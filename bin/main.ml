@@ -56,18 +56,43 @@ let find_all_project_ml_files () =
   | None -> find_ml_files_in_dir (Sys.getcwd ())
 
 let analyze_files config files =
-  let total_violations = ref 0 in
+  let all_violations = ref [] in
   List.iter (fun file ->
     match Cyclomatic.Merlin_interface.analyze_file config file with
     | Ok violations ->
-        List.iter (fun v ->
-          print_endline (Cyclomatic.Cyclomatic_complexity.format_violation v);
-          incr total_violations
-        ) violations
+        all_violations := !all_violations @ violations
     | Error msg ->
         Printf.eprintf "Error analyzing %s: %s\n" file msg
   ) files;
-  if !total_violations > 0 then
+  
+  (* Sort violations by priority: complexity violations first (sorted by complexity desc),
+     then length violations (sorted by length desc) *)
+  let sorted_violations = List.sort (fun a b ->
+    match a, b with
+    | Cyclomatic.Cyclomatic_complexity.ComplexityExceeded ca,
+      Cyclomatic.Cyclomatic_complexity.ComplexityExceeded cb ->
+        (* Higher complexity first *)
+        compare cb.complexity ca.complexity
+    | Cyclomatic.Cyclomatic_complexity.FunctionTooLong la,
+      Cyclomatic.Cyclomatic_complexity.FunctionTooLong lb ->
+        (* Longer functions first *)
+        compare lb.length la.length
+    | Cyclomatic.Cyclomatic_complexity.ComplexityExceeded _,
+      Cyclomatic.Cyclomatic_complexity.FunctionTooLong _ ->
+        (* Complexity violations come first *)
+        -1
+    | Cyclomatic.Cyclomatic_complexity.FunctionTooLong _,
+      Cyclomatic.Cyclomatic_complexity.ComplexityExceeded _ ->
+        (* Complexity violations come first *)
+        1
+  ) !all_violations in
+  
+  (* Print sorted violations *)
+  List.iter (fun v ->
+    print_endline (Cyclomatic.Cyclomatic_complexity.format_violation v)
+  ) sorted_violations;
+  
+  if sorted_violations <> [] then
     exit 1
 
 let files =

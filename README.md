@@ -39,3 +39,7 @@ cyclomatic --max-complexity 15 --max-length 100 src/*.ml
 ```
 
 The tool will exit with code 1 if any violations are found.
+
+Violations are sorted by priority:
+1. Complexity violations (highest complexity first)
+2. Length violations (longest functions first)

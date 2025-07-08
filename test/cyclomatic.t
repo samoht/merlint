@@ -13,9 +13,9 @@ Test long function detection
 
 Test with multiple violations
   $ cyclomatic --max-complexity 5 --max-length 20 samples/complex.ml samples/long_function.ml
-  complex.ml:4:0: Function 'process_command' is 43 lines long (threshold: 20)
   complex.ml:4:0: Function 'process_command' has cyclomatic complexity of 14 (threshold: 5)
   long_function.ml:2:0: Function 'very_long_function' is 54 lines long (threshold: 20)
+  complex.ml:4:0: Function 'process_command' is 43 lines long (threshold: 20)
   [1]
 
 Test with custom thresholds that pass
