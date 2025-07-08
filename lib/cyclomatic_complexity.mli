@@ -1,17 +1,10 @@
-type config = {
-  max_complexity : int;
-  max_function_length : int;
-}
+type config = { max_complexity : int; max_function_length : int }
 
 val default_config : config
 
-type location = {
-  file : string;
-  line : int;
-  col : int;
-}
+type location = { file : string; line : int; col : int }
 
-type violation = 
+type violation =
   | ComplexityExceeded of {
       name : string;
       location : location;
@@ -26,5 +19,4 @@ type violation =
     }
 
 val analyze_structure : config -> Yojson.Safe.t -> violation list
-
 val format_violation : violation -> string
