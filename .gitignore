@@ -1,0 +1,39 @@
+# OCaml build artifacts
+_build/
+*.cmo
+*.cma
+*.cmi
+*.a
+*.o
+*.cmx
+*.cmxs
+*.cmxa
+*.native
+*.byte
+
+# OPAM
+_opam/
+
+# Merlin
+.merlin
+.merlin-conf
+
+# Editor files
+*.swp
+*~
+.#*
+\#*#
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Dune
+.dune-lock
+_esy/
+*.install
+
+# Test artifacts
+*.corrected
