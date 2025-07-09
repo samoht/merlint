@@ -57,7 +57,7 @@ let expand_paths ~suffix paths =
         else if Filename.check_suffix path suffix then path :: acc
         else acc
       else (
-        Printf.eprintf "Warning: %s does not exist\n" path;
+        Fmt.epr "Warning: %s does not exist@." path;
         acc))
     [] paths
   |> List.rev
@@ -118,8 +118,8 @@ let run_analysis project_root filtered_files =
     Merlint.Rules.analyze_project rules_config filtered_files
   in
 
-  Printf.printf "Running merlint analysis...\n\n";
-  Printf.printf "Analyzing %d files\n\n" (List.length filtered_files);
+  Fmt.pr "Running merlint analysis...@.@.";
+  Fmt.pr "Analyzing %d files@.@." (List.length filtered_files);
 
   let all_reports =
     List.fold_left
@@ -133,7 +133,7 @@ let run_analysis project_root filtered_files =
           List.for_all (fun report -> report.Merlint.Report.passed) reports
         in
 
-        Printf.printf "%s %s (%d total issues)\n"
+        Fmt.pr "%s %s (%d total issues)@."
           (Merlint.Report.print_color category_passed
              (Merlint.Report.print_status category_passed))
           category_name total_issues;
@@ -150,7 +150,7 @@ let run_analysis project_root filtered_files =
 
   (* Print hints for fixing issues if any exist *)
   if all_issues <> [] then (
-    Printf.printf "\n%s Fix hints:\n" (Merlint.Report.print_color false "💡");
+    Fmt.pr "@.%s Fix hints:@." (Merlint.Report.print_color false "💡");
 
     (* Group issues by type and provide contextual hints *)
     let module Issue_type_map = Map.Make (String) in
@@ -171,7 +171,7 @@ let run_analysis project_root filtered_files =
     Issue_type_map.iter
       (fun issue_type issues ->
         match Merlint.Issue.find_grouped_hint issue_type issues with
-        | Some hint -> Printf.printf "\n  • %s\n" hint
+        | Some hint -> Fmt.pr "@.  • %s@." hint
         | None -> ())
       issue_groups;
 
@@ -181,9 +181,9 @@ let ensure_project_built project_root =
   match Merlint.Dune.ensure_project_built project_root with
   | Ok () -> ()
   | Error msg ->
-      Printf.eprintf "Warning: %s\n" msg;
-      Printf.eprintf "Function type analysis may not work properly.\n";
-      Printf.eprintf "Continuing with analysis...\n"
+      Fmt.epr "Warning: %s@." msg;
+      Fmt.epr "Function type analysis may not work properly.@.";
+      Fmt.epr "Continuing with analysis...@."
 
 let analyze_files ?(exclude_patterns = []) files =
   (* Find project root and all files *)
