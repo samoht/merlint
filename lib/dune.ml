@@ -14,7 +14,7 @@ type stanza_info = {
 
 let run_dune_describe project_root =
   let cmd =
-    Printf.sprintf "cd %s && dune describe" (Filename.quote project_root)
+    Fmt.str "cd %s && dune describe" (Filename.quote project_root)
   in
   Log.debug (fun m -> m "Running dune describe command: %s" cmd);
   let ic = Unix.open_process_in cmd in
@@ -38,13 +38,13 @@ let run_dune_describe project_root =
       Error "dune not found. Please ensure dune is installed"
   | Unix.WEXITED code ->
       Log.err (fun m -> m "Dune describe failed with exit code %d" code);
-      Error (Printf.sprintf "Dune describe failed with exit code %d" code)
+      Error (Fmt.str "Dune describe failed with exit code %d" code)
   | Unix.WSIGNALED n ->
       Log.err (fun m -> m "Dune describe killed by signal %d" n);
-      Error (Printf.sprintf "Dune describe was killed by signal %d" n)
+      Error (Fmt.str "Dune describe was killed by signal %d" n)
   | Unix.WSTOPPED n ->
       Log.err (fun m -> m "Dune describe stopped by signal %d" n);
-      Error (Printf.sprintf "Dune describe was stopped by signal %d" n)
+      Error (Fmt.str "Dune describe was stopped by signal %d" n)
 
 let ensure_project_built project_root =
   (* Check if _build directory exists *)
@@ -52,7 +52,7 @@ let ensure_project_built project_root =
   if not (Sys.file_exists build_dir) then (
     Log.info (fun m -> m "No _build directory found, running 'dune build'");
     let cmd =
-      Printf.sprintf "cd %s && dune build" (Filename.quote project_root)
+      Fmt.str "cd %s && dune build" (Filename.quote project_root)
     in
     match Unix.system cmd with
     | Unix.WEXITED 0 ->
@@ -60,13 +60,13 @@ let ensure_project_built project_root =
         Ok ()
     | Unix.WEXITED code ->
         Log.err (fun m -> m "Dune build failed with exit code %d" code);
-        Error (Printf.sprintf "Dune build failed with exit code %d" code)
+        Error (Fmt.str "Dune build failed with exit code %d" code)
     | Unix.WSIGNALED n ->
         Log.err (fun m -> m "Dune build killed by signal %d" n);
-        Error (Printf.sprintf "Dune build was killed by signal %d" n)
+        Error (Fmt.str "Dune build was killed by signal %d" n)
     | Unix.WSTOPPED n ->
         Log.err (fun m -> m "Dune build stopped by signal %d" n);
-        Error (Printf.sprintf "Dune build was stopped by signal %d" n))
+        Error (Fmt.str "Dune build was stopped by signal %d" n))
   else (
     Log.debug (fun m -> m "_build directory already exists");
     Ok ())
