@@ -80,5 +80,11 @@ type t =
 
 val format : t -> string
 
+val get_issue_type : t -> string
+(** Get a string identifier for the issue type *)
+
+val find_grouped_hint : string -> t list -> string option
+(** Get a helpful hint for a group of issues of the same type *)
+
 val compare : t -> t -> int
 (** Compare issues by priority, then by location *)

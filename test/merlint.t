@@ -15,6 +15,15 @@ Test simple functions with low complexity
   
   Summary: ✗ 2 total issues
   ✗ Some checks failed. See details above.
+  
+  💡 Fix hints:
+  
+    • Create these interface files:
+       Create samples/simple.mli (copy public signatures from samples/simple.ml)
+  
+    • Create file '.ocamlformat' in project root with:
+       profile = default
+       version = 0.26.1
   [1]
 
 Test function with high cyclomatic complexity
@@ -36,6 +45,18 @@ Test function with high cyclomatic complexity
   
   Summary: ✗ 3 total issues
   ✗ Some checks failed. See details above.
+  
+  💡 Fix hints:
+  
+    • Extract complex conditional logic from these functions into smaller helper functions:
+       complex.ml:8: function process_command
+  
+    • Create these interface files:
+       Create samples/complex.mli (copy public signatures from samples/complex.ml)
+  
+    • Create file '.ocamlformat' in project root with:
+       profile = default
+       version = 0.26.1
   [1]
 
 Test long function detection
@@ -57,6 +78,18 @@ Test long function detection
   
   Summary: ✗ 3 total issues
   ✗ Some checks failed. See details above.
+  
+  💡 Fix hints:
+  
+    • Split these long functions by extracting logical sections into separate functions:
+       long_function.ml:2: function very_long_function
+  
+    • Create these interface files:
+       Create samples/long_function.mli (copy public signatures from samples/long_function.ml)
+  
+    • Create file '.ocamlformat' in project root with:
+       profile = default
+       version = 0.26.1
   [1]
 
 Test naming conventions
@@ -82,6 +115,24 @@ Test naming conventions
   
   Summary: ✗ 7 total issues
   ✗ Some checks failed. See details above.
+  
+  💡 Fix hints:
+  
+    • Rename these values:
+       samples/bad_names.ml:4: let myFunction → let my_function
+       samples/bad_names.ml:9: let checkValue → let check_value
+  
+    • Rename these variant constructors:
+       samples/bad_names.ml:3: MyModule → My_module
+       samples/bad_names.ml:7: WaitingForInput → Waiting_for_input
+       samples/bad_names.ml:7: ProcessingData → Processing_data
+  
+    • Create these interface files:
+       Create samples/bad_names.mli (copy public signatures from samples/bad_names.ml)
+  
+    • Create file '.ocamlformat' in project root with:
+       profile = default
+       version = 0.26.1
   [1]
 
 Test documentation rules
@@ -102,6 +153,20 @@ Test documentation rules
   
   Summary: ✗ 2 total issues
   ✗ Some checks failed. See details above.
+  
+  💡 Fix hints:
+  
+    • Add module documentation at the top of these .mli files:
+       samples/missing_docs.mli:1: Add documentation for module missing_docs
+  
+       Template:
+       (** Brief one-line summary
+  
+           This module provides types and functions for detailed description of what this module does. *)
+  
+    • Create file '.ocamlformat' in project root with:
+       profile = default
+       version = 0.26.1
   [1]
 
 Test style rules - Obj.magic
@@ -123,6 +188,17 @@ Test style rules - Obj.magic
   
   Summary: ✗ 3 total issues
   ✗ Some checks failed. See details above.
+  
+  💡 Fix hints:
+  
+    • Create these interface files:
+       Create samples/bad_style.mli (copy public signatures from samples/bad_style.ml)
+  
+    • Create file '.ocamlformat' in project root with:
+       profile = default
+       version = 0.26.1
+  
+    • Replace all Obj.magic calls with proper type definitions. Define a variant type or use GADTs to represent the different cases safely.
   [1]
 
 Test style rules - Str module
@@ -147,6 +223,20 @@ Test style rules - Str module
   
   Summary: ✗ 6 total issues
   ✗ Some checks failed. See details above.
+  
+  💡 Fix hints:
+  
+    • Create these interface files:
+       Create samples/uses_str.mli (copy public signatures from samples/uses_str.ml)
+  
+    • Create file '.ocamlformat' in project root with:
+       profile = default
+       version = 0.26.1
+  
+    • Replace all Str module usage:
+       1. Add 're' to your dune dependencies: (libraries ... re)
+       2. Replace Str.regexp with Re.compile (Re.str ...)
+       3. Replace Str.string_match with Re.execp
   [1]
 
 Test catch-all exception handler
@@ -166,4 +256,13 @@ Test catch-all exception handler
   
   Summary: ✗ 2 total issues
   ✗ Some checks failed. See details above.
+  
+  💡 Fix hints:
+  
+    • Create these interface files:
+       Create samples/catch_all.mli (copy public signatures from samples/catch_all.ml)
+  
+    • Create file '.ocamlformat' in project root with:
+       profile = default
+       version = 0.26.1
   [1]

@@ -147,7 +147,35 @@ let run_analysis project_root filtered_files =
   Merlint.Report.print_summary all_reports;
 
   let all_issues = Merlint.Report.get_all_issues all_reports in
-  if all_issues <> [] then exit 1
+
+  (* Print hints for fixing issues if any exist *)
+  if all_issues <> [] then (
+    Printf.printf "\n%s Fix hints:\n" (Merlint.Report.print_color false "💡");
+
+    (* Group issues by type and provide contextual hints *)
+    let module Issue_type_map = Map.Make (String) in
+    let issue_groups =
+      List.fold_left
+        (fun acc issue ->
+          let type_name = Merlint.Issue.get_issue_type issue in
+          let current =
+            match Issue_type_map.find_opt type_name acc with
+            | None -> []
+            | Some issues -> issues
+          in
+          Issue_type_map.add type_name (issue :: current) acc)
+        Issue_type_map.empty all_issues
+    in
+
+    (* Print grouped hints *)
+    Issue_type_map.iter
+      (fun issue_type issues ->
+        match Merlint.Issue.find_grouped_hint issue_type issues with
+        | Some hint -> Printf.printf "\n  • %s\n" hint
+        | None -> ())
+      issue_groups;
+
+    exit 1)
 
 let ensure_project_built project_root =
   match Merlint.Dune.ensure_project_built project_root with
