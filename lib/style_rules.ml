@@ -26,7 +26,7 @@ let extract_location_from_parsetree text =
     let line = int_of_string (Re.Group.get substrings 2) in
     let col = int_of_string (Re.Group.get substrings 3) in
     Some (line, col)
-  with _ -> None
+  with Not_found -> None
 
 let extract_filename_from_parsetree text =
   let filename_regex =
@@ -39,7 +39,7 @@ let extract_filename_from_parsetree text =
   try
     let substrings = Re.exec filename_regex text in
     Re.Group.get substrings 1
-  with _ -> "unknown"
+  with Not_found -> "unknown"
 
 let extract_location_from_match text start_pos =
   (* Extract location from a specific match position in parsetree text *)
@@ -68,7 +68,7 @@ let extract_location_from_match text start_pos =
     let line = int_of_string (Re.Group.get substrings 2) in
     let col = int_of_string (Re.Group.get substrings 3) in
     Some (line, col)
-  with _ -> None
+  with Not_found -> None
 
 let check_obj_magic filename text =
   if String.contains text 'O' && String.contains text 'm' then
