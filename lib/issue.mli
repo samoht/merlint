@@ -74,3 +74,6 @@ type t =
     }
 
 val format : t -> string
+
+val compare : t -> t -> int
+(** Compare issues by priority, then by location *)

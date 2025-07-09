@@ -19,12 +19,13 @@ let print_detailed report =
   let colored_status = print_color report.passed status in
   Printf.printf "  %s %s (%d issues)\n" colored_status report.rule_name
     (List.length report.issues);
-  (* Show detailed issues *)
+  (* Show detailed issues sorted by priority *)
+  let sorted_issues = List.sort Issue.compare report.issues in
   List.iter
     (fun issue ->
       let formatted = Issue.format issue in
       if formatted <> "" then Printf.printf "    %s\n" formatted)
-    report.issues
+    sorted_issues
 
 let print_summary reports =
   let total_issues =

@@ -131,7 +131,7 @@ let rec check_json_catch_all filename json =
           ) [] fields)
   | `List items ->
       List.fold_left (fun acc item ->
-        acc @ check_catch_all_in_json filename item
+        acc @ check_json_catch_all filename item
       ) [] items
   | _ -> []
 
