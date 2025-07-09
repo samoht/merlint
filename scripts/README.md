@@ -13,7 +13,7 @@ This script installs pre-commit and commit-msg hooks that ensure code quality be
 2. **Dune fmt** - Checks and enforces code formatting
 3. **Dune test** - Runs all tests
 4. **Merlint** - Runs the project's own merlint linter (if available)
-5. **Prune** - Checks for unused code (if prune is installed)
+5. **Prune** - Checks for unused code in lib/ and bin/ directories (if prune is installed)
 
 **Commit-msg hook:**
 - Checks for AI attributions in commit messages and rejects them

@@ -76,15 +76,13 @@ fi
 # 5. Run prune (if available) only in lib and bin directories
 if command -v prune >/dev/null 2>&1; then
     echo -e "\n${YELLOW}Running prune to check for unused code...${NC}"
-    if [ -d "lib" ]; then
-        echo "  Checking lib/ directory..."
-        (cd lib && prune) || echo -e "${YELLOW}⚠️  Prune found unused code in lib/.${NC}"
+    # Run prune in dry-run mode to check for unused code
+    if ! prune clean lib bin --dry-run; then
+        echo -e "${YELLOW}⚠️  Prune found unused code. Consider running 'prune clean lib bin -f' to remove it.${NC}"
+        # Don't fail on prune warnings - it's informational only
+    else
+        echo -e "${GREEN}✅ No unused code found by prune!${NC}"
     fi
-    if [ -d "bin" ]; then  
-        echo "  Checking bin/ directory..."
-        (cd bin && prune) || echo -e "${YELLOW}⚠️  Prune found unused code in bin/.${NC}"
-    fi
-    # Don't fail on prune warnings
 fi
 
 # 6. Check for AI attributions
