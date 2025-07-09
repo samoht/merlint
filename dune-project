@@ -4,11 +4,11 @@
 
 (package
  (name merlint)
- (synopsis "OCaml linter enforcing project conventions")
- (description "An opinionated OCaml linter that enforces modern OCaml coding conventions")
+ (synopsis "OCaml linter enforcing modern coding conventions")
+ (description "An opinionated OCaml linter that enforces modern OCaml coding conventions and best practices with priority-based issue sorting")
  (maintainers "Thomas Gazagnaire")
- (authors "Merlint Authors")
- (license "MIT")
+ (authors "Merlint Contributors")
+ (license "ISC")
  (homepage "https://github.com/samoht/merlint")
  (bug_reports "https://github.com/samoht/merlint/issues")
  (depends
@@ -18,4 +18,5 @@
   cmdliner
   merlin
   re
+  fpath
   (alcotest :with-test)))
