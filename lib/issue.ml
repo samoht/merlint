@@ -55,6 +55,18 @@ type t =
       missing : string list;
       file : string;
     }
+  | Missing_ocamlformat_file of { location : location }
+  | Missing_mli_file of {
+      ml_file : string;
+      expected_mli : string;
+      location : location;
+    }
+  | Long_identifier_name of {
+      name : string;
+      location : location;
+      underscore_count : int;
+      threshold : int;
+    }
 
 let format_location loc = Printf.sprintf "%s:%d:%d" loc.file loc.line loc.col
 
@@ -116,6 +128,17 @@ let format_style v =
   | Use_str_module { location } ->
       Printf.sprintf "%s: Use Re module instead of Str"
         (format_location location)
+  | Missing_ocamlformat_file { location = _ } ->
+      Printf.sprintf
+        "(project): Missing .ocamlformat file for consistent formatting"
+  | Missing_mli_file { ml_file; expected_mli; location } ->
+      Printf.sprintf "%s: Missing interface file %s for %s"
+        (format_location location) expected_mli ml_file
+  | Long_identifier_name { name; location; underscore_count; threshold } ->
+      Printf.sprintf
+        "%s: Identifier '%s' has %d underscores (threshold: %d) - consider \
+         shorter name"
+        (format_location location) name underscore_count threshold
   | _ -> ""
 
 let format v =

@@ -3,7 +3,7 @@
     This module enforces code style rules such as avoiding Obj.magic and
     catch-all exception handlers. *)
 
-val check : Yojson.Safe.t -> Violation.t list
+val check : Yojson.Safe.t -> Issue.t list
 (** [check ast] analyzes the AST for style violations. *)
 
 val extract_location_from_parsetree : string -> (int * int) option

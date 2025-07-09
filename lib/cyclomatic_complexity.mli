@@ -10,4 +10,7 @@ type config = {
 }
 
 val default_config : config
-val analyze_structure : config -> Yojson.Safe.t -> Violation.t list
+
+val analyze_browse_value : config -> Yojson.Safe.t -> Issue.t list
+(** [analyze_browse_value config json] analyzes a Merlin browse value
+    (extracted) *)

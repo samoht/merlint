@@ -87,7 +87,7 @@ let check parsetree_data =
               let start_pos = Re.Group.start group 0 in
               match extract_location_from_match text start_pos with
               | Some (line, col) ->
-                  Violation.No_obj_magic
+                  Issue.No_obj_magic
                     { location = { file = filename; line; col } }
                   :: acc
               | None -> acc)
@@ -105,7 +105,7 @@ let check parsetree_data =
               let start_pos = Re.Group.start group 0 in
               match extract_location_from_match text start_pos with
               | Some (line, col) ->
-                  Violation.Use_str_module
+                  Issue.Use_str_module
                     { location = { file = filename; line; col } }
                   :: acc
               | None -> acc)
@@ -125,7 +125,7 @@ let check parsetree_data =
                 let try_pos = Re.Group.start substrings 0 in
                 match extract_location_from_match text try_pos with
                 | Some (line, col) ->
-                    Violation.Catch_all_exception
+                    Issue.Catch_all_exception
                       { location = { file = filename; line; col } }
                     :: violations
                 | None -> violations)
