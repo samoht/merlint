@@ -254,11 +254,12 @@ Test Printf/Format module usage
       uses_printf.ml:7:2: Use Fmt module instead of Format
   ✓ Naming Conventions (0 total issues)
   ✓ Documentation (0 total issues)
-  ✗ Project Structure (1 total issues)
-    ✗ Format rules (.ocamlformat, .mli files) (1 issues)
+  ✗ Project Structure (2 total issues)
+    ✗ Format rules (.ocamlformat, .mli files) (2 issues)
       samples/uses_printf.ml:1:1: missing interface file
+      (project): Missing .ocamlformat file for consistent formatting
   
-  Summary: ✗ 5 total issues
+  Summary: ✗ 6 total issues
   ✗ Some checks failed. See details above.
   
   💡 Fix hints:

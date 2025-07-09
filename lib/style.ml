@@ -215,7 +215,7 @@ let check_catch_all_text filename text =
 let check_printf_module filename text =
   let printf_regex = Re.compile (Re.str "Pexp_ident \"Printf.") in
   let format_regex = Re.compile (Re.str "Pexp_ident \"Format.") in
-  
+
   let check_module regex module_name =
     if Re.execp regex text then
       let matches = Re.all ~pos:0 regex text in
@@ -224,15 +224,17 @@ let check_printf_module filename text =
           let start_pos = Re.Group.start group 0 in
           match extract_location_from_match text start_pos with
           | Some (line, col) ->
-              Issue.Use_printf_module { 
-                location = { file = filename; line; col };
-                module_used = module_name 
-              } :: acc
+              Issue.Use_printf_module
+                {
+                  location = { file = filename; line; col };
+                  module_used = module_name;
+                }
+              :: acc
           | None -> acc)
         [] matches
     else []
   in
-  
+
   check_module printf_regex "Printf" @ check_module format_regex "Format"
 
 let check parsetree_data =
@@ -246,7 +248,8 @@ let check parsetree_data =
       (* For catch-all, try the simple text-based approach *)
       let catch_all_issues = check_catch_all_text filename text in
 
-      obj_magic_issues @ str_module_issues @ printf_module_issues @ catch_all_issues
+      obj_magic_issues @ str_module_issues @ printf_module_issues
+      @ catch_all_issues
   | json ->
       (* If we get JSON, use the proper parser *)
       let filename = "unknown" in
