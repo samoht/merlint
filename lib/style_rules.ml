@@ -91,41 +91,57 @@ let check_str_module filename text =
       [] matches
   else []
 
+let is_catch_all_pattern pattern =
+  match pattern with
+  | `Assoc fields -> (
+      match List.assoc_opt "class" fields with
+      | Some (`String "Ppat_any") -> true
+      | Some (`String "Ppat_var") -> (
+          (* Check if it's _something which is also a catch-all *)
+          match List.assoc_opt "name" fields with
+          | Some (`String name) -> String.starts_with ~prefix:"_" name
+          | _ -> false)
+      | _ -> false)
+  | _ -> false
+
+let extract_location_from_fields fields =
+  match List.assoc_opt "location" fields with
+  | Some (`Assoc loc_fields) -> (
+      match (List.assoc_opt "start" loc_fields, 
+             List.assoc_opt "line" loc_fields,
+             List.assoc_opt "col" loc_fields) with
+      | (Some (`Int line), _, Some (`Int col))
+      | (_, Some (`Int line), Some (`Int col)) -> Some (line, col)
+      | _ -> None)
+  | _ -> None
+
+let check_exception_case filename fields case =
+  match case with
+  | `Assoc case_fields -> (
+      match List.assoc_opt "pattern" case_fields with
+      | Some pattern when is_catch_all_pattern pattern -> (
+          match extract_location_from_fields fields with
+          | Some (line, col) -> 
+              [Issue.Catch_all_exception { location = { file = filename; line; col } }]
+          | None -> [])
+      | _ -> [])
+  | _ -> []
+
+let check_try_expression filename fields =
+  match List.assoc_opt "exceptions" fields with
+  | Some (`List cases) ->
+      List.fold_left (fun acc case ->
+        acc @ check_exception_case filename fields case
+      ) [] cases
+  | _ -> []
+
 (* Parse JSON AST to check for catch-all exceptions *)
 let rec check_json_catch_all filename json =
   match json with
   | `Assoc fields -> (
       match List.assoc_opt "class" fields with
-      | Some (`String "Pexp_try") -> (
-          (* This is a try expression *)
-          match List.assoc_opt "exceptions" fields with
-          | Some (`List cases) ->
-              (* Check each exception case *)
-              List.fold_left (fun acc case ->
-                match case with
-                | `Assoc case_fields -> (
-                    match List.assoc_opt "pattern" case_fields with
-                    | Some pattern -> (
-                        if is_catch_all_pattern pattern then
-                          (* Extract location from the try expression *)
-                          match List.assoc_opt "location" fields with
-                          | Some (`Assoc loc_fields) -> (
-                              match (List.assoc_opt "start" loc_fields, 
-                                     List.assoc_opt "line" loc_fields,
-                                     List.assoc_opt "col" loc_fields) with
-                              | (Some (`Int line), _, Some (`Int col))
-                              | (_, Some (`Int line), Some (`Int col)) ->
-                                  Issue.Catch_all_exception 
-                                    { location = { file = filename; line; col } } :: acc
-                              | _ -> acc)
-                          | _ -> acc
-                        else acc)
-                    | None -> acc)
-                | _ -> acc
-              ) [] cases
-          | _ -> [])
+      | Some (`String "Pexp_try") -> check_try_expression filename fields
       | _ ->
-          (* Recursively check children *)
           List.fold_left (fun acc (_, child) ->
             acc @ check_json_catch_all filename child
           ) [] fields)
@@ -135,18 +151,6 @@ let rec check_json_catch_all filename json =
       ) [] items
   | _ -> []
 
-and is_catch_all_pattern pattern =
-  match pattern with
-  | `Assoc fields -> (
-      match List.assoc_opt "class" fields with
-      | Some (`String "Ppat_any") -> true
-      | Some (`String "Ppat_var") -> (
-          (* Check if it's _something which is also a catch-all *)
-          match List.assoc_opt "name" fields with
-          | Some (`String name) -> String.length name > 0 && name.[0] = '_'
-          | _ -> false)
-      | _ -> false)
-  | _ -> false
 
 (* Simple text-based check for catch-all - fallback *)
 let check_catch_all_text filename text =
