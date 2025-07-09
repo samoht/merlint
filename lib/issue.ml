@@ -150,3 +150,85 @@ let format v =
     else
       let result = format_doc v in
       if result <> "" then result else format_style v
+
+(* Assign priority to issues - lower number = higher priority *)
+let priority = function
+  (* Critical issues - code correctness/safety *)
+  | No_obj_magic _ -> 1
+  | Catch_all_exception _ -> 2
+  
+  (* High priority - code quality *)
+  | Complexity_exceeded _ -> 3
+  | Deep_nesting _ -> 4
+  | Function_too_long _ -> 5
+  
+  (* Medium priority - style and conventions *)
+  | Use_str_module _ -> 6
+  | Bad_variant_naming _ -> 7
+  | Missing_mli_file _ -> 8
+  | Bad_module_naming _ -> 9
+  | Bad_value_naming _ -> 10
+  | Bad_type_naming _ -> 11
+  | Long_identifier_name _ -> 12
+  
+  (* Low priority - documentation and structure *)
+  | Missing_mli_doc _ -> 13
+  | Missing_value_doc _ -> 14
+  | Bad_doc_style _ -> 15
+  | Missing_standard_function _ -> 16
+  | Missing_ocamlformat_file _ -> 17
+
+(* Compare issues for sorting *)
+let compare a b =
+  let pa = priority a in
+  let pb = priority b in
+  if pa <> pb then compare pa pb
+  else
+    (* Same priority - sort by location *)
+    match (a, b) with
+    | (Missing_mli_doc { file = f1; _ }, Missing_mli_doc { file = f2; _ })
+    | (Missing_standard_function { file = f1; _ }, Missing_standard_function { file = f2; _ }) ->
+        String.compare f1 f2
+    | _ ->
+        let loc_a = match a with
+          | Complexity_exceeded { location; _ }
+          | Function_too_long { location; _ }
+          | No_obj_magic { location }
+          | Missing_value_doc { location; _ }
+          | Bad_doc_style { location; _ }
+          | Bad_variant_naming { location; _ }
+          | Bad_module_naming { location; _ }
+          | Bad_value_naming { location; _ }
+          | Bad_type_naming { location; _ }
+          | Catch_all_exception { location }
+          | Use_str_module { location }
+          | Deep_nesting { location; _ }
+          | Missing_ocamlformat_file { location }
+          | Missing_mli_file { location; _ }
+          | Long_identifier_name { location; _ } -> Some location
+          | _ -> None
+        in
+        let loc_b = match b with
+          | Complexity_exceeded { location; _ }
+          | Function_too_long { location; _ }
+          | No_obj_magic { location }
+          | Missing_value_doc { location; _ }
+          | Bad_doc_style { location; _ }
+          | Bad_variant_naming { location; _ }
+          | Bad_module_naming { location; _ }
+          | Bad_value_naming { location; _ }
+          | Bad_type_naming { location; _ }
+          | Catch_all_exception { location }
+          | Use_str_module { location }
+          | Deep_nesting { location; _ }
+          | Missing_ocamlformat_file { location }
+          | Missing_mli_file { location; _ }
+          | Long_identifier_name { location; _ } -> Some location
+          | _ -> None
+        in
+        match (loc_a, loc_b) with
+        | (Some l1, Some l2) ->
+            let fc = String.compare l1.file l2.file in
+            if fc <> 0 then fc
+            else compare l1.line l2.line
+        | _ -> 0

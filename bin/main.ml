@@ -70,39 +70,6 @@ let analyze_with_merlin config file =
       Printf.eprintf "Error analyzing %s: %s\n" file msg;
       []
 
-let get_issue_location v =
-  match v with
-  | Merlint.Issue.Complexity_exceeded { location; _ }
-  | Function_too_long { location; _ }
-  | No_obj_magic { location }
-  | Missing_value_doc { location; _ }
-  | Bad_doc_style { location; _ }
-  | Bad_variant_naming { location; _ }
-  | Bad_module_naming { location; _ }
-  | Bad_value_naming { location; _ }
-  | Bad_type_naming { location; _ }
-  | Catch_all_exception { location }
-  | Use_str_module { location }
-  | Deep_nesting { location; _ } ->
-      Some location
-  | _ -> None
-
-let get_issue_file v =
-  match v with
-  | Merlint.Issue.Missing_mli_doc { file; _ }
-  | Missing_standard_function { file; _ } ->
-      Some file
-  | _ -> None
-
-let compare_issues a b =
-  match (get_issue_file a, get_issue_file b) with
-  | Some f1, Some f2 -> String.compare f1 f2
-  | _ -> (
-      match (get_issue_location a, get_issue_location b) with
-      | Some l1, Some l2 ->
-          let fc = String.compare l1.file l2.file in
-          if fc <> 0 then fc else compare l1.line l2.line
-      | _ -> 0)
 
 let should_exclude_file file exclude_patterns =
   List.exists
@@ -154,7 +121,7 @@ let run_quiet_analysis config filtered_files =
 
   (* Sort and print issues *)
   let all_issues = ml_issues @ doc_issues in
-  let sorted_issues = List.sort compare_issues all_issues in
+  let sorted_issues = List.sort Merlint.Issue.compare all_issues in
 
   List.iter (fun v -> print_endline (Merlint.Issue.format v)) sorted_issues;
 
@@ -186,7 +153,9 @@ let run_visual_analysis project_root filtered_files =
              (Merlint.Report.print_status category_passed))
           category_name total_issues;
 
-        List.iter Merlint.Report.print_detailed reports;
+        (* Only show detailed reports if there are issues *)
+        if total_issues > 0 then
+          List.iter Merlint.Report.print_detailed reports;
         reports @ acc)
       [] category_reports
   in
