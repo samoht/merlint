@@ -258,6 +258,14 @@ let extract_filename_from_parsetree text =
     Re.Group.get substrings 1
   with Not_found -> "unknown"
 
+let check_function_naming _filename _text =
+  (* TODO: Implement proper function naming convention checking
+     This should enforce:
+     - get_* functions for extracting from existing structures (return value directly)
+     - find_* functions for searching (return option type)
+     Requires proper typed tree analysis via Merlin to check return types *)
+  []
+
 let check_long_identifier_name filename text =
   let max_underscores = 3 in
   let identifier_regex =
@@ -312,8 +320,10 @@ let check_parsetree_line filename text =
   (* Check for long identifier names *)
   let long_name_issues = check_long_identifier_name filename text in
 
+  let function_naming_issues = check_function_naming filename text in
+
   issues @ variant_issues @ value_issues @ module_issues
-  @ type_issues @ long_name_issues
+  @ type_issues @ long_name_issues @ function_naming_issues
 
 let check data =
   match data with

@@ -67,6 +67,11 @@ type t =
       underscore_count : int;
       threshold : int;
     }
+  | Bad_function_naming of {
+      function_name : string;
+      location : location;
+      suggestion : string;
+    }
 
 let format_location loc = Printf.sprintf "%s:%d:%d" loc.file loc.line loc.col
 
@@ -98,6 +103,9 @@ let format_naming v =
   | Bad_type_naming { type_name; location; message } ->
       Printf.sprintf "%s: Type '%s' %s" (format_location location) type_name
         message
+  | Bad_function_naming { function_name; location; suggestion } ->
+      Printf.sprintf "%s: Function '%s' should use '%s' (get_* for extraction, find_* for search)" 
+        (format_location location) function_name suggestion
   | _ -> ""
 
 let format_doc v =
@@ -153,7 +161,7 @@ let priority = function
   | Complexity_exceeded _ | Deep_nesting _ | Function_too_long _ -> 2
   | Use_str_module _ | Bad_variant_naming _ | Missing_mli_file _ 
   | Bad_module_naming _ | Bad_value_naming _ | Bad_type_naming _ 
-  | Long_identifier_name _ -> 3
+  | Long_identifier_name _ | Bad_function_naming _ -> 3
   | Missing_mli_doc _ | Missing_value_doc _ | Bad_doc_style _ 
   | Missing_standard_function _ | Missing_ocamlformat_file _ -> 4
 
@@ -165,7 +173,7 @@ let get_location = function
   | Bad_type_naming { location; _ } | Catch_all_exception { location }
   | Use_str_module { location } | Deep_nesting { location; _ }
   | Missing_ocamlformat_file { location } | Missing_mli_file { location; _ }
-  | Long_identifier_name { location; _ } -> Some location
+  | Long_identifier_name { location; _ } | Bad_function_naming { location; _ } -> Some location
   | _ -> None
 
 let get_file = function
