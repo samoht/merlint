@@ -21,11 +21,11 @@ Test long function detection
 Test naming conventions
   $ merlint --quiet samples/bad_names.ml
   bad_names.ml:3:7: Variant 'MyModule' should be 'My_module'
+  bad_names.ml:4:6: Value 'myFunction' should be 'my_function'
   bad_names.ml:7:32: Variant 'ProcessingData' should be 'Processing_data'
   bad_names.ml:7:14: Variant 'WaitingForInput' should be 'Waiting_for_input'
-  samples/bad_names.ml:1:1: missing interface file
-  bad_names.ml:4:6: Value 'myFunction' should be 'my_function'
   bad_names.ml:9:4: Value 'checkValue' should be 'check_value'
+  samples/bad_names.ml:1:1: missing interface file
   (project): Missing .ocamlformat file for consistent formatting
   [1]
 
@@ -43,11 +43,11 @@ Test style rules - Obj.magic
 
 Test style rules - Str module
   $ merlint --quiet samples/uses_str.ml
+  samples/uses_str.ml:1:1: missing interface file
   uses_str.ml:2:31: Use Re module instead of Str
   uses_str.ml:2:20: Use Re module instead of Str
   uses_str.ml:6:32: Use Re module instead of Str
   uses_str.ml:6:12: Use Re module instead of Str
-  samples/uses_str.ml:1:1: missing interface file
   (project): Missing .ocamlformat file for consistent formatting
   [1]
 

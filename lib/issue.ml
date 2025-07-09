@@ -133,8 +133,8 @@ let format_style v =
         "(project): Missing .ocamlformat file for consistent formatting"
   | Missing_mli_file { location; _ } ->
       Printf.sprintf "%s: missing interface file" (format_location location)
-  | Long_identifier_name { location; _ } ->
-      Printf.sprintf "%s is too long" (format_location location)
+  | Long_identifier_name { name; location; underscore_count; _ } ->
+      Printf.sprintf "%s: '%s' has too many underscores (%d)" (format_location location) name underscore_count
   | _ -> ""
 
 let format v =

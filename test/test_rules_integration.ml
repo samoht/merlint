@@ -3,7 +3,7 @@ open Merlint
 (* Test the complete rules system with real OCaml code *)
 
 let test_analyze_simple_file () =
-  (* Create a temporary file with violations *)
+  (* Create a temporary file with issues *)
   let temp_file = Filename.temp_file "merlint_test" ".ml" in
   let oc = open_out temp_file in
   output_string oc "let test_obj_magic x = Obj.magic x\n";
@@ -11,11 +11,11 @@ let test_analyze_simple_file () =
 
   let config = Config.default in
   match Merlin_interface.analyze_file config temp_file with
-  | Ok violations ->
+  | Ok issues ->
       let has_obj_magic =
         List.exists
           (function Issue.No_obj_magic _ -> true | _ -> false)
-          violations
+          issues
       in
       Alcotest.check Alcotest.bool "detects Obj.magic" true has_obj_magic;
       Sys.remove temp_file
@@ -23,8 +23,8 @@ let test_analyze_simple_file () =
       Sys.remove temp_file;
       Alcotest.fail ("Analysis failed: " ^ msg)
 
-let test_no_violations_on_clean_code () =
-  (* Create a temporary file without violations *)
+let no_issues_clean_code () =
+  (* Create a temporary file without issues *)
   let temp_file = Filename.temp_file "merlint_test" ".ml" in
   let oc = open_out temp_file in
   output_string oc "let add x y = x + y\n";
@@ -32,10 +32,10 @@ let test_no_violations_on_clean_code () =
 
   let config = Config.default in
   match Merlin_interface.analyze_file config temp_file with
-  | Ok violations ->
-      let violation_count = List.length violations in
-      (* Should only have format violations (missing .mli, .ocamlformat) *)
-      Alcotest.check Alcotest.bool "has few violations" (violation_count <= 2)
+  | Ok issues ->
+      let violation_count = List.length issues in
+      (* Should only have format issues (missing .mli, .ocamlformat) *)
+      Alcotest.check Alcotest.bool "has few issues" (violation_count <= 2)
         true;
       Sys.remove temp_file
   | Error msg ->
@@ -44,9 +44,9 @@ let test_no_violations_on_clean_code () =
 
 let tests =
   [
-    Alcotest.test_case "analyze_with_violations" `Quick test_analyze_simple_file;
+    Alcotest.test_case "analyze_with_issues" `Quick test_analyze_simple_file;
     Alcotest.test_case "analyze_clean_code" `Quick
-      test_no_violations_on_clean_code;
+      no_issues_clean_code;
   ]
 
 let suite = [ ("rules_integration", tests) ]
