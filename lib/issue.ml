@@ -74,93 +74,56 @@ type t =
       suggestion : string;
     }
 
-let format_location loc = Printf.sprintf "%s:%d:%d" loc.file loc.line loc.col
+let pp_location ppf loc = Fmt.pf ppf "%s:%d:%d" loc.file loc.line loc.col
 
-let format_complexity v =
-  match v with
+
+let pp ppf = function
   | Complexity_exceeded { name; location; complexity; threshold } ->
-      Printf.sprintf
-        "%s: Function '%s' has cyclomatic complexity of %d (threshold: %d)"
-        (format_location location) name complexity threshold
+      Fmt.pf ppf "%a: Function '%s' has cyclomatic complexity of %d (threshold: %d)"
+        pp_location location name complexity threshold
   | Function_too_long { name; location; length; threshold } ->
-      Printf.sprintf "%s: Function '%s' is %d lines long (threshold: %d)"
-        (format_location location) name length threshold
+      Fmt.pf ppf "%a: Function '%s' is %d lines long (threshold: %d)"
+        pp_location location name length threshold
   | Deep_nesting { name; location; depth; threshold } ->
-      Printf.sprintf "%s: Function '%s' has nesting depth of %d (threshold: %d)"
-        (format_location location) name depth threshold
-  | _ -> ""
-
-let format_naming v =
-  match v with
-  | Bad_variant_naming { variant; location; expected } ->
-      Printf.sprintf "%s: Variant '%s' should be '%s'"
-        (format_location location) variant expected
-  | Bad_module_naming { module_name; location; expected } ->
-      Printf.sprintf "%s: Module '%s' should be '%s'" (format_location location)
-        module_name expected
-  | Bad_value_naming { value_name; location; expected } ->
-      Printf.sprintf "%s: Value '%s' should be '%s'" (format_location location)
-        value_name expected
-  | Bad_type_naming { type_name; location; message } ->
-      Printf.sprintf "%s: Type '%s' %s" (format_location location) type_name
-        message
-  | Bad_function_naming { function_name; location; suggestion } ->
-      Printf.sprintf
-        "%s: Function '%s' should use '%s' (get_* for extraction, find_* for \
-         search)"
-        (format_location location) function_name suggestion
-  | _ -> ""
-
-let format_doc v =
-  match v with
-  | Missing_mli_doc { module_name; file } ->
-      Printf.sprintf "%s:1:0: Module '%s' missing documentation comment" file
-        module_name
-  | Missing_value_doc { value_name; location } ->
-      Printf.sprintf "%s: Value '%s' missing documentation"
-        (format_location location) value_name
-  | Bad_doc_style { value_name; location; message } ->
-      Printf.sprintf "%s: Value '%s' documentation issue: %s"
-        (format_location location) value_name message
-  | Missing_standard_function { module_name; type_name; missing; file } ->
-      Printf.sprintf
-        "%s: Module '%s' with type '%s' missing standard functions: %s" file
-        module_name type_name
-        (String.concat ", " missing)
-  | _ -> ""
-
-let format_style v =
-  match v with
+      Fmt.pf ppf "%a: Function '%s' has nesting depth of %d (threshold: %d)"
+        pp_location location name depth threshold
   | No_obj_magic { location } ->
-      Printf.sprintf "%s: Never use Obj.magic" (format_location location)
+      Fmt.pf ppf "%a: Never use Obj.magic" pp_location location
   | Catch_all_exception { location } ->
-      Printf.sprintf "%s: Avoid catch-all exception handler"
-        (format_location location)
+      Fmt.pf ppf "%a: Avoid catch-all exception handler" pp_location location
   | Use_str_module { location } ->
-      Printf.sprintf "%s: Use Re module instead of Str"
-        (format_location location)
+      Fmt.pf ppf "%a: Use Re module instead of Str" pp_location location
   | Use_printf_module { location; module_used } ->
-      Printf.sprintf "%s: Use Fmt module instead of %s"
-        (format_location location) module_used
-  | Missing_ocamlformat_file { location = _ } ->
-      Printf.sprintf
-        "(project): Missing .ocamlformat file for consistent formatting"
+      Fmt.pf ppf "%a: Use Fmt module instead of %s" pp_location location module_used
+  | Bad_variant_naming { variant; location; expected } ->
+      Fmt.pf ppf "%a: Variant '%s' should be '%s'" pp_location location variant expected
+  | Bad_module_naming { module_name; location; expected } ->
+      Fmt.pf ppf "%a: Module '%s' should be '%s'" pp_location location module_name expected
+  | Bad_value_naming { value_name; location; expected } ->
+      Fmt.pf ppf "%a: Value '%s' should be '%s'" pp_location location value_name expected
+  | Bad_type_naming { type_name; location; message } ->
+      Fmt.pf ppf "%a: Type '%s' %s" pp_location location type_name message
+  | Bad_function_naming { function_name; location; suggestion } ->
+      Fmt.pf ppf "%a: Function '%s' should use '%s' (get_* for extraction, find_* for search)"
+        pp_location location function_name suggestion
+  | Missing_mli_doc { module_name; file } ->
+      Fmt.pf ppf "%s:1:0: Module '%s' missing documentation comment" file module_name
+  | Missing_value_doc { value_name; location } ->
+      Fmt.pf ppf "%a: Value '%s' missing documentation" pp_location location value_name
+  | Bad_doc_style { value_name; location; message } ->
+      Fmt.pf ppf "%a: Value '%s' documentation issue: %s" pp_location location value_name message
+  | Missing_standard_function { module_name; type_name; missing; file } ->
+      Fmt.pf ppf "%s: Module '%s' with type '%s' missing standard functions: %a"
+        file module_name type_name Fmt.(list ~sep:(any ", ") string) missing
+  | Missing_ocamlformat_file _ ->
+      Fmt.pf ppf "(project): Missing .ocamlformat file for consistent formatting"
   | Missing_mli_file { location; _ } ->
-      Printf.sprintf "%s: missing interface file" (format_location location)
+      Fmt.pf ppf "%a: missing interface file" pp_location location
   | Long_identifier_name { name; location; underscore_count; _ } ->
-      Printf.sprintf "%s: '%s' has too many underscores (%d)"
-        (format_location location) name underscore_count
-  | _ -> ""
+      Fmt.pf ppf "%a: '%s' has too many underscores (%d)"
+        pp_location location name underscore_count
 
-let format v =
-  let result = format_complexity v in
-  if result <> "" then result
-  else
-    let result = format_naming v in
-    if result <> "" then result
-    else
-      let result = format_doc v in
-      if result <> "" then result else format_style v
+let format v = Fmt.str "%a" pp v
 
 let rec take n lst =
   if n <= 0 then []

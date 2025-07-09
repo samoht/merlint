@@ -79,7 +79,11 @@ type t =
       suggestion : string;
     }
 
+val pp : t Fmt.t
+(** Pretty-printer for issues *)
+
 val format : t -> string
+(** [Deprecated] Use pp instead *)
 
 val get_issue_type : t -> string
 (** Get a string identifier for the issue type *)
