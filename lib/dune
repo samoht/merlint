@@ -1,4 +1,4 @@
 (library
  (public_name merlint)
  (name merlint)
- (libraries yojson unix re))
+ (libraries yojson unix re logs fmt))

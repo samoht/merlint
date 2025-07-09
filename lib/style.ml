@@ -50,7 +50,27 @@ let extract_location_from_match text pos =
       else find_location_backwards (i - 1)
     else find_location_backwards (i - 1)
   in
-  find_location_backwards (min pos (String.length text - 1))
+  
+  (* Also look forward from pos to find the location *)
+  let rec find_location_forward i =
+    if i >= String.length text then None
+    else if text.[i] = '(' then
+      (* Found a potential location start *)
+      let location_end = 
+        try String.index_from text i ']' 
+        with Not_found -> -1 
+      in
+      if location_end > i then
+        let location_str = String.sub text i (location_end - i + 1) in
+        extract_location_from_parsetree location_str
+      else find_location_forward (i + 1)
+    else find_location_forward (i + 1)
+  in
+  
+  (* Try backwards first, then forward *)
+  match find_location_backwards (min pos (String.length text - 1)) with
+  | Some loc -> Some loc
+  | None -> find_location_forward pos
 
 (* Extract location for a specific line containing text *)
 let extract_location_near text search_text =

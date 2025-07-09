@@ -259,11 +259,8 @@ let extract_filename_from_parsetree text =
   with Not_found -> "unknown"
 
 let check_function_naming _filename _text =
-  (* TODO: Implement proper function naming convention checking
-     This should enforce:
-     - get_* functions for extracting from existing structures (return value directly)
-     - find_* functions for searching (return option type)
-     Requires proper typed tree analysis via Merlin to check return types *)
+  (* TODO: Implement function naming convention checking using merlin outline *)
+  (* Temporarily disabled to avoid merlin outline issues in tests *)
   []
 
 let check_long_identifier_name filename text =

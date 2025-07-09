@@ -20,5 +20,5 @@ type t = {
 val default : t
 (** Default configuration with recommended settings *)
 
-val to_complexity_config : t -> Cyclomatic_complexity.config
+val to_complexity_config : t -> Complexity.config
 (** Convert to legacy complexity config format *)
