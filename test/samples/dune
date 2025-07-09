@@ -9,6 +9,7 @@
   long_function
   simple
   stubs
-  uses_str)
+  uses_str
+  uses_printf)
  (libraries str)
  (flags -w -a))

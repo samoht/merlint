@@ -239,6 +239,46 @@ Test style rules - Str module
        3. Replace Str.string_match with Re.execp
   [1]
 
+Test Printf/Format module usage
+  $ merlint samples/uses_printf.ml
+  Running merlint analysis...
+  
+  Analyzing 1 files
+  
+  ✓ Code Quality (0 total issues)
+  ✗ Code Style (4 total issues)
+    ✗ Style rules (no Obj.magic, no Str, no catch-all) (4 issues)
+      uses_printf.ml:2:2: Use Fmt module instead of Printf
+      uses_printf.ml:3:2: Use Fmt module instead of Printf
+      uses_printf.ml:6:2: Use Fmt module instead of Format
+      uses_printf.ml:7:2: Use Fmt module instead of Format
+  ✓ Naming Conventions (0 total issues)
+  ✓ Documentation (0 total issues)
+  ✗ Project Structure (1 total issues)
+    ✗ Format rules (.ocamlformat, .mli files) (1 issues)
+      samples/uses_printf.ml:1:1: missing interface file
+  
+  Summary: ✗ 5 total issues
+  ✗ Some checks failed. See details above.
+  
+  💡 Fix hints:
+  
+    • Create these interface files:
+       Create samples/uses_printf.mli (copy public signatures from samples/uses_printf.ml)
+  
+    • Create file '.ocamlformat' in project root with:
+       profile = default
+       version = 0.26.1
+  
+    • Replace Printf/Format module usage with Fmt:
+       1. Add 'fmt' to your dune dependencies: (libraries ... fmt)
+       2. Replace Printf.printf with Fmt.pr
+       3. Replace Printf.sprintf with Fmt.str
+       4. Replace Format.printf with Fmt.pr
+       5. Replace Format.asprintf with Fmt.str
+       Example: Fmt.pr "Hello %s!@." name
+  [1]
+
 Test catch-all exception handler
   $ merlint samples/catch_all.ml
   Running merlint analysis...

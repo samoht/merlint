@@ -43,6 +43,7 @@ type t =
     }
   | Catch_all_exception of { location : location }
   | Use_str_module of { location : location }
+  | Use_printf_module of { location : location; module_used : string }
   | Deep_nesting of {
       name : string;
       location : location;
@@ -138,6 +139,9 @@ let format_style v =
   | Use_str_module { location } ->
       Printf.sprintf "%s: Use Re module instead of Str"
         (format_location location)
+  | Use_printf_module { location; module_used } ->
+      Printf.sprintf "%s: Use Fmt module instead of %s"
+        (format_location location) module_used
   | Missing_ocamlformat_file { location = _ } ->
       Printf.sprintf
         "(project): Missing .ocamlformat file for consistent formatting"
@@ -169,6 +173,7 @@ let get_issue_type = function
   | No_obj_magic _ -> "no_obj_magic"
   | Catch_all_exception _ -> "catch_all_exception"
   | Use_str_module _ -> "use_str_module"
+  | Use_printf_module _ -> "use_printf_module"
   | Bad_variant_naming _ -> "bad_variant_naming"
   | Bad_module_naming _ -> "bad_module_naming"
   | Bad_value_naming _ -> "bad_value_naming"
@@ -268,6 +273,15 @@ let find_grouped_hint issue_type issues =
         \     1. Add 're' to your dune dependencies: (libraries ... re)\n\
         \     2. Replace Str.regexp with Re.compile (Re.str ...)\n\
         \     3. Replace Str.string_match with Re.execp"
+  | "use_printf_module" ->
+      Some
+        "Replace Printf/Format module usage with Fmt:\n\
+        \     1. Add 'fmt' to your dune dependencies: (libraries ... fmt)\n\
+        \     2. Replace Printf.printf with Fmt.pr\n\
+        \     3. Replace Printf.sprintf with Fmt.str\n\
+        \     4. Replace Format.printf with Fmt.pr\n\
+        \     5. Replace Format.asprintf with Fmt.str\n\
+        \     Example: Fmt.pr \"Hello %s!@.\" name"
   | "bad_variant_naming" ->
       hint_for_renames issue_type
         (function
@@ -421,7 +435,7 @@ let find_grouped_hint issue_type issues =
 let priority = function
   | No_obj_magic _ | Catch_all_exception _ -> 1
   | Complexity_exceeded _ | Deep_nesting _ | Function_too_long _ -> 2
-  | Use_str_module _ | Bad_variant_naming _ | Missing_mli_file _
+  | Use_str_module _ | Use_printf_module _ | Bad_variant_naming _ | Missing_mli_file _
   | Bad_module_naming _ | Bad_value_naming _ | Bad_type_naming _
   | Long_identifier_name _ | Bad_function_naming _ ->
       3
@@ -441,6 +455,7 @@ let find_location = function
   | Bad_type_naming { location; _ }
   | Catch_all_exception { location }
   | Use_str_module { location }
+  | Use_printf_module { location; _ }
   | Deep_nesting { location; _ }
   | Missing_ocamlformat_file { location }
   | Missing_mli_file { location; _ }
