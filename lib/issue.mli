@@ -5,6 +5,27 @@
 
 type location = { file : string; line : int; col : int }
 
+type issue_type =
+  | Complexity_issue
+  | Function_length_issue
+  | Deep_nesting_issue
+  | Obj_magic_issue
+  | Catch_all_exception_issue
+  | Str_module_issue
+  | Printf_module_issue
+  | Variant_naming_issue
+  | Module_naming_issue
+  | Value_naming_issue
+  | Type_naming_issue
+  | Long_identifier_issue
+  | Function_naming_issue
+  | Missing_mli_doc_issue
+  | Missing_value_doc_issue
+  | Bad_doc_style_issue
+  | Missing_standard_function_issue
+  | Missing_ocamlformat_file_issue
+  | Missing_mli_file_issue
+
 type t =
   | Complexity_exceeded of {
       name : string;
@@ -85,10 +106,10 @@ val pp : t Fmt.t
 val format : t -> string
 (** [Deprecated] Use pp instead *)
 
-val get_issue_type : t -> string
-(** Get a string identifier for the issue type *)
+val get_issue_type : t -> issue_type
+(** Get the issue type for an issue *)
 
-val find_grouped_hint : string -> t list -> string option
+val find_grouped_hint : issue_type -> t list -> string option
 (** Get a helpful hint for a group of issues of the same type *)
 
 val compare : t -> t -> int

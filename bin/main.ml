@@ -8,8 +8,7 @@ let setup_log ?style_renderer log_level =
   (* Setup logging with colors *)
   Fmt_tty.setup_std_outputs ?style_renderer ();
   Logs.set_level log_level;
-  Logs.set_reporter
-    (Logs_fmt.reporter ~dst:Format.err_formatter ~app:Fmt.stdout ())
+  Logs.set_reporter (Logs_fmt.reporter ~dst:Fmt.stderr ~app:Fmt.stdout ())
 
 let check_ocamlmerlin () =
   let cmd = "which ocamlmerlin > /dev/null 2>&1" in
@@ -153,17 +152,21 @@ let run_analysis project_root filtered_files =
     Fmt.pr "@.%s Fix hints:@." (Merlint.Report.print_color false "💡");
 
     (* Group issues by type and provide contextual hints *)
-    let module Issue_type_map = Map.Make (String) in
+    let module Issue_type_map = Map.Make (struct
+      type t = Merlint.Issue.issue_type
+
+      let compare = compare
+    end) in
     let issue_groups =
       List.fold_left
         (fun acc issue ->
-          let type_name = Merlint.Issue.get_issue_type issue in
+          let issue_type = Merlint.Issue.get_issue_type issue in
           let current =
-            match Issue_type_map.find_opt type_name acc with
+            match Issue_type_map.find_opt issue_type acc with
             | None -> []
             | Some issues -> issues
           in
-          Issue_type_map.add type_name (issue :: current) acc)
+          Issue_type_map.add issue_type (issue :: current) acc)
         Issue_type_map.empty all_issues
     in
 

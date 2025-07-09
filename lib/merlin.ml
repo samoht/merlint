@@ -12,8 +12,7 @@ type file_analysis = {
 
 let get_outline file =
   (* Ensure file exists before trying to analyze it *)
-  if not (Sys.file_exists file) then
-    Error (Fmt.str "File not found: %s" file)
+  if not (Sys.file_exists file) then Error (Fmt.str "File not found: %s" file)
   else
     let cmd =
       Fmt.str "ocamlmerlin single outline -filename %s < %s"
