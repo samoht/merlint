@@ -22,7 +22,7 @@ let check_mli_documentation filename =
     let result = check_first_non_empty () in
     close_in ic;
     result
-  with _ -> None
+  with Sys_error _ -> None
 
 let check_mli_files files =
   List.filter_map

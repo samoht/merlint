@@ -56,7 +56,7 @@ let extract_function_name kind_str =
       match String.index_opt full_name '/' with
       | Some idx -> Some (String.sub full_name 0 idx)
       | None -> Some full_name
-    with _ -> None
+    with Invalid_argument _ | Not_found -> None
   else None
 
 (* Count complexity in a browse tree *)

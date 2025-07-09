@@ -87,7 +87,7 @@ let extract_location_from_parsetree text =
     let line = int_of_string (Re.Group.get substrings 2) in
     let col = int_of_string (Re.Group.get substrings 3) in
     Some (line, col)
-  with _ -> None
+  with Not_found -> None
 
 let check_variant_in_parsetree filename text =
   (* Look for variant names in parsetree text like:
@@ -138,7 +138,7 @@ let check_variant_in_parsetree filename text =
           | None -> acc
         else acc)
       [] matches
-  with _ -> []
+  with Not_found -> []
 
 let check_value_in_parsetree filename text =
   (* Look for Ppat_var "valueName" in parsetree text *)
@@ -175,7 +175,7 @@ let check_value_in_parsetree filename text =
           | None -> acc
         else acc)
       [] matches
-  with _ -> []
+  with Not_found -> []
 
 let check_module_in_parsetree filename text =
   (* Look for Pstr_module "ModuleName" in parsetree text *)
@@ -209,7 +209,7 @@ let check_module_in_parsetree filename text =
             | None -> acc)
         | None -> acc)
       [] matches
-  with _ -> []
+  with Not_found -> []
 
 let check_type_in_parsetree filename text =
   (* Look for type definitions in parsetree text *)
@@ -243,7 +243,7 @@ let check_type_in_parsetree filename text =
           else None
         else None
     | None -> None
-  with _ -> None
+  with Not_found -> None
 
 let extract_filename_from_parsetree text =
   let filename_regex =
@@ -256,7 +256,7 @@ let extract_filename_from_parsetree text =
   try
     let substrings = Re.exec filename_regex text in
     Re.Group.get substrings 1
-  with _ -> "unknown"
+  with Not_found -> "unknown"
 
 let check_long_identifier_name filename text =
   let max_underscores = 3 in
@@ -288,7 +288,7 @@ let check_long_identifier_name filename text =
           | None -> acc
         else acc)
       [] matches
-  with _ -> []
+  with Not_found -> []
 
 let check_parsetree_line filename text =
   let violations = [] in

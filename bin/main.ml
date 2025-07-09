@@ -32,9 +32,9 @@ let find_files_in_dir ~suffix dir =
               else acc
             else if Filename.check_suffix item suffix then full_path :: acc
             else acc
-          with _ -> acc)
+          with Sys_error _ -> acc)
         acc items
-    with _ -> acc
+    with Sys_error _ -> acc
   in
   find_files [] dir
 
