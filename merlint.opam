@@ -16,6 +16,8 @@ depends: [
   "merlin"
   "re"
   "fpath"
+  "logs"
+  "fmt"
   "alcotest" {with-test}
   "odoc" {with-doc}
 ]

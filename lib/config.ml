@@ -37,7 +37,7 @@ let default =
 
 (* Convert to legacy config formats for existing modules *)
 let to_complexity_config (config : t) =
-  Cyclomatic_complexity.
+  Complexity.
     {
       max_complexity = config.max_complexity;
       max_function_length = config.max_function_length;

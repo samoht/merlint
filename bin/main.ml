@@ -1,5 +1,15 @@
 open Cmdliner
 
+let logs_src = Logs.Src.create "merlint" ~doc:"Merlint OCaml linter"
+module Log = (val Logs.src_log logs_src : Logs.LOG)
+
+let setup_log ?style_renderer log_level =
+  (* Setup logging with colors *)
+  Fmt_tty.setup_std_outputs ?style_renderer ();
+  Logs.set_level log_level;
+  Logs.set_reporter
+    (Logs_fmt.reporter ~dst:Format.err_formatter ~app:Fmt.stdout ())
+
 let check_ocamlmerlin () =
   let cmd = "which ocamlmerlin > /dev/null 2>&1" in
   match Unix.system cmd with Unix.WEXITED 0 -> true | _ -> false
@@ -64,11 +74,21 @@ let find_all_project_files ~suffix () =
   | None -> find_files_in_dir ~suffix (Sys.getcwd ())
 
 let analyze_with_merlin config file =
-  match Merlint.Merlin_interface.analyze_file config file with
-  | Ok issues -> issues
-  | Error msg ->
-      Printf.eprintf "Error analyzing %s: %s\n" file msg;
-      []
+  Log.debug (fun m -> m "Analyzing file: %s" file);
+  let project_root = Merlint.Rules.find_project_root file in
+  Log.debug (fun m -> m "Project root: %s" project_root);
+  let rules_config = Merlint.Rules.{ merlint_config = config; project_root } in
+  let category_reports = Merlint.Rules.analyze_project rules_config [ file ] in
+  let all_issues =
+    List.fold_left
+      (fun acc (_category_name, reports) ->
+        List.fold_left
+          (fun acc report -> report.Merlint.Report.issues @ acc)
+          acc reports)
+      [] category_reports
+  in
+  Log.debug (fun m -> m "Found %d issues in %s" (List.length all_issues) file);
+  all_issues
 
 
 let should_exclude_file file exclude_patterns =
@@ -113,22 +133,27 @@ let run_quiet_analysis config filtered_files =
     List.filter (String.ends_with ~suffix:".mli") filtered_files
   in
 
+  Log.info (fun m -> m "Analyzing %d ML files and %d MLI files" 
+    (List.length ml_files) (List.length mli_files));
+
   (* Run complexity and style checks on ML files *)
   let ml_issues = List.concat_map (analyze_with_merlin config) ml_files in
 
   (* Run documentation checks on MLI files *)
-  let doc_issues = Merlint.Doc_rules.check_mli_files mli_files in
+  let doc_issues = Merlint.Doc.check_mli_files mli_files in
 
   (* Sort and print issues *)
   let all_issues = ml_issues @ doc_issues in
   let sorted_issues = List.sort Merlint.Issue.compare all_issues in
 
+  Log.info (fun m -> m "Found %d total issues" (List.length sorted_issues));
   List.iter (fun v -> print_endline (Merlint.Issue.format v)) sorted_issues;
 
   if sorted_issues <> [] then exit 1
 
 let run_visual_analysis project_root filtered_files =
   let rules_config = Merlint.Rules.default_config project_root in
+  Log.info (fun m -> m "Starting visual analysis on %d files" (List.length filtered_files));
   let category_reports =
     Merlint.Rules.analyze_project rules_config filtered_files
   in
@@ -171,9 +196,11 @@ let analyze_files ?(quiet = false) ?(exclude_patterns = []) files =
   (* Find project root and all files *)
   let project_root =
     match files with
-    | file :: _ -> Merlint.Merlin_interface.find_project_root file
+    | file :: _ -> Merlint.Rules.find_project_root file
     | [] -> "."
   in
+
+  Log.info (fun m -> m "Project root: %s" project_root);
 
   let all_files =
     if files = [] then
@@ -181,6 +208,8 @@ let analyze_files ?(quiet = false) ?(exclude_patterns = []) files =
       @ find_all_project_files ~suffix:".mli" ()
     else expand_paths ~suffix:".ml" files @ expand_paths ~suffix:".mli" files
   in
+
+  Log.debug (fun m -> m "Found %d total files before filtering" (List.length all_files));
 
   (* Convert to relative paths *)
   let all_files = List.map make_relative_to_cwd all_files in
@@ -190,9 +219,15 @@ let analyze_files ?(quiet = false) ?(exclude_patterns = []) files =
     if exclude_patterns = [] then all_files
     else
       List.filter
-        (fun file -> not (should_exclude_file file exclude_patterns))
+        (fun file -> 
+          let excluded = should_exclude_file file exclude_patterns in
+          if excluded then Log.debug (fun m -> m "Excluding file: %s" file);
+          not excluded)
         all_files
   in
+
+  Log.info (fun m -> m "Analyzing %d files after exclusions" (List.length filtered_files));
+  List.iter (fun file -> Log.debug (fun m -> m "  - %s" file)) filtered_files;
 
   if quiet then run_quiet_analysis config filtered_files
   else run_visual_analysis project_root filtered_files
@@ -204,11 +239,11 @@ let files =
   in
   Arg.(value & pos_all string [] & info [] ~docv:"FILE|DIR" ~doc)
 
-let quiet_flag =
+let simple_flag =
   let doc =
-    "Use quiet mode with simple line-by-line output (default is visual mode)"
+    "Use simple line-by-line output instead of visual mode"
   in
-  Arg.(value & flag & info [ "quiet"; "q" ] ~doc)
+  Arg.(value & flag & info [ "simple" ] ~doc)
 
 let exclude_flag =
   let doc =
@@ -216,6 +251,10 @@ let exclude_flag =
      Supports simple glob patterns with * and path matching."
   in
   Arg.(value & opt_all string [] & info [ "exclude"; "e" ] ~docv:"PATTERN" ~doc)
+
+let log_level =
+  let env = Cmd.Env.info "MERLINT_VERBOSE" in
+  Logs_cli.level ~env ()
 
 let cmd =
   let doc = "Analyze OCaml code for style issues" in
@@ -237,15 +276,15 @@ let cmd =
   let info = Cmd.info "merlint" ~version:"0.1.0" ~doc ~man in
   Cmd.v info
     Term.(
-      const (fun quiet exclude_patterns files ->
+      const (fun style_renderer log_level simple exclude_patterns files ->
+          setup_log ?style_renderer log_level;
           if not (check_ocamlmerlin ()) then (
-            Printf.eprintf "Error: ocamlmerlin not found in PATH.\n\n";
-            Printf.eprintf "To fix this, run one of the following:\n";
-            Printf.eprintf "  1. eval $(opam env)  # If using opam\n";
-            Printf.eprintf
-              "  2. opam install merlin  # If merlin is not installed\n";
+            Log.err (fun m -> m "ocamlmerlin not found in PATH");
+            Log.err (fun m -> m "To fix this, run one of the following:");
+            Log.err (fun m -> m "  1. eval $(opam env)  # If using opam");
+            Log.err (fun m -> m "  2. opam install merlin  # If merlin is not installed");
             Stdlib.exit 1)
-          else analyze_files ~quiet ~exclude_patterns files)
-      $ quiet_flag $ exclude_flag $ files)
+          else analyze_files ~quiet:simple ~exclude_patterns files)
+      $ Fmt_cli.style_renderer () $ log_level $ simple_flag $ exclude_flag $ files)
 
 let () = Stdlib.exit (Cmd.eval cmd)

@@ -19,4 +19,6 @@
   merlin
   re
   fpath
+  logs
+  fmt
   (alcotest :with-test)))

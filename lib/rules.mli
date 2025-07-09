@@ -2,6 +2,9 @@
 
 type config = { merlint_config : Config.t; project_root : string }
 
+val find_project_root : string -> string
+(** [find_project_root file] finds the project root by looking for dune-project *)
+
 val default_config : string -> config
 (** [default_config project_root] creates default configuration *)
 

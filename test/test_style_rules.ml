@@ -2,7 +2,7 @@ open Merlint
 
 let extract_location_parsetree () =
   let text = "Pexp_ident \"Obj.magic\" (bad_style.ml[2,27+16]..[2,27+25])" in
-  match Style_rules.extract_location_from_parsetree text with
+  match Style.extract_location_from_parsetree text with
   | Some (line, col) ->
       Alcotest.check Alcotest.int "line" 2 line;
       Alcotest.check Alcotest.int "col" 16 col
@@ -10,12 +10,12 @@ let extract_location_parsetree () =
 
 let extract_filename_parsetree () =
   let text = "Pexp_ident \"Obj.magic\" (bad_style.ml[2,27+16]..[2,27+25])" in
-  let filename = Style_rules.extract_filename_from_parsetree text in
+  let filename = Style.extract_filename_from_parsetree text in
   Alcotest.check Alcotest.string "filename" "bad_style.ml" filename
 
 let test_check_obj_magic () =
   let text = "Pexp_ident \"Obj.magic\" (bad_style.ml[2,27+16]..[2,27+25])" in
-  let issues = Style_rules.check (`String text) in
+  let issues = Style.check (`String text) in
   Alcotest.check Alcotest.int "issue count" 1 (List.length issues);
   match issues with
   | [ Issue.No_obj_magic { location = { file; line; col } } ] ->
@@ -26,7 +26,7 @@ let test_check_obj_magic () =
 
 let test_check_str_module () =
   let text = "Pexp_ident \"Str.split\" (uses_str.ml[2,28+20]..[2,28+29])" in
-  let issues = Style_rules.check (`String text) in
+  let issues = Style.check (`String text) in
   Alcotest.check Alcotest.int "issue count" 1 (List.length issues);
   match issues with
   | [ Issue.Use_str_module { location = { file; line; col } } ] ->
@@ -68,7 +68,7 @@ let test_full_parsetree_sample () =
     ]
 ]|}
   in
-  let issues = Style_rules.check (`String sample_text) in
+  let issues = Style.check (`String sample_text) in
   Alcotest.check Alcotest.bool "has issues" true (List.length issues > 0)
 
 let tests =
