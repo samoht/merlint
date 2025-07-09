@@ -13,9 +13,7 @@ type stanza_info = {
 }
 
 let run_dune_describe project_root =
-  let cmd =
-    Fmt.str "cd %s && dune describe" (Filename.quote project_root)
-  in
+  let cmd = Fmt.str "cd %s && dune describe" (Filename.quote project_root) in
   Log.debug (fun m -> m "Running dune describe command: %s" cmd);
   let ic = Unix.open_process_in cmd in
   let rec read_all acc =
@@ -51,9 +49,7 @@ let ensure_project_built project_root =
   let build_dir = Filename.concat project_root "_build" in
   if not (Sys.file_exists build_dir) then (
     Log.info (fun m -> m "No _build directory found, running 'dune build'");
-    let cmd =
-      Fmt.str "cd %s && dune build" (Filename.quote project_root)
-    in
+    let cmd = Fmt.str "cd %s && dune build" (Filename.quote project_root) in
     match Unix.system cmd with
     | Unix.WEXITED 0 ->
         Log.info (fun m -> m "Successfully built project");

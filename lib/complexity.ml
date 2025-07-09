@@ -85,7 +85,8 @@ let rec count_complexity_in_node (json : Yojson.Safe.t) =
               else if String.starts_with ~prefix:"Texp_try" trimmed then acc + 1
               else acc)
             0 lines
-        else if kind = "case" then 1 (* Each case in a match adds complexity *)
+        else if kind = "case" then 0
+          (* Cases don't add complexity, only the match itself *)
         else 0
       in
 
@@ -113,36 +114,6 @@ let extract_child_function_name children =
           | _ -> None)
       | _ -> None)
   | _ -> None
-
-(* Count match cases in a node for complexity adjustment *)
-let count_match_cases (node : Yojson.Safe.t) =
-  let has_match = ref false in
-  let case_count = ref 0 in
-  let rec count_cases node =
-    match node with
-    | `Assoc items ->
-        let kind =
-          match List.assoc_opt "kind" items with
-          | Some (`String k) -> k
-          | _ -> ""
-        in
-        if String.contains kind '\n' then (
-          let lines = String.split_on_char '\n' kind in
-          if
-            List.exists
-              (fun l ->
-                String.contains (String.trim l) 'T'
-                && String.starts_with ~prefix:"Texp_match" (String.trim l))
-              lines
-          then has_match := true;
-          if kind = "case" then incr case_count;
-          match List.assoc_opt "children" items with
-          | Some (`List children) -> List.iter count_cases children
-          | _ -> ())
-    | _ -> ()
-  in
-  count_cases node;
-  (!has_match, !case_count)
 
 (* Calculate function length *)
 let calculate_function_length location end_line =
@@ -247,19 +218,10 @@ let analyze_value_binding config (binding_node : Yojson.Safe.t) =
             let length = calculate_function_length location end_line in
 
             (* Count complexity *)
-            let base_complexity = 1 + count_complexity_in_node binding_node in
-
-            (* Adjust for match expressions *)
-            let has_match, case_count = count_match_cases binding_node in
-            let adjusted_complexity =
-              if has_match && case_count > 1 then
-                base_complexity + case_count - 2
-              else base_complexity
-            in
+            let complexity = 1 + count_complexity_in_node binding_node in
 
             let nesting = calculate_nesting_depth binding_node in
-            create_issues config func_name location adjusted_complexity length
-              nesting
+            create_issues config func_name location complexity length nesting
         | _ -> [])
 
 (* Recursively analyze the browse tree *)

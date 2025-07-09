@@ -18,9 +18,8 @@ let print_color passed text = Fmt.str "%a" (pp_color passed) text
 
 let pp ppf report =
   let status = print_status report.passed in
-  Fmt.pf ppf "  %a %s (%d issues)@." 
-    (pp_color report.passed) status 
-    report.rule_name 
+  Fmt.pf ppf "  %a %s (%d issues)@." (pp_color report.passed) status
+    report.rule_name
     (List.length report.issues);
   (* Show detailed issues sorted by priority *)
   let sorted_issues = List.sort Issue.compare report.issues in
@@ -35,18 +34,16 @@ let pp_summary ppf reports =
     List.fold_left (fun acc report -> acc + List.length report.issues) 0 reports
   in
   let all_passed = List.for_all (fun report -> report.passed) reports in
-  
-  Fmt.pf ppf "@.Summary: %a %d total issues@."
-    (pp_color all_passed) (print_status all_passed)
-    total_issues;
-  
-  if all_passed then
-    Fmt.pf ppf "%a All checks passed!@." (pp_color true) "✓"
+
+  Fmt.pf ppf "@.Summary: %a %d total issues@." (pp_color all_passed)
+    (print_status all_passed) total_issues;
+
+  if all_passed then Fmt.pf ppf "%a All checks passed!@." (pp_color true) "✓"
   else
-    Fmt.pf ppf "%a Some checks failed. See details above.@." (pp_color false) "✗"
+    Fmt.pf ppf "%a Some checks failed. See details above.@." (pp_color false)
+      "✗"
 
 let print_detailed report = Fmt.pr "%a" pp report
-
 let print_summary reports = Fmt.pr "%a" pp_summary reports
 
 let get_all_issues reports =

@@ -18,12 +18,12 @@ Test simple functions with low complexity
   
   💡 Fix hints:
   
-    • Create these interface files:
-       Create samples/simple.mli (copy public signatures from samples/simple.ml)
-  
     • Create file '.ocamlformat' in project root with:
        profile = default
        version = 0.26.1
+  
+    • Create these interface files:
+       Create samples/simple.mli (copy public signatures from samples/simple.ml)
   [1]
 
 Test function with high cyclomatic complexity
@@ -32,9 +32,7 @@ Test function with high cyclomatic complexity
   
   Analyzing 1 files
   
-  ✗ Code Quality (1 total issues)
-    ✗ Complexity rules (complexity ≤10, length ≤50, nesting ≤3) (1 issues)
-      complex.ml:8:0: Function 'process_command' has cyclomatic complexity of 14 (threshold: 10)
+  ✓ Code Quality (0 total issues)
   ✓ Code Style (0 total issues)
   ✓ Naming Conventions (0 total issues)
   ✓ Documentation (0 total issues)
@@ -43,20 +41,17 @@ Test function with high cyclomatic complexity
       samples/complex.ml:1:1: missing interface file
       (project): Missing .ocamlformat file for consistent formatting
   
-  Summary: ✗ 3 total issues
+  Summary: ✗ 2 total issues
   ✗ Some checks failed. See details above.
   
   💡 Fix hints:
   
-    • Extract complex conditional logic from these functions into smaller helper functions:
-       complex.ml:8: function process_command
-  
-    • Create these interface files:
-       Create samples/complex.mli (copy public signatures from samples/complex.ml)
-  
     • Create file '.ocamlformat' in project root with:
        profile = default
        version = 0.26.1
+  
+    • Create these interface files:
+       Create samples/complex.mli (copy public signatures from samples/complex.ml)
   [1]
 
 Test long function detection
@@ -84,12 +79,12 @@ Test long function detection
     • Split these long functions by extracting logical sections into separate functions:
        long_function.ml:2: function very_long_function
   
-    • Create these interface files:
-       Create samples/long_function.mli (copy public signatures from samples/long_function.ml)
-  
     • Create file '.ocamlformat' in project root with:
        profile = default
        version = 0.26.1
+  
+    • Create these interface files:
+       Create samples/long_function.mli (copy public signatures from samples/long_function.ml)
   [1]
 
 Test naming conventions
@@ -118,21 +113,21 @@ Test naming conventions
   
   💡 Fix hints:
   
-    • Rename these values:
-       samples/bad_names.ml:4: let myFunction → let my_function
-       samples/bad_names.ml:9: let checkValue → let check_value
-  
     • Rename these variant constructors:
        samples/bad_names.ml:3: MyModule → My_module
        samples/bad_names.ml:7: WaitingForInput → Waiting_for_input
        samples/bad_names.ml:7: ProcessingData → Processing_data
   
-    • Create these interface files:
-       Create samples/bad_names.mli (copy public signatures from samples/bad_names.ml)
+    • Rename these values:
+       samples/bad_names.ml:4: let myFunction → let my_function
+       samples/bad_names.ml:9: let checkValue → let check_value
   
     • Create file '.ocamlformat' in project root with:
        profile = default
        version = 0.26.1
+  
+    • Create these interface files:
+       Create samples/bad_names.mli (copy public signatures from samples/bad_names.ml)
   [1]
 
 Test documentation rules
@@ -191,14 +186,14 @@ Test style rules - Obj.magic
   
   💡 Fix hints:
   
-    • Create these interface files:
-       Create samples/bad_style.mli (copy public signatures from samples/bad_style.ml)
+    • Replace all Obj.magic calls with proper type definitions. Define a variant type or use GADTs to represent the different cases safely.
   
     • Create file '.ocamlformat' in project root with:
        profile = default
        version = 0.26.1
   
-    • Replace all Obj.magic calls with proper type definitions. Define a variant type or use GADTs to represent the different cases safely.
+    • Create these interface files:
+       Create samples/bad_style.mli (copy public signatures from samples/bad_style.ml)
   [1]
 
 Test style rules - Str module
@@ -226,17 +221,17 @@ Test style rules - Str module
   
   💡 Fix hints:
   
-    • Create these interface files:
-       Create samples/uses_str.mli (copy public signatures from samples/uses_str.ml)
+    • Replace all Str module usage:
+       1. Add 're' to your dune dependencies: (libraries ... re)
+       2. Replace Str.regexp with Re.compile (Re.str ...)
+       3. Replace Str.string_match with Re.execp
   
     • Create file '.ocamlformat' in project root with:
        profile = default
        version = 0.26.1
   
-    • Replace all Str module usage:
-       1. Add 're' to your dune dependencies: (libraries ... re)
-       2. Replace Str.regexp with Re.compile (Re.str ...)
-       3. Replace Str.string_match with Re.execp
+    • Create these interface files:
+       Create samples/uses_str.mli (copy public signatures from samples/uses_str.ml)
   [1]
 
 Test Printf/Format module usage
@@ -264,13 +259,6 @@ Test Printf/Format module usage
   
   💡 Fix hints:
   
-    • Create these interface files:
-       Create samples/uses_printf.mli (copy public signatures from samples/uses_printf.ml)
-  
-    • Create file '.ocamlformat' in project root with:
-       profile = default
-       version = 0.26.1
-  
     • Replace Printf/Format module usage with Fmt:
        1. Add 'fmt' to your dune dependencies: (libraries ... fmt)
        2. Replace Printf.printf with Fmt.pr
@@ -278,6 +266,13 @@ Test Printf/Format module usage
        4. Replace Format.printf with Fmt.pr
        5. Replace Format.asprintf with Fmt.str
        Example: Fmt.pr "Hello %s!@." name
+  
+    • Create file '.ocamlformat' in project root with:
+       profile = default
+       version = 0.26.1
+  
+    • Create these interface files:
+       Create samples/uses_printf.mli (copy public signatures from samples/uses_printf.ml)
   [1]
 
 Test catch-all exception handler
@@ -300,10 +295,10 @@ Test catch-all exception handler
   
   💡 Fix hints:
   
-    • Create these interface files:
-       Create samples/catch_all.mli (copy public signatures from samples/catch_all.ml)
-  
     • Create file '.ocamlformat' in project root with:
        profile = default
        version = 0.26.1
+  
+    • Create these interface files:
+       Create samples/catch_all.mli (copy public signatures from samples/catch_all.ml)
   [1]
