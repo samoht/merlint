@@ -4,7 +4,7 @@
     catch-all exception handlers. *)
 
 val check : Yojson.Safe.t -> Issue.t list
-(** [check ast] analyzes the AST for style violations. *)
+(** [check ast] analyzes the AST for style issues. *)
 
 val extract_location_from_parsetree : string -> (int * int) option
 (** [extract_location_from_parsetree text] extracts line and column from

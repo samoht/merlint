@@ -218,7 +218,7 @@ let exclude_flag =
   Arg.(value & opt_all string [] & info [ "exclude"; "e" ] ~docv:"PATTERN" ~doc)
 
 let cmd =
-  let doc = "Analyze OCaml code for style violations" in
+  let doc = "Analyze OCaml code for style issues" in
   let man =
     [
       `S Manpage.s_description;

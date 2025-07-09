@@ -291,29 +291,29 @@ let check_long_identifier_name filename text =
   with Not_found -> []
 
 let check_parsetree_line filename text =
-  let violations = [] in
+  let issues = [] in
 
   (* Check for variant names *)
-  let variant_violations = check_variant_in_parsetree filename text in
+  let variant_issues = check_variant_in_parsetree filename text in
 
   (* Check for value names *)
-  let value_violations = check_value_in_parsetree filename text in
+  let value_issues = check_value_in_parsetree filename text in
 
   (* Check for module names *)
-  let module_violations = check_module_in_parsetree filename text in
+  let module_issues = check_module_in_parsetree filename text in
 
   (* Check for type names *)
-  let type_violations =
+  let type_issues =
     match check_type_in_parsetree filename text with
     | Some v -> [ v ]
     | None -> []
   in
 
   (* Check for long identifier names *)
-  let long_name_violations = check_long_identifier_name filename text in
+  let long_name_issues = check_long_identifier_name filename text in
 
-  violations @ variant_violations @ value_violations @ module_violations
-  @ type_violations @ long_name_violations
+  issues @ variant_issues @ value_issues @ module_issues
+  @ type_issues @ long_name_issues
 
 let check data =
   match data with
@@ -325,8 +325,8 @@ let check data =
         (fun acc line ->
           let trimmed = String.trim line in
           if trimmed <> "" then
-            let violations = check_parsetree_line filename trimmed in
-            violations @ acc
+            let issues = check_parsetree_line filename trimmed in
+            issues @ acc
           else acc)
         [] lines
   | `List items ->

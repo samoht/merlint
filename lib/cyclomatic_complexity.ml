@@ -182,10 +182,10 @@ let rec calculate_nesting_depth (json : Yojson.Safe.t) =
       if is_nesting_node then 1 + children_depth else children_depth
   | _ -> 0
 
-(* Create violations based on thresholds *)
-let create_violations config func_name location complexity length nesting =
-  let violations = [] in
-  let violations =
+(* Create issues based on thresholds *)
+let create_issues config func_name location complexity length nesting =
+  let issues = [] in
+  let issues =
     if complexity > config.max_complexity then
       Issue.Complexity_exceeded
         {
@@ -194,10 +194,10 @@ let create_violations config func_name location complexity length nesting =
           complexity;
           threshold = config.max_complexity;
         }
-      :: violations
-    else violations
+      :: issues
+    else issues
   in
-  let violations =
+  let issues =
     if length > config.max_function_length then
       Issue.Function_too_long
         {
@@ -206,10 +206,10 @@ let create_violations config func_name location complexity length nesting =
           length;
           threshold = config.max_function_length;
         }
-      :: violations
-    else violations
+      :: issues
+    else issues
   in
-  let violations =
+  let issues =
     if nesting > config.max_nesting then
       Issue.Deep_nesting
         {
@@ -218,10 +218,10 @@ let create_violations config func_name location complexity length nesting =
           depth = nesting;
           threshold = config.max_nesting;
         }
-      :: violations
-    else violations
+      :: issues
+    else issues
   in
-  violations
+  issues
 
 (* Analyze a value binding node *)
 let analyze_value_binding config (binding_node : Yojson.Safe.t) =
@@ -258,7 +258,7 @@ let analyze_value_binding config (binding_node : Yojson.Safe.t) =
             in
 
             let nesting = calculate_nesting_depth binding_node in
-            create_violations config func_name location adjusted_complexity
+            create_issues config func_name location adjusted_complexity
               length nesting
         | _ -> [])
 
@@ -271,19 +271,19 @@ let rec analyze_browse_tree config (json : Yojson.Safe.t) =
       in
 
       (* Check if this is a value binding *)
-      let current_violations =
+      let current_issues =
         if kind = "value_binding" then analyze_value_binding config json else []
       in
 
       (* Recursively check children *)
-      let child_violations =
+      let child_issues =
         match List.assoc_opt "children" items with
         | Some (`List children) ->
             List.concat_map (analyze_browse_tree config) children
         | _ -> []
       in
 
-      current_violations @ child_violations
+      current_issues @ child_issues
   | _ -> []
 
 let analyze_browse_value config (json : Yojson.Safe.t) =
