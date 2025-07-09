@@ -26,7 +26,7 @@ let default =
     (* Naming defaults *)
     max_underscores_in_name = 3;
     min_name_length_underscore = 5;
-    (* Style defaults - all violations enabled *)
+    (* Style defaults - all issues enabled *)
     allow_obj_magic = false;
     allow_str_module = false;
     allow_catch_all_exceptions = false;

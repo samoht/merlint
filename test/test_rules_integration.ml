@@ -33,9 +33,9 @@ let no_issues_clean_code () =
   let config = Config.default in
   match Merlin_interface.analyze_file config temp_file with
   | Ok issues ->
-      let violation_count = List.length issues in
+      let issue_count = List.length issues in
       (* Should only have format issues (missing .mli, .ocamlformat) *)
-      Alcotest.check Alcotest.bool "has few issues" (violation_count <= 2)
+      Alcotest.check Alcotest.bool "has few issues" (issue_count <= 2)
         true;
       Sys.remove temp_file
   | Error msg ->

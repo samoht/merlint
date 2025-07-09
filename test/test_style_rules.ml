@@ -16,7 +16,7 @@ let extract_filename_parsetree () =
 let test_check_obj_magic () =
   let text = "Pexp_ident \"Obj.magic\" (bad_style.ml[2,27+16]..[2,27+25])" in
   let issues = Style_rules.check (`String text) in
-  Alcotest.check Alcotest.int "violation count" 1 (List.length issues);
+  Alcotest.check Alcotest.int "issue count" 1 (List.length issues);
   match issues with
   | [ Issue.No_obj_magic { location = { file; line; col } } ] ->
       Alcotest.check Alcotest.string "file" "bad_style.ml" file;
@@ -27,13 +27,13 @@ let test_check_obj_magic () =
 let test_check_str_module () =
   let text = "Pexp_ident \"Str.split\" (uses_str.ml[2,28+20]..[2,28+29])" in
   let issues = Style_rules.check (`String text) in
-  Alcotest.check Alcotest.int "violation count" 1 (List.length issues);
+  Alcotest.check Alcotest.int "issue count" 1 (List.length issues);
   match issues with
   | [ Issue.Use_str_module { location = { file; line; col } } ] ->
       Alcotest.check Alcotest.string "file" "uses_str.ml" file;
       Alcotest.check Alcotest.int "line" 2 line;
       Alcotest.check Alcotest.int "col" 20 col
-  | _ -> Alcotest.fail "Expected 1 Str module violation"
+  | _ -> Alcotest.fail "Expected 1 Str module issue"
 
 let test_full_parsetree_sample () =
   let sample_text =

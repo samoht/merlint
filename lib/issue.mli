@@ -1,6 +1,6 @@
 (** Violation types and formatting
 
-    This module defines the types for all possible violations that merlint can
+    This module defines the types for all possible issues that merlint can
     detect, along with functions to format them for output. *)
 
 type location = { file : string; line : int; col : int }
