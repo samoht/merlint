@@ -435,9 +435,9 @@ let find_grouped_hint issue_type issues =
 let priority = function
   | No_obj_magic _ | Catch_all_exception _ -> 1
   | Complexity_exceeded _ | Deep_nesting _ | Function_too_long _ -> 2
-  | Use_str_module _ | Use_printf_module _ | Bad_variant_naming _ | Missing_mli_file _
-  | Bad_module_naming _ | Bad_value_naming _ | Bad_type_naming _
-  | Long_identifier_name _ | Bad_function_naming _ ->
+  | Use_str_module _ | Use_printf_module _ | Bad_variant_naming _
+  | Missing_mli_file _ | Bad_module_naming _ | Bad_value_naming _
+  | Bad_type_naming _ | Long_identifier_name _ | Bad_function_naming _ ->
       3
   | Missing_mli_doc _ | Missing_value_doc _ | Bad_doc_style _
   | Missing_standard_function _ | Missing_ocamlformat_file _ ->

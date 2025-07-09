@@ -1,30 +1,34 @@
-# Development Scripts
+# Git Hook Setup Scripts
 
-This directory contains scripts to help with development setup and workflows.
+This directory contains scripts to set up git hooks for OCaml projects.
 
 ## setup-hooks.sh
 
-Sets up git hooks for the project. Run this after cloning the repository:
+This script installs pre-commit and commit-msg hooks that ensure code quality before commits.
+
+### What the hooks do:
+
+**Pre-commit hook:**
+1. **Dune build** - Ensures the project builds successfully
+2. **Dune fmt** - Checks and enforces code formatting
+3. **Dune test** - Runs all tests
+4. **Merlint** - Runs the project's own merlint linter (if available)
+5. **Prune** - Checks for unused code (if prune is installed)
+
+**Commit-msg hook:**
+- Checks for AI attributions in commit messages and rejects them
+
+### Installation
+
+Run from the project root:
 
 ```bash
 ./scripts/setup-hooks.sh
 ```
 
-This installs hooks that:
-1. **pre-commit**: Runs `dune fmt`, `dune build`, and `dune test`
-2. **prepare-commit-msg**: Detects special commit prefixes to allow failing tests
+### Notes
 
-### Committing Failing Tests
-
-If you need to commit code with intentionally failing tests (e.g., when adding a test for a bug that hasn't been fixed yet), use one of these commit prefixes:
-
-- `test!:` - For test changes that are expected to fail
-- `wip:` - For work-in-progress commits
-
-Examples:
-```bash
-git commit -m "test!: add failing test for complex history"
-git commit -m "wip: partial implementation of topological sort"
-```
-
-The hooks will detect these prefixes and allow the commit even if tests fail.
+- The hooks are installed in `.git/hooks/` which is not tracked by git
+- You need to run the setup script on each clone of the repository
+- To bypass the pre-commit hook in emergencies: `git commit --no-verify`
+- The script uses the project's own merlint via `dune exec -- merlint`
