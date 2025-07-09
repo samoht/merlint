@@ -48,6 +48,7 @@ type t =
     }
   | Catch_all_exception of { location : location }
   | Use_str_module of { location : location }
+  | Use_printf_module of { location : location; module_used : string }
   | Deep_nesting of {
       name : string;
       location : location;
