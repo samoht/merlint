@@ -7,7 +7,7 @@ type t = {
   max_nesting : int;
   (* Naming rules *)
   max_underscores_in_name : int;
-  min_name_length_for_underscore_check : int;
+  min_name_length_underscore : int;
   (* Style rules *)
   allow_obj_magic : bool;
   allow_str_module : bool;
@@ -25,7 +25,7 @@ let default =
     max_nesting = 3;
     (* Naming defaults *)
     max_underscores_in_name = 3;
-    min_name_length_for_underscore_check = 5;
+    min_name_length_underscore = 5;
     (* Style defaults - all violations enabled *)
     allow_obj_magic = false;
     allow_str_module = false;

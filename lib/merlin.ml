@@ -29,8 +29,6 @@ let run_merlin_dump_raw format file =
   | Unix.WSTOPPED n ->
       Error (Printf.sprintf "Merlin command was stopped by signal %d" n)
 
-let dump = run_merlin_dump_raw
-
 let dump_value format file =
   match run_merlin_dump_raw format file with
   | Ok json -> (

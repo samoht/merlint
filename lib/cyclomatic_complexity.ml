@@ -103,7 +103,7 @@ let rec count_complexity_in_node (json : Yojson.Safe.t) =
   | _ -> 0
 
 (* Extract function name from the first child of a value binding *)
-let extract_function_name_from_children children =
+let extract_child_function_name children =
   match children with
   | pattern :: _ -> (
       match pattern with
@@ -239,7 +239,7 @@ let analyze_value_binding config (binding_node : Yojson.Safe.t) =
           | _ -> []
         in
 
-        match extract_function_name_from_children children with
+        match extract_child_function_name children with
         | None -> []
         | Some func_name ->
             let location = extract_location binding_node in
