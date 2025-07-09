@@ -32,3 +32,4 @@ Run from the project root:
 - You need to run the setup script on each clone of the repository
 - To bypass the pre-commit hook in emergencies: `git commit --no-verify`
 - The script uses the project's own merlint via `dune exec -- merlint`
+- For the merlint project itself: Use `--no-verify` until we migrate from Printf to Fmt
