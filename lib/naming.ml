@@ -245,23 +245,96 @@ let check_type_in_parsetree filename text =
     | None -> None
   with Not_found -> None
 
-let extract_filename_from_parsetree text =
-  let filename_regex =
-    Re.compile
-      (Re.seq
-         [
-           Re.str "("; Re.group (Re.rep1 (Re.compl [ Re.char '[' ])); Re.str "[";
-         ])
-  in
-  try
-    let substrings = Re.exec filename_regex text in
-    Re.Group.get substrings 1
-  with Not_found -> "unknown"
 
-let check_function_naming _filename _text =
-  (* TODO: Implement function naming convention checking using merlin outline *)
-  (* Temporarily disabled to avoid merlin outline issues in tests *)
-  []
+(* Helper to extract string field from JSON *)
+let find_string_field name fields =
+  match List.assoc_opt name fields with
+  | Some (`String s) -> Some s
+  | _ -> None
+
+(* Helper to check if a type signature is a function type *)
+let is_function_type type_sig =
+  String.contains type_sig '-'
+
+(* Helper to extract return type from function signature *)
+let get_return_type type_sig =
+  (* Find the last -> in the type signature *)
+  try
+    let last_arrow = String.rindex type_sig '>' in
+    if last_arrow > 0 && type_sig.[last_arrow - 1] = '-' then
+      let return_start = last_arrow + 1 in
+      String.trim (String.sub type_sig return_start (String.length type_sig - return_start))
+    else type_sig
+  with Not_found -> type_sig
+
+(* Check if return type is an option *)
+let returns_option return_type =
+  String.ends_with ~suffix:" option" return_type ||
+  return_type = "option" ||
+  Re.execp (Re.compile (Re.str "option")) return_type
+
+(* Extract location from outline fields *)
+let extract_outline_location filename fields =
+  match List.assoc_opt "start" fields with
+  | Some (`Assoc pos_fields) ->
+      let line = match List.assoc_opt "line" pos_fields with
+        | Some (`Int l) -> l
+        | _ -> 1
+      in
+      let col = match List.assoc_opt "col" pos_fields with
+        | Some (`Int c) -> c
+        | _ -> 0
+      in
+      Some { Issue.file = filename; line; col }
+  | _ -> None
+
+(* Check a single function for naming issues *)
+let check_single_function _filename name kind type_sig location =
+  match name, kind, type_sig, location with
+  | Some n, Some "Value", Some ts, Some loc when is_function_type ts ->
+      let return_type = get_return_type ts in
+      let is_option = returns_option return_type in
+      
+      (* Check get_* functions or just 'get' *)
+      if (String.starts_with ~prefix:"get_" n || n = "get") && is_option then
+        Some (Issue.Bad_function_naming {
+          function_name = n;
+          location = loc;
+          suggestion = 
+            if n = "get" then "find"
+            else
+              let suffix = String.sub n 4 (String.length n - 4) in
+              "find_" ^ suffix
+        })
+      (* Check find_* functions or just 'find' *)
+      else if (String.starts_with ~prefix:"find_" n || n = "find") && not is_option then
+        Some (Issue.Bad_function_naming {
+          function_name = n;
+          location = loc;
+          suggestion = 
+            if n = "find" then "get"
+            else
+              let suffix = String.sub n 5 (String.length n - 5) in
+              "get_" ^ suffix
+        })
+      else None
+  | _ -> None
+
+let check_function_naming filename outline_opt =
+  match outline_opt with
+  | None -> []
+  | Some (`List items) ->
+      List.filter_map (fun item ->
+        match item with
+        | `Assoc fields ->
+            let name = find_string_field "name" fields in
+            let kind = find_string_field "kind" fields in
+            let type_sig = find_string_field "type" fields in
+            let location = extract_outline_location filename fields in
+            check_single_function filename name kind type_sig location
+        | _ -> None
+      ) items
+  | Some _ -> []
 
 let check_long_identifier_name filename text =
   let max_underscores = 3 in
@@ -317,25 +390,25 @@ let check_parsetree_line filename text =
   (* Check for long identifier names *)
   let long_name_issues = check_long_identifier_name filename text in
 
-  let function_naming_issues = check_function_naming filename text in
-
   issues @ variant_issues @ value_issues @ module_issues
-  @ type_issues @ long_name_issues @ function_naming_issues
+  @ type_issues @ long_name_issues
 
-let check data =
+let check ~filename ~outline data =
   match data with
   | `String text ->
       (* Split text by lines and check each line *)
       let lines = String.split_on_char '\n' text in
-      let filename = extract_filename_from_parsetree text in
-      List.fold_left
+      let line_issues = List.fold_left
         (fun acc line ->
           let trimmed = String.trim line in
           if trimmed <> "" then
             let issues = check_parsetree_line filename trimmed in
             issues @ acc
           else acc)
-        [] lines
+        [] lines in
+      (* Check function naming once for the whole file *)
+      let function_naming_issues = check_function_naming filename outline in
+      line_issues @ function_naming_issues
   | `List items ->
       (* This is the old browse format, keep for backward compatibility *)
       List.fold_left

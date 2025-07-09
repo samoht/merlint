@@ -3,12 +3,29 @@
 let src = Logs.Src.create "merlint.merlin" ~doc:"Merlin interface"
 module Log = (val Logs.src_log src : Logs.LOG)
 
+type file_analysis = {
+  browse: (Yojson.Safe.t, string) result;
+  parsetree: (Yojson.Safe.t, string) result;
+  outline: (Yojson.Safe.t, string) result;
+}
+
 let get_outline file =
-  let cmd = Printf.sprintf "ocamlmerlin single outline -filename %s < %s" (Filename.quote file) (Filename.quote file) in
-  Log.debug (fun m -> m "Running merlin outline command: %s" cmd);
-  try
+  (* Ensure file exists before trying to analyze it *)
+  if not (Sys.file_exists file) then
+    Error (Printf.sprintf "File not found: %s" file)
+  else
+    let cmd = Printf.sprintf "ocamlmerlin single outline -filename %s < %s" (Filename.quote file) (Filename.quote file) in
+    Log.info (fun m -> m "Running merlin outline command: %s" cmd);
+    try
     let ic = Unix.open_process_in cmd in
-    let content = really_input_string ic (in_channel_length ic) in
+    let rec read_all acc =
+      try
+        let line = input_line ic in
+        read_all (line :: acc)
+      with End_of_file -> List.rev acc
+    in
+    let lines = read_all [] in
+    let content = String.concat "\n" lines in
     let _ = Unix.close_process_in ic in
     Log.debug (fun m -> m "Merlin outline result length: %d chars" (String.length content));
     match Yojson.Safe.from_string content with
@@ -33,7 +50,7 @@ let run_merlin_dump_raw format file =
     Printf.sprintf "ocamlmerlin single dump -what %s -filename %s < %s" format
       (Filename.quote file) (Filename.quote file)
   in
-  Log.debug (fun m -> m "Running merlin dump command: %s" cmd);
+  Log.info (fun m -> m "Running merlin dump command: %s" cmd);
   let ic = Unix.open_process_in cmd in
   let rec read_all acc =
     try
@@ -74,3 +91,12 @@ let dump_value format file =
           | None -> Error "Failed to extract value from Merlin output")
       | _ -> Error "Invalid Merlin JSON format")
   | Error msg -> Error msg
+
+let analyze_file file =
+  (* Run all three merlin commands for the file *)
+  Log.info (fun m -> m "Analyzing file %s with merlin" file);
+  {
+    browse = dump_value "browse" file;
+    parsetree = dump_value "parsetree" file;
+    outline = get_outline file;
+  }
