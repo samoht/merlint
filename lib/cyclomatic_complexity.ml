@@ -1,22 +1,11 @@
-type config = { max_complexity : int; max_function_length : int }
+type config = {
+  max_complexity : int;
+  max_function_length : int;
+  max_nesting : int;
+}
 
-let default_config = { max_complexity = 10; max_function_length = 50 }
-
-type location = { file : string; line : int; col : int }
-
-type violation =
-  | ComplexityExceeded of {
-      name : string;
-      location : location;
-      complexity : int;
-      threshold : int;
-    }
-  | FunctionTooLong of {
-      name : string;
-      location : location;
-      length : int;
-      threshold : int;
-    }
+let default_config =
+  { max_complexity = 10; max_function_length = 50; max_nesting = 3 }
 
 (* Extract filename from JSON *)
 let extract_filename items =
@@ -40,7 +29,7 @@ let extract_location (json : Yojson.Safe.t) =
   match json with
   | `Assoc items ->
       {
-        file = extract_filename items;
+        Violation.file = extract_filename items;
         line = extract_start_position items "line";
         col = extract_start_position items "col";
       }
@@ -157,14 +146,49 @@ let count_match_cases (node : Yojson.Safe.t) =
 
 (* Calculate function length *)
 let calculate_function_length location end_line =
-  if end_line > location.line then end_line - location.line + 1 else 1
+  if end_line > location.Violation.line then
+    end_line - location.Violation.line + 1
+  else 1
+
+(* Calculate nesting depth *)
+let rec calculate_nesting_depth (json : Yojson.Safe.t) =
+  match json with
+  | `Assoc items ->
+      let kind =
+        match List.assoc_opt "kind" items with Some (`String k) -> k | _ -> ""
+      in
+      let lines =
+        if String.contains kind '\n' then String.split_on_char '\n' kind
+        else [ kind ]
+      in
+      let is_nesting_node =
+        List.exists
+          (fun line ->
+            let trimmed = String.trim line in
+            String.starts_with ~prefix:"Texp_ifthenelse" trimmed
+            || String.starts_with ~prefix:"Texp_match" trimmed
+            || String.starts_with ~prefix:"Texp_while" trimmed
+            || String.starts_with ~prefix:"Texp_for" trimmed
+            || String.starts_with ~prefix:"Texp_try" trimmed)
+          lines
+      in
+      let children_depth =
+        match List.assoc_opt "children" items with
+        | Some (`List children) ->
+            List.fold_left
+              (fun acc child -> max acc (calculate_nesting_depth child))
+              0 children
+        | _ -> 0
+      in
+      if is_nesting_node then 1 + children_depth else children_depth
+  | _ -> 0
 
 (* Create violations based on thresholds *)
-let create_violations config func_name location complexity length =
+let create_violations config func_name location complexity length nesting =
   let violations = [] in
   let violations =
     if complexity > config.max_complexity then
-      ComplexityExceeded
+      Violation.Complexity_exceeded
         {
           name = func_name;
           location;
@@ -176,12 +200,24 @@ let create_violations config func_name location complexity length =
   in
   let violations =
     if length > config.max_function_length then
-      FunctionTooLong
+      Violation.Function_too_long
         {
           name = func_name;
           location;
           length;
           threshold = config.max_function_length;
+        }
+      :: violations
+    else violations
+  in
+  let violations =
+    if nesting > config.max_nesting then
+      Violation.Deep_nesting
+        {
+          name = func_name;
+          location;
+          depth = nesting;
+          threshold = config.max_nesting;
         }
       :: violations
     else violations
@@ -222,8 +258,9 @@ let analyze_value_binding config (binding_node : Yojson.Safe.t) =
               else base_complexity
             in
 
+            let nesting = calculate_nesting_depth binding_node in
             create_violations config func_name location adjusted_complexity
-              length
+              length nesting
         | _ -> [])
 
 (* Recursively analyze the browse tree *)
@@ -258,13 +295,3 @@ let analyze_structure config (json : Yojson.Safe.t) =
           analyze_browse_tree config browse_tree
       | _ -> [])
   | _ -> []
-
-let format_violation = function
-  | ComplexityExceeded { name; location; complexity; threshold } ->
-      Printf.sprintf
-        "%s:%d:%d: Function '%s' has cyclomatic complexity of %d (threshold: \
-         %d)"
-        location.file location.line location.col name complexity threshold
-  | FunctionTooLong { name; location; length; threshold } ->
-      Printf.sprintf "%s:%d:%d: Function '%s' is %d lines long (threshold: %d)"
-        location.file location.line location.col name length threshold

@@ -1,45 +1,73 @@
-# Cyclomatic
+# Merlint
 
-OCaml cyclomatic complexity analyzer using Merlin.
+An opinionated OCaml linter that enforces modern OCaml coding conventions.
+
+## Features
+
+Merlint checks for:
+
+### Complexity
+- **Cyclomatic complexity**: Functions should have complexity ≤ 10
+- **Function length**: Functions should be ≤ 50 lines  
+- **Nesting depth**: Code should not nest deeper than 3 levels
+
+### Naming Conventions
+- **Modules**: Must use snake_case (e.g., `user_profile`)
+- **Variants**: Must use Snake_case (e.g., `Waiting_for_input`)
+- **Values/Functions**: Must use snake_case
+- **Types**: Must use snake_case (primary type should be `t`)
+
+### Documentation
+- **MLI files**: Must have module-level documentation comment
+
+### Code Style
+- **No Obj.magic**: Never use `Obj.magic`
+- **No catch-all**: Avoid `try ... with _ -> ...`
+- **Use Re not Str**: Use `Re` module instead of `Str` for regular expressions
 
 ## Installation
 
 ```bash
-opam install .
+opam install . --deps-only
+dune build
+dune install
 ```
 
 ## Usage
 
 ```bash
-# Analyze all .ml files in current dune project
-cyclomatic
+# Analyze entire project
+merlint
 
-# Analyze specific files
-cyclomatic file1.ml file2.ml
-
-# Analyze all .ml files in specific directories
-cyclomatic lib/ src/
+# Analyze specific files or directories
+merlint src/ lib/
+merlint src/parser.ml
 ```
 
-Options:
-- `--max-complexity N` (default: 10) - Maximum allowed cyclomatic complexity
-- `--max-length N` (default: 50) - Maximum allowed function length in lines
+## Example Output
 
-## Example
+```
+src/parser.ml:45:2: Function 'parse_expr' has cyclomatic complexity of 15 (threshold: 10)
+src/types.ml:12:4: Module 'myModule' should be 'my_module'
+src/utils.ml:33:8: Never use Obj.magic
+src/api.mli:1:0: Module 'api' missing documentation comment
+src/types.ml:8:2: Variant 'waitingForInput' should be 'Waiting_For_Input'
+```
+
+## Philosophy
+
+Merlint enforces best practices for OCaml development, focusing on:
+- Code clarity and maintainability
+- Consistent naming conventions
+- Proper documentation
+- Safe coding practices
+
+## Development
 
 ```bash
-# Check entire project with default thresholds
-cyclomatic
+# Run tests
+dune test
 
-# Check specific directory
-cyclomatic lib/
-
-# Check specific files with custom thresholds
-cyclomatic --max-complexity 15 --max-length 100 src/*.ml
+# Format code
+dune fmt
 ```
-
-The tool will exit with code 1 if any violations are found.
-
-Violations are sorted by priority:
-1. Complexity violations (highest complexity first)
-2. Length violations (longest functions first)

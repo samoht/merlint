@@ -1,22 +1,13 @@
-type config = { max_complexity : int; max_function_length : int }
+(** Cyclomatic complexity analysis
+
+    This module provides functions to analyze the cyclomatic complexity,
+    function length, and nesting depth of OCaml code using Merlin's AST. *)
+
+type config = {
+  max_complexity : int;
+  max_function_length : int;
+  max_nesting : int;
+}
 
 val default_config : config
-
-type location = { file : string; line : int; col : int }
-
-type violation =
-  | ComplexityExceeded of {
-      name : string;
-      location : location;
-      complexity : int;
-      threshold : int;
-    }
-  | FunctionTooLong of {
-      name : string;
-      location : location;
-      length : int;
-      threshold : int;
-    }
-
-val analyze_structure : config -> Yojson.Safe.t -> violation list
-val format_violation : violation -> string
+val analyze_structure : config -> Yojson.Safe.t -> Violation.t list

@@ -1,4 +1,9 @@
+(executable
+ (public_name test)
+ (name test)
+ (libraries merlint alcotest))
+
 (cram
  (deps
-  %{bin:cyclomatic}
+  %{bin:merlint}
   (source_tree samples)))

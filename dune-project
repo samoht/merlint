@@ -1,19 +1,21 @@
 (lang dune 3.0)
-(name cyclomatic)
+(name merlint)
 (generate_opam_files true)
 
 (package
- (name cyclomatic)
- (synopsis "OCaml cyclomatic complexity analyzer")
- (description "A tool to analyze OCaml source code and report functions that exceed complexity or length thresholds")
+ (name merlint)
+ (synopsis "OCaml linter enforcing project conventions")
+ (description "An opinionated OCaml linter that enforces modern OCaml coding conventions")
  (maintainers "Thomas Gazagnaire")
- (authors "Cyclomatic Authors")
+ (authors "Merlint Authors")
  (license "MIT")
- (homepage "https://github.com/example/cyclomatic")
- (bug_reports "https://github.com/example/cyclomatic/issues")
+ (homepage "https://github.com/samoht/merlint")
+ (bug_reports "https://github.com/samoht/merlint/issues")
  (depends
   ocaml
   dune
   yojson
   cmdliner
-  merlin))
+  merlin
+  re
+  (alcotest :with-test)))
