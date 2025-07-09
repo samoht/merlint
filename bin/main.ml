@@ -140,6 +140,62 @@ let should_exclude_file file exclude_patterns =
       && Re.execp (Re.compile (Re.str pattern_no_wildcards)) file)
     exclude_patterns
 
+let run_quiet_analysis config filtered_files =
+  let ml_files = List.filter (String.ends_with ~suffix:".ml") filtered_files in
+  let mli_files =
+    List.filter (String.ends_with ~suffix:".mli") filtered_files
+  in
+
+  (* Run complexity and style checks on ML files *)
+  let ml_issues = List.concat_map (analyze_with_merlin config) ml_files in
+
+  (* Run documentation checks on MLI files *)
+  let doc_issues = Merlint.Doc_rules.check_mli_files mli_files in
+
+  (* Sort and print issues *)
+  let all_issues = ml_issues @ doc_issues in
+  let sorted_issues = List.sort compare_issues all_issues in
+
+  List.iter (fun v -> print_endline (Merlint.Issue.format v)) sorted_issues;
+
+  if sorted_issues <> [] then exit 1
+
+let run_visual_analysis project_root filtered_files =
+  let rules_config = Merlint.Rules.default_config project_root in
+  let category_reports =
+    Merlint.Rules.analyze_project rules_config filtered_files
+  in
+
+  Printf.printf "Running merlint analysis...\n\n";
+  Printf.printf "Analyzing %d files\n\n" (List.length filtered_files);
+
+  let all_reports =
+    List.fold_left
+      (fun acc (category_name, reports) ->
+        let total_issues =
+          List.fold_left
+            (fun acc report -> acc + List.length report.Merlint.Report.issues)
+            0 reports
+        in
+        let category_passed =
+          List.for_all (fun report -> report.Merlint.Report.passed) reports
+        in
+
+        Printf.printf "%s %s (%d total issues)\n"
+          (Merlint.Report.print_color category_passed
+             (Merlint.Report.print_status category_passed))
+          category_name total_issues;
+
+        List.iter Merlint.Report.print_detailed reports;
+        reports @ acc)
+      [] category_reports
+  in
+
+  Merlint.Report.print_summary all_reports;
+
+  let all_issues = Merlint.Report.get_all_issues all_reports in
+  if all_issues <> [] then exit 1
+
 let analyze_files ?(quiet = false) ?(exclude_patterns = []) files =
   let config = Merlint.Config.default in
 
@@ -169,64 +225,8 @@ let analyze_files ?(quiet = false) ?(exclude_patterns = []) files =
         all_files
   in
 
-  if quiet then (
-    (* Quiet mode - keep existing behavior *)
-    let ml_files =
-      List.filter (String.ends_with ~suffix:".ml") filtered_files
-    in
-    let mli_files =
-      List.filter (String.ends_with ~suffix:".mli") filtered_files
-    in
-
-    (* Run complexity and style checks on ML files *)
-    let ml_issues = List.concat_map (analyze_with_merlin config) ml_files in
-
-    (* Run documentation checks on MLI files *)
-    let doc_issues = Merlint.Doc_rules.check_mli_files mli_files in
-
-    (* Sort and print issues *)
-    let all_issues = ml_issues @ doc_issues in
-    let sorted_issues = List.sort compare_issues all_issues in
-
-    List.iter (fun v -> print_endline (Merlint.Issue.format v)) sorted_issues;
-
-    if sorted_issues <> [] then exit 1)
-  else
-    (* Visual mode - default behavior *)
-    let rules_config = Merlint.Rules.default_config project_root in
-    let category_reports =
-      Merlint.Rules.analyze_project rules_config filtered_files
-    in
-
-    Printf.printf "Running merlint analysis...\n\n";
-    Printf.printf "Analyzing %d files\n\n" (List.length filtered_files);
-
-    let all_reports =
-      List.fold_left
-        (fun acc (category_name, reports) ->
-          let total_issues =
-            List.fold_left
-              (fun acc report -> acc + List.length report.Merlint.Report.issues)
-              0 reports
-          in
-          let category_passed =
-            List.for_all (fun report -> report.Merlint.Report.passed) reports
-          in
-
-          Printf.printf "%s %s (%d total issues)\n"
-            (Merlint.Report.print_color category_passed
-               (Merlint.Report.print_status category_passed))
-            category_name total_issues;
-
-          List.iter Merlint.Report.print_detailed reports;
-          reports @ acc)
-        [] category_reports
-    in
-
-    Merlint.Report.print_summary all_reports;
-
-    let all_issues = Merlint.Report.get_all_issues all_reports in
-    if all_issues <> [] then exit 1
+  if quiet then run_quiet_analysis config filtered_files
+  else run_visual_analysis project_root filtered_files
 
 let files =
   let doc =

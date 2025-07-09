@@ -62,7 +62,7 @@ let run_naming_rules _config files =
     ~passed:(!issues = []) ~issues:!issues ~file_count:!file_count
 
 let run_format_rules config files =
-  let issues = Format_rules.check_with_files config.project_root files in
+  let issues = Format_rules.check config.project_root files in
   Report.create ~rule_name:"Format rules (.ocamlformat, .mli files)"
     ~passed:(issues = []) ~issues ~file_count:1
 

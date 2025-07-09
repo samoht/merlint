@@ -1,3 +1,8 @@
+(** Report type and functions for displaying rule results. This module provides
+    types and functions for creating and displaying analysis reports with visual
+    feedback including color-coded status indicators and hierarchical issue
+    listings. *)
+
 type t = {
   rule_name : string;
   passed : bool;

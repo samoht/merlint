@@ -7,7 +7,7 @@ type t = {
   max_nesting : int;
   (* Naming rules *)
   max_underscores_in_name : int;
-  min_name_length_for_underscore_check : int;
+  min_name_length_underscore : int;
   (* Style rules *)
   allow_obj_magic : bool;
   allow_str_module : bool;

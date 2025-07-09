@@ -48,9 +48,9 @@ Test style rules - Str module
   samples/uses_str.ml:1:1: Missing interface file samples/uses_str.mli for samples/uses_str.ml
   uses_str.ml:2:31: Use Re module instead of Str
   uses_str.ml:2:20: Use Re module instead of Str
-  uses_str.ml:6:4: Avoid catch-all exception handler
   uses_str.ml:6:32: Use Re module instead of Str
   uses_str.ml:6:12: Use Re module instead of Str
+  uses_str.ml:6:4: Avoid catch-all exception handler
   [1]
 
 Test catch-all exception handler
