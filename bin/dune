@@ -1,4 +1,4 @@
 (executable
- (public_name cyclomatic)
+ (public_name merlint)
  (name main)
- (libraries cyclomatic cmdliner))
+ (libraries merlint cmdliner))

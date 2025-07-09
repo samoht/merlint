@@ -1,4 +1,4 @@
 (library
- (public_name cyclomatic)
- (name cyclomatic)
- (libraries yojson unix))
+ (public_name merlint)
+ (name merlint)
+ (libraries yojson unix re))
