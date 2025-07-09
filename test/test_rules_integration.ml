@@ -12,7 +12,9 @@ let test_analyze_simple_file () =
   let config = Config.default in
   let project_root = Merlint.Rules.get_project_root temp_file in
   let rules_config = Merlint.Rules.{ merlint_config = config; project_root } in
-  let category_reports = Merlint.Rules.analyze_project rules_config [ temp_file ] in
+  let category_reports =
+    Merlint.Rules.analyze_project rules_config [ temp_file ]
+  in
   let issues =
     List.fold_left
       (fun acc (_category_name, reports) ->
@@ -21,14 +23,12 @@ let test_analyze_simple_file () =
           acc reports)
       [] category_reports
   in
-  if true then
-      let has_obj_magic =
-        List.exists
-          (function Issue.No_obj_magic _ -> true | _ -> false)
-          issues
-      in
-      Alcotest.check Alcotest.bool "detects Obj.magic" true has_obj_magic;
-      Sys.remove temp_file
+  if true then (
+    let has_obj_magic =
+      List.exists (function Issue.No_obj_magic _ -> true | _ -> false) issues
+    in
+    Alcotest.check Alcotest.bool "detects Obj.magic" true has_obj_magic;
+    Sys.remove temp_file)
 
 let no_issues_clean_code () =
   (* Create a temporary file without issues *)
@@ -40,7 +40,9 @@ let no_issues_clean_code () =
   let config = Config.default in
   let project_root = Merlint.Rules.get_project_root temp_file in
   let rules_config = Merlint.Rules.{ merlint_config = config; project_root } in
-  let category_reports = Merlint.Rules.analyze_project rules_config [ temp_file ] in
+  let category_reports =
+    Merlint.Rules.analyze_project rules_config [ temp_file ]
+  in
   let issues =
     List.fold_left
       (fun acc (_category_name, reports) ->
@@ -57,8 +59,7 @@ let no_issues_clean_code () =
 let tests =
   [
     Alcotest.test_case "analyze_with_issues" `Quick test_analyze_simple_file;
-    Alcotest.test_case "analyze_clean_code" `Quick
-      no_issues_clean_code;
+    Alcotest.test_case "analyze_clean_code" `Quick no_issues_clean_code;
   ]
 
 let suite = [ ("rules_integration", tests) ]

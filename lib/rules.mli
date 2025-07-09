@@ -3,7 +3,8 @@
 type config = { merlint_config : Config.t; project_root : string }
 
 val get_project_root : string -> string
-(** [get_project_root file] finds the project root by looking for dune-project *)
+(** [get_project_root file] finds the project root by looking for dune-project
+*)
 
 val default_config : string -> config
 (** [default_config project_root] creates default configuration *)

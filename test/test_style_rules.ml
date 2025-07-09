@@ -73,10 +73,8 @@ let test_full_parsetree_sample () =
 
 let tests =
   [
-    Alcotest.test_case "location_extraction" `Quick
-      extract_location_parsetree;
-    Alcotest.test_case "filename_extraction" `Quick
-      extract_filename_parsetree;
+    Alcotest.test_case "location_extraction" `Quick extract_location_parsetree;
+    Alcotest.test_case "filename_extraction" `Quick extract_filename_parsetree;
     Alcotest.test_case "obj_magic_detection" `Quick test_check_obj_magic;
     Alcotest.test_case "str_module_detection" `Quick test_check_str_module;
     Alcotest.test_case "full_parsetree" `Quick test_full_parsetree_sample;
