@@ -12,12 +12,12 @@ let check_mli_documentation filename =
           let module_name =
             Filename.basename filename |> Filename.remove_extension
           in
-          Some (Violation.Missing_mli_doc { module_name; file = filename })
+          Some (Issue.Missing_mli_doc { module_name; file = filename })
       with End_of_file ->
         let module_name =
           Filename.basename filename |> Filename.remove_extension
         in
-        Some (Violation.Missing_mli_doc { module_name; file = filename })
+        Some (Issue.Missing_mli_doc { module_name; file = filename })
     in
     let result = check_first_non_empty () in
     close_in ic;

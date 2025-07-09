@@ -18,7 +18,7 @@ let test_check_obj_magic () =
   let violations = Style_rules.check (`String text) in
   Alcotest.check Alcotest.int "violation count" 1 (List.length violations);
   match violations with
-  | [ Violation.No_obj_magic { location = { file; line; col } } ] ->
+  | [ Issue.No_obj_magic { location = { file; line; col } } ] ->
       Alcotest.check Alcotest.string "file" "bad_style.ml" file;
       Alcotest.check Alcotest.int "line" 2 line;
       Alcotest.check Alcotest.int "col" 16 col
@@ -29,7 +29,7 @@ let test_check_str_module () =
   let violations = Style_rules.check (`String text) in
   Alcotest.check Alcotest.int "violation count" 1 (List.length violations);
   match violations with
-  | [ Violation.Use_str_module { location = { file; line; col } } ] ->
+  | [ Issue.Use_str_module { location = { file; line; col } } ] ->
       Alcotest.check Alcotest.string "file" "uses_str.ml" file;
       Alcotest.check Alcotest.int "line" 2 line;
       Alcotest.check Alcotest.int "col" 20 col

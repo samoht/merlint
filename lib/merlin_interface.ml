@@ -1,61 +1,29 @@
-let run_merlin_dump_raw format file =
-  let cmd =
-    Printf.sprintf "ocamlmerlin single dump -what %s -filename %s < %s" format
-      file file
+let find_project_root file =
+  (* Walk up directories to find project root (contains dune-project) *)
+  let rec find_root dir =
+    let dune_project = Filename.concat dir "dune-project" in
+    if Sys.file_exists dune_project then dir
+    else
+      let parent = Filename.dirname dir in
+      if parent = dir then dir (* reached filesystem root *)
+      else find_root parent
   in
-  let ic = Unix.open_process_in cmd in
-  let rec read_all acc =
-    try
-      let line = input_line ic in
-      read_all (line :: acc)
-    with End_of_file -> List.rev acc
+  let file_dir =
+    if Sys.is_directory file then file else Filename.dirname file
   in
-  let output = read_all [] in
-  let status = Unix.close_process_in ic in
-  match status with
-  | Unix.WEXITED 0 -> (
-      let json_str = String.concat "\n" output in
-      try Ok (Yojson.Safe.from_string json_str)
-      with Yojson.Json_error msg ->
-        Error (Printf.sprintf "Failed to parse Merlin JSON: %s" msg))
-  | Unix.WEXITED 127 ->
-      Error "ocamlmerlin not found. Please run: eval $(opam env)"
-  | Unix.WEXITED code ->
-      Error (Printf.sprintf "Merlin command failed with exit code %d" code)
-  | Unix.WSIGNALED n ->
-      Error (Printf.sprintf "Merlin command was killed by signal %d" n)
-  | Unix.WSTOPPED n ->
-      Error (Printf.sprintf "Merlin command was stopped by signal %d" n)
-
-let run_merlin_dump_with_format format file =
-  match run_merlin_dump_raw format file with
-  | Ok json -> (
-      match json with
-      | `Assoc fields -> (
-          match List.assoc_opt "value" fields with
-          | Some value -> Ok value
-          | None -> Error "Failed to extract value from Merlin output")
-      | _ -> Error "Invalid Merlin JSON format")
-  | Error msg -> Error msg
-
-let run_merlin_dump_full_json format file = run_merlin_dump_raw format file
+  find_root file_dir
 
 let analyze_file config file =
-  (* Use browse for complexity analysis (needs full JSON) *)
-  let complexity_violations =
-    match run_merlin_dump_full_json "browse" file with
-    | Ok full_json -> Cyclomatic_complexity.analyze_structure config full_json
-    | Error _ -> []
+  (* Create rules config with actual project root *)
+  let project_root = find_project_root file in
+  let rules_config = Rules.{ merlint_config = config; project_root } in
+  let category_reports = Rules.analyze_project rules_config [ file ] in
+  let all_issues =
+    List.fold_left
+      (fun acc (_category_name, reports) ->
+        List.fold_left
+          (fun acc report -> report.Report.issues @ acc)
+          acc reports)
+      [] category_reports
   in
-
-  (* Use parsetree for naming and style analysis (needs extracted value) *)
-  let naming_and_style_violations =
-    match run_merlin_dump_with_format "parsetree" file with
-    | Ok structure ->
-        let naming_violations = Naming_rules.check structure in
-        let style_violations = Style_rules.check structure in
-        naming_violations @ style_violations
-    | Error _ -> []
-  in
-
-  Ok (complexity_violations @ naming_and_style_violations)
+  Ok all_issues

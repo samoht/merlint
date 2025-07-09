@@ -60,5 +60,17 @@ type t =
       missing : string list;
       file : string;
     }
+  | Missing_ocamlformat_file of { location : location }
+  | Missing_mli_file of {
+      ml_file : string;
+      expected_mli : string;
+      location : location;
+    }
+  | Long_identifier_name of {
+      name : string;
+      location : location;
+      underscore_count : int;
+      threshold : int;
+    }
 
 val format : t -> string

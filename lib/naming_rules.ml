@@ -13,26 +13,42 @@ let to_snake_case name =
   convert [] (String.to_seq name |> List.of_seq)
 
 let check_variant_name name =
-  (* Variants should use Snake_case like Waiting_for_input *)
-  (* Check that each word after underscore is capitalized *)
-  let parts = String.split_on_char '_' name in
-  let is_valid =
-    List.for_all
-      (fun part -> String.length part > 0 && part.[0] >= 'A' && part.[0] <= 'Z')
-      parts
-  in
-  if not is_valid then
-    let expected =
-      List.map
-        (fun part ->
-          if String.length part > 0 then
-            String.capitalize_ascii (String.lowercase_ascii part)
-          else part)
-        parts
-      |> String.concat "_"
-    in
-    Some expected
-  else None
+  (* Variants should start with a capital letter *)
+  (* Multi-word variants should use underscores: Missing_mli_doc not MissingMliDoc *)
+  if String.length name = 0 then None
+  else if name.[0] < 'A' || name.[0] > 'Z' then
+    (* Must start with capital *)
+    Some (String.capitalize_ascii name)
+  else
+    (* Check for CamelCase that should use underscores *)
+    let has_lowercase_then_uppercase = ref false in
+    for i = 0 to String.length name - 2 do
+      if
+        name.[i] >= 'a'
+        && name.[i] <= 'z'
+        && name.[i + 1] >= 'A'
+        && name.[i + 1] <= 'Z'
+      then has_lowercase_then_uppercase := true
+    done;
+
+    if !has_lowercase_then_uppercase then (
+      (* Convert CamelCase to Snake_case (lowercase after underscore) *)
+      let result = ref "" in
+      for i = 0 to String.length name - 1 do
+        if
+          i > 0
+          && name.[i] >= 'A'
+          && name.[i] <= 'Z'
+          && i > 0
+          && name.[i - 1] >= 'a'
+          && name.[i - 1] <= 'z'
+        then
+          result :=
+            !result ^ "_" ^ String.make 1 (Char.lowercase_ascii name.[i])
+        else result := !result ^ String.make 1 name.[i]
+      done;
+      Some !result)
+    else None
 
 let check_value_name name =
   let expected = to_snake_case name in
@@ -52,13 +68,13 @@ let extract_location_from_parsetree text =
       (Re.seq
          [
            Re.str "(";
-           Re.group (Re.rep1 Re.alnum);
-           (* filename *)
+           Re.group (Re.rep1 (Re.compl [ Re.char '[' ]));
+           (* filename - may contain dots *)
            Re.str "[";
            Re.group (Re.rep1 Re.digit);
            (* line *)
            Re.str ",";
-           Re.rep Re.digit;
+           Re.rep1 Re.digit;
            (* offset *)
            Re.str "+";
            Re.group (Re.rep1 Re.digit);
@@ -74,36 +90,55 @@ let extract_location_from_parsetree text =
   with _ -> None
 
 let check_variant_in_parsetree filename text =
-  (* Look for Ppat_construct "VariantName" in parsetree text *)
+  (* Look for variant names in parsetree text like:
+     "WaitingForInput" (bad_names.ml[7,97+14]..[7,97+29])
+     These appear in type declarations with quotes around the name *)
   let variant_regex =
     Re.compile
       (Re.seq
          [
-           Re.str "Ppat_construct ";
            Re.str "\"";
            Re.group (Re.rep1 (Re.compl [ Re.char '"' ]));
-           Re.str "\"";
+           Re.str "\" (";
+           Re.group (Re.rep1 (Re.compl [ Re.char '[' ]));
+           (* filename *)
+           Re.str "[";
          ])
   in
   try
-    let substrings = Re.exec_opt variant_regex text in
-    match substrings with
-    | Some substrings -> (
-        let name = Re.Group.get substrings 1 in
-        match
-          (check_variant_name name, extract_location_from_parsetree text)
-        with
-        | Some expected, Some (line, col) ->
-            Some
-              (Violation.Bad_variant_naming
-                 {
-                   variant = name;
-                   location = { file = filename; line; col };
-                   expected;
-                 })
-        | _ -> None)
-    | None -> None
-  with _ -> None
+    let matches = Re.all ~pos:0 variant_regex text in
+    List.fold_left
+      (fun acc group ->
+        let name = Re.Group.get group 1 in
+        (* Only check names that look like variants (start with uppercase letter A-Z) *)
+        if
+          String.length name > 0
+          && name.[0] >= 'A'
+          && name.[0] <= 'Z'
+          && String.for_all
+               (fun c ->
+                 (c >= 'A' && c <= 'Z')
+                 || (c >= 'a' && c <= 'z')
+                 || (c >= '0' && c <= '9')
+                 || c = '_')
+               name
+        then
+          match check_variant_name name with
+          | Some expected -> (
+              match extract_location_from_parsetree text with
+              | Some (line, col) ->
+                  Issue.Bad_variant_naming
+                    {
+                      variant = name;
+                      location = { file = filename; line; col };
+                      expected;
+                    }
+                  :: acc
+              | None -> acc)
+          | None -> acc
+        else acc)
+      [] matches
+  with _ -> []
 
 let check_value_in_parsetree filename text =
   (* Look for Ppat_var "valueName" in parsetree text *)
@@ -118,22 +153,29 @@ let check_value_in_parsetree filename text =
          ])
   in
   try
-    let substrings = Re.exec_opt value_regex text in
-    match substrings with
-    | Some substrings -> (
-        let name = Re.Group.get substrings 1 in
-        match (check_value_name name, extract_location_from_parsetree text) with
-        | Some expected, Some (line, col) ->
-            Some
-              (Violation.Bad_value_naming
-                 {
-                   value_name = name;
-                   location = { file = filename; line; col };
-                   expected;
-                 })
-        | _ -> None)
-    | None -> None
-  with _ -> None
+    let matches = Re.all ~pos:0 value_regex text in
+    List.fold_left
+      (fun acc group ->
+        let name = Re.Group.get group 1 in
+        (* Skip single letter variables and common short names *)
+        if String.length name > 1 && name <> "x" && name <> "y" && name <> "v"
+        then
+          match check_value_name name with
+          | Some expected -> (
+              match extract_location_from_parsetree text with
+              | Some (line, col) ->
+                  Issue.Bad_value_naming
+                    {
+                      value_name = name;
+                      location = { file = filename; line; col };
+                      expected;
+                    }
+                  :: acc
+              | None -> acc)
+          | None -> acc
+        else acc)
+      [] matches
+  with _ -> []
 
 let check_module_in_parsetree filename text =
   (* Look for Pstr_module "ModuleName" in parsetree text *)
@@ -142,31 +184,32 @@ let check_module_in_parsetree filename text =
       (Re.seq
          [
            Re.str "Pstr_module";
-           Re.rep Re.space;
+           Re.rep1 Re.space;
            Re.str "\"";
            Re.group (Re.rep1 (Re.compl [ Re.char '"' ]));
            Re.str "\"";
          ])
   in
   try
-    let substrings = Re.exec_opt module_regex text in
-    match substrings with
-    | Some substrings -> (
-        let name = Re.Group.get substrings 1 in
-        match
-          (check_module_name name, extract_location_from_parsetree text)
-        with
-        | Some expected, Some (line, col) ->
-            Some
-              (Violation.Bad_module_naming
-                 {
-                   module_name = name;
-                   location = { file = filename; line; col };
-                   expected;
-                 })
-        | _ -> None)
-    | None -> None
-  with _ -> None
+    let matches = Re.all ~pos:0 module_regex text in
+    List.fold_left
+      (fun acc group ->
+        let name = Re.Group.get group 1 in
+        match check_module_name name with
+        | Some expected -> (
+            match extract_location_from_parsetree text with
+            | Some (line, col) ->
+                Issue.Bad_module_naming
+                  {
+                    module_name = name;
+                    location = { file = filename; line; col };
+                    expected;
+                  }
+                :: acc
+            | None -> acc)
+        | None -> acc)
+      [] matches
+  with _ -> []
 
 let check_type_in_parsetree filename text =
   (* Look for type definitions in parsetree text *)
@@ -190,7 +233,7 @@ let check_type_in_parsetree filename text =
             match extract_location_from_parsetree text with
             | Some (line, col) ->
                 Some
-                  (Violation.Bad_type_naming
+                  (Issue.Bad_type_naming
                      {
                        type_name = name;
                        location = { file = filename; line; col };
@@ -215,38 +258,62 @@ let extract_filename_from_parsetree text =
     Re.Group.get substrings 1
   with _ -> "unknown"
 
+let check_long_identifier_name filename text =
+  let max_underscores = 3 in
+  let identifier_regex =
+    Re.compile
+      (Re.seq [ Re.group (Re.rep1 (Re.alt [ Re.alnum; Re.char '_' ])) ])
+  in
+  try
+    let matches = Re.all ~pos:0 identifier_regex text in
+    List.fold_left
+      (fun acc group ->
+        let name = Re.Group.get group 1 in
+        let underscore_count =
+          String.fold_left
+            (fun count c -> if c = '_' then count + 1 else count)
+            0 name
+        in
+        if underscore_count > max_underscores && String.length name > 5 then
+          match extract_location_from_parsetree text with
+          | Some (line, col) ->
+              Issue.Long_identifier_name
+                {
+                  name;
+                  location = { file = filename; line; col };
+                  underscore_count;
+                  threshold = max_underscores;
+                }
+              :: acc
+          | None -> acc
+        else acc)
+      [] matches
+  with _ -> []
+
 let check_parsetree_line filename text =
   let violations = [] in
 
   (* Check for variant names *)
-  let violations =
-    match check_variant_in_parsetree filename text with
-    | Some v -> v :: violations
-    | None -> violations
-  in
+  let variant_violations = check_variant_in_parsetree filename text in
 
   (* Check for value names *)
-  let violations =
-    match check_value_in_parsetree filename text with
-    | Some v -> v :: violations
-    | None -> violations
-  in
+  let value_violations = check_value_in_parsetree filename text in
 
   (* Check for module names *)
-  let violations =
-    match check_module_in_parsetree filename text with
-    | Some v -> v :: violations
-    | None -> violations
-  in
+  let module_violations = check_module_in_parsetree filename text in
 
   (* Check for type names *)
-  let violations =
+  let type_violations =
     match check_type_in_parsetree filename text with
-    | Some v -> v :: violations
-    | None -> violations
+    | Some v -> [ v ]
+    | None -> []
   in
 
-  violations
+  (* Check for long identifier names *)
+  let long_name_violations = check_long_identifier_name filename text in
+
+  violations @ variant_violations @ value_violations @ module_violations
+  @ type_violations @ long_name_violations
 
 let check data =
   match data with

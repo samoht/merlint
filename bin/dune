@@ -1,4 +1,4 @@
 (executable
  (public_name merlint)
  (name main)
- (libraries merlint cmdliner))
+ (libraries merlint cmdliner fpath))

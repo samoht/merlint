@@ -29,7 +29,7 @@ let extract_location (json : Yojson.Safe.t) =
   match json with
   | `Assoc items ->
       {
-        Violation.file = extract_filename items;
+        Issue.file = extract_filename items;
         line = extract_start_position items "line";
         col = extract_start_position items "col";
       }
@@ -146,8 +146,7 @@ let count_match_cases (node : Yojson.Safe.t) =
 
 (* Calculate function length *)
 let calculate_function_length location end_line =
-  if end_line > location.Violation.line then
-    end_line - location.Violation.line + 1
+  if end_line > location.Issue.line then end_line - location.Issue.line + 1
   else 1
 
 (* Calculate nesting depth *)
@@ -188,7 +187,7 @@ let create_violations config func_name location complexity length nesting =
   let violations = [] in
   let violations =
     if complexity > config.max_complexity then
-      Violation.Complexity_exceeded
+      Issue.Complexity_exceeded
         {
           name = func_name;
           location;
@@ -200,7 +199,7 @@ let create_violations config func_name location complexity length nesting =
   in
   let violations =
     if length > config.max_function_length then
-      Violation.Function_too_long
+      Issue.Function_too_long
         {
           name = func_name;
           location;
@@ -212,7 +211,7 @@ let create_violations config func_name location complexity length nesting =
   in
   let violations =
     if nesting > config.max_nesting then
-      Violation.Deep_nesting
+      Issue.Deep_nesting
         {
           name = func_name;
           location;
@@ -287,11 +286,7 @@ let rec analyze_browse_tree config (json : Yojson.Safe.t) =
       current_violations @ child_violations
   | _ -> []
 
-let analyze_structure config (json : Yojson.Safe.t) =
+let analyze_browse_value config (json : Yojson.Safe.t) =
   match json with
-  | `Assoc items -> (
-      match (List.assoc_opt "class" items, List.assoc_opt "value" items) with
-      | Some (`String "return"), Some (`List [ browse_tree ]) ->
-          analyze_browse_tree config browse_tree
-      | _ -> [])
+  | `List [ browse_tree ] -> analyze_browse_tree config browse_tree
   | _ -> []
