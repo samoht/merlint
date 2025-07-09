@@ -8,7 +8,7 @@ Merlint analyzes your OCaml code and reports issues across multiple categories, 
 
 ### Code Quality (High Priority)
 - **Cyclomatic complexity**: Functions should have complexity ≤ 10
-- **Function length**: Functions should be ≤ 50 lines  
+- **Function length**: Functions should be ≤ 50 lines
 - **Nesting depth**: Code should not nest deeper than 3 levels
 
 ### Code Style (High Priority)
@@ -129,23 +129,6 @@ Use merlint in your continuous integration:
   run: merlint --quiet
 ```
 
-## Configuration
-
-Merlint uses sensible defaults but can be configured:
-
-- **Complexity threshold**: 10 (functions with higher complexity are flagged)
-- **Function length threshold**: 50 lines
-- **Nesting depth threshold**: 3 levels
-- **Identifier underscore threshold**: 3 underscores
-
-## Philosophy
-
-Merlint enforces best practices for OCaml development, focusing on:
-- **Safety first**: Critical issues like `Obj.magic` get highest priority
-- **Code clarity**: Consistent naming and reasonable complexity
-- **Maintainability**: Proper documentation and interface files
-- **Modern OCaml**: Encourages contemporary OCaml practices
-
 ## Development
 
 ```bash
@@ -169,17 +152,33 @@ merlint lib/ bin/
 
 ## AI Transparency
 
-**This project was developed with significant AI assistance** ([Claude Code](https://www.anthropic.com/claude-code) by Anthropic). While the tool has been tested extensively and works well in practice, users should be aware that:
+**This project was developed with significant AI assistance** ([Claude
+  Code](https://www.anthropic.com/claude-code) by Anthropic). While
+  the tool has been tested extensively and works well in practice,
+  users should be aware that:
 
-1. **Technical implications**: AI-generated code may have unique patterns or subtle bugs. We've used `merlint` on itself and other projects successfully, but thorough testing is always recommended.
+1. **Technical implications**: AI-generated code may have unique
+   patterns or subtle bugs. We've used `merlint` on itself and other
+   projects successfully, but thorough testing is always recommended.
 
-2. **Legal uncertainty**: The copyright status, license implications, and liability for AI-generated code remain legally untested. We cannot trace which training data influenced specific code patterns.
+2. **Legal uncertainty**: The copyright status, license implications,
+   and liability for AI-generated code remain legally untested. We cannot
+   trace which training data influenced specific code patterns.
 
-3. **Our Commitment**: Despite these unknowns, we believe `merlint` provides real value to the OCaml community. We are committed to maintaining it, using it ourselves, and being transparent about its AI origins.
+3. **Our Commitment**: Despite these unknowns, we believe `merlint`
+   provides real value to the OCaml community. We are committed to
+   maintaining it, using it ourselves, and being transparent about its AI
+   origins.
 
-For deeper context on these issues, see the [Software Freedom Conservancy](https://sfconservancy.org/blog/2022/feb/03/github-copilot-copyleft-gpl/) and [FSF positions](https://www.fsf.org/blogs/licensing/fsf-funded-call-for-white-papers-on-questions-around-copilot/) on AI-generated code.
+For deeper context on these issues, see the [Software Freedom
+Conservancy](https://sfconservancy.org/blog/2022/feb/03/github-copilot-copyleft-gpl/)
+and [FSF
+positions](https://www.fsf.org/blogs/licensing/fsf-funded-call-for-white-papers-on-questions-around-copilot/)
+on AI-generated code.
 
-**By using this tool, you acknowledge these uncertainties.** As with any code modification tool: use version control, review all changes, and test thoroughly.
+**By using this tool, you acknowledge these uncertainties.** As with
+  any code modification tool: use version control, review all changes,
+  and test thoroughly.
 
 ## License
 
@@ -187,4 +186,6 @@ MIT — see LICENSE.md for details.
 
 ## Acknowledgements
 
-Many thanks to the [Merlin](https://github.com/ocaml/merlin) maintainers for an indispensable API that makes OCaml tooling possible.
+Many thanks to the [Merlin](https://github.com/ocaml/merlin)
+maintainers for an indispensable API that makes OCaml tooling
+possible.
