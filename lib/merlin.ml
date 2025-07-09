@@ -13,10 +13,10 @@ type file_analysis = {
 let get_outline file =
   (* Ensure file exists before trying to analyze it *)
   if not (Sys.file_exists file) then
-    Error (Printf.sprintf "File not found: %s" file)
+    Error (Fmt.str "File not found: %s" file)
   else
     let cmd =
-      Printf.sprintf "ocamlmerlin single outline -filename %s < %s"
+      Fmt.str "ocamlmerlin single outline -filename %s < %s"
         (Filename.quote file) (Filename.quote file)
     in
     Log.info (fun m -> m "Running merlin outline command: %s" cmd);
@@ -53,7 +53,7 @@ let get_outline file =
 
 let run_merlin_dump_raw format file =
   let cmd =
-    Printf.sprintf "ocamlmerlin single dump -what %s -filename %s < %s" format
+    Fmt.str "ocamlmerlin single dump -what %s -filename %s < %s" format
       (Filename.quote file) (Filename.quote file)
   in
   Log.info (fun m -> m "Running merlin dump command: %s" cmd);
@@ -75,20 +75,20 @@ let run_merlin_dump_raw format file =
       try Ok (Yojson.Safe.from_string json_str)
       with Yojson.Json_error msg ->
         Log.err (fun m -> m "Failed to parse Merlin JSON for %s: %s" file msg);
-        Error (Printf.sprintf "Failed to parse Merlin JSON: %s" msg))
+        Error (Fmt.str "Failed to parse Merlin JSON: %s" msg))
   | Unix.WEXITED 127 ->
       Log.err (fun m -> m "ocamlmerlin not found when processing %s" file);
       Error "ocamlmerlin not found. Please run: eval $(opam env)"
   | Unix.WEXITED code ->
       Log.err (fun m ->
           m "Merlin command failed for %s with exit code %d" file code);
-      Error (Printf.sprintf "Merlin command failed with exit code %d" code)
+      Error (Fmt.str "Merlin command failed with exit code %d" code)
   | Unix.WSIGNALED n ->
       Log.err (fun m -> m "Merlin command killed by signal %d for %s" n file);
-      Error (Printf.sprintf "Merlin command was killed by signal %d" n)
+      Error (Fmt.str "Merlin command was killed by signal %d" n)
   | Unix.WSTOPPED n ->
       Log.err (fun m -> m "Merlin command stopped by signal %d for %s" n file);
-      Error (Printf.sprintf "Merlin command was stopped by signal %d" n)
+      Error (Fmt.str "Merlin command was stopped by signal %d" n)
 
 let dump_value format file =
   match run_merlin_dump_raw format file with
