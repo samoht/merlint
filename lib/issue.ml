@@ -165,7 +165,7 @@ let priority = function
   | Missing_mli_doc _ | Missing_value_doc _ | Bad_doc_style _ 
   | Missing_standard_function _ | Missing_ocamlformat_file _ -> 4
 
-let get_location = function
+let find_location = function
   | Complexity_exceeded { location; _ } | Function_too_long { location; _ }
   | No_obj_magic { location } | Missing_value_doc { location; _ }
   | Bad_doc_style { location; _ } | Bad_variant_naming { location; _ }
@@ -176,7 +176,7 @@ let get_location = function
   | Long_identifier_name { location; _ } | Bad_function_naming { location; _ } -> Some location
   | _ -> None
 
-let get_file = function
+let find_file = function
   | Missing_mli_doc { file; _ } | Missing_standard_function { file; _ } -> Some file
   | _ -> None
 
@@ -190,9 +190,9 @@ let compare a b =
   let pb = priority b in
   if pa <> pb then compare pa pb
   else
-    match (get_file a, get_file b) with
+    match (find_file a, find_file b) with
     | (Some f1, Some f2) -> String.compare f1 f2
     | _ ->
-        match (get_location a, get_location b) with
+        match (find_location a, find_location b) with
         | (Some l1, Some l2) -> compare_locations l1 l2
         | _ -> 0

@@ -25,8 +25,8 @@ let make_relative_to_cwd path =
           | Some rel -> Fpath.to_string rel
           | None -> path (* fallback to original path *)))
 
-let find_files_in_dir ~suffix dir =
-  let rec find_files acc path =
+let get_files_in_dir ~suffix dir =
+  let rec get_files acc path =
     try
       let items = Sys.readdir path in
       Array.fold_left
@@ -38,7 +38,7 @@ let find_files_in_dir ~suffix dir =
                 item <> "_build" && item <> "_opam"
                 && String.length item > 0
                 && item.[0] <> '.'
-              then find_files acc full_path
+              then get_files acc full_path
               else acc
             else if Filename.check_suffix item suffix then full_path :: acc
             else acc
@@ -46,13 +46,13 @@ let find_files_in_dir ~suffix dir =
         acc items
     with Sys_error _ -> acc
   in
-  find_files [] dir
+  get_files [] dir
 
 let expand_paths ~suffix paths =
   List.fold_left
     (fun acc path ->
       if Sys.file_exists path then
-        if Sys.is_directory path then find_files_in_dir ~suffix path @ acc
+        if Sys.is_directory path then get_files_in_dir ~suffix path @ acc
         else if Filename.check_suffix path suffix then path :: acc
         else acc
       else (
@@ -61,7 +61,7 @@ let expand_paths ~suffix paths =
     [] paths
   |> List.rev
 
-let find_all_project_files ~suffix () =
+let get_all_project_files ~suffix () =
   let rec find_dune_root dir =
     let dune_project = Filename.concat dir "dune-project" in
     if Sys.file_exists dune_project then Some dir
@@ -70,25 +70,9 @@ let find_all_project_files ~suffix () =
       if parent = dir then None else find_dune_root parent
   in
   match find_dune_root (Sys.getcwd ()) with
-  | Some root -> find_files_in_dir ~suffix root
-  | None -> find_files_in_dir ~suffix (Sys.getcwd ())
+  | Some root -> get_files_in_dir ~suffix root
+  | None -> get_files_in_dir ~suffix (Sys.getcwd ())
 
-let analyze_with_merlin config file =
-  Log.debug (fun m -> m "Analyzing file: %s" file);
-  let project_root = Merlint.Rules.find_project_root file in
-  Log.debug (fun m -> m "Project root: %s" project_root);
-  let rules_config = Merlint.Rules.{ merlint_config = config; project_root } in
-  let category_reports = Merlint.Rules.analyze_project rules_config [ file ] in
-  let all_issues =
-    List.fold_left
-      (fun acc (_category_name, reports) ->
-        List.fold_left
-          (fun acc report -> report.Merlint.Report.issues @ acc)
-          acc reports)
-      [] category_reports
-  in
-  Log.debug (fun m -> m "Found %d issues in %s" (List.length all_issues) file);
-  all_issues
 
 
 let should_exclude_file file exclude_patterns =
@@ -127,31 +111,8 @@ let should_exclude_file file exclude_patterns =
       && Re.execp (Re.compile (Re.str pattern_no_wildcards)) file)
     exclude_patterns
 
-let run_quiet_analysis config filtered_files =
-  let ml_files = List.filter (String.ends_with ~suffix:".ml") filtered_files in
-  let mli_files =
-    List.filter (String.ends_with ~suffix:".mli") filtered_files
-  in
 
-  Log.info (fun m -> m "Analyzing %d ML files and %d MLI files" 
-    (List.length ml_files) (List.length mli_files));
-
-  (* Run complexity and style checks on ML files *)
-  let ml_issues = List.concat_map (analyze_with_merlin config) ml_files in
-
-  (* Run documentation checks on MLI files *)
-  let doc_issues = Merlint.Doc.check_mli_files mli_files in
-
-  (* Sort and print issues *)
-  let all_issues = ml_issues @ doc_issues in
-  let sorted_issues = List.sort Merlint.Issue.compare all_issues in
-
-  Log.info (fun m -> m "Found %d total issues" (List.length sorted_issues));
-  List.iter (fun v -> print_endline (Merlint.Issue.format v)) sorted_issues;
-
-  if sorted_issues <> [] then exit 1
-
-let run_visual_analysis project_root filtered_files =
+let run_analysis project_root filtered_files =
   let rules_config = Merlint.Rules.default_config project_root in
   Log.info (fun m -> m "Starting visual analysis on %d files" (List.length filtered_files));
   let category_reports =
@@ -190,22 +151,32 @@ let run_visual_analysis project_root filtered_files =
   let all_issues = Merlint.Report.get_all_issues all_reports in
   if all_issues <> [] then exit 1
 
-let analyze_files ?(quiet = false) ?(exclude_patterns = []) files =
-  let config = Merlint.Config.default in
+let ensure_project_built project_root =
+  match Merlint.Dune.ensure_project_built project_root with
+  | Ok () -> ()
+  | Error msg -> 
+      Printf.eprintf "Warning: %s\n" msg;
+      Printf.eprintf "Function type analysis may not work properly.\n";
+      Printf.eprintf "Continuing with analysis...\n"
+
+let analyze_files ?(exclude_patterns = []) files =
 
   (* Find project root and all files *)
   let project_root =
     match files with
-    | file :: _ -> Merlint.Rules.find_project_root file
+    | file :: _ -> Merlint.Rules.get_project_root file
     | [] -> "."
   in
 
   Log.info (fun m -> m "Project root: %s" project_root);
+  
+  (* Ensure project is built before running merlin-based analyses *)
+  ensure_project_built project_root;
 
   let all_files =
     if files = [] then
-      find_all_project_files ~suffix:".ml" ()
-      @ find_all_project_files ~suffix:".mli" ()
+      get_all_project_files ~suffix:".ml" ()
+      @ get_all_project_files ~suffix:".mli" ()
     else expand_paths ~suffix:".ml" files @ expand_paths ~suffix:".mli" files
   in
 
@@ -229,8 +200,7 @@ let analyze_files ?(quiet = false) ?(exclude_patterns = []) files =
   Log.info (fun m -> m "Analyzing %d files after exclusions" (List.length filtered_files));
   List.iter (fun file -> Log.debug (fun m -> m "  - %s" file)) filtered_files;
 
-  if quiet then run_quiet_analysis config filtered_files
-  else run_visual_analysis project_root filtered_files
+  run_analysis project_root filtered_files
 
 let files =
   let doc =
@@ -239,11 +209,6 @@ let files =
   in
   Arg.(value & pos_all string [] & info [] ~docv:"FILE|DIR" ~doc)
 
-let simple_flag =
-  let doc =
-    "Use simple line-by-line output instead of visual mode"
-  in
-  Arg.(value & flag & info [ "simple" ] ~doc)
 
 let exclude_flag =
   let doc =
@@ -276,7 +241,7 @@ let cmd =
   let info = Cmd.info "merlint" ~version:"0.1.0" ~doc ~man in
   Cmd.v info
     Term.(
-      const (fun style_renderer log_level simple exclude_patterns files ->
+      const (fun style_renderer log_level exclude_patterns files ->
           setup_log ?style_renderer log_level;
           if not (check_ocamlmerlin ()) then (
             Log.err (fun m -> m "ocamlmerlin not found in PATH");
@@ -284,7 +249,7 @@ let cmd =
             Log.err (fun m -> m "  1. eval $(opam env)  # If using opam");
             Log.err (fun m -> m "  2. opam install merlin  # If merlin is not installed");
             Stdlib.exit 1)
-          else analyze_files ~quiet:simple ~exclude_patterns files)
-      $ Fmt_cli.style_renderer () $ log_level $ simple_flag $ exclude_flag $ files)
+          else analyze_files ~exclude_patterns files)
+      $ Fmt_cli.style_renderer () $ log_level $ exclude_flag $ files)
 
 let () = Stdlib.exit (Cmd.eval cmd)
