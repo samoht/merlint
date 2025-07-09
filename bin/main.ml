@@ -1,6 +1,7 @@
 open Cmdliner
 
 let logs_src = Logs.Src.create "merlint" ~doc:"Merlint OCaml linter"
+
 module Log = (val Logs.src_log logs_src : Logs.LOG)
 
 let setup_log ?style_renderer log_level =
@@ -73,8 +74,6 @@ let get_all_project_files ~suffix () =
   | Some root -> get_files_in_dir ~suffix root
   | None -> get_files_in_dir ~suffix (Sys.getcwd ())
 
-
-
 let should_exclude_file file exclude_patterns =
   List.exists
     (fun pattern ->
@@ -111,10 +110,10 @@ let should_exclude_file file exclude_patterns =
       && Re.execp (Re.compile (Re.str pattern_no_wildcards)) file)
     exclude_patterns
 
-
 let run_analysis project_root filtered_files =
   let rules_config = Merlint.Rules.default_config project_root in
-  Log.info (fun m -> m "Starting visual analysis on %d files" (List.length filtered_files));
+  Log.info (fun m ->
+      m "Starting visual analysis on %d files" (List.length filtered_files));
   let category_reports =
     Merlint.Rules.analyze_project rules_config filtered_files
   in
@@ -140,8 +139,7 @@ let run_analysis project_root filtered_files =
           category_name total_issues;
 
         (* Only show detailed reports if there are issues *)
-        if total_issues > 0 then
-          List.iter Merlint.Report.print_detailed reports;
+        if total_issues > 0 then List.iter Merlint.Report.print_detailed reports;
         reports @ acc)
       [] category_reports
   in
@@ -154,13 +152,12 @@ let run_analysis project_root filtered_files =
 let ensure_project_built project_root =
   match Merlint.Dune.ensure_project_built project_root with
   | Ok () -> ()
-  | Error msg -> 
+  | Error msg ->
       Printf.eprintf "Warning: %s\n" msg;
       Printf.eprintf "Function type analysis may not work properly.\n";
       Printf.eprintf "Continuing with analysis...\n"
 
 let analyze_files ?(exclude_patterns = []) files =
-
   (* Find project root and all files *)
   let project_root =
     match files with
@@ -169,7 +166,7 @@ let analyze_files ?(exclude_patterns = []) files =
   in
 
   Log.info (fun m -> m "Project root: %s" project_root);
-  
+
   (* Ensure project is built before running merlin-based analyses *)
   ensure_project_built project_root;
 
@@ -180,7 +177,8 @@ let analyze_files ?(exclude_patterns = []) files =
     else expand_paths ~suffix:".ml" files @ expand_paths ~suffix:".mli" files
   in
 
-  Log.debug (fun m -> m "Found %d total files before filtering" (List.length all_files));
+  Log.debug (fun m ->
+      m "Found %d total files before filtering" (List.length all_files));
 
   (* Convert to relative paths *)
   let all_files = List.map make_relative_to_cwd all_files in
@@ -190,14 +188,15 @@ let analyze_files ?(exclude_patterns = []) files =
     if exclude_patterns = [] then all_files
     else
       List.filter
-        (fun file -> 
+        (fun file ->
           let excluded = should_exclude_file file exclude_patterns in
           if excluded then Log.debug (fun m -> m "Excluding file: %s" file);
           not excluded)
         all_files
   in
 
-  Log.info (fun m -> m "Analyzing %d files after exclusions" (List.length filtered_files));
+  Log.info (fun m ->
+      m "Analyzing %d files after exclusions" (List.length filtered_files));
   List.iter (fun file -> Log.debug (fun m -> m "  - %s" file)) filtered_files;
 
   run_analysis project_root filtered_files
@@ -208,7 +207,6 @@ let files =
      all .ml and .mli files in the current dune project."
   in
   Arg.(value & pos_all string [] & info [] ~docv:"FILE|DIR" ~doc)
-
 
 let exclude_flag =
   let doc =
@@ -247,7 +245,8 @@ let cmd =
             Log.err (fun m -> m "ocamlmerlin not found in PATH");
             Log.err (fun m -> m "To fix this, run one of the following:");
             Log.err (fun m -> m "  1. eval $(opam env)  # If using opam");
-            Log.err (fun m -> m "  2. opam install merlin  # If merlin is not installed");
+            Log.err (fun m ->
+                m "  2. opam install merlin  # If merlin is not installed");
             Stdlib.exit 1)
           else analyze_files ~exclude_patterns files)
       $ Fmt_cli.style_renderer () $ log_level $ exclude_flag $ files)

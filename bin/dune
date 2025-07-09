@@ -1,4 +1,13 @@
 (executable
  (public_name merlint)
  (name main)
- (libraries merlint cmdliner fpath logs logs.cli logs.fmt fmt fmt.cli fmt.tty))
+ (libraries
+  merlint
+  cmdliner
+  fpath
+  logs
+  logs.cli
+  logs.fmt
+  fmt
+  fmt.cli
+  fmt.tty))

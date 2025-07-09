@@ -258,8 +258,8 @@ let analyze_value_binding config (binding_node : Yojson.Safe.t) =
             in
 
             let nesting = calculate_nesting_depth binding_node in
-            create_issues config func_name location adjusted_complexity
-              length nesting
+            create_issues config func_name location adjusted_complexity length
+              nesting
         | _ -> [])
 
 (* Recursively analyze the browse tree *)

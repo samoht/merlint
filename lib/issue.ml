@@ -104,7 +104,9 @@ let format_naming v =
       Printf.sprintf "%s: Type '%s' %s" (format_location location) type_name
         message
   | Bad_function_naming { function_name; location; suggestion } ->
-      Printf.sprintf "%s: Function '%s' should use '%s' (get_* for extraction, find_* for search)" 
+      Printf.sprintf
+        "%s: Function '%s' should use '%s' (get_* for extraction, find_* for \
+         search)"
         (format_location location) function_name suggestion
   | _ -> ""
 
@@ -142,7 +144,8 @@ let format_style v =
   | Missing_mli_file { location; _ } ->
       Printf.sprintf "%s: missing interface file" (format_location location)
   | Long_identifier_name { name; location; underscore_count; _ } ->
-      Printf.sprintf "%s: '%s' has too many underscores (%d)" (format_location location) name underscore_count
+      Printf.sprintf "%s: '%s' has too many underscores (%d)"
+        (format_location location) name underscore_count
   | _ -> ""
 
 let format v =
@@ -159,25 +162,37 @@ let format v =
 let priority = function
   | No_obj_magic _ | Catch_all_exception _ -> 1
   | Complexity_exceeded _ | Deep_nesting _ | Function_too_long _ -> 2
-  | Use_str_module _ | Bad_variant_naming _ | Missing_mli_file _ 
-  | Bad_module_naming _ | Bad_value_naming _ | Bad_type_naming _ 
-  | Long_identifier_name _ | Bad_function_naming _ -> 3
-  | Missing_mli_doc _ | Missing_value_doc _ | Bad_doc_style _ 
-  | Missing_standard_function _ | Missing_ocamlformat_file _ -> 4
+  | Use_str_module _ | Bad_variant_naming _ | Missing_mli_file _
+  | Bad_module_naming _ | Bad_value_naming _ | Bad_type_naming _
+  | Long_identifier_name _ | Bad_function_naming _ ->
+      3
+  | Missing_mli_doc _ | Missing_value_doc _ | Bad_doc_style _
+  | Missing_standard_function _ | Missing_ocamlformat_file _ ->
+      4
 
 let find_location = function
-  | Complexity_exceeded { location; _ } | Function_too_long { location; _ }
-  | No_obj_magic { location } | Missing_value_doc { location; _ }
-  | Bad_doc_style { location; _ } | Bad_variant_naming { location; _ }
-  | Bad_module_naming { location; _ } | Bad_value_naming { location; _ }
-  | Bad_type_naming { location; _ } | Catch_all_exception { location }
-  | Use_str_module { location } | Deep_nesting { location; _ }
-  | Missing_ocamlformat_file { location } | Missing_mli_file { location; _ }
-  | Long_identifier_name { location; _ } | Bad_function_naming { location; _ } -> Some location
+  | Complexity_exceeded { location; _ }
+  | Function_too_long { location; _ }
+  | No_obj_magic { location }
+  | Missing_value_doc { location; _ }
+  | Bad_doc_style { location; _ }
+  | Bad_variant_naming { location; _ }
+  | Bad_module_naming { location; _ }
+  | Bad_value_naming { location; _ }
+  | Bad_type_naming { location; _ }
+  | Catch_all_exception { location }
+  | Use_str_module { location }
+  | Deep_nesting { location; _ }
+  | Missing_ocamlformat_file { location }
+  | Missing_mli_file { location; _ }
+  | Long_identifier_name { location; _ }
+  | Bad_function_naming { location; _ } ->
+      Some location
   | _ -> None
 
 let find_file = function
-  | Missing_mli_doc { file; _ } | Missing_standard_function { file; _ } -> Some file
+  | Missing_mli_doc { file; _ } | Missing_standard_function { file; _ } ->
+      Some file
   | _ -> None
 
 let compare_locations l1 l2 =
@@ -191,8 +206,8 @@ let compare a b =
   if pa <> pb then compare pa pb
   else
     match (find_file a, find_file b) with
-    | (Some f1, Some f2) -> String.compare f1 f2
-    | _ ->
+    | Some f1, Some f2 -> String.compare f1 f2
+    | _ -> (
         match (find_location a, find_location b) with
-        | (Some l1, Some l2) -> compare_locations l1 l2
-        | _ -> 0
+        | Some l1, Some l2 -> compare_locations l1 l2
+        | _ -> 0)

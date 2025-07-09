@@ -1,0 +1,14 @@
+(library
+ (name test_samples)
+ (modules
+  bad_names
+  bad_style
+  catch_all
+  complex
+  function_naming
+  long_function
+  simple
+  stubs
+  uses_str)
+ (libraries str)
+ (flags -w -a))
