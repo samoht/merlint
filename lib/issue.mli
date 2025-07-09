@@ -72,6 +72,11 @@ type t =
       underscore_count : int;
       threshold : int;
     }
+  | Bad_function_naming of {
+      function_name : string;
+      location : location;
+      suggestion : string;
+    }
 
 val format : t -> string
 
