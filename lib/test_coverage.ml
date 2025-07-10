@@ -6,8 +6,8 @@
 let is_local_library lib_contents =
   List.exists
     (function
-      | Sexplib0.Sexp.List [ Sexplib0.Sexp.Atom "local"; value ] ->
-          (match value with Sexplib0.Sexp.Atom "true" -> true | _ -> false)
+      | Sexplib0.Sexp.List [ Sexplib0.Sexp.Atom "local"; value ] -> (
+          match value with Sexplib0.Sexp.Atom "true" -> true | _ -> false)
       | _ -> false)
     lib_contents
 
