@@ -63,30 +63,31 @@ let exports_module_name content module_base =
           ]))
     content
 
-let uses_suite_in_run content =
-  (* Check if Alcotest.run is called with suite *)
-  Re.execp
-    (Re.compile
-       (Re.seq
-          [
-            Re.str "Alcotest.run";
-            Re.rep1 Re.space;
-            Re.rep1 (Re.alt [ Re.alnum; Re.char '_'; Re.char '"'; Re.space ]);
-            Re.rep Re.space;
-            Re.str "suite";
-          ]))
-    content
+(** Check if a test file properly exports suite instead of using module name
+    directly.
 
-(** Check if a file exports 'suite' instead of the module name *)
+    Good pattern (what we want): ```ocaml (* test_foo.ml *) let test_basic () =
+    ... let test_advanced () = ...
+
+    let suite =
+    [ ("basic", [ Alcotest.test_case "test1" `Quick test_basic ]); ("advanced",
+     [ Alcotest.test_case "test2" `Quick test_advanced ]); ]
+
+    let () = Alcotest.run "Test suite description" suite ```
+
+    Bad pattern (what we flag): ```ocaml (* test_foo.ml *) let test_basic () =
+    ...
+
+    let () = Alcotest.run "test_foo"
+    [  (* Using module name instead of suite *) ("basic", [ Alcotest.test_case
+     "test1" `Quick test_basic ]); ] ``` *)
 let check_test_file_exports filename content =
   if not (is_test_file filename) then []
   else if not (has_test_runner content) then []
   else
     let module_base = get_module_name filename in
-    let has_suite = exports_suite content in
-    let uses_suite = uses_suite_in_run content in
-    (* Issue if using module name AND either no suite defined OR suite not used *)
-    if exports_module_name content module_base && not (has_suite && uses_suite)
+    (* Issue if using module name instead of exporting suite *)
+    if exports_module_name content module_base && not (exports_suite content)
     then
       [
         Issue.Test_exports_module_name

@@ -4,6 +4,9 @@ let src = Logs.Src.create "merlint.dune" ~doc:"Dune interface"
 
 module Log = (val Logs.src_log src : Logs.LOG)
 
+(* Cache for dune describe output *)
+let dune_describe_cache : (string, string) Hashtbl.t = Hashtbl.create 1
+
 type stanza_type = Library | Executable | Test
 
 type stanza_info = {
@@ -13,36 +16,47 @@ type stanza_info = {
 }
 
 let run_dune_describe project_root =
-  let cmd = Fmt.str "cd %s && dune describe" (Filename.quote project_root) in
-  Log.debug (fun m -> m "Running dune describe command: %s" cmd);
-  let ic = Unix.open_process_in cmd in
-  let rec read_all acc =
-    try
-      let line = input_line ic in
-      read_all (line :: acc)
-    with End_of_file -> List.rev acc
-  in
-  let output = read_all [] in
-  let status = Unix.close_process_in ic in
-  match status with
-  | Unix.WEXITED 0 ->
-      let sexp_str = String.concat "\n" output in
+  (* Check cache first *)
+  match Hashtbl.find_opt dune_describe_cache project_root with
+  | Some cached ->
       Log.debug (fun m ->
-          m "Dune describe successful, output length: %d"
-            (String.length sexp_str));
-      Ok sexp_str
-  | Unix.WEXITED 127 ->
-      Log.err (fun m -> m "dune not found");
-      Error "dune not found. Please ensure dune is installed"
-  | Unix.WEXITED code ->
-      Log.err (fun m -> m "Dune describe failed with exit code %d" code);
-      Error (Fmt.str "Dune describe failed with exit code %d" code)
-  | Unix.WSIGNALED n ->
-      Log.err (fun m -> m "Dune describe killed by signal %d" n);
-      Error (Fmt.str "Dune describe was killed by signal %d" n)
-  | Unix.WSTOPPED n ->
-      Log.err (fun m -> m "Dune describe stopped by signal %d" n);
-      Error (Fmt.str "Dune describe was stopped by signal %d" n)
+          m "Using cached dune describe output for %s" project_root);
+      Ok cached
+  | None -> (
+      let cmd =
+        Fmt.str "cd %s && dune describe" (Filename.quote project_root)
+      in
+      Log.debug (fun m -> m "Running dune describe command: %s" cmd);
+      let ic = Unix.open_process_in cmd in
+      let rec read_all acc =
+        try
+          let line = input_line ic in
+          read_all (line :: acc)
+        with End_of_file -> List.rev acc
+      in
+      let output = read_all [] in
+      let status = Unix.close_process_in ic in
+      match status with
+      | Unix.WEXITED 0 ->
+          let sexp_str = String.concat "\n" output in
+          Log.debug (fun m ->
+              m "Dune describe successful, output length: %d"
+                (String.length sexp_str));
+          (* Cache the result *)
+          Hashtbl.add dune_describe_cache project_root sexp_str;
+          Ok sexp_str
+      | Unix.WEXITED 127 ->
+          Log.err (fun m -> m "dune not found");
+          Error "dune not found. Please ensure dune is installed"
+      | Unix.WEXITED code ->
+          Log.err (fun m -> m "Dune describe failed with exit code %d" code);
+          Error (Fmt.str "Dune describe failed with exit code %d" code)
+      | Unix.WSIGNALED n ->
+          Log.err (fun m -> m "Dune describe killed by signal %d" n);
+          Error (Fmt.str "Dune describe was killed by signal %d" n)
+      | Unix.WSTOPPED n ->
+          Log.err (fun m -> m "Dune describe stopped by signal %d" n);
+          Error (Fmt.str "Dune describe was stopped by signal %d" n))
 
 let ensure_project_built project_root =
   (* Check if _build directory exists *)
@@ -96,3 +110,6 @@ let is_executable project_root ml_file =
         && Re.execp module_regex sexp_str
       in
       has_executable_stanza
+
+(** Clear the dune describe cache *)
+let clear_cache () = Hashtbl.clear dune_describe_cache
