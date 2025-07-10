@@ -19,3 +19,6 @@ val is_test_module : string -> stanza_info list -> bool
 
 val is_executable : string -> string -> bool
 (** Check if a file is an executable (binary or test) - no .mli needed *)
+
+val clear_cache : unit -> unit
+(** Clear the dune describe cache *)
