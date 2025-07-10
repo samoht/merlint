@@ -542,17 +542,30 @@ let find_file = function
       Some file
   | _ -> None
 
+(* Get numeric severity for sorting - higher number = more severe *)
+let numeric_severity = function
+  | Function_too_long { length; _ } -> length
+  | Complexity_exceeded { complexity; _ } -> complexity
+  | Deep_nesting { depth; _ } -> depth
+  | Long_identifier_name { underscore_count; _ } -> underscore_count
+  | _ -> 0
+
 (* Compare issues for sorting *)
 let compare a b =
   let pa = priority a in
   let pb = priority b in
   if pa <> pb then compare pa pb
   else
-    match (find_file a, find_file b) with
-    | Some f1, Some f2 -> String.compare f1 f2
-    | _ -> (
-        match (find_location a, find_location b) with
-        | Some l1, Some l2 -> Location.compare l1 l2
-        | _ -> 0)
+    (* Within the same priority, sort by severity (higher first) *)
+    let sa = numeric_severity a in
+    let sb = numeric_severity b in
+    if sa <> sb then compare sb sa (* Reverse order: higher severity first *)
+    else
+      match (find_file a, find_file b) with
+      | Some f1, Some f2 -> String.compare f1 f2
+      | _ -> (
+          match (find_location a, find_location b) with
+          | Some l1, Some l2 -> Location.compare l1 l2
+          | _ -> 0)
 
 let equal a b = compare a b = 0

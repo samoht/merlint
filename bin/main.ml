@@ -140,10 +140,11 @@ let print_fix_hints all_issues =
         Issue_type_map.empty all_issues
     in
 
-    (* Print grouped hints *)
+    (* Print grouped hints with issues sorted by severity *)
     Issue_type_map.iter
       (fun issue_type issues ->
-        match Merlint.Issue.find_grouped_hint issue_type issues with
+        let sorted_issues = List.sort Merlint.Issue.compare issues in
+        match Merlint.Issue.find_grouped_hint issue_type sorted_issues with
         | Some hint -> Fmt.pr "@.  • %s@." hint
         | None -> ())
       issue_groups;
