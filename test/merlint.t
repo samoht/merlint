@@ -143,6 +143,25 @@ Test naming conventions
     conventions. Fix them by renaming to Snake_case (e.g., MyVariant →
     My_variant).
   
+  ❌ BAD:
+  ```ocaml
+  type status = 
+    | WaitingForInput    (*
+    CamelCase *)
+    | ProcessingData
+    | errorOccurred      (* lowerCamelCase
+    *)
+  ```
+  
+  ✅ GOOD:
+  ```ocaml
+  type status = 
+    | Waiting_for_input  (* Snake_case
+    *)
+    | Processing_data
+    | Error_occurred
+  ```
+  
   [E310] Value Naming Convention
     This issue means your value names don't follow OCaml naming conventions. Fix
     them by renaming to snake_case (e.g., myValue → my_value).
@@ -306,6 +325,28 @@ Test Printf/Format module usage
     This issue means you're using outdated Printf/Format modules for formatting.
     Fix it by switching to the modern Fmt module: add 'fmt' to your dune
     dependencies and replace Printf/Format functions with Fmt equivalents.
+  
+  ❌
+    BAD:
+  ```ocaml
+  let error_msg = Printf.sprintf "Error: %s at line %d" msg
+    line
+  let () = Printf.printf "Processing %d items...\n" count
+  ```
+  
+  ✅
+    GOOD:
+  ```ocaml
+  let error_msg = Fmt.str "Error: %s at line %d" msg line
+  let ()
+    = Fmt.pr "Processing %d items...@." count
+  
+  (* Even better with custom
+    formatters *)
+  let pp_error ppf (msg, line) = 
+    Fmt.pf ppf "Error: %s at line
+    %d" msg line
+  ```
   
   [E500] Missing Code Formatter
     This issue means your project lacks consistent code formatting. Fix it by

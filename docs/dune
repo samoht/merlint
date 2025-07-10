@@ -1,0 +1,7 @@
+(rule
+ (target error-codes.html)
+ (deps
+  (source_tree ../lib))
+ (action
+  (run ../bin/generate_docs.exe %{target}))
+ (mode promote))
