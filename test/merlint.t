@@ -12,6 +12,7 @@ Test simple functions with low complexity
     ✗ Format rules (.ocamlformat, .mli files) (2 issues)
       samples/simple.ml:1:1: missing interface file
       (project): Missing .ocamlformat file for consistent formatting
+  ✓ Test Quality (0 total issues)
   
   Summary: ✗ 2 total issues
   ✗ Some checks failed. See details above.
@@ -40,6 +41,7 @@ Test function with high cyclomatic complexity
     ✗ Format rules (.ocamlformat, .mli files) (2 issues)
       samples/complex.ml:1:1: missing interface file
       (project): Missing .ocamlformat file for consistent formatting
+  ✓ Test Quality (0 total issues)
   
   Summary: ✗ 2 total issues
   ✗ Some checks failed. See details above.
@@ -63,6 +65,7 @@ Test long function detection
   ✗ Code Quality (1 total issues)
     ✗ Complexity rules (complexity ≤10, length ≤50, nesting ≤3) (1 issues)
       long_function.ml:2:0: Function 'very_long_function' is 54 lines long (threshold: 50)
+    ✓ Warning rules (no silenced warnings) (0 issues)
   ✓ Code Style (0 total issues)
   ✓ Naming Conventions (0 total issues)
   ✓ Documentation (0 total issues)
@@ -70,6 +73,7 @@ Test long function detection
     ✗ Format rules (.ocamlformat, .mli files) (2 issues)
       samples/long_function.ml:1:1: missing interface file
       (project): Missing .ocamlformat file for consistent formatting
+  ✓ Test Quality (0 total issues)
   
   Summary: ✗ 3 total issues
   ✗ Some checks failed. See details above.
@@ -107,6 +111,7 @@ Test naming conventions
     ✗ Format rules (.ocamlformat, .mli files) (2 issues)
       samples/bad_names.ml:1:1: missing interface file
       (project): Missing .ocamlformat file for consistent formatting
+  ✓ Test Quality (0 total issues)
   
   Summary: ✗ 7 total issues
   ✗ Some checks failed. See details above.
@@ -145,6 +150,7 @@ Test documentation rules
   ✗ Project Structure (1 total issues)
     ✗ Format rules (.ocamlformat, .mli files) (1 issues)
       (project): Missing .ocamlformat file for consistent formatting
+  ✓ Test Quality (0 total issues)
   
   Summary: ✗ 2 total issues
   ✗ Some checks failed. See details above.
@@ -180,6 +186,7 @@ Test style rules - Obj.magic
     ✗ Format rules (.ocamlformat, .mli files) (2 issues)
       samples/bad_style.ml:1:1: missing interface file
       (project): Missing .ocamlformat file for consistent formatting
+  ✓ Test Quality (0 total issues)
   
   Summary: ✗ 3 total issues
   ✗ Some checks failed. See details above.
@@ -215,6 +222,7 @@ Test style rules - Str module
     ✗ Format rules (.ocamlformat, .mli files) (2 issues)
       samples/uses_str.ml:1:1: missing interface file
       (project): Missing .ocamlformat file for consistent formatting
+  ✓ Test Quality (0 total issues)
   
   Summary: ✗ 6 total issues
   ✗ Some checks failed. See details above.
@@ -253,6 +261,7 @@ Test Printf/Format module usage
     ✗ Format rules (.ocamlformat, .mli files) (2 issues)
       samples/uses_printf.ml:1:1: missing interface file
       (project): Missing .ocamlformat file for consistent formatting
+  ✓ Test Quality (0 total issues)
   
   Summary: ✗ 6 total issues
   ✗ Some checks failed. See details above.
@@ -289,6 +298,7 @@ Test catch-all exception handler
     ✗ Format rules (.ocamlformat, .mli files) (2 issues)
       samples/catch_all.ml:1:1: missing interface file
       (project): Missing .ocamlformat file for consistent formatting
+  ✓ Test Quality (0 total issues)
   
   Summary: ✗ 2 total issues
   ✗ Some checks failed. See details above.

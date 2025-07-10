@@ -23,6 +23,8 @@ type issue_type =
   | Missing_standard_function
   | Missing_ocamlformat_file
   | Missing_mli_file
+  | Test_exports_module
+  | Silenced_warning
 
 type t =
   | Complexity_exceeded of {
@@ -97,6 +99,12 @@ type t =
       location : Location.t;
       suggestion : string;
     }
+  | Test_exports_module_name of {
+      filename : string;
+      location : Location.t;
+      module_name : string;
+    }
+  | Silenced_warning of { location : Location.t; warning_number : string }
 
 val pp : t Fmt.t
 (** Pretty-printer for issues *)
