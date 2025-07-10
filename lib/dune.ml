@@ -113,3 +113,32 @@ let is_executable project_root ml_file =
 
 (** Clear the dune describe cache *)
 let clear_cache () = Hashtbl.clear dune_describe_cache
+
+(** Get executable information for all files at once *)
+let get_executable_info project_root =
+  match run_dune_describe project_root with
+  | Error err ->
+      Log.warn (fun m -> m "Could not run dune describe: %s" err);
+      (* Return empty set if dune describe fails *)
+      []
+  | Ok sexp_str ->
+      (* Parse executable and test modules from the sexp *)
+      let executables_regex = Re.compile (Re.str "executables") in
+      let tests_regex = Re.compile (Re.str "tests") in
+      let module_regex =
+        Re.compile
+          (Re.seq
+             [
+               Re.str "\"";
+               Re.group (Re.rep1 (Re.alt [ Re.alnum; Re.char '_' ]));
+               Re.str "\"";
+             ])
+      in
+
+      let has_executables =
+        Re.execp executables_regex sexp_str || Re.execp tests_regex sexp_str
+      in
+
+      if has_executables then
+        Re.all module_regex sexp_str |> List.map (fun m -> Re.Group.get m 1)
+      else []

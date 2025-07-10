@@ -22,3 +22,6 @@ val is_executable : string -> string -> bool
 
 val clear_cache : unit -> unit
 (** Clear the dune describe cache *)
+
+val get_executable_info : string -> string list
+(** Get list of executable module names for the project *)
