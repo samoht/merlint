@@ -18,7 +18,7 @@ let cleanup_test_dir dir =
   in
   remove_dir dir
 
-let test_check_ocamlformat_exists_missing () =
+let ocamlformat_missing () =
   let test_dir = setup_test_dir () in
   let issues = Format.check test_dir [] in
   cleanup_test_dir test_dir;
@@ -32,7 +32,7 @@ let test_check_ocamlformat_exists_missing () =
   Alcotest.(check bool)
     "has missing ocamlformat issue" true has_ocamlformat_issue
 
-let test_check_ocamlformat_exists_present () =
+let ocamlformat_present () =
   let test_dir = setup_test_dir () in
   let ocamlformat = Filename.concat test_dir ".ocamlformat" in
   let oc = open_out ocamlformat in
@@ -50,7 +50,7 @@ let test_check_ocamlformat_exists_present () =
   in
   Alcotest.(check bool) "no ocamlformat issue" false has_ocamlformat_issue
 
-let test_check_mli_for_files_executable () =
+let mli_executable () =
   let test_dir = setup_test_dir () in
 
   (* Create a simple dune file to make this a valid project *)
@@ -74,7 +74,7 @@ let test_check_mli_for_files_executable () =
     "check runs without error" true
     (match issues with _ -> true)
 
-let test_check_mli_for_files_library_missing () =
+let mli_library_missing () =
   let test_dir = setup_test_dir () in
 
   (* Create a simple dune file *)
@@ -95,7 +95,7 @@ let test_check_mli_for_files_library_missing () =
   (* Since we're using real dune describe, we cannot predict exact behavior *)
   Alcotest.(check bool) "check completes" true (match issues with _ -> true)
 
-let test_check_mli_for_files_library_present () =
+let mli_library_present () =
   let test_dir = setup_test_dir () in
 
   (* Create a simple dune file *)
@@ -122,7 +122,7 @@ let test_check_mli_for_files_library_present () =
   (* Check completes without error *)
   Alcotest.(check bool) "check completes" true (match issues with _ -> true)
 
-let test_check_combined () =
+let check_combined () =
   let test_dir = setup_test_dir () in
 
   (* No .ocamlformat and library file without .mli *)
@@ -143,15 +143,14 @@ let suite =
     ( "format",
       [
         Alcotest.test_case "check ocamlformat missing" `Quick
-          test_check_ocamlformat_exists_missing;
+          ocamlformat_missing;
         Alcotest.test_case "check ocamlformat present" `Quick
-          test_check_ocamlformat_exists_present;
-        Alcotest.test_case "check mli for executable" `Quick
-          test_check_mli_for_files_executable;
+          ocamlformat_present;
+        Alcotest.test_case "check mli for executable" `Quick mli_executable;
         Alcotest.test_case "check mli for library missing" `Quick
-          test_check_mli_for_files_library_missing;
+          mli_library_missing;
         Alcotest.test_case "check mli for library present" `Quick
-          test_check_mli_for_files_library_present;
-        Alcotest.test_case "check combined" `Quick test_check_combined;
+          mli_library_present;
+        Alcotest.test_case "check combined" `Quick check_combined;
       ] );
   ]

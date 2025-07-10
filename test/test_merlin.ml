@@ -1,6 +1,6 @@
 open Merlint
 
-let test_analyze_file_valid () =
+let analyze_file_valid () =
   (* Test with a valid OCaml file *)
   let temp_file = Filename.temp_file "test" ".ml" in
   let oc = open_out temp_file in
@@ -21,7 +21,7 @@ let test_analyze_file_valid () =
     "browse should succeed" true
     (Result.is_ok result.browse)
 
-let test_analyze_file_syntax_error () =
+let analyze_syntax_error () =
   (* Test with invalid OCaml syntax *)
   let temp_file = Filename.temp_file "test" ".ml" in
   let oc = open_out temp_file in
@@ -42,7 +42,7 @@ let test_analyze_file_syntax_error () =
     "browse should fail" true
     (Result.is_error result.browse)
 
-let test_analyze_file_nonexistent () =
+let analyze_file_nonexistent () =
   let result = Merlin.analyze_file "/nonexistent/file.ml" in
 
   (* All analyses should fail for nonexistent file *)
@@ -56,7 +56,7 @@ let test_analyze_file_nonexistent () =
     "browse should fail" true
     (Result.is_error result.browse)
 
-let test_get_outline () =
+let get_outline () =
   let temp_file = Filename.temp_file "test" ".ml" in
   let oc = open_out temp_file in
   output_string oc "let foo x = x + 1\nlet bar = foo 42";
@@ -78,11 +78,11 @@ let suite =
   [
     ( "merlin",
       [
-        Alcotest.test_case "analyze valid file" `Quick test_analyze_file_valid;
+        Alcotest.test_case "analyze valid file" `Quick analyze_file_valid;
         Alcotest.test_case "analyze file with syntax error" `Quick
-          test_analyze_file_syntax_error;
+          analyze_syntax_error;
         Alcotest.test_case "analyze nonexistent file" `Quick
-          test_analyze_file_nonexistent;
-        Alcotest.test_case "get outline" `Quick test_get_outline;
+          analyze_file_nonexistent;
+        Alcotest.test_case "get outline" `Quick get_outline;
       ] );
   ]

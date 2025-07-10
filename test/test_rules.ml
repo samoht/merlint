@@ -1,6 +1,6 @@
 open Merlint
 
-let test_get_project_root () =
+let get_project_root () =
   (* Create a temporary directory structure *)
   let temp_dir = Filename.temp_file "test_rules" "" in
   Sys.remove temp_dir;
@@ -31,7 +31,7 @@ let test_get_project_root () =
 
   Alcotest.(check string) "project root" temp_dir root
 
-let test_get_project_root_no_dune () =
+let project_root_no_dune () =
   (* Test when no dune-project exists *)
   let temp_file = Filename.temp_file "test" ".ml" in
   let root = Rules.get_project_root temp_file in
@@ -41,7 +41,7 @@ let test_get_project_root_no_dune () =
   let expected = Filename.dirname temp_file in
   Alcotest.(check string) "defaults to file directory" expected root
 
-let test_default_config () =
+let default_config () =
   let config = Rules.default_config "/some/path" in
   Alcotest.(check string) "project root" "/some/path" config.project_root;
   (* Just verify we get a valid config *)
@@ -49,7 +49,7 @@ let test_default_config () =
     "has merlint config" true
     (config.merlint_config == Config.default)
 
-let test_analyze_project_empty () =
+let analyze_project_empty () =
   let temp_dir = Filename.temp_file "test_rules" "" in
   Sys.remove temp_dir;
   Unix.mkdir temp_dir 0o755;
@@ -73,7 +73,7 @@ let test_analyze_project_empty () =
         reports)
     categories
 
-let test_analyze_project_with_file () =
+let analyze_with_file () =
   let temp_dir = Filename.temp_file "test_rules" "" in
   Sys.remove temp_dir;
   Unix.mkdir temp_dir 0o755;
@@ -100,13 +100,11 @@ let suite =
   [
     ( "rules",
       [
-        Alcotest.test_case "get project root" `Quick test_get_project_root;
+        Alcotest.test_case "get project root" `Quick get_project_root;
         Alcotest.test_case "get project root no dune" `Quick
-          test_get_project_root_no_dune;
-        Alcotest.test_case "default config" `Quick test_default_config;
-        Alcotest.test_case "analyze empty project" `Quick
-          test_analyze_project_empty;
-        Alcotest.test_case "analyze project with file" `Quick
-          test_analyze_project_with_file;
+          project_root_no_dune;
+        Alcotest.test_case "default config" `Quick default_config;
+        Alcotest.test_case "analyze empty project" `Quick analyze_project_empty;
+        Alcotest.test_case "analyze project with file" `Quick analyze_with_file;
       ] );
   ]

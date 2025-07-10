@@ -118,12 +118,10 @@ let test_grouped_hints () =
 
   List.iter
     (fun (issue_type, issues) ->
-      match Issue.find_grouped_hint issue_type issues with
-      | Some hint ->
-          Alcotest.(check bool)
-            "grouped hint is non-empty" true
-            (String.length hint > 0)
-      | None -> Alcotest.fail "Expected grouped hint for issue type")
+      let hint = Issue.find_grouped_hint issue_type issues in
+      Alcotest.(check bool)
+        "grouped hint is non-empty" true
+        (String.length hint > 0))
     test_cases
 
 let suite =

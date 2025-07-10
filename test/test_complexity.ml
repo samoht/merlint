@@ -1,13 +1,13 @@
 open Merlint
 
-let test_default_config () =
+let default_config () =
   let config = Complexity.default_config in
   Alcotest.(check int) "default max_complexity" 10 config.max_complexity;
   Alcotest.(check int)
     "default max_function_length" 50 config.max_function_length;
   Alcotest.(check int) "default max_nesting" 3 config.max_nesting
 
-let test_analyze_browse_value () =
+let analyze_browse_value () =
   let config = Complexity.default_config in
   (* Create a mock browse value *)
   let loc =
@@ -36,7 +36,7 @@ let test_analyze_browse_value () =
       Alcotest.(check int) "threshold" 50 threshold
   | _ -> Alcotest.fail "Expected Function_too_long issue"
 
-let test_analyze_browse_value_with_pattern () =
+let browse_value_with_pattern () =
   let config = Complexity.default_config in
   (* Create a mock browse value with pattern matching *)
   let loc =
@@ -65,10 +65,9 @@ let suite =
   [
     ( "complexity",
       [
-        Alcotest.test_case "default config" `Quick test_default_config;
-        Alcotest.test_case "analyze browse value" `Quick
-          test_analyze_browse_value;
+        Alcotest.test_case "default config" `Quick default_config;
+        Alcotest.test_case "analyze browse value" `Quick analyze_browse_value;
         Alcotest.test_case "analyze browse value with pattern" `Quick
-          test_analyze_browse_value_with_pattern;
+          browse_value_with_pattern;
       ] );
   ]

@@ -52,11 +52,11 @@ let run_warning_rules _config files =
     ~passed:(warning_issues = []) ~issues:warning_issues
     ~file_count:(List.length files)
 
-let run_test_coverage_rules config files =
-  let coverage_issues =
-    Test_coverage.check_test_coverage config.project_root files
+let run_test_coverage_rules dune_describe files =
+  let coverage_issues = Test_coverage.check_test_coverage dune_describe files in
+  let runner_issues =
+    Test_coverage.check_test_runner_completeness dune_describe files
   in
-  let runner_issues = Test_coverage.check_test_runner_completeness files in
   let all_issues = coverage_issues @ runner_issues in
 
   Report.create ~rule_name:"Test coverage (1:1 lib/test correspondence)"
@@ -100,6 +100,9 @@ let analyze_project config files =
   let all_files = files in
   let file_count = List.length ml_files in
 
+  (* Run dune describe once at the beginning *)
+  let dune_describe = Dune.describe config.project_root in
+
   (* Analyze all ML files with merlin once *)
   let file_analyses =
     List.map (fun file -> (file, Merlin.analyze_file file)) ml_files
@@ -134,6 +137,6 @@ let analyze_project config files =
     ( "Test Quality",
       [
         run_test_convention_rules config all_files;
-        run_test_coverage_rules config all_files;
+        run_test_coverage_rules dune_describe all_files;
       ] );
   ]

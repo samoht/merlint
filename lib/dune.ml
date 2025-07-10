@@ -7,6 +7,9 @@ module Log = (val Logs.src_log src : Logs.LOG)
 (* Cache for dune describe output *)
 let dune_describe_cache : (string, string) Hashtbl.t = Hashtbl.create 1
 
+type describe = Sexplib0.Sexp.t
+(** Parsed dune describe output *)
+
 type stanza_type = Library | Executable | Test
 
 type stanza_info = {
@@ -57,6 +60,20 @@ let run_dune_describe project_root =
       | Unix.WSTOPPED n ->
           Log.err (fun m -> m "Dune describe stopped by signal %d" n);
           Error (Fmt.str "Dune describe was stopped by signal %d" n))
+
+let parse_dune_describe sexp_str =
+  try Parsexp.Single.parse_string_exn sexp_str
+  with exn ->
+    Log.err (fun m ->
+        m "Failed to parse dune describe output: %s" (Printexc.to_string exn));
+    Sexplib0.Sexp.List []
+
+let describe project_root =
+  match run_dune_describe project_root with
+  | Error err ->
+      Log.warn (fun m -> m "Could not run dune describe: %s" err);
+      parse_dune_describe ""
+  | Ok sexp_str -> parse_dune_describe sexp_str
 
 let ensure_project_built project_root =
   (* Check if _build directory exists *)
@@ -170,7 +187,7 @@ let get_executable_info project_root =
         [])
 
 (** Extract all source files from dune describe output *)
-let extract_source_files_from_sexp sexp =
+let extract_source_files sexp =
   let rec extract_modules = function
     | Sexplib0.Sexp.List
         (Sexplib0.Sexp.Atom "modules" :: [ Sexplib0.Sexp.List modules ]) ->
@@ -264,7 +281,7 @@ let get_project_files project_root =
   | Ok sexp_str -> (
       try
         let sexp = Parsexp.Single.parse_string_exn sexp_str in
-        let files = extract_source_files_from_sexp sexp in
+        let files = extract_source_files sexp in
         (* Remove duplicates and sort *)
         let unique_files = List.sort_uniq String.compare files in
         Log.debug (fun m ->
