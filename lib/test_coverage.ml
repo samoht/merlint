@@ -2,6 +2,63 @@
 
     This module ensures that library modules have corresponding test files. *)
 
+(** Check if a library is local *)
+let is_local_library lib_contents =
+  List.exists
+    (function
+      | Sexplib0.Sexp.List [ Sexplib0.Sexp.Atom "local"; value ] ->
+          (match value with Sexplib0.Sexp.Atom "true" -> true | _ -> false)
+      | _ -> false)
+    lib_contents
+
+(** Check if a module is generated (ends with .ml-gen) *)
+let is_generated_module items =
+  List.exists
+    (function
+      | Sexplib0.Sexp.List
+          [
+            Sexplib0.Sexp.Atom "impl";
+            Sexplib0.Sexp.List [ Sexplib0.Sexp.Atom path ];
+          ] ->
+          String.ends_with ~suffix:".ml-gen" path
+      | _ -> false)
+    items
+
+(** Extract module name from a module description *)
+let extract_module_name items =
+  match
+    List.find_map
+      (function
+        | Sexplib0.Sexp.List
+            [ Sexplib0.Sexp.Atom "name"; Sexplib0.Sexp.Atom name ] ->
+            Some (String.lowercase_ascii name)
+        | _ -> None)
+      items
+  with
+  | Some name when String.ends_with ~suffix:"__" name ->
+      (* Skip dune-generated wrapper modules like "prune__" *)
+      None
+  | Some name -> Some name
+  | None -> None
+
+(** Process a single module from dune describe *)
+let process_module = function
+  | Sexplib0.Sexp.List items ->
+      if is_generated_module items then None else extract_module_name items
+  | _ -> None
+
+(** Extract modules from a modules list *)
+let extract_modules = function
+  | Sexplib0.Sexp.List
+      (Sexplib0.Sexp.Atom "modules" :: [ Sexplib0.Sexp.List modules ]) ->
+      List.filter_map process_module modules
+  | _ -> []
+
+(** Process library fields to find modules *)
+let process_library_fields = function
+  | Sexplib0.Sexp.List fields -> List.concat_map extract_modules fields
+  | _ -> []
+
 (** Extract library modules from dune describe output *)
 let extract_library_modules_from_sexp sexp =
   match sexp with
@@ -9,36 +66,9 @@ let extract_library_modules_from_sexp sexp =
       List.concat_map
         (function
           | Sexplib0.Sexp.List (Sexplib0.Sexp.Atom "library" :: lib_contents) ->
-              (* Found a library section *)
-              List.concat_map
-                (function
-                  | Sexplib0.Sexp.List fields ->
-                      (* Look for modules field *)
-                      List.concat_map
-                        (function
-                          | Sexplib0.Sexp.List
-                              (Sexplib0.Sexp.Atom "modules"
-                              :: [ Sexplib0.Sexp.List modules ]) ->
-                              List.filter_map
-                                (function
-                                  | Sexplib0.Sexp.List items ->
-                                      (* Look for name field in module description *)
-                                      List.find_map
-                                        (function
-                                          | Sexplib0.Sexp.List
-                                              [
-                                                Sexplib0.Sexp.Atom "name";
-                                                Sexplib0.Sexp.Atom name;
-                                              ] ->
-                                              Some (String.lowercase_ascii name)
-                                          | _ -> None)
-                                        items
-                                  | _ -> None)
-                                modules
-                          | _ -> [])
-                        fields
-                  | _ -> [])
-                lib_contents
+              if is_local_library lib_contents then
+                List.concat_map process_library_fields lib_contents
+              else []
           | _ -> [])
         items
   | _ -> []
@@ -65,19 +95,25 @@ let get_lib_modules project_root =
         [])
 
 let get_test_modules files =
-  files
-  |> List.filter (fun f ->
-         String.starts_with ~prefix:"test/" f
-         && String.ends_with ~suffix:".ml" f
-         && not (String.ends_with ~suffix:".mli" f))
-  |> List.map (fun f ->
-         let base = Filename.basename f |> Filename.remove_extension in
-         (* Extract the module being tested from test_<module>.ml *)
-         if String.starts_with ~prefix:"test_" base then
-           Some (String.sub base 5 (String.length base - 5))
-         else if base = "test" then None (* Main test runner *)
-         else Some base)
-  |> List.filter_map Fun.id
+  let test_files =
+    files
+    |> List.filter (fun f ->
+           String.starts_with ~prefix:"test/" f
+           && String.ends_with ~suffix:".ml" f
+           && not (String.ends_with ~suffix:".mli" f))
+  in
+  let test_modules =
+    test_files
+    |> List.map (fun f ->
+           let base = Filename.basename f |> Filename.remove_extension in
+           (* Extract the module being tested from test_<module>.ml *)
+           if String.starts_with ~prefix:"test_" base then
+             Some (String.sub base 5 (String.length base - 5))
+           else if base = "test" then None (* Main test runner *)
+           else Some base)
+    |> List.filter_map Fun.id
+  in
+  test_modules
 
 let create_missing_test_issue module_name files =
   let lib_file =
