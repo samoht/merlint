@@ -18,6 +18,8 @@ type issue_type =
   | Missing_standard_function
   | Missing_ocamlformat_file
   | Missing_mli_file
+  | Test_exports_module
+  | Silenced_warning
 
 type t =
   | Complexity_exceeded of {
@@ -92,6 +94,12 @@ type t =
       location : Location.t;
       suggestion : string;
     }
+  | Test_exports_module_name of {
+      filename : string;
+      location : Location.t;
+      module_name : string;
+    }
+  | Silenced_warning of { location : Location.t; warning_number : string }
 
 let pp ppf = function
   | Complexity_exceeded { name; location; complexity; threshold } ->
@@ -151,6 +159,12 @@ let pp ppf = function
   | Long_identifier_name { name; location; underscore_count; _ } ->
       Fmt.pf ppf "%a: '%s' has too many underscores (%d)" Location.pp location
         name underscore_count
+  | Test_exports_module_name { filename = _; location; module_name } ->
+      Fmt.pf ppf "%a: Test file exports module name '%s' instead of 'suite'"
+        Location.pp location module_name
+  | Silenced_warning { location; warning_number } ->
+      Fmt.pf ppf "%a: Warning %s is silenced - fix the underlying issue instead"
+        Location.pp location warning_number
 
 let format v = Fmt.str "%a" pp v
 
@@ -178,6 +192,8 @@ let get_type = function
   | Missing_standard_function _ -> Missing_standard_function
   | Missing_ocamlformat_file _ -> Missing_ocamlformat_file
   | Missing_mli_file _ -> Missing_mli_file
+  | Test_exports_module_name _ -> Test_exports_module
+  | Silenced_warning _ -> Silenced_warning
 
 let hint_for_renames issue_type get_old_new issues =
   let renames = List.filter_map get_old_new issues in
@@ -435,17 +451,31 @@ let find_grouped_hint issue_type issues =
         \     profile = default\n\
         \     version = 0.26.1"
   | Missing_mli_file -> hint_missing_mli_file issues
+  | Test_exports_module ->
+      Some
+        "Test files should export 'suite' instead of the module name:\n\
+        \     let suite = [ (\"test_name\", tests) ]\n\
+        \     \n\
+        \     Instead of:\n\
+        \     let () = Alcotest.run \"module_name\" [ ... ]"
+  | Silenced_warning ->
+      Some
+        "Fix the underlying issue instead of silencing warnings:\n\
+        \     - Remove [@warning \"-nn\"] attributes\n\
+        \     - Remove [@@warning \"-nn\"] attributes\n\
+        \     - Fix the code that triggers the warning"
 
 (* Assign priority to issues - lower number = higher priority *)
 let priority = function
-  | No_obj_magic _ | Catch_all_exception _ -> 1
+  | No_obj_magic _ | Catch_all_exception _ | Silenced_warning _ -> 1
   | Complexity_exceeded _ | Deep_nesting _ | Function_too_long _ -> 2
   | Use_str_module _ | Use_printf_module _ | Bad_variant_naming _
   | Missing_mli_file _ | Bad_module_naming _ | Bad_value_naming _
   | Bad_type_naming _ | Long_identifier_name _ | Bad_function_naming _ ->
       3
   | Missing_mli_doc _ | Missing_value_doc _ | Bad_doc_style _
-  | Missing_standard_function _ | Missing_ocamlformat_file _ ->
+  | Missing_standard_function _ | Missing_ocamlformat_file _
+  | Test_exports_module_name _ ->
       4
 
 let find_location = function
@@ -465,7 +495,9 @@ let find_location = function
   | Missing_ocamlformat_file { location }
   | Missing_mli_file { location; _ }
   | Long_identifier_name { location; _ }
-  | Bad_function_naming { location; _ } ->
+  | Bad_function_naming { location; _ }
+  | Test_exports_module_name { location; _ }
+  | Silenced_warning { location; _ } ->
       Some location
   | _ -> None
 

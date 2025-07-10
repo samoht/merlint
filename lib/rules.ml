@@ -32,6 +32,26 @@ let run_documentation_rules _config files =
   Report.create ~rule_name:"Documentation rules (module docs)"
     ~passed:(issues = []) ~issues ~file_count:(List.length mli_files)
 
+let run_test_convention_rules _config files =
+  let test_issues = Test_checks.check files in
+  let test_files =
+    List.filter
+      (fun f ->
+        String.ends_with ~suffix:"_test.ml" f || Filename.basename f = "test.ml")
+      files
+  in
+
+  Report.create ~rule_name:"Test conventions (export 'suite' not module name)"
+    ~passed:(test_issues = []) ~issues:test_issues
+    ~file_count:(List.length test_files)
+
+let run_warning_rules _config files =
+  let warning_issues = Warning_checks.check files in
+
+  Report.create ~rule_name:"Warning rules (no silenced warnings)"
+    ~passed:(warning_issues = []) ~issues:warning_issues
+    ~file_count:(List.length files)
+
 (* Process a single file analysis *)
 let process_file_analysis config (file, analysis) =
   let complexity_issues =
@@ -96,9 +116,10 @@ let analyze_project config files =
   in
 
   [
-    ("Code Quality", [ complexity_report ]);
+    ("Code Quality", [ complexity_report; run_warning_rules config all_files ]);
     ("Code Style", [ style_report ]);
     ("Naming Conventions", [ naming_report ]);
     ("Documentation", [ run_documentation_rules config all_files ]);
     ("Project Structure", [ run_format_rules config all_files ]);
+    ("Test Quality", [ run_test_convention_rules config all_files ]);
   ]

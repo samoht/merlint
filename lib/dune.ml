@@ -77,36 +77,22 @@ let is_test_module module_name stanza_info =
     stanza_info
 
 let is_executable project_root ml_file =
-  (* Use dune describe to get actual stanza information *)
+  (* Only use dune describe to get actual stanza information *)
   match run_dune_describe project_root with
-  | Error _ ->
-      (* Fallback to heuristics if dune describe fails *)
-      let dirname = Filename.dirname ml_file in
-      let basename = Filename.basename ml_file in
-      let path_parts = String.split_on_char '/' dirname in
-      let is_test_dir =
-        List.exists (fun part -> part = "test" || part = "tests") path_parts
-      in
-      let is_bin_dir =
-        List.exists (fun part -> part = "bin" || part = "binary") path_parts
-      in
-      let is_test_file =
-        String.ends_with ~suffix:"_test.ml" basename
-        || String.ends_with ~suffix:"test.ml" basename
-        || String.starts_with ~prefix:"test_" basename
-      in
-      let is_main_file =
-        basename = "main.ml" || basename = "app.ml" || basename = "cli.ml"
-      in
-      is_test_dir || is_bin_dir || is_test_file || is_main_file
+  | Error err ->
+      Log.warn (fun m -> m "Could not run dune describe: %s" err);
+      (* If dune describe fails, we can't determine if it's an executable *)
+      false
   | Ok sexp_str ->
       (* Parse the s-expression and check if file belongs to executable stanza *)
       let module_name = Filename.basename (Filename.remove_extension ml_file) in
       let module_name_capitalized = String.capitalize_ascii module_name in
-      (* Use Re to find executable stanzas *)
+      (* Use Re to find executable or test stanzas *)
       let executables_regex = Re.compile (Re.str "executables") in
+      let tests_regex = Re.compile (Re.str "tests") in
       let module_regex = Re.compile (Re.str module_name_capitalized) in
       let has_executable_stanza =
-        Re.execp executables_regex sexp_str && Re.execp module_regex sexp_str
+        (Re.execp executables_regex sexp_str || Re.execp tests_regex sexp_str)
+        && Re.execp module_regex sexp_str
       in
       has_executable_stanza
