@@ -10,8 +10,8 @@ Test simple functions with low complexity
   ✓ Documentation (0 total issues)
   ✗ Project Structure (2 total issues)
     ✗ Format rules (.ocamlformat, .mli files) (2 issues)
-      samples/simple.ml:1:1: missing interface file
-      (project): Missing .ocamlformat file for consistent formatting
+      [E505] samples/simple.ml:1:1: missing interface file
+      [E500] (project): Missing .ocamlformat file for consistent formatting
   ✓ Test Quality (0 total issues)
   
   Summary: ✗ 2 total issues
@@ -39,8 +39,8 @@ Test function with high cyclomatic complexity
   ✓ Documentation (0 total issues)
   ✗ Project Structure (2 total issues)
     ✗ Format rules (.ocamlformat, .mli files) (2 issues)
-      samples/complex.ml:1:1: missing interface file
-      (project): Missing .ocamlformat file for consistent formatting
+      [E505] samples/complex.ml:1:1: missing interface file
+      [E500] (project): Missing .ocamlformat file for consistent formatting
   ✓ Test Quality (0 total issues)
   
   Summary: ✗ 2 total issues
@@ -64,15 +64,15 @@ Test long function detection
   
   ✗ Code Quality (1 total issues)
     ✗ Complexity rules (complexity ≤10, length ≤50, nesting ≤3) (1 issues)
-      long_function.ml:2:0: Function 'very_long_function' is 54 lines long (threshold: 50)
+      [E005] long_function.ml:2:0: Function 'very_long_function' is 54 lines long (threshold: 50)
     ✓ Warning rules (no silenced warnings) (0 issues)
   ✓ Code Style (0 total issues)
   ✓ Naming Conventions (0 total issues)
   ✓ Documentation (0 total issues)
   ✗ Project Structure (2 total issues)
     ✗ Format rules (.ocamlformat, .mli files) (2 issues)
-      samples/long_function.ml:1:1: missing interface file
-      (project): Missing .ocamlformat file for consistent formatting
+      [E505] samples/long_function.ml:1:1: missing interface file
+      [E500] (project): Missing .ocamlformat file for consistent formatting
   ✓ Test Quality (0 total issues)
   
   Summary: ✗ 3 total issues
@@ -101,16 +101,16 @@ Test naming conventions
   ✓ Code Style (0 total issues)
   ✗ Naming Conventions (5 total issues)
     ✗ Naming conventions (snake_case) (5 issues)
-      samples/bad_names.ml:3:7: Variant 'MyModule' should be 'My_module'
-      samples/bad_names.ml:4:6: Value 'myFunction' should be 'my_function'
-      samples/bad_names.ml:7:32: Variant 'ProcessingData' should be 'Processing_data'
-      samples/bad_names.ml:7:14: Variant 'WaitingForInput' should be 'Waiting_for_input'
-      samples/bad_names.ml:9:4: Value 'checkValue' should be 'check_value'
+      [E300] samples/bad_names.ml:3:7: Variant 'MyModule' should be 'My_module'
+      [E310] samples/bad_names.ml:4:6: Value 'myFunction' should be 'my_function'
+      [E300] samples/bad_names.ml:7:32: Variant 'ProcessingData' should be 'Processing_data'
+      [E300] samples/bad_names.ml:7:14: Variant 'WaitingForInput' should be 'Waiting_for_input'
+      [E310] samples/bad_names.ml:9:4: Value 'checkValue' should be 'check_value'
   ✓ Documentation (0 total issues)
   ✗ Project Structure (2 total issues)
     ✗ Format rules (.ocamlformat, .mli files) (2 issues)
-      samples/bad_names.ml:1:1: missing interface file
-      (project): Missing .ocamlformat file for consistent formatting
+      [E505] samples/bad_names.ml:1:1: missing interface file
+      [E500] (project): Missing .ocamlformat file for consistent formatting
   ✓ Test Quality (0 total issues)
   
   Summary: ✗ 7 total issues
@@ -146,10 +146,10 @@ Test documentation rules
   ✓ Naming Conventions (0 total issues)
   ✗ Documentation (1 total issues)
     ✗ Documentation rules (module docs) (1 issues)
-      samples/missing_docs.mli:1:0: Module 'missing_docs' missing documentation comment
+      [E400] samples/missing_docs.mli:1:0: Module 'missing_docs' missing documentation comment
   ✗ Project Structure (1 total issues)
     ✗ Format rules (.ocamlformat, .mli files) (1 issues)
-      (project): Missing .ocamlformat file for consistent formatting
+      [E500] (project): Missing .ocamlformat file for consistent formatting
   ✓ Test Quality (0 total issues)
   
   Summary: ✗ 2 total issues
@@ -179,13 +179,13 @@ Test style rules - Obj.magic
   ✓ Code Quality (0 total issues)
   ✗ Code Style (1 total issues)
     ✗ Style rules (no Obj.magic, no Str, no catch-all) (1 issues)
-      samples/bad_style.ml:2:16: Never use Obj.magic
+      [E100] samples/bad_style.ml:2:16: Never use Obj.magic
   ✓ Naming Conventions (0 total issues)
   ✓ Documentation (0 total issues)
   ✗ Project Structure (2 total issues)
     ✗ Format rules (.ocamlformat, .mli files) (2 issues)
-      samples/bad_style.ml:1:1: missing interface file
-      (project): Missing .ocamlformat file for consistent formatting
+      [E505] samples/bad_style.ml:1:1: missing interface file
+      [E500] (project): Missing .ocamlformat file for consistent formatting
   ✓ Test Quality (0 total issues)
   
   Summary: ✗ 3 total issues
@@ -212,16 +212,16 @@ Test style rules - Str module
   ✓ Code Quality (0 total issues)
   ✗ Code Style (4 total issues)
     ✗ Style rules (no Obj.magic, no Str, no catch-all) (4 issues)
-      samples/uses_str.ml:2:31: Use Re module instead of Str
-      samples/uses_str.ml:2:20: Use Re module instead of Str
-      samples/uses_str.ml:6:32: Use Re module instead of Str
-      samples/uses_str.ml:6:12: Use Re module instead of Str
+      [E200] samples/uses_str.ml:2:31: Use Re module instead of Str
+      [E200] samples/uses_str.ml:2:20: Use Re module instead of Str
+      [E200] samples/uses_str.ml:6:32: Use Re module instead of Str
+      [E200] samples/uses_str.ml:6:12: Use Re module instead of Str
   ✓ Naming Conventions (0 total issues)
   ✓ Documentation (0 total issues)
   ✗ Project Structure (2 total issues)
     ✗ Format rules (.ocamlformat, .mli files) (2 issues)
-      samples/uses_str.ml:1:1: missing interface file
-      (project): Missing .ocamlformat file for consistent formatting
+      [E505] samples/uses_str.ml:1:1: missing interface file
+      [E500] (project): Missing .ocamlformat file for consistent formatting
   ✓ Test Quality (0 total issues)
   
   Summary: ✗ 6 total issues
@@ -251,16 +251,16 @@ Test Printf/Format module usage
   ✓ Code Quality (0 total issues)
   ✗ Code Style (4 total issues)
     ✗ Style rules (no Obj.magic, no Str, no catch-all) (4 issues)
-      samples/uses_printf.ml:2:2: Use Fmt module instead of Printf
-      samples/uses_printf.ml:3:2: Use Fmt module instead of Printf
-      samples/uses_printf.ml:6:2: Use Fmt module instead of Format
-      samples/uses_printf.ml:7:2: Use Fmt module instead of Format
+      [E205] samples/uses_printf.ml:2:2: Use Fmt module instead of Printf
+      [E205] samples/uses_printf.ml:3:2: Use Fmt module instead of Printf
+      [E205] samples/uses_printf.ml:6:2: Use Fmt module instead of Format
+      [E205] samples/uses_printf.ml:7:2: Use Fmt module instead of Format
   ✓ Naming Conventions (0 total issues)
   ✓ Documentation (0 total issues)
   ✗ Project Structure (2 total issues)
     ✗ Format rules (.ocamlformat, .mli files) (2 issues)
-      samples/uses_printf.ml:1:1: missing interface file
-      (project): Missing .ocamlformat file for consistent formatting
+      [E505] samples/uses_printf.ml:1:1: missing interface file
+      [E500] (project): Missing .ocamlformat file for consistent formatting
   ✓ Test Quality (0 total issues)
   
   Summary: ✗ 6 total issues
@@ -296,8 +296,8 @@ Test catch-all exception handler
   ✓ Documentation (0 total issues)
   ✗ Project Structure (2 total issues)
     ✗ Format rules (.ocamlformat, .mli files) (2 issues)
-      samples/catch_all.ml:1:1: missing interface file
-      (project): Missing .ocamlformat file for consistent formatting
+      [E505] samples/catch_all.ml:1:1: missing interface file
+      [E500] (project): Missing .ocamlformat file for consistent formatting
   ✓ Test Quality (0 total issues)
   
   Summary: ✗ 2 total issues

@@ -119,86 +119,6 @@ type t =
       location : Location.t;
     }
 
-let pp ppf = function
-  | Complexity_exceeded { name; location; complexity; threshold } ->
-      Fmt.pf ppf
-        "%a: Function '%s' has cyclomatic complexity of %d (threshold: %d)"
-        Location.pp location name complexity threshold
-  | Function_too_long { name; location; length; threshold } ->
-      Fmt.pf ppf "%a: Function '%s' is %d lines long (threshold: %d)"
-        Location.pp location name length threshold
-  | Deep_nesting { name; location; depth; threshold } ->
-      Fmt.pf ppf "%a: Function '%s' has nesting depth of %d (threshold: %d)"
-        Location.pp location name depth threshold
-  | No_obj_magic { location } ->
-      Fmt.pf ppf "%a: Never use Obj.magic" Location.pp location
-  | Catch_all_exception { location } ->
-      Fmt.pf ppf "%a: Avoid catch-all exception handler" Location.pp location
-  | Use_str_module { location } ->
-      Fmt.pf ppf "%a: Use Re module instead of Str" Location.pp location
-  | Use_printf_module { location; module_used } ->
-      Fmt.pf ppf "%a: Use Fmt module instead of %s" Location.pp location
-        module_used
-  | Bad_variant_naming { variant; location; expected } ->
-      Fmt.pf ppf "%a: Variant '%s' should be '%s'" Location.pp location variant
-        expected
-  | Bad_module_naming { module_name; location; expected } ->
-      Fmt.pf ppf "%a: Module '%s' should be '%s'" Location.pp location
-        module_name expected
-  | Bad_value_naming { value_name; location; expected } ->
-      Fmt.pf ppf "%a: Value '%s' should be '%s'" Location.pp location value_name
-        expected
-  | Bad_type_naming { type_name; location; message } ->
-      Fmt.pf ppf "%a: Type '%s' %s" Location.pp location type_name message
-  | Bad_function_naming { function_name; location; suggestion } ->
-      Fmt.pf ppf
-        "%a: Function '%s' should use '%s' (get_* for extraction, find_* for \
-         search)"
-        Location.pp location function_name suggestion
-  | Missing_mli_doc { module_name; file } ->
-      Fmt.pf ppf "%s:1:0: Module '%s' missing documentation comment" file
-        module_name
-  | Missing_value_doc { value_name; location } ->
-      Fmt.pf ppf "%a: Value '%s' missing documentation" Location.pp location
-        value_name
-  | Bad_doc_style { value_name; location; message } ->
-      Fmt.pf ppf "%a: Value '%s' documentation issue: %s" Location.pp location
-        value_name message
-  | Missing_standard_function { module_name; type_name; missing; file } ->
-      Fmt.pf ppf "%s: Module '%s' with type '%s' missing standard functions: %a"
-        file module_name type_name
-        Fmt.(list ~sep:(any ", ") string)
-        missing
-  | Missing_ocamlformat_file _ ->
-      Fmt.pf ppf
-        "(project): Missing .ocamlformat file for consistent formatting"
-  | Missing_mli_file { location; _ } ->
-      Fmt.pf ppf "%a: missing interface file" Location.pp location
-  | Long_identifier_name { name; location; underscore_count; _ } ->
-      Fmt.pf ppf "%a: '%s' has too many underscores (%d)" Location.pp location
-        name underscore_count
-  | Test_exports_module_name { filename = _; location; module_name } ->
-      Fmt.pf ppf "%a: Test file exports module name '%s' instead of 'suite'"
-        Location.pp location module_name
-  | Silenced_warning { location; warning_number } ->
-      Fmt.pf ppf "%a: Warning %s is silenced - fix the underlying issue instead"
-        Location.pp location warning_number
-  | Missing_test_file { location; module_name; expected_test_file } ->
-      Fmt.pf ppf "%a: Module '%s' is missing test file '%s'" Location.pp
-        location module_name expected_test_file
-  | Test_without_library { location; test_file; expected_module } ->
-      Fmt.pf ppf "%a: Test file '%s' has no corresponding library module '%s'"
-        Location.pp location test_file expected_module
-  | Test_suite_not_included { location; test_module; _ } ->
-      Fmt.pf ppf "%a: Test suite '%s.suite' is not included in test runner"
-        Location.pp location test_module
-
-let format v = Fmt.str "%a" pp v
-
-let rec take n lst =
-  if n <= 0 then []
-  else match lst with [] -> [] | h :: t -> h :: take (n - 1) t
-
 let get_type = function
   | Complexity_exceeded _ -> Complexity
   | Function_too_long _ -> Function_length
@@ -224,6 +144,131 @@ let get_type = function
   | Missing_test_file _ -> Missing_test_file
   | Test_without_library _ -> Test_without_library
   | Test_suite_not_included _ -> Test_suite_not_included
+
+(* Error codes with gaps for future additions *)
+let error_code = function
+  (* Complexity (E001-E099) *)
+  | Complexity -> "E001"
+  | Function_length -> "E005"
+  | Deep_nesting -> "E010"
+  (* Security/Safety (E100-E199) *)
+  | Obj_magic -> "E100"
+  | Catch_all_exception -> "E105"
+  | Silenced_warning -> "E110"
+  (* Style/Modernization (E200-E299) *)
+  | Str_module -> "E200"
+  | Printf_module -> "E205"
+  (* Naming Conventions (E300-E399) *)
+  | Variant_naming -> "E300"
+  | Module_naming -> "E305"
+  | Value_naming -> "E310"
+  | Type_naming -> "E315"
+  | Long_identifier -> "E320"
+  | Function_naming -> "E325"
+  (* Documentation (E400-E499) *)
+  | Missing_mli_doc -> "E400"
+  | Missing_value_doc -> "E405"
+  | Bad_doc_style -> "E410"
+  | Missing_standard_function -> "E415"
+  (* Project Structure (E500-E599) *)
+  | Missing_ocamlformat_file -> "E500"
+  | Missing_mli_file -> "E505"
+  (* Testing (E600-E699) *)
+  | Test_exports_module -> "E600"
+  | Missing_test_file -> "E605"
+  | Test_without_library -> "E610"
+  | Test_suite_not_included -> "E615"
+
+let pp ppf issue =
+  let code = error_code (get_type issue) in
+  match issue with
+  | Complexity_exceeded { name; location; complexity; threshold } ->
+      Fmt.pf ppf
+        "[%s] %a: Function '%s' has cyclomatic complexity of %d (threshold: %d)"
+        code Location.pp location name complexity threshold
+  | Function_too_long { name; location; length; threshold } ->
+      Fmt.pf ppf "[%s] %a: Function '%s' is %d lines long (threshold: %d)" code
+        Location.pp location name length threshold
+  | Deep_nesting { name; location; depth; threshold } ->
+      Fmt.pf ppf
+        "[%s] %a: Function '%s' has nesting depth of %d (threshold: %d)" code
+        Location.pp location name depth threshold
+  | No_obj_magic { location } ->
+      Fmt.pf ppf "[%s] %a: Never use Obj.magic" code Location.pp location
+  | Catch_all_exception { location } ->
+      Fmt.pf ppf "[%s] %a: Avoid catch-all exception handler" code Location.pp
+        location
+  | Use_str_module { location } ->
+      Fmt.pf ppf "[%s] %a: Use Re module instead of Str" code Location.pp
+        location
+  | Use_printf_module { location; module_used } ->
+      Fmt.pf ppf "[%s] %a: Use Fmt module instead of %s" code Location.pp
+        location module_used
+  | Bad_variant_naming { variant; location; expected } ->
+      Fmt.pf ppf "[%s] %a: Variant '%s' should be '%s'" code Location.pp
+        location variant expected
+  | Bad_module_naming { module_name; location; expected } ->
+      Fmt.pf ppf "[%s] %a: Module '%s' should be '%s'" code Location.pp location
+        module_name expected
+  | Bad_value_naming { value_name; location; expected } ->
+      Fmt.pf ppf "[%s] %a: Value '%s' should be '%s'" code Location.pp location
+        value_name expected
+  | Bad_type_naming { type_name; location; message } ->
+      Fmt.pf ppf "[%s] %a: Type '%s' %s" code Location.pp location type_name
+        message
+  | Bad_function_naming { function_name; location; suggestion } ->
+      Fmt.pf ppf
+        "[%s] %a: Function '%s' should use '%s' (get_* for extraction, find_* \
+         for search)"
+        code Location.pp location function_name suggestion
+  | Missing_mli_doc { module_name; file } ->
+      Fmt.pf ppf "[%s] %s:1:0: Module '%s' missing documentation comment" code
+        file module_name
+  | Missing_value_doc { value_name; location } ->
+      Fmt.pf ppf "[%s] %a: Value '%s' missing documentation" code Location.pp
+        location value_name
+  | Bad_doc_style { value_name; location; message } ->
+      Fmt.pf ppf "[%s] %a: Value '%s' documentation issue: %s" code Location.pp
+        location value_name message
+  | Missing_standard_function { module_name; type_name; missing; file } ->
+      Fmt.pf ppf
+        "[%s] %s: Module '%s' with type '%s' missing standard functions: %a"
+        code file module_name type_name
+        Fmt.(list ~sep:(any ", ") string)
+        missing
+  | Missing_ocamlformat_file _ ->
+      Fmt.pf ppf
+        "[%s] (project): Missing .ocamlformat file for consistent formatting"
+        code
+  | Missing_mli_file { location; _ } ->
+      Fmt.pf ppf "[%s] %a: missing interface file" code Location.pp location
+  | Long_identifier_name { name; location; underscore_count; _ } ->
+      Fmt.pf ppf "[%s] %a: '%s' has too many underscores (%d)" code Location.pp
+        location name underscore_count
+  | Test_exports_module_name { filename = _; location; module_name } ->
+      Fmt.pf ppf
+        "[%s] %a: Test file exports module name '%s' instead of 'suite'" code
+        Location.pp location module_name
+  | Silenced_warning { location; warning_number } ->
+      Fmt.pf ppf
+        "[%s] %a: Warning %s is silenced - fix the underlying issue instead"
+        code Location.pp location warning_number
+  | Missing_test_file { location; module_name; expected_test_file } ->
+      Fmt.pf ppf "[%s] %a: Module '%s' is missing test file '%s'" code
+        Location.pp location module_name expected_test_file
+  | Test_without_library { location; test_file; expected_module } ->
+      Fmt.pf ppf
+        "[%s] %a: Test file '%s' has no corresponding library module '%s'" code
+        Location.pp location test_file expected_module
+  | Test_suite_not_included { location; test_module; _ } ->
+      Fmt.pf ppf "[%s] %a: Test suite '%s.suite' is not included in test runner"
+        code Location.pp location test_module
+
+let format v = Fmt.str "%a" pp v
+
+let rec take n lst =
+  if n <= 0 then []
+  else match lst with [] -> [] | h :: t -> h :: take (n - 1) t
 
 let hint_for_renames issue_type get_old_new issues =
   let renames = List.filter_map get_old_new issues in

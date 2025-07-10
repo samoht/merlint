@@ -16,10 +16,11 @@
 
 ## Medium Priority
 
-- [ ] Sort issues by severity/length (longest functions first as most actionable)
-  - Currently issues are not sorted by severity
-  - Longest functions should appear first as they are the most actionable items to fix
-  - Sort by: function length (descending), then complexity, then other issues
+- [x] Sort issues by severity/length (longest functions first as most actionable)
+  - ~~Currently issues are not sorted by severity~~
+  - ~~Longest functions should appear first as they are the most actionable items to fix~~
+  - ~~Sort by: function length (descending), then complexity, then other issues~~
+  - DONE: Enhanced Issue.compare to sort by numeric severity within each priority level
 
 - [ ] Detect when a function or type has the name of the module it belongs to
   - Examples: `Process.process*` or `History.find_history`
@@ -43,6 +44,12 @@
   - Similar to OCaml compiler warning flags
   - Support ranges (e.g., `-w -100..199` to disable all style checks)
   - Store configuration in .merlintrc or similar config file
+
+- [ ] Add rule to catch Error patterns and suggest using err_* helper functions
+  - Detect `Error (Fmt.str ...)` patterns in code  
+  - Suggest creating specific error helper functions like `err_invalid_input`, `err_file_not_found`
+  - Helper functions should be defined at the top of the file for better organization
+  - This promotes consistent error handling and reduces code duplication
 
 ## Low Priority
 
