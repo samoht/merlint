@@ -19,6 +19,8 @@ depends: [
   "logs"
   "fmt"
   "astring"
+  "sexplib0"
+  "parsexp"
   "alcotest" {with-test}
   "odoc" {with-doc}
 ]
