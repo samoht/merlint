@@ -2,9 +2,16 @@
 
 ## High Priority
 
-- [ ] Use dune describe to list files in the project instead of scanning
-  - Currently we scan the filesystem directly, but dune describe can provide a more accurate list of project files
-  - Should respect dune's source tree configuration and exclusions
+- [ ] Don't expect tests for dune-generated main modules
+  - Dune generates `<library>__.ml` files as entry points for wrapped libraries
+  - These should not require test files (e.g., `prune__.ml` should not require `test_prune__.ml`)
+  - Need to identify these from dune describe output and exclude them from test coverage checks
+  - Example error to fix: `prune__.ml:1:0: Module 'prune__' is missing test file 'test_prune__.ml'`
+
+- [x] Use dune describe to list files in the project instead of scanning
+  - ~~Currently we scan the filesystem directly, but dune describe can provide a more accurate list of project files~~
+  - ~~Should respect dune's source tree configuration and exclusions~~
+  - DONE: Implemented `Dune.get_project_files` that extracts source files from dune describe output
 
 ## Medium Priority
 

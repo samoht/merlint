@@ -25,6 +25,7 @@ let make_relative_to_cwd path =
           | Some rel -> Fpath.to_string rel
           | None -> path (* fallback to original path *)))
 
+(* DEPRECATED: Use Merlint.Dune.get_project_files instead *)
 let get_files_in_dir ~suffix dir =
   let rec get_files acc path =
     try
@@ -60,18 +61,6 @@ let expand_paths ~suffix paths =
         acc))
     [] paths
   |> List.rev
-
-let get_all_project_files ~suffix () =
-  let rec find_dune_root dir =
-    let dune_project = Filename.concat dir "dune-project" in
-    if Sys.file_exists dune_project then Some dir
-    else
-      let parent = Filename.dirname dir in
-      if parent = dir then None else find_dune_root parent
-  in
-  match find_dune_root (Sys.getcwd ()) with
-  | Some root -> get_files_in_dir ~suffix root
-  | None -> get_files_in_dir ~suffix (Sys.getcwd ())
 
 let should_exclude_file file exclude_patterns =
   List.exists
@@ -207,8 +196,8 @@ let analyze_files ?(exclude_patterns = []) files =
 
   let all_files =
     if files = [] then
-      get_all_project_files ~suffix:".ml" ()
-      @ get_all_project_files ~suffix:".mli" ()
+      (* Use dune describe to get project files *)
+      Merlint.Dune.get_project_files project_root
     else expand_paths ~suffix:".ml" files @ expand_paths ~suffix:".mli" files
   in
 

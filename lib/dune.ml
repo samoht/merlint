@@ -168,3 +168,111 @@ let get_executable_info project_root =
             m "Failed to parse dune describe output: %s"
               (Printexc.to_string exn));
         [])
+
+(** Extract all source files from dune describe output *)
+let extract_source_files_from_sexp sexp =
+  let rec extract_modules = function
+    | Sexplib0.Sexp.List
+        (Sexplib0.Sexp.Atom "modules" :: [ Sexplib0.Sexp.List modules ]) ->
+        (* Found modules section *)
+        List.concat_map
+          (function
+            | Sexplib0.Sexp.List items ->
+                (* Extract impl and intf fields *)
+                List.concat_map
+                  (function
+                    | Sexplib0.Sexp.List
+                        [
+                          Sexplib0.Sexp.Atom "impl";
+                          Sexplib0.Sexp.List [ Sexplib0.Sexp.Atom path ];
+                        ] ->
+                        (* Convert build path to source path *)
+                        let source_path =
+                          if String.starts_with ~prefix:"_build/default/" path
+                          then String.sub path 15 (String.length path - 15)
+                          else path
+                        in
+                        [ source_path ]
+                    | Sexplib0.Sexp.List
+                        [
+                          Sexplib0.Sexp.Atom "intf";
+                          Sexplib0.Sexp.List [ Sexplib0.Sexp.Atom path ];
+                        ] ->
+                        (* Convert build path to source path *)
+                        let source_path =
+                          if String.starts_with ~prefix:"_build/default/" path
+                          then String.sub path 15 (String.length path - 15)
+                          else path
+                        in
+                        [ source_path ]
+                    | _ -> [])
+                  items
+            | _ -> [])
+          modules
+    | Sexplib0.Sexp.List items ->
+        (* Recursively search in nested structures *)
+        List.concat_map extract_modules items
+    | _ -> []
+  in
+
+  let extract_from_stanzas = function
+    | Sexplib0.Sexp.List items ->
+        List.concat_map
+          (function
+            | Sexplib0.Sexp.List (Sexplib0.Sexp.Atom "library" :: lib_contents)
+              ->
+                (* Check if it's a local library *)
+                let is_local =
+                  List.exists
+                    (function
+                      | Sexplib0.Sexp.List
+                          [
+                            Sexplib0.Sexp.Atom "local";
+                            Sexplib0.Sexp.Atom "true";
+                          ] ->
+                          true
+                      | _ -> false)
+                    lib_contents
+                in
+                if is_local then List.concat_map extract_modules lib_contents
+                else []
+            | Sexplib0.Sexp.List
+                (Sexplib0.Sexp.Atom "executables" :: exec_contents) ->
+                List.concat_map extract_modules exec_contents
+            | Sexplib0.Sexp.List
+                (Sexplib0.Sexp.Atom "executable" :: exec_contents) ->
+                List.concat_map extract_modules exec_contents
+            | Sexplib0.Sexp.List (Sexplib0.Sexp.Atom "test" :: test_contents) ->
+                List.concat_map extract_modules test_contents
+            | Sexplib0.Sexp.List (Sexplib0.Sexp.Atom "tests" :: test_contents)
+              ->
+                List.concat_map extract_modules test_contents
+            | _ -> [])
+          items
+    | _ -> []
+  in
+
+  extract_from_stanzas sexp
+
+(** Get all project source files using dune describe *)
+let get_project_files project_root =
+  match run_dune_describe project_root with
+  | Error err ->
+      Log.warn (fun m -> m "Could not run dune describe: %s" err);
+      (* Return empty list if dune describe fails *)
+      []
+  | Ok sexp_str -> (
+      try
+        let sexp = Parsexp.Single.parse_string_exn sexp_str in
+        let files = extract_source_files_from_sexp sexp in
+        (* Remove duplicates and sort *)
+        let unique_files = List.sort_uniq String.compare files in
+        Log.debug (fun m ->
+            m "Found %d source files from dune describe"
+              (List.length unique_files));
+        unique_files
+      with exn ->
+        Log.err (fun m ->
+            m "Failed to parse dune describe output: %s"
+              (Printexc.to_string exn));
+        [])

@@ -25,3 +25,7 @@ val clear_cache : unit -> unit
 
 val get_executable_info : string -> string list
 (** Get list of executable module names for the project *)
+
+val get_project_files : string -> string list
+(** Get all project source files using dune describe. Returns a list of .ml and
+    .mli files. *)
