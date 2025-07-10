@@ -1,0 +1,4 @@
+(executable
+ (public_name test_sexp)
+ (name test_sexp)
+ (libraries merlint))

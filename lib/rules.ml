@@ -36,21 +36,21 @@ let run_documentation_rules _config files =
 let process_file_analysis config (file, analysis) =
   let complexity_issues =
     match analysis.Merlin.browse with
-    | Ok browse_value ->
+    | Ok browse_result ->
         Complexity.analyze_browse_value
           (Config.to_complexity_config config.merlint_config)
-          browse_value
+          browse_result
     | Error _ -> []
   in
 
   let style_issues, naming_issues =
     match analysis.Merlin.parsetree with
-    | Ok structure ->
-        let style = Style.check structure in
+    | Ok parsetree_result ->
+        let style = Style.check ~filename:file parsetree_result in
         let outline =
           match analysis.Merlin.outline with Ok o -> Some o | Error _ -> None
         in
-        let naming = Naming.check ~filename:file ~outline structure in
+        let naming = Naming.check ~filename:file ~outline parsetree_result in
         (style, naming)
     | Error _ -> ([], [])
   in

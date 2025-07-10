@@ -109,45 +109,26 @@ let should_exclude_file file exclude_patterns =
       && Re.execp (Re.compile (Re.str pattern_no_wildcards)) file)
     exclude_patterns
 
-let run_analysis project_root filtered_files =
-  let rules_config = Merlint.Rules.default_config project_root in
-  Log.info (fun m ->
-      m "Starting visual analysis on %d files" (List.length filtered_files));
-  let category_reports =
-    Merlint.Rules.analyze_project rules_config filtered_files
-  in
-
-  Fmt.pr "Running merlint analysis...@.@.";
-  Fmt.pr "Analyzing %d files@.@." (List.length filtered_files);
-
-  let all_reports =
+let process_category_report (category_name, reports) =
+  let total_issues =
     List.fold_left
-      (fun acc (category_name, reports) ->
-        let total_issues =
-          List.fold_left
-            (fun acc report -> acc + List.length report.Merlint.Report.issues)
-            0 reports
-        in
-        let category_passed =
-          List.for_all (fun report -> report.Merlint.Report.passed) reports
-        in
-
-        Fmt.pr "%s %s (%d total issues)@."
-          (Merlint.Report.print_color category_passed
-             (Merlint.Report.print_status category_passed))
-          category_name total_issues;
-
-        (* Only show detailed reports if there are issues *)
-        if total_issues > 0 then List.iter Merlint.Report.print_detailed reports;
-        reports @ acc)
-      [] category_reports
+      (fun acc report -> acc + List.length report.Merlint.Report.issues)
+      0 reports
+  in
+  let category_passed =
+    List.for_all (fun report -> report.Merlint.Report.passed) reports
   in
 
-  Merlint.Report.print_summary all_reports;
+  Fmt.pr "%s %s (%d total issues)@."
+    (Merlint.Report.print_color category_passed
+       (Merlint.Report.print_status category_passed))
+    category_name total_issues;
 
-  let all_issues = Merlint.Report.get_all_issues all_reports in
+  (* Only show detailed reports if there are issues *)
+  if total_issues > 0 then List.iter Merlint.Report.print_detailed reports;
+  reports
 
-  (* Print hints for fixing issues if any exist *)
+let print_fix_hints all_issues =
   if all_issues <> [] then (
     Fmt.pr "@.%s Fix hints:@." (Merlint.Report.print_color false "💡");
 
@@ -160,7 +141,7 @@ let run_analysis project_root filtered_files =
     let issue_groups =
       List.fold_left
         (fun acc issue ->
-          let issue_type = Merlint.Issue.get_issue_type issue in
+          let issue_type = Merlint.Issue.get_type issue in
           let current =
             match Issue_type_map.find_opt issue_type acc with
             | None -> []
@@ -179,6 +160,29 @@ let run_analysis project_root filtered_files =
       issue_groups;
 
     exit 1)
+
+let run_analysis project_root filtered_files =
+  let rules_config = Merlint.Rules.default_config project_root in
+  Log.info (fun m ->
+      m "Starting visual analysis on %d files" (List.length filtered_files));
+  let category_reports =
+    Merlint.Rules.analyze_project rules_config filtered_files
+  in
+
+  Fmt.pr "Running merlint analysis...@.@.";
+  Fmt.pr "Analyzing %d files@.@." (List.length filtered_files);
+
+  let all_reports =
+    List.fold_left
+      (fun acc category_report ->
+        let reports = process_category_report category_report in
+        reports @ acc)
+      [] category_reports
+  in
+
+  Merlint.Report.print_summary all_reports;
+  let all_issues = Merlint.Report.get_all_issues all_reports in
+  print_fix_hints all_issues
 
 let ensure_project_built project_root =
   match Merlint.Dune.ensure_project_built project_root with

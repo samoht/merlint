@@ -4,10 +4,10 @@ let src = Logs.Src.create "merlint.merlin" ~doc:"Merlin interface"
 
 module Log = (val Logs.src_log src : Logs.LOG)
 
-type file_analysis = {
-  browse : (Yojson.Safe.t, string) result;
-  parsetree : (Yojson.Safe.t, string) result;
-  outline : (Yojson.Safe.t, string) result;
+type t = {
+  browse : (Browse.t, string) result;
+  parsetree : (Parsetree.t, string) result;
+  outline : (Outline.t, string) result;
 }
 
 let get_outline file =
@@ -38,7 +38,7 @@ let get_outline file =
           | Some outline ->
               Log.debug (fun m ->
                   m "Successfully extracted outline for %s" file);
-              Ok outline
+              Ok (Outline.of_json outline)
           | None ->
               Log.warn (fun m -> m "No value in outline response for %s" file);
               Error "No value in outline response")
@@ -100,11 +100,21 @@ let dump_value format file =
       | _ -> Error "Invalid Merlin JSON format")
   | Error msg -> Error msg
 
+let get_browse file =
+  match dump_value "browse" file with
+  | Ok json -> Ok (Browse.of_json json)
+  | Error msg -> Error msg
+
+let get_parsetree file =
+  match dump_value "parsetree" file with
+  | Ok json -> Ok (Parsetree.of_json json)
+  | Error msg -> Error msg
+
 let analyze_file file =
   (* Run all three merlin commands for the file *)
   Log.info (fun m -> m "Analyzing file %s with merlin" file);
   {
-    browse = dump_value "browse" file;
-    parsetree = dump_value "parsetree" file;
+    browse = get_browse file;
+    parsetree = get_parsetree file;
     outline = get_outline file;
   }
