@@ -112,7 +112,7 @@ val get_type : t -> issue_type
 val error_code : issue_type -> string
 (** Get the error code for an issue type *)
 
-val find_grouped_hint : issue_type -> t list -> string option
+val find_grouped_hint : issue_type -> t list -> string
 (** Get a helpful hint for a group of issues of the same type *)
 
 val compare : t -> t -> int

@@ -159,7 +159,7 @@ let error_code = function
 
 (* Helper to style error codes *)
 let pp_error_code ppf code =
-  Fmt.pf ppf "%a" (Fmt.styled `Yellow Fmt.string) (Printf.sprintf "[%s]" code)
+  Fmt.pf ppf "%a" (Fmt.styled `Yellow Fmt.string) (Fmt.str "[%s]" code)
 
 (* Helper to style locations with bold filenames *)
 let pp_location_styled ppf (loc : Location.t) =

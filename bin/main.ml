@@ -186,22 +186,20 @@ let print_fix_hints all_issues =
     Issue_type_map.iter
       (fun issue_type issues ->
         let sorted_issues = List.sort Merlint.Issue.compare issues in
-        match Merlint.Issue.find_grouped_hint issue_type sorted_issues with
-        | Some hint ->
-            if not !first then Fmt.pr "@.";
-            (* Add spacing between hints *)
-            first := false;
-            let error_code = Merlint.Issue.error_code issue_type in
-            let title = Merlint.Hints.get_hint_title issue_type in
-            (* Print error code in yellow with title *)
-            Fmt.pr "%a %a@."
-              (Fmt.styled `Yellow Fmt.string)
-              (Printf.sprintf "[%s]" error_code)
-              (Fmt.styled `Bold Fmt.string)
-              title;
-            (* Print wrapped description *)
-            Fmt.pr "%s@." (wrap_hint_description hint)
-        | None -> ())
+        let hint = Merlint.Issue.find_grouped_hint issue_type sorted_issues in
+        if not !first then Fmt.pr "@.";
+        (* Add spacing between hints *)
+        first := false;
+        let error_code = Merlint.Issue.error_code issue_type in
+        let title = Merlint.Hints.get_hint_title issue_type in
+        (* Print error code in yellow with title *)
+        Fmt.pr "%a %a@."
+          (Fmt.styled `Yellow Fmt.string)
+          (Fmt.str "[%s]" error_code)
+          (Fmt.styled `Bold Fmt.string)
+          title;
+        (* Print wrapped description *)
+        Fmt.pr "%s@." (wrap_hint_description hint))
       issue_groups;
 
     exit 1)

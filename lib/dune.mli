@@ -1,5 +1,8 @@
 (** Wrapper for dune commands *)
 
+type describe = Sexplib0.Sexp.t
+(** Parsed dune describe output *)
+
 type stanza_type = Library | Executable | Test
 
 type stanza_info = {
@@ -9,7 +12,13 @@ type stanza_info = {
 }
 
 val run_dune_describe : string -> (string, string) result
-(** Run 'dune describe' and parse the output *)
+(** Run 'dune describe' and return the raw output *)
+
+val parse_dune_describe : string -> describe
+(** Parse dune describe output into structured format *)
+
+val describe : string -> describe
+(** Get parsed dune describe output for a project, using cache when possible *)
 
 val ensure_project_built : string -> (unit, string) result
 (** Ensure the project is built by running 'dune build' if needed *)

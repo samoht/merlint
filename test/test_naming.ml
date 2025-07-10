@@ -7,7 +7,7 @@ let create_temp_file content =
   close_out oc;
   temp_file
 
-let test_snake_case_valid () =
+let snake_case_valid () =
   let content = "let my_function x = x + 1\nlet another_var = 42" in
   let temp_file = create_temp_file content in
 
@@ -22,7 +22,7 @@ let test_snake_case_valid () =
       Sys.remove temp_file;
       Alcotest.fail "Failed to parse test file"
 
-let test_camel_case_violation () =
+let camel_case_violation () =
   let content = "let myFunction x = x + 1\nlet anotherVar = 42" in
   let temp_file = create_temp_file content in
 
@@ -52,8 +52,8 @@ let test_camel_case_violation () =
       Sys.remove temp_file;
       Alcotest.fail "Failed to parse test file"
 
-let test_too_many_underscores () =
-  let content = "let my_very_long_function_name x = x + 1" in
+let too_many_underscores () =
+  let content = "let very_long_function_name x = x + 1" in
   let temp_file = create_temp_file content in
 
   match Merlin.get_parsetree temp_file with
@@ -65,7 +65,7 @@ let test_too_many_underscores () =
       Alcotest.(check int) "should have 1 issue" 1 (List.length issues);
       match List.hd issues with
       | Issue.Long_identifier_name { name; underscore_count; _ } ->
-          Alcotest.(check string) "name" "my_very_long_function_name" name;
+          Alcotest.(check string) "name" "very_long_function_name" name;
           Alcotest.(check bool)
             "has many underscores" true (underscore_count > 3)
       | _ -> Alcotest.fail "Expected Long_identifier_name issue")
@@ -73,7 +73,7 @@ let test_too_many_underscores () =
       Sys.remove temp_file;
       Alcotest.fail "Failed to parse test file"
 
-let test_module_naming () =
+let module_naming () =
   let content = "module MyModule = struct let x = 1 end" in
   let temp_file = create_temp_file content in
 
@@ -90,7 +90,7 @@ let test_module_naming () =
       Sys.remove temp_file;
       Alcotest.fail "Failed to parse test file"
 
-let test_type_naming () =
+let type_naming () =
   let content = "type my_type = int\ntype AnotherType = string" in
   let temp_file = create_temp_file content in
 
@@ -110,12 +110,10 @@ let suite =
   [
     ( "naming",
       [
-        Alcotest.test_case "valid snake_case" `Quick test_snake_case_valid;
-        Alcotest.test_case "camelCase violation" `Quick
-          test_camel_case_violation;
-        Alcotest.test_case "too many underscores" `Quick
-          test_too_many_underscores;
-        Alcotest.test_case "module naming" `Quick test_module_naming;
-        Alcotest.test_case "type naming" `Quick test_type_naming;
+        Alcotest.test_case "valid snake_case" `Quick snake_case_valid;
+        Alcotest.test_case "camelCase violation" `Quick camel_case_violation;
+        Alcotest.test_case "too many underscores" `Quick too_many_underscores;
+        Alcotest.test_case "module naming" `Quick module_naming;
+        Alcotest.test_case "type naming" `Quick type_naming;
       ] );
   ]

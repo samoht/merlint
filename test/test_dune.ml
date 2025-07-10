@@ -18,13 +18,13 @@ let cleanup_test_project dir =
   in
   remove_dir dir
 
-let test_clear_cache () =
+let clear_cache () =
   (* Clear cache and verify it's empty *)
   Dune.clear_cache ();
   (* We cannot directly access the cache, but we can test the behavior *)
   Alcotest.(check bool) "cache cleared" true true
 
-let test_run_dune_describe_cache () =
+let dune_describe_cache () =
   Dune.clear_cache ();
 
   (* Test that run_dune_describe returns consistent results *)
@@ -42,7 +42,7 @@ let test_run_dune_describe_cache () =
       Alcotest.(check bool) "both calls failed consistently" true true
   | _ -> Alcotest.fail "Inconsistent results between calls"
 
-let test_get_executable_info_basic () =
+let executable_info_basic () =
   Dune.clear_cache ();
 
   (* We cannot test internals, but we can test behavior *)
@@ -56,7 +56,7 @@ let test_get_executable_info_basic () =
 
   cleanup_test_project temp_dir
 
-let test_is_executable () =
+let is_executable () =
   let temp_dir = setup_test_project () in
 
   (* Test with a regular .ml file *)
@@ -65,14 +65,14 @@ let test_is_executable () =
 
   cleanup_test_project temp_dir
 
-let test_get_executable_info () =
+let get_executable_info () =
   Dune.clear_cache ();
 
   (* Test with invalid project root *)
   let executables = Dune.get_executable_info "/nonexistent/path" in
   Alcotest.(check (list string)) "empty list for invalid path" [] executables
 
-let test_ensure_project_built () =
+let ensure_project_built () =
   let temp_dir = setup_test_project () in
 
   (* Without _build directory *)
@@ -98,14 +98,12 @@ let suite =
   [
     ( "dune",
       [
-        Alcotest.test_case "clear cache" `Quick test_clear_cache;
-        Alcotest.test_case "run dune describe cache" `Quick
-          test_run_dune_describe_cache;
+        Alcotest.test_case "clear cache" `Quick clear_cache;
+        Alcotest.test_case "run dune describe cache" `Quick dune_describe_cache;
         Alcotest.test_case "get executable info basic" `Quick
-          test_get_executable_info_basic;
-        Alcotest.test_case "is executable" `Quick test_is_executable;
-        Alcotest.test_case "get executable info" `Quick test_get_executable_info;
-        Alcotest.test_case "ensure project built" `Quick
-          test_ensure_project_built;
+          executable_info_basic;
+        Alcotest.test_case "is executable" `Quick is_executable;
+        Alcotest.test_case "get executable info" `Quick get_executable_info;
+        Alcotest.test_case "ensure project built" `Quick ensure_project_built;
       ] );
   ]

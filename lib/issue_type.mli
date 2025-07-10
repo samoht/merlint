@@ -1,3 +1,9 @@
+(** Types of issues that merlint can detect.
+
+    This module defines all the different categories of code quality issues that
+    merlint checks for, including complexity issues, style violations, naming
+    convention problems, documentation gaps, and test coverage issues. *)
+
 type t =
   | Complexity
   | Function_length

@@ -92,7 +92,10 @@ Test long function detection
   [E005] Long Functions
     This issue means your functions are too long and hard to read. Fix them by
     extracting logical sections into separate functions with descriptive names.
-    Aim for functions under 50 lines.
+    Note: Large pattern matching blocks are acceptable - functions with pattern
+    matching get double the line limit when they have more than 10 cases. For
+    better readability, consider using a helper function for each complex case.
+    Aim for functions under 50 lines otherwise.
   
   [E500] Missing Code Formatter
     This issue means your project lacks consistent code formatting. Fix it by
