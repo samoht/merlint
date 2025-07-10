@@ -22,43 +22,6 @@ let get_terminal_width () =
     width
   with _ -> 80 (* fallback to 80 columns *)
 
-let wrap_line ?(max_width = 80) ?(indent = 4) text =
-  let terminal_width = get_terminal_width () in
-  let effective_width = min max_width terminal_width in
-  let prefix = "  • " in
-  let continuation_prefix = String.make (String.length prefix + indent) ' ' in
-
-  if String.length text + String.length prefix <= effective_width then
-    prefix ^ text
-  else
-    let words = String.split_on_char ' ' text in
-    let rec build_lines acc current_line current_length = function
-      | [] -> if current_line = "" then acc else current_line :: acc
-      | word :: rest ->
-          let word_len = String.length word in
-          let space_len = if current_line = "" then 0 else 1 in
-          let new_length = current_length + space_len + word_len in
-          if new_length <= effective_width - String.length prefix then
-            let new_line =
-              if current_line = "" then word else current_line ^ " " ^ word
-            in
-            build_lines acc new_line new_length rest
-          else
-            let completed_line =
-              if current_line = "" then word else current_line
-            in
-            build_lines (completed_line :: acc) word word_len rest
-    in
-    let lines = List.rev (build_lines [] "" 0 words) in
-    match lines with
-    | [] -> prefix
-    | first :: rest ->
-        let first_line = prefix ^ first in
-        let continuation_lines =
-          List.map (fun line -> continuation_prefix ^ line) rest
-        in
-        String.concat "\n" (first_line :: continuation_lines)
-
 let make_relative_to_cwd path =
   match Fpath.of_string path with
   | Error _ -> path (* fallback to original path *)
@@ -162,9 +125,42 @@ let process_category_report (category_name, reports) =
   if total_issues > 0 then List.iter Merlint.Report.print_detailed reports;
   reports
 
+let wrap_hint_description ?(max_width = 80) text =
+  let terminal_width = get_terminal_width () in
+  let effective_width = min max_width terminal_width in
+  let indent_size = 2 in
+  let continuation_prefix = String.make indent_size ' ' in
+
+  let words = String.split_on_char ' ' text in
+  let rec build_lines acc current_line current_length = function
+    | [] -> if current_line = "" then acc else current_line :: acc
+    | word :: rest ->
+        let word_len = String.length word in
+        let space_len = if current_line = "" then 0 else 1 in
+        let new_length = current_length + space_len + word_len in
+        if new_length <= effective_width - indent_size then
+          let new_line =
+            if current_line = "" then word else current_line ^ " " ^ word
+          in
+          build_lines acc new_line new_length rest
+        else
+          let completed_line =
+            if current_line = "" then word else current_line
+          in
+          build_lines (completed_line :: acc) word word_len rest
+  in
+  let lines = List.rev (build_lines [] "" 0 words) in
+  match lines with
+  | [] -> ""
+  | lines ->
+      String.concat "\n"
+        (List.map (fun line -> continuation_prefix ^ line) lines)
+
 let print_fix_hints all_issues =
   if all_issues <> [] then (
-    Fmt.pr "@.%s Fix hints:@." (Merlint.Report.print_color false "💡");
+    Fmt.pr "@.%a Fix hints:@.@."
+      (Fmt.styled `Bold (Fmt.styled `Yellow Fmt.string))
+      "💡";
 
     (* Group issues by type and provide contextual hints *)
     let module Issue_type_map = Map.Make (struct
@@ -186,20 +182,35 @@ let print_fix_hints all_issues =
     in
 
     (* Print grouped hints with issues sorted by severity *)
+    let first = ref true in
     Issue_type_map.iter
       (fun issue_type issues ->
         let sorted_issues = List.sort Merlint.Issue.compare issues in
         match Merlint.Issue.find_grouped_hint issue_type sorted_issues with
         | Some hint ->
+            if not !first then Fmt.pr "@.";
+            (* Add spacing between hints *)
+            first := false;
             let error_code = Merlint.Issue.error_code issue_type in
-            let prefixed_hint = Fmt.str "[%s] %s" error_code hint in
-            Fmt.pr "%s@." (wrap_line prefixed_hint)
+            let title = Merlint.Hints.get_hint_title issue_type in
+            (* Print error code in yellow with title *)
+            Fmt.pr "%a %a@."
+              (Fmt.styled `Yellow Fmt.string)
+              (Printf.sprintf "[%s]" error_code)
+              (Fmt.styled `Bold Fmt.string)
+              title;
+            (* Print wrapped description *)
+            Fmt.pr "%s@." (wrap_hint_description hint)
         | None -> ())
       issue_groups;
 
     exit 1)
 
 let run_analysis project_root filtered_files =
+  (* Set formatter margin based on terminal width *)
+  let terminal_width = get_terminal_width () in
+  Format.set_margin terminal_width;
+
   let rules_config = Merlint.Rules.default_config project_root in
   Log.info (fun m ->
       m "Starting visual analysis on %d files" (List.length filtered_files));

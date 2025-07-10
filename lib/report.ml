@@ -23,11 +23,7 @@ let pp ppf report =
     (List.length report.issues);
   (* Show detailed issues sorted by priority *)
   let sorted_issues = List.sort Issue.compare report.issues in
-  List.iter
-    (fun issue ->
-      let formatted = Issue.format issue in
-      if formatted <> "" then Fmt.pf ppf "    %s@." formatted)
-    sorted_issues
+  List.iter (fun issue -> Fmt.pf ppf "    %a@." Issue.pp issue) sorted_issues
 
 let pp_summary ppf reports =
   let total_issues =

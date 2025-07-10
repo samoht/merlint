@@ -18,13 +18,17 @@ Test simple functions with low complexity
   ✗ Some checks failed. See details above.
   
   💡 Fix hints:
-    • [E500] This issue means your project lacks consistent code formatting. Fix
-            it by creating a .ocamlformat file in your project root with 'profile =
-            default' and a version number to ensure consistent formatting.
-    • [E505] This issue means your modules lack interface files making their
-            public API unclear. Fix it by creating .mli files that document which
-            functions and types should be public. Copy public signatures from the .ml
-            file and remove private ones.
+  
+  [E500] Missing Code Formatter
+    This issue means your project lacks consistent code formatting. Fix it by
+    creating a .ocamlformat file in your project root with 'profile = default' and
+    a version number to ensure consistent formatting.
+  
+  [E505] Missing Interface Files
+    This issue means your modules lack interface files making their public API
+    unclear. Fix it by creating .mli files that document which functions and types
+    should be public. Copy public signatures from the .ml file and remove private
+    ones.
   [1]
 
 Test function with high cyclomatic complexity
@@ -47,13 +51,17 @@ Test function with high cyclomatic complexity
   ✗ Some checks failed. See details above.
   
   💡 Fix hints:
-    • [E500] This issue means your project lacks consistent code formatting. Fix
-            it by creating a .ocamlformat file in your project root with 'profile =
-            default' and a version number to ensure consistent formatting.
-    • [E505] This issue means your modules lack interface files making their
-            public API unclear. Fix it by creating .mli files that document which
-            functions and types should be public. Copy public signatures from the .ml
-            file and remove private ones.
+  
+  [E500] Missing Code Formatter
+    This issue means your project lacks consistent code formatting. Fix it by
+    creating a .ocamlformat file in your project root with 'profile = default' and
+    a version number to ensure consistent formatting.
+  
+  [E505] Missing Interface Files
+    This issue means your modules lack interface files making their public API
+    unclear. Fix it by creating .mli files that document which functions and types
+    should be public. Copy public signatures from the .ml file and remove private
+    ones.
   [1]
 
 Test long function detection
@@ -64,7 +72,8 @@ Test long function detection
   
   ✗ Code Quality (1 total issues)
     ✗ Complexity rules (complexity ≤10, length ≤50, nesting ≤3) (1 issues)
-      [E005] long_function.ml:2:0: Function 'very_long_function' is 54 lines long (threshold: 50)
+      [E005] long_function.ml:2:0: Function 'very_long_function' is 54 lines long
+             (threshold: 50)
     ✓ Warning rules (no silenced warnings) (0 issues)
   ✓ Code Style (0 total issues)
   ✓ Naming Conventions (0 total issues)
@@ -79,16 +88,22 @@ Test long function detection
   ✗ Some checks failed. See details above.
   
   💡 Fix hints:
-    • [E005] This issue means your functions are too long and hard to read. Fix
-            them by extracting logical sections into separate functions with
-            descriptive names. Aim for functions under 50 lines.
-    • [E500] This issue means your project lacks consistent code formatting. Fix
-            it by creating a .ocamlformat file in your project root with 'profile =
-            default' and a version number to ensure consistent formatting.
-    • [E505] This issue means your modules lack interface files making their
-            public API unclear. Fix it by creating .mli files that document which
-            functions and types should be public. Copy public signatures from the .ml
-            file and remove private ones.
+  
+  [E005] Long Functions
+    This issue means your functions are too long and hard to read. Fix them by
+    extracting logical sections into separate functions with descriptive names.
+    Aim for functions under 50 lines.
+  
+  [E500] Missing Code Formatter
+    This issue means your project lacks consistent code formatting. Fix it by
+    creating a .ocamlformat file in your project root with 'profile = default' and
+    a version number to ensure consistent formatting.
+  
+  [E505] Missing Interface Files
+    This issue means your modules lack interface files making their public API
+    unclear. Fix it by creating .mli files that document which functions and types
+    should be public. Copy public signatures from the .ml file and remove private
+    ones.
   [1]
 
 Test naming conventions
@@ -103,8 +118,10 @@ Test naming conventions
     ✗ Naming conventions (snake_case) (5 issues)
       [E300] samples/bad_names.ml:3:7: Variant 'MyModule' should be 'My_module'
       [E310] samples/bad_names.ml:4:6: Value 'myFunction' should be 'my_function'
-      [E300] samples/bad_names.ml:7:32: Variant 'ProcessingData' should be 'Processing_data'
-      [E300] samples/bad_names.ml:7:14: Variant 'WaitingForInput' should be 'Waiting_for_input'
+      [E300] samples/bad_names.ml:7:32: Variant 'ProcessingData' should be
+             'Processing_data'
+      [E300] samples/bad_names.ml:7:14: Variant 'WaitingForInput' should be
+             'Waiting_for_input'
       [E310] samples/bad_names.ml:9:4: Value 'checkValue' should be 'check_value'
   ✓ Documentation (0 total issues)
   ✗ Project Structure (2 total issues)
@@ -117,19 +134,26 @@ Test naming conventions
   ✗ Some checks failed. See details above.
   
   💡 Fix hints:
-    • [E300] This issue means your variant constructors don't follow OCaml
-            naming conventions. Fix them by renaming to Snake_case (e.g., MyVariant
-            → My_variant).
-    • [E310] This issue means your value names don't follow OCaml naming
-            conventions. Fix them by renaming to snake_case (e.g., myValue →
-            my_value).
-    • [E500] This issue means your project lacks consistent code formatting. Fix
-            it by creating a .ocamlformat file in your project root with 'profile =
-            default' and a version number to ensure consistent formatting.
-    • [E505] This issue means your modules lack interface files making their
-            public API unclear. Fix it by creating .mli files that document which
-            functions and types should be public. Copy public signatures from the .ml
-            file and remove private ones.
+  
+  [E300] Variant Naming Convention
+    This issue means your variant constructors don't follow OCaml naming
+    conventions. Fix them by renaming to Snake_case (e.g., MyVariant →
+    My_variant).
+  
+  [E310] Value Naming Convention
+    This issue means your value names don't follow OCaml naming conventions. Fix
+    them by renaming to snake_case (e.g., myValue → my_value).
+  
+  [E500] Missing Code Formatter
+    This issue means your project lacks consistent code formatting. Fix it by
+    creating a .ocamlformat file in your project root with 'profile = default' and
+    a version number to ensure consistent formatting.
+  
+  [E505] Missing Interface Files
+    This issue means your modules lack interface files making their public API
+    unclear. Fix it by creating .mli files that document which functions and types
+    should be public. Copy public signatures from the .ml file and remove private
+    ones.
   [1]
 
 Test documentation rules
@@ -143,7 +167,8 @@ Test documentation rules
   ✓ Naming Conventions (0 total issues)
   ✗ Documentation (1 total issues)
     ✗ Documentation rules (module docs) (1 issues)
-      [E400] samples/missing_docs.mli:1:0: Module 'missing_docs' missing documentation comment
+      [E400] samples/missing_docs.mli:1:0: Module 'missing_docs' missing
+             documentation comment
   ✗ Project Structure (1 total issues)
     ✗ Format rules (.ocamlformat, .mli files) (1 issues)
       [E500] (project): Missing .ocamlformat file for consistent formatting
@@ -153,12 +178,16 @@ Test documentation rules
   ✗ Some checks failed. See details above.
   
   💡 Fix hints:
-    • [E400] This issue means your modules lack documentation making them hard
-            to understand. Fix it by adding module documentation at the top of .mli
-            files with a brief summary and description of the module's purpose.
-    • [E500] This issue means your project lacks consistent code formatting. Fix
-            it by creating a .ocamlformat file in your project root with 'profile =
-            default' and a version number to ensure consistent formatting.
+  
+  [E400] Missing Module Documentation
+    This issue means your modules lack documentation making them hard to
+    understand. Fix it by adding module documentation at the top of .mli files
+    with a brief summary and description of the module's purpose.
+  
+  [E500] Missing Code Formatter
+    This issue means your project lacks consistent code formatting. Fix it by
+    creating a .ocamlformat file in your project root with 'profile = default' and
+    a version number to ensure consistent formatting.
   [1]
 
 Test style rules - Obj.magic
@@ -183,16 +212,22 @@ Test style rules - Obj.magic
   ✗ Some checks failed. See details above.
   
   💡 Fix hints:
-    • [E100] This issue means you're using unsafe type casting that can crash
-            your program. Fix it by replacing Obj.magic with proper type definitions,
-            variant types, or GADTs to represent different cases safely.
-    • [E500] This issue means your project lacks consistent code formatting. Fix
-            it by creating a .ocamlformat file in your project root with 'profile =
-            default' and a version number to ensure consistent formatting.
-    • [E505] This issue means your modules lack interface files making their
-            public API unclear. Fix it by creating .mli files that document which
-            functions and types should be public. Copy public signatures from the .ml
-            file and remove private ones.
+  
+  [E100] Unsafe Type Casting
+    This issue means you're using unsafe type casting that can crash your program.
+    Fix it by replacing Obj.magic with proper type definitions, variant types, or
+    GADTs to represent different cases safely.
+  
+  [E500] Missing Code Formatter
+    This issue means your project lacks consistent code formatting. Fix it by
+    creating a .ocamlformat file in your project root with 'profile = default' and
+    a version number to ensure consistent formatting.
+  
+  [E505] Missing Interface Files
+    This issue means your modules lack interface files making their public API
+    unclear. Fix it by creating .mli files that document which functions and types
+    should be public. Copy public signatures from the .ml file and remove private
+    ones.
   [1]
 
 Test style rules - Str module
@@ -220,16 +255,22 @@ Test style rules - Str module
   ✗ Some checks failed. See details above.
   
   💡 Fix hints:
-    • [E200] This issue means you're using the outdated Str module for regular
-            expressions. Fix it by switching to the modern Re module: add 're' to your
-            dune dependencies and replace Str functions with Re equivalents.
-    • [E500] This issue means your project lacks consistent code formatting. Fix
-            it by creating a .ocamlformat file in your project root with 'profile =
-            default' and a version number to ensure consistent formatting.
-    • [E505] This issue means your modules lack interface files making their
-            public API unclear. Fix it by creating .mli files that document which
-            functions and types should be public. Copy public signatures from the .ml
-            file and remove private ones.
+  
+  [E200] Outdated Str Module
+    This issue means you're using the outdated Str module for regular expressions.
+    Fix it by switching to the modern Re module: add 're' to your dune
+    dependencies and replace Str functions with Re equivalents.
+  
+  [E500] Missing Code Formatter
+    This issue means your project lacks consistent code formatting. Fix it by
+    creating a .ocamlformat file in your project root with 'profile = default' and
+    a version number to ensure consistent formatting.
+  
+  [E505] Missing Interface Files
+    This issue means your modules lack interface files making their public API
+    unclear. Fix it by creating .mli files that document which functions and types
+    should be public. Copy public signatures from the .ml file and remove private
+    ones.
   [1]
 
 Test Printf/Format module usage
@@ -257,17 +298,22 @@ Test Printf/Format module usage
   ✗ Some checks failed. See details above.
   
   💡 Fix hints:
-    • [E205] This issue means you're using outdated Printf/Format modules for
-            formatting. Fix it by switching to the modern Fmt module: add 'fmt' to
-            your dune dependencies and replace Printf/Format functions with Fmt
-            equivalents.
-    • [E500] This issue means your project lacks consistent code formatting. Fix
-            it by creating a .ocamlformat file in your project root with 'profile =
-            default' and a version number to ensure consistent formatting.
-    • [E505] This issue means your modules lack interface files making their
-            public API unclear. Fix it by creating .mli files that document which
-            functions and types should be public. Copy public signatures from the .ml
-            file and remove private ones.
+  
+  [E205] Outdated Printf/Format Modules
+    This issue means you're using outdated Printf/Format modules for formatting.
+    Fix it by switching to the modern Fmt module: add 'fmt' to your dune
+    dependencies and replace Printf/Format functions with Fmt equivalents.
+  
+  [E500] Missing Code Formatter
+    This issue means your project lacks consistent code formatting. Fix it by
+    creating a .ocamlformat file in your project root with 'profile = default' and
+    a version number to ensure consistent formatting.
+  
+  [E505] Missing Interface Files
+    This issue means your modules lack interface files making their public API
+    unclear. Fix it by creating .mli files that document which functions and types
+    should be public. Copy public signatures from the .ml file and remove private
+    ones.
   [1]
 
 Test catch-all exception handler
@@ -290,11 +336,15 @@ Test catch-all exception handler
   ✗ Some checks failed. See details above.
   
   💡 Fix hints:
-    • [E500] This issue means your project lacks consistent code formatting. Fix
-            it by creating a .ocamlformat file in your project root with 'profile =
-            default' and a version number to ensure consistent formatting.
-    • [E505] This issue means your modules lack interface files making their
-            public API unclear. Fix it by creating .mli files that document which
-            functions and types should be public. Copy public signatures from the .ml
-            file and remove private ones.
+  
+  [E500] Missing Code Formatter
+    This issue means your project lacks consistent code formatting. Fix it by
+    creating a .ocamlformat file in your project root with 'profile = default' and
+    a version number to ensure consistent formatting.
+  
+  [E505] Missing Interface Files
+    This issue means your modules lack interface files making their public API
+    unclear. Fix it by creating .mli files that document which functions and types
+    should be public. Copy public signatures from the .ml file and remove private
+    ones.
   [1]
