@@ -157,91 +157,115 @@ let error_code = function
   | Test_without_library -> "E610"
   | Test_suite_not_included -> "E615"
 
-let pp ppf issue =
+(* Helper to style error codes *)
+let pp_error_code ppf code =
+  Fmt.pf ppf "%a" (Fmt.styled `Yellow Fmt.string) (Printf.sprintf "[%s]" code)
+
+(* Helper to style locations with bold filenames *)
+let pp_location_styled ppf (loc : Location.t) =
+  Fmt.pf ppf "%a:%d:%d" (Fmt.styled `Bold Fmt.string) loc.file loc.line loc.col
+
+(* Helper to format issue content *)
+let pp_issue_content ppf issue =
   let code = error_code (get_type issue) in
   match issue with
   | Complexity_exceeded { name; location; complexity; threshold } ->
       Fmt.pf ppf
-        "[%s] %a: Function '%s' has cyclomatic complexity of %d (threshold: %d)"
-        code Location.pp location name complexity threshold
+        "%a %a:@ Function@ '%s'@ has@ cyclomatic@ complexity@ of@ %d@ \
+         (threshold:@ %d)"
+        pp_error_code code pp_location_styled location name complexity threshold
   | Function_too_long { name; location; length; threshold } ->
-      Fmt.pf ppf "[%s] %a: Function '%s' is %d lines long (threshold: %d)" code
-        Location.pp location name length threshold
+      Fmt.pf ppf "%a %a:@ Function@ '%s'@ is@ %d@ lines@ long@ (threshold:@ %d)"
+        pp_error_code code pp_location_styled location name length threshold
   | Deep_nesting { name; location; depth; threshold } ->
       Fmt.pf ppf
-        "[%s] %a: Function '%s' has nesting depth of %d (threshold: %d)" code
-        Location.pp location name depth threshold
+        "%a %a:@ Function@ '%s'@ has@ nesting@ depth@ of@ %d@ (threshold:@ %d)"
+        pp_error_code code pp_location_styled location name depth threshold
   | No_obj_magic { location } ->
-      Fmt.pf ppf "[%s] %a: Never use Obj.magic" code Location.pp location
+      Fmt.pf ppf "%a %a:@ Never@ use@ Obj.magic" pp_error_code code
+        pp_location_styled location
   | Catch_all_exception { location } ->
-      Fmt.pf ppf "[%s] %a: Avoid catch-all exception handler" code Location.pp
-        location
+      Fmt.pf ppf "%a %a:@ Avoid@ catch-all@ exception@ handler" pp_error_code
+        code pp_location_styled location
   | Use_str_module { location } ->
-      Fmt.pf ppf "[%s] %a: Use Re module instead of Str" code Location.pp
-        location
+      Fmt.pf ppf "%a %a:@ Use@ Re@ module@ instead@ of@ Str" pp_error_code code
+        pp_location_styled location
   | Use_printf_module { location; module_used } ->
-      Fmt.pf ppf "[%s] %a: Use Fmt module instead of %s" code Location.pp
-        location module_used
+      Fmt.pf ppf "%a %a:@ Use@ Fmt@ module@ instead@ of@ %s" pp_error_code code
+        pp_location_styled location module_used
   | Bad_variant_naming { variant; location; expected } ->
-      Fmt.pf ppf "[%s] %a: Variant '%s' should be '%s'" code Location.pp
-        location variant expected
+      Fmt.pf ppf "%a %a:@ Variant@ '%s'@ should@ be@ '%s'" pp_error_code code
+        pp_location_styled location variant expected
   | Bad_module_naming { module_name; location; expected } ->
-      Fmt.pf ppf "[%s] %a: Module '%s' should be '%s'" code Location.pp location
-        module_name expected
+      Fmt.pf ppf "%a %a:@ Module@ '%s'@ should@ be@ '%s'" pp_error_code code
+        pp_location_styled location module_name expected
   | Bad_value_naming { value_name; location; expected } ->
-      Fmt.pf ppf "[%s] %a: Value '%s' should be '%s'" code Location.pp location
-        value_name expected
+      Fmt.pf ppf "%a %a:@ Value@ '%s'@ should@ be@ '%s'" pp_error_code code
+        pp_location_styled location value_name expected
   | Bad_type_naming { type_name; location; message } ->
-      Fmt.pf ppf "[%s] %a: Type '%s' %s" code Location.pp location type_name
-        message
+      Fmt.pf ppf "%a %a:@ Type@ '%s'@ %s" pp_error_code code pp_location_styled
+        location type_name message
   | Bad_function_naming { function_name; location; suggestion } ->
       Fmt.pf ppf
-        "[%s] %a: Function '%s' should use '%s' (get_* for extraction, find_* \
-         for search)"
-        code Location.pp location function_name suggestion
+        "%a %a:@ Function@ '%s'@ should@ use@ '%s'@ (get_*@ for@ extraction,@ \
+         find_*@ for@ search)"
+        pp_error_code code pp_location_styled location function_name suggestion
   | Missing_mli_doc { module_name; file } ->
-      Fmt.pf ppf "[%s] %s:1:0: Module '%s' missing documentation comment" code
+      Fmt.pf ppf "%a %a:1:0:@ Module@ '%s'@ missing@ documentation@ comment"
+        pp_error_code code
+        (Fmt.styled `Bold Fmt.string)
         file module_name
   | Missing_value_doc { value_name; location } ->
-      Fmt.pf ppf "[%s] %a: Value '%s' missing documentation" code Location.pp
-        location value_name
+      Fmt.pf ppf "%a %a:@ Value@ '%s'@ missing@ documentation" pp_error_code
+        code pp_location_styled location value_name
   | Bad_doc_style { value_name; location; message } ->
-      Fmt.pf ppf "[%s] %a: Value '%s' documentation issue: %s" code Location.pp
-        location value_name message
+      Fmt.pf ppf "%a %a:@ Value@ '%s'@ documentation@ issue:@ %s" pp_error_code
+        code pp_location_styled location value_name message
   | Missing_standard_function { module_name; type_name; missing; file } ->
       Fmt.pf ppf
-        "[%s] %s: Module '%s' with type '%s' missing standard functions: %a"
-        code file module_name type_name
-        Fmt.(list ~sep:(any ", ") string)
-        missing
+        "%a %a:@ Module@ '%s'@ with@ type@ '%s'@ missing@ standard@ \
+         functions:@ %s"
+        pp_error_code code
+        (Fmt.styled `Bold Fmt.string)
+        file module_name type_name
+        (String.concat ", " missing)
   | Missing_ocamlformat_file _ ->
       Fmt.pf ppf
-        "[%s] (project): Missing .ocamlformat file for consistent formatting"
-        code
+        "%a (project):@ Missing@ .ocamlformat@ file@ for@ consistent@ \
+         formatting"
+        pp_error_code code
   | Missing_mli_file { location; _ } ->
-      Fmt.pf ppf "[%s] %a: missing interface file" code Location.pp location
+      Fmt.pf ppf "%a %a:@ missing@ interface@ file" pp_error_code code
+        pp_location_styled location
   | Long_identifier_name { name; location; underscore_count; _ } ->
-      Fmt.pf ppf "[%s] %a: '%s' has too many underscores (%d)" code Location.pp
-        location name underscore_count
+      Fmt.pf ppf "%a %a:@ '%s'@ has@ too@ many@ underscores@ (%d)" pp_error_code
+        code pp_location_styled location name underscore_count
   | Test_exports_module_name { filename = _; location; module_name } ->
       Fmt.pf ppf
-        "[%s] %a: Test file exports module name '%s' instead of 'suite'" code
-        Location.pp location module_name
+        "%a %a:@ Test@ file@ exports@ module@ name@ '%s'@ instead@ of@ 'suite'"
+        pp_error_code code pp_location_styled location module_name
   | Silenced_warning { location; warning_number } ->
       Fmt.pf ppf
-        "[%s] %a: Warning %s is silenced - fix the underlying issue instead"
-        code Location.pp location warning_number
+        "%a %a:@ Warning@ %s@ is@ silenced@ -@ fix@ the@ underlying@ issue@ \
+         instead"
+        pp_error_code code pp_location_styled location warning_number
   | Missing_test_file { location; module_name; expected_test_file } ->
-      Fmt.pf ppf "[%s] %a: Module '%s' is missing test file '%s'" code
-        Location.pp location module_name expected_test_file
+      Fmt.pf ppf "%a %a:@ Module@ '%s'@ is@ missing@ test@ file@ '%s'"
+        pp_error_code code pp_location_styled location module_name
+        expected_test_file
   | Test_without_library { location; test_file; expected_module } ->
       Fmt.pf ppf
-        "[%s] %a: Test file '%s' has no corresponding library module '%s'" code
-        Location.pp location test_file expected_module
+        "%a %a:@ Test@ file@ '%s'@ has@ no@ corresponding@ library@ module@ \
+         '%s'"
+        pp_error_code code pp_location_styled location test_file expected_module
   | Test_suite_not_included { location; test_module; _ } ->
-      Fmt.pf ppf "[%s] %a: Test suite '%s.suite' is not included in test runner"
-        code Location.pp location test_module
+      Fmt.pf ppf
+        "%a %a:@ Test@ suite@ '%s.suite'@ is@ not@ included@ in@ test@ runner"
+        pp_error_code code pp_location_styled location test_module
 
+(* Format issue with proper line wrapping using Fmt *)
+let pp_wrapped ppf issue = Fmt.box ~indent:7 pp_issue_content ppf issue
+let pp = pp_wrapped
 let format v = Fmt.str "%a" pp v
 let find_grouped_hint issue_type _issues = Hints.get_hint issue_type
 

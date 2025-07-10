@@ -2,6 +2,33 @@
 
 open Issue_type
 
+(** Get a short title for a specific issue type *)
+let get_hint_title = function
+  | Complexity -> "High Cyclomatic Complexity"
+  | Function_length -> "Long Functions"
+  | Deep_nesting -> "Deep Nesting"
+  | Obj_magic -> "Unsafe Type Casting"
+  | Catch_all_exception -> "Catch-All Exception Handlers"
+  | Str_module -> "Outdated Str Module"
+  | Printf_module -> "Outdated Printf/Format Modules"
+  | Variant_naming -> "Variant Naming Convention"
+  | Module_naming -> "Module Naming Convention"
+  | Value_naming -> "Value Naming Convention"
+  | Type_naming -> "Type Naming Convention"
+  | Long_identifier -> "Long Identifier Names"
+  | Function_naming -> "Function Naming Pattern"
+  | Missing_mli_doc -> "Missing Module Documentation"
+  | Missing_value_doc -> "Missing Value Documentation"
+  | Bad_doc_style -> "Documentation Style Issues"
+  | Missing_standard_function -> "Missing Standard Functions"
+  | Missing_ocamlformat_file -> "Missing Code Formatter"
+  | Missing_mli_file -> "Missing Interface Files"
+  | Test_exports_module -> "Test Module Convention"
+  | Silenced_warning -> "Silenced Compiler Warnings"
+  | Missing_test_file -> "Missing Test Coverage"
+  | Test_without_library -> "Orphaned Test Files"
+  | Test_suite_not_included -> "Excluded Test Suites"
+
 (** Get a hint for a specific issue type *)
 let get_hint = function
   | Complexity ->
