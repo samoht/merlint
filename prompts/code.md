@@ -17,18 +17,19 @@ pragmatism.
     constructs.
 4.  **Explicitness**: Make control flow and error handling explicit. Avoid
     exceptions for recoverable errors.
-5.  **NEVER USE Obj.magic**: The `Obj` module is not part of the OCaml language
+5.  **NEVER USE Obj.magic** [E100]: The `Obj` module is not part of the OCaml language
     and breaks type safety. There is always a better, type-safe solution.
 
 ## Dependencies and Tooling
 
 -   **Build System**: The project is built exclusively with `dune`.
--   **Formatting**: All code is formatted automatically with `ocamlformat`. Run
-    `dune fmt` before committing.
+-   **Formatting** [E500]: All code is formatted automatically with `ocamlformat`. Run
+    `dune fmt` before committing. Ensure you have a `.ocamlformat` file in your project root.
 -   **Core Libraries**: Projects typically embrace a curated set of high-quality
     libraries for common tasks. For example:
     -   **Concurrency**: `eio`
-    -   **Structured Output**: `fmt`
+    -   **Structured Output** [E205]: `fmt` (instead of Printf/Format)
+    -   **Regular Expressions** [E200]: `re` (instead of Str module)
     -   **Logging**: `logs`
     -   **CLI Parsing**: `cmdliner`
     -   **JSON Handling**: `yojson`
@@ -36,7 +37,7 @@ pragmatism.
 
 ## Module and Interface Design
 
--   **Documentation**: Every `.mli` file must begin with a top-level
+-   **Documentation** [E400]: Every `.mli` file must begin with a top-level
     documentation comment explaining its purpose. Focus on *what* the module
     provides, not *how* it is implemented.
 
@@ -46,7 +47,7 @@ pragmatism.
         This module provides types and functions for interacting with users. *)
     ```
 
--   **Interface (`.mli`) Style**: Document every exported value. Use a
+-   **Interface (`.mli`) Style** [E405]: Document every exported value. Use a
     consistent, concise style.
     -   **Documentation Philosophy**: For functions, use the
         `[function_name arg1 arg2] is ...` pattern.
@@ -64,7 +65,7 @@ pragmatism.
     smart constructors and accessors instead of record fields to maintain
     invariants.
 
--   **Standard Interfaces for Data Types**: For modules defining a central data
+-   **Standard Interfaces for Data Types** [E415]: For modules defining a central data
     type `t`, consistently provide these functions where applicable:
     -   `val v : ... -> t`: A pure, smart constructor for creating values of
         type `t` in memory. This function should not perform any I/O.
@@ -78,6 +79,13 @@ pragmatism.
     -   `val to_json : t -> Yojson.Safe.t`: For serializing to JSON.
     -   `val validate : t -> (t, string) result`: For validating the integrity
         of the data.
+
+## Project Structure
+
+-   **Interface Files** [E505]: Create `.mli` files for all public modules to define
+    clear interfaces and hide implementation details.
+-   **Code Formatting** [E500]: Maintain a `.ocamlformat` file in the project root
+    with consistent formatting settings.
 
 ## Command-Line Applications
 
@@ -126,8 +134,10 @@ for programming errors (e.g., `Invalid_argument`).
       | None -> err_parse "Missing user ID"
     ```
 
--   **No Broad Exceptions**: Never use `try ... with _ -> ...`. Always match on
+-   **No Broad Exceptions** [E105]: Never use `try ... with _ -> ...`. Always match on
     specific exceptions.
+-   **No Silenced Warnings** [E110]: Fix underlying issues instead of silencing compiler
+    warnings with attributes like `[@warning "-nn"]`.
 
 -   **Initialization Failures**: For unrecoverable errors during startup (e.g.,
     missing configuration), it is acceptable to fail fast using `Fmt.failwith`.
@@ -142,24 +152,31 @@ for programming errors (e.g., `Invalid_argument`).
 ## Naming and Formatting
 
 -   **File Naming**: Lowercase with underscores (e.g., `user_profile.ml`).
--   **Module Naming**: Lowercase with underscores (e.g., `user_profile`).
--   **Type Naming**: The primary type in a module is `t`. Identifiers are named
-    `id`.
--   **Variant Constructors**: Use snake_case for variant constructors (e.g.,
+-   **Module Naming** [E305]: Lowercase with underscores (e.g., `user_profile`).
+-   **Type Naming** [E315]: The primary type in a module is `t`. Identifiers are named
+    `id`. Use snake_case for all type names.
+-   **Variant Constructors** [E300]: Use Snake_case for variant constructors (e.g.,
     `Waiting_for_input`, `Processing_data`), not CamelCase.
--   **Values**: Short, descriptive, and lowercase with underscores (e.g.,
+-   **Values** [E310]: Short, descriptive, and lowercase with underscores (e.g.,
     `find_user`, `create_channel`).
+-   **Long Identifiers** [E320]: Avoid excessively long names with many underscores.
+    Keep names concise and meaningful.
+-   **Function Naming** [E325]: Use `get_*` for extraction (returns value directly),
+    `find_*` for search (returns option type).
 -   **Labels**: Use labels only when they clarify the meaning of an argument, not
     for all arguments. Avoid `~f` and `~x`.
 -   **Formatting**: Trust `ocamlformat`. No manual formatting.
 
 ## Function Design
 
--   **Keep Functions Small and Focused**: A function should do one thing well.
+-   **Keep Functions Small and Focused** [E005]: A function should do one thing well.
     Decompose complex logic into smaller, well-defined helper functions. This
-    improves readability, testability, and reusability. As a rule of thumb,
-    avoid deep nesting of `match` or `if` statements; more than two or three
-    levels is a strong signal that the function should be refactored.
+    improves readability, testability, and reusability. Aim for functions under
+    50 lines. As a rule of thumb, avoid deep nesting of `match` or `if` statements;
+    more than two or three levels [E010] is a strong signal that the function should be
+    refactored.
+-   **Complexity Management** [E001]: Break down functions with high cyclomatic complexity
+    into smaller, focused helper functions with clear names.
 -   **Purity**: Prefer pure functions. Isolate side-effects (I/O, state
     mutation) at the edges of the application, primarily in the `bin/` and
     `lib/ui/` directories.

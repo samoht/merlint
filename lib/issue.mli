@@ -3,31 +3,7 @@
     This module defines the types for all possible issues that merlint can
     detect, along with functions to format them for output. *)
 
-type issue_type =
-  | Complexity
-  | Function_length
-  | Deep_nesting
-  | Obj_magic
-  | Catch_all_exception
-  | Str_module
-  | Printf_module
-  | Variant_naming
-  | Module_naming
-  | Value_naming
-  | Type_naming
-  | Long_identifier
-  | Function_naming
-  | Missing_mli_doc
-  | Missing_value_doc
-  | Bad_doc_style
-  | Missing_standard_function
-  | Missing_ocamlformat_file
-  | Missing_mli_file
-  | Test_exports_module
-  | Silenced_warning
-  | Missing_test_file
-  | Test_without_library
-  | Test_suite_not_included
+type issue_type = Issue_type.t
 
 type t =
   | Complexity_exceeded of {
@@ -132,6 +108,9 @@ val format : t -> string
 
 val get_type : t -> issue_type
 (** Get the issue type for an issue *)
+
+val error_code : issue_type -> string
+(** Get the error code for an issue type *)
 
 val find_grouped_hint : issue_type -> t list -> string option
 (** Get a helpful hint for a group of issues of the same type *)

@@ -18,13 +18,13 @@ Test simple functions with low complexity
   ✗ Some checks failed. See details above.
   
   💡 Fix hints:
-  
-    • Create file '.ocamlformat' in project root with:
-       profile = default
-       version = 0.26.1
-  
-    • Create these interface files:
-       Create samples/simple.mli (copy public signatures from samples/simple.ml)
+    • [E500] This issue means your project lacks consistent code formatting. Fix
+            it by creating a .ocamlformat file in your project root with 'profile =
+            default' and a version number to ensure consistent formatting.
+    • [E505] This issue means your modules lack interface files making their
+            public API unclear. Fix it by creating .mli files that document which
+            functions and types should be public. Copy public signatures from the .ml
+            file and remove private ones.
   [1]
 
 Test function with high cyclomatic complexity
@@ -47,13 +47,13 @@ Test function with high cyclomatic complexity
   ✗ Some checks failed. See details above.
   
   💡 Fix hints:
-  
-    • Create file '.ocamlformat' in project root with:
-       profile = default
-       version = 0.26.1
-  
-    • Create these interface files:
-       Create samples/complex.mli (copy public signatures from samples/complex.ml)
+    • [E500] This issue means your project lacks consistent code formatting. Fix
+            it by creating a .ocamlformat file in your project root with 'profile =
+            default' and a version number to ensure consistent formatting.
+    • [E505] This issue means your modules lack interface files making their
+            public API unclear. Fix it by creating .mli files that document which
+            functions and types should be public. Copy public signatures from the .ml
+            file and remove private ones.
   [1]
 
 Test long function detection
@@ -79,16 +79,16 @@ Test long function detection
   ✗ Some checks failed. See details above.
   
   💡 Fix hints:
-  
-    • Split these long functions by extracting logical sections into separate functions:
-       long_function.ml:2:0: function very_long_function
-  
-    • Create file '.ocamlformat' in project root with:
-       profile = default
-       version = 0.26.1
-  
-    • Create these interface files:
-       Create samples/long_function.mli (copy public signatures from samples/long_function.ml)
+    • [E005] This issue means your functions are too long and hard to read. Fix
+            them by extracting logical sections into separate functions with
+            descriptive names. Aim for functions under 50 lines.
+    • [E500] This issue means your project lacks consistent code formatting. Fix
+            it by creating a .ocamlformat file in your project root with 'profile =
+            default' and a version number to ensure consistent formatting.
+    • [E505] This issue means your modules lack interface files making their
+            public API unclear. Fix it by creating .mli files that document which
+            functions and types should be public. Copy public signatures from the .ml
+            file and remove private ones.
   [1]
 
 Test naming conventions
@@ -117,22 +117,19 @@ Test naming conventions
   ✗ Some checks failed. See details above.
   
   💡 Fix hints:
-  
-    • Rename these variant constructors:
-       samples/bad_names.ml:3:7: MyModule → My_module
-       samples/bad_names.ml:7:14: WaitingForInput → Waiting_for_input
-       samples/bad_names.ml:7:32: ProcessingData → Processing_data
-  
-    • Rename these values:
-       samples/bad_names.ml:4:6: let myFunction → let my_function
-       samples/bad_names.ml:9:4: let checkValue → let check_value
-  
-    • Create file '.ocamlformat' in project root with:
-       profile = default
-       version = 0.26.1
-  
-    • Create these interface files:
-       Create samples/bad_names.mli (copy public signatures from samples/bad_names.ml)
+    • [E300] This issue means your variant constructors don't follow OCaml
+            naming conventions. Fix them by renaming to Snake_case (e.g., MyVariant
+            → My_variant).
+    • [E310] This issue means your value names don't follow OCaml naming
+            conventions. Fix them by renaming to snake_case (e.g., myValue →
+            my_value).
+    • [E500] This issue means your project lacks consistent code formatting. Fix
+            it by creating a .ocamlformat file in your project root with 'profile =
+            default' and a version number to ensure consistent formatting.
+    • [E505] This issue means your modules lack interface files making their
+            public API unclear. Fix it by creating .mli files that document which
+            functions and types should be public. Copy public signatures from the .ml
+            file and remove private ones.
   [1]
 
 Test documentation rules
@@ -156,18 +153,12 @@ Test documentation rules
   ✗ Some checks failed. See details above.
   
   💡 Fix hints:
-  
-    • Add module documentation at the top of these .mli files:
-       samples/missing_docs.mli:1: Add documentation for module missing_docs
-  
-       Template:
-       (** Brief one-line summary
-  
-           This module provides types and functions for detailed description of what this module does. *)
-  
-    • Create file '.ocamlformat' in project root with:
-       profile = default
-       version = 0.26.1
+    • [E400] This issue means your modules lack documentation making them hard
+            to understand. Fix it by adding module documentation at the top of .mli
+            files with a brief summary and description of the module's purpose.
+    • [E500] This issue means your project lacks consistent code formatting. Fix
+            it by creating a .ocamlformat file in your project root with 'profile =
+            default' and a version number to ensure consistent formatting.
   [1]
 
 Test style rules - Obj.magic
@@ -192,15 +183,16 @@ Test style rules - Obj.magic
   ✗ Some checks failed. See details above.
   
   💡 Fix hints:
-  
-    • Replace all Obj.magic calls with proper type definitions. Define a variant type or use GADTs to represent the different cases safely.
-  
-    • Create file '.ocamlformat' in project root with:
-       profile = default
-       version = 0.26.1
-  
-    • Create these interface files:
-       Create samples/bad_style.mli (copy public signatures from samples/bad_style.ml)
+    • [E100] This issue means you're using unsafe type casting that can crash
+            your program. Fix it by replacing Obj.magic with proper type definitions,
+            variant types, or GADTs to represent different cases safely.
+    • [E500] This issue means your project lacks consistent code formatting. Fix
+            it by creating a .ocamlformat file in your project root with 'profile =
+            default' and a version number to ensure consistent formatting.
+    • [E505] This issue means your modules lack interface files making their
+            public API unclear. Fix it by creating .mli files that document which
+            functions and types should be public. Copy public signatures from the .ml
+            file and remove private ones.
   [1]
 
 Test style rules - Str module
@@ -228,18 +220,16 @@ Test style rules - Str module
   ✗ Some checks failed. See details above.
   
   💡 Fix hints:
-  
-    • Replace all Str module usage:
-       1. Add 're' to your dune dependencies: (libraries ... re)
-       2. Replace Str.regexp with Re.compile (Re.str ...)
-       3. Replace Str.string_match with Re.execp
-  
-    • Create file '.ocamlformat' in project root with:
-       profile = default
-       version = 0.26.1
-  
-    • Create these interface files:
-       Create samples/uses_str.mli (copy public signatures from samples/uses_str.ml)
+    • [E200] This issue means you're using the outdated Str module for regular
+            expressions. Fix it by switching to the modern Re module: add 're' to your
+            dune dependencies and replace Str functions with Re equivalents.
+    • [E500] This issue means your project lacks consistent code formatting. Fix
+            it by creating a .ocamlformat file in your project root with 'profile =
+            default' and a version number to ensure consistent formatting.
+    • [E505] This issue means your modules lack interface files making their
+            public API unclear. Fix it by creating .mli files that document which
+            functions and types should be public. Copy public signatures from the .ml
+            file and remove private ones.
   [1]
 
 Test Printf/Format module usage
@@ -267,21 +257,17 @@ Test Printf/Format module usage
   ✗ Some checks failed. See details above.
   
   💡 Fix hints:
-  
-    • Replace Printf/Format module usage with Fmt:
-       1. Add 'fmt' to your dune dependencies: (libraries ... fmt)
-       2. Replace Printf.printf with Fmt.pr
-       3. Replace Printf.sprintf with Fmt.str
-       4. Replace Format.printf with Fmt.pr
-       5. Replace Format.asprintf with Fmt.str
-       Example: Fmt.pr "Hello %s!@." name
-  
-    • Create file '.ocamlformat' in project root with:
-       profile = default
-       version = 0.26.1
-  
-    • Create these interface files:
-       Create samples/uses_printf.mli (copy public signatures from samples/uses_printf.ml)
+    • [E205] This issue means you're using outdated Printf/Format modules for
+            formatting. Fix it by switching to the modern Fmt module: add 'fmt' to
+            your dune dependencies and replace Printf/Format functions with Fmt
+            equivalents.
+    • [E500] This issue means your project lacks consistent code formatting. Fix
+            it by creating a .ocamlformat file in your project root with 'profile =
+            default' and a version number to ensure consistent formatting.
+    • [E505] This issue means your modules lack interface files making their
+            public API unclear. Fix it by creating .mli files that document which
+            functions and types should be public. Copy public signatures from the .ml
+            file and remove private ones.
   [1]
 
 Test catch-all exception handler
@@ -304,11 +290,11 @@ Test catch-all exception handler
   ✗ Some checks failed. See details above.
   
   💡 Fix hints:
-  
-    • Create file '.ocamlformat' in project root with:
-       profile = default
-       version = 0.26.1
-  
-    • Create these interface files:
-       Create samples/catch_all.mli (copy public signatures from samples/catch_all.ml)
+    • [E500] This issue means your project lacks consistent code formatting. Fix
+            it by creating a .ocamlformat file in your project root with 'profile =
+            default' and a version number to ensure consistent formatting.
+    • [E505] This issue means your modules lack interface files making their
+            public API unclear. Fix it by creating .mli files that document which
+            functions and types should be public. Copy public signatures from the .ml
+            file and remove private ones.
   [1]

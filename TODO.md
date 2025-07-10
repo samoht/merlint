@@ -27,11 +27,12 @@
   - This is redundant naming and should be flagged as a style issue
   - Should work for functions, types, and module names
 
-- [ ] Give a unique identifier to each error type (with gaps for future additions)
-  - Each issue type should have a unique error code (e.g., E001, E005, E010)
-  - Leave gaps for future error types (e.g., E001-E099 for complexity, E100-E199 for style)
-  - Error messages should reference the error code
-  - Update Issue.t type to include error codes
+- [x] Give a unique identifier to each error type (with gaps for future additions)
+  - ~~Each issue type should have a unique error code (e.g., E001, E005, E010)~~
+  - ~~Leave gaps for future error types (e.g., E001-E099 for complexity, E100-E199 for style)~~
+  - ~~Error messages should reference the error code~~
+  - ~~Update Issue.t type to include error codes~~
+  - DONE: Implemented categorized error codes E001-E699 with aligned display format
 
 - [ ] Generate an HTML page with all the rules and their numbers
   - Create a static HTML page documenting all linting rules
