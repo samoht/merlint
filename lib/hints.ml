@@ -34,7 +34,38 @@ let get_hint_title = function
 let complexity_hint () =
   "This issue means your functions have too much conditional logic. Fix them \
    by extracting complex logic into smaller helper functions with clear names \
-   that describe their purpose."
+   that describe their purpose.\n\n\
+   ❌ BAD:\n\
+   ```ocaml\n\
+   let process_data data user =\n\
+  \  if data.valid then\n\
+  \    if user.authenticated then\n\
+  \      if data.size < 1000 then\n\
+  \        if has_permission user data then\n\
+  \          (* complex processing logic *)\n\
+  \        else Error \"No permission\"\n\
+  \      else Error \"Data too large\"\n\
+  \    else Error \"Not authenticated\"\n\
+  \  else Error \"Invalid data\"\n\
+   ```\n\n\
+   ✅ GOOD:\n\
+   ```ocaml\n\
+   let validate_data data = \n\
+  \  if not data.valid then Error \"Invalid data\" else Ok ()\n\n\
+   let check_auth user = \n\
+  \  if not user.authenticated then Error \"Not authenticated\" else Ok ()\n\n\
+   let check_size data = \n\
+  \  if data.size >= 1000 then Error \"Data too large\" else Ok ()\n\n\
+   let check_permission user data = \n\
+  \  if not (has_permission user data) then Error \"No permission\" else Ok ()\n\n\
+   let process_data data user =\n\
+  \  let open Result.Syntax in\n\
+  \  let* () = validate_data data in\n\
+  \  let* () = check_auth user in\n\
+  \  let* () = check_size data in\n\
+  \  let* () = check_permission user data in\n\
+  \  (* complex processing logic *)\n\
+   ```"
 
 let function_length_hint () =
   "This issue means your functions are too long and hard to read. Fix them by \
@@ -67,7 +98,21 @@ let str_module_hint () =
 let printf_module_hint () =
   "This issue means you're using outdated Printf/Format modules for \
    formatting. Fix it by switching to the modern Fmt module: add 'fmt' to your \
-   dune dependencies and replace Printf/Format functions with Fmt equivalents."
+   dune dependencies and replace Printf/Format functions with Fmt \
+   equivalents.\n\n\
+   ❌ BAD:\n\
+   ```ocaml\n\
+   let error_msg = Printf.sprintf \"Error: %s at line %d\" msg line\n\
+   let () = Printf.printf \"Processing %d items...\\n\" count\n\
+   ```\n\n\
+   ✅ GOOD:\n\
+   ```ocaml\n\
+   let error_msg = Fmt.str \"Error: %s at line %d\" msg line\n\
+   let () = Fmt.pr \"Processing %d items...@.\" count\n\n\
+   (* Even better with custom formatters *)\n\
+   let pp_error ppf (msg, line) = \n\
+  \  Fmt.pf ppf \"Error: %s at line %d\" msg line\n\
+   ```"
 
 let silenced_warning_hint () =
   "This issue means you're hiding compiler warnings that indicate potential \
@@ -77,7 +122,21 @@ let silenced_warning_hint () =
 let variant_naming_hint () =
   "This issue means your variant constructors don't follow OCaml naming \
    conventions. Fix them by renaming to Snake_case (e.g., MyVariant → \
-   My_variant)."
+   My_variant).\n\n\
+   ❌ BAD:\n\
+   ```ocaml\n\
+   type status = \n\
+  \  | WaitingForInput    (* CamelCase *)\n\
+  \  | ProcessingData\n\
+  \  | errorOccurred      (* lowerCamelCase *)\n\
+   ```\n\n\
+   ✅ GOOD:\n\
+   ```ocaml\n\
+   type status = \n\
+  \  | Waiting_for_input  (* Snake_case *)\n\
+  \  | Processing_data\n\
+  \  | Error_occurred\n\
+   ```"
 
 let module_naming_hint () =
   "This issue means your module names don't follow OCaml naming conventions. \

@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Merlint Error Codes Reference</title>
+    <style>
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    line-height: 1.6;
+    color: #333;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+    background: #f8f9fa;
+}
+h1 {
+    color: #2c3e50;
+    border-bottom: 3px solid #3498db;
+    padding-bottom: 10px;
+}
+h2 {
+    color: #34495e;
+    margin-top: 40px;
+    border-bottom: 1px solid #bdc3c7;
+    padding-bottom: 8px;
+}
+.error-card {
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 20px;
+    margin: 20px 0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+.error-code {
+    font-family: 'Courier New', monospace;
+    font-size: 1.2em;
+    font-weight: bold;
+    color: #e74c3c;
+    display: inline-block;
+    background: #fee;
+    padding: 4px 8px;
+    border-radius: 4px;
+    margin-right: 10px;
+}
+.error-title {
+    font-size: 1.1em;
+    font-weight: bold;
+    color: #2c3e50;
+    display: inline-block;
+}
+.error-hint {
+    margin-top: 15px;
+    padding: 15px;
+    background: #f0f8ff;
+    border-left: 4px solid #3498db;
+    border-radius: 4px;
+    white-space: pre-wrap;
+}
+.code-example {
+    background: #f5f5f5;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 10px;
+    margin: 10px 0;
+    overflow-x: auto;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9em;
+}
+.bad-example {
+    color: #e74c3c;
+    font-weight: bold;
+}
+.good-example {
+    color: #27ae60;
+    font-weight: bold;
+}
+.category {
+    color: #7f8c8d;
+    font-size: 0.9em;
+    margin-bottom: 20px;
+}
+.toc {
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 30px;
+}
+.toc ul {
+    list-style-type: none;
+    padding-left: 20px;
+}
+.toc a {
+    color: #3498db;
+    text-decoration: none;
+}
+.toc a:hover {
+    text-decoration: underline;
+}
+.back-to-top {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: #3498db;
+    color: white;
+    padding: 10px 15px;
+    border-radius: 5px;
+    text-decoration: none;
+    opacity: 0.8;
+}
+.back-to-top:hover {
+    opacity: 1;
+}
+    </style>
+</head>
+<body>
+
+<h1>Merlint Error Codes Reference</h1>
+<p>This document lists all error codes that Merlint can detect, along with their descriptions and fix hints.</p>
+<div class="toc" id="top">
+<h2>Table of Contents</h2>
+<ul>
+<li><a href="#complexity">Complexity (E001-E099)</a></li>
+<li><a href="#security-safety">Security/Safety (E100-E199)</a></li>
+<li><a href="#style-modernization">Style/Modernization (E200-E299)</a></li>
+<li><a href="#naming conventions">Naming Conventions (E300-E399)</a></li>
+<li><a href="#documentation">Documentation (E400-E499)</a></li>
+<li><a href="#project structure">Project Structure (E500-E599)</a></li>
+<li><a href="#testing">Testing (E600-E699)</a></li>
+</ul>
+</div>
+<h2 id="complexity">Complexity</h2>
+<div class="category">E001-E099 • Code complexity and maintainability issues</div>
+<div class="error-card" id="E001">
+    <div>
+        <span class="error-code">E001</span>
+        <span class="error-title">High Cyclomatic Complexity</span>
+    </div>
+    <div class="error-hint">This issue means your functions have too much conditional logic. Fix them by extracting complex logic into smaller helper functions with clear names that describe their purpose.
+
+<span class="bad-example">❌</span> BAD:
+<pre class="code-example"><code><!-- ocaml -->
+let process_data data user =
+  if data.valid then
+    if user.authenticated then
+      if data.size &lt; 1000 then
+        if has_permission user data then
+          (* complex processing logic *)
+        else Error "No permission"
+      else Error "Data too large"
+    else Error "Not authenticated"
+  else Error "Invalid data"
+</pre>
+
+<span class="good-example">✅</span> GOOD:
+<pre class="code-example"><code><!-- ocaml -->
+let validate_data data = 
+  if not data.valid then Error "Invalid data" else Ok ()
+
+let check_auth user = 
+  if not user.authenticated then Error "Not authenticated" else Ok ()
+
+let check_size data = 
+  if data.size &gt;= 1000 then Error "Data too large" else Ok ()
+
+let check_permission user data = 
+  if not (has_permission user data) then Error "No permission" else Ok ()
+
+let process_data data user =
+  let open Result.Syntax in
+  let* () = validate_data data in
+  let* () = check_auth user in
+  let* () = check_size data in
+  let* () = check_permission user data in
+  (* complex processing logic *)
+</pre></div>
+</div>
+<div class="error-card" id="E005">
+    <div>
+        <span class="error-code">E005</span>
+        <span class="error-title">Long Functions</span>
+    </div>
+    <div class="error-hint">This issue means your functions are too long and hard to read. Fix them by extracting logical sections into separate functions with descriptive names. Note: Large pattern matching blocks are acceptable - functions with pattern matching get double the line limit when they have more than 10 cases. For better readability, consider using a helper function for each complex case. Aim for functions under 50 lines otherwise.</div>
+</div>
+<div class="error-card" id="E010">
+    <div>
+        <span class="error-code">E010</span>
+        <span class="error-title">Deep Nesting</span>
+    </div>
+    <div class="error-hint">This issue means your code has too many nested conditions making it hard to follow. Fix it by using pattern matching, early returns with 'when' guards, or extracting nested logic into helper functions.</div>
+</div>
+<h2 id="security-safety">Security/Safety</h2>
+<div class="category">E100-E199 • Potential security vulnerabilities and unsafe code patterns</div>
+<div class="error-card" id="E100">
+    <div>
+        <span class="error-code">E100</span>
+        <span class="error-title">Unsafe Type Casting</span>
+    </div>
+    <div class="error-hint">This issue means you're using unsafe type casting that can crash your program. Fix it by replacing Obj.magic with proper type definitions, variant types, or GADTs to represent different cases safely.</div>
+</div>
+<div class="error-card" id="E105">
+    <div>
+        <span class="error-code">E105</span>
+        <span class="error-title">Catch-All Exception Handlers</span>
+    </div>
+    <div class="error-hint">This issue means you're catching all exceptions which can hide bugs. Fix it by replacing catch-all handlers with specific exception patterns and add explicit handlers for each expected exception type.</div>
+</div>
+<div class="error-card" id="E110">
+    <div>
+        <span class="error-code">E110</span>
+        <span class="error-title">Silenced Compiler Warnings</span>
+    </div>
+    <div class="error-hint">This issue means you're hiding compiler warnings that indicate potential problems. Fix it by removing warning silencing attributes and addressing the underlying issues that trigger the warnings.</div>
+</div>
+<h2 id="style-modernization">Style/Modernization</h2>
+<div class="category">E200-E299 • Code style and modernization recommendations</div>
+<div class="error-card" id="E200">
+    <div>
+        <span class="error-code">E200</span>
+        <span class="error-title">Outdated Str Module</span>
+    </div>
+    <div class="error-hint">This issue means you're using the outdated Str module for regular expressions. Fix it by switching to the modern Re module: add 're' to your dune dependencies and replace Str functions with Re equivalents.</div>
+</div>
+<div class="error-card" id="E205">
+    <div>
+        <span class="error-code">E205</span>
+        <span class="error-title">Outdated Printf/Format Modules</span>
+    </div>
+    <div class="error-hint">This issue means you're using outdated Printf/Format modules for formatting. Fix it by switching to the modern Fmt module: add 'fmt' to your dune dependencies and replace Printf/Format functions with Fmt equivalents.
+
+<span class="bad-example">❌</span> BAD:
+<pre class="code-example"><code><!-- ocaml -->
+let error_msg = Printf.sprintf "Error: %s at line %d" msg line
+let () = Printf.printf "Processing %d items...\n" count
+</pre>
+
+<span class="good-example">✅</span> GOOD:
+<pre class="code-example"><code><!-- ocaml -->
+let error_msg = Fmt.str "Error: %s at line %d" msg line
+let () = Fmt.pr "Processing %d items...@." count
+
+(* Even better with custom formatters *)
+let pp_error ppf (msg, line) = 
+  Fmt.pf ppf "Error: %s at line %d" msg line
+</pre></div>
+</div>
+<h2 id="naming conventions">Naming Conventions</h2>
+<div class="category">E300-E399 • Identifier naming convention violations</div>
+<div class="error-card" id="E300">
+    <div>
+        <span class="error-code">E300</span>
+        <span class="error-title">Variant Naming Convention</span>
+    </div>
+    <div class="error-hint">This issue means your variant constructors don't follow OCaml naming conventions. Fix them by renaming to Snake_case (e.g., MyVariant → My_variant).
+
+<span class="bad-example">❌</span> BAD:
+<pre class="code-example"><code><!-- ocaml -->
+type status = 
+  | WaitingForInput    (* CamelCase *)
+  | ProcessingData
+  | errorOccurred      (* lowerCamelCase *)
+</pre>
+
+<span class="good-example">✅</span> GOOD:
+<pre class="code-example"><code><!-- ocaml -->
+type status = 
+  | Waiting_for_input  (* Snake_case *)
+  | Processing_data
+  | Error_occurred
+</pre></div>
+</div>
+<div class="error-card" id="E305">
+    <div>
+        <span class="error-code">E305</span>
+        <span class="error-title">Module Naming Convention</span>
+    </div>
+    <div class="error-hint">This issue means your module names don't follow OCaml naming conventions. Fix them by renaming to Snake_case (e.g., MyModule → My_module).</div>
+</div>
+<div class="error-card" id="E310">
+    <div>
+        <span class="error-code">E310</span>
+        <span class="error-title">Value Naming Convention</span>
+    </div>
+    <div class="error-hint">This issue means your value names don't follow OCaml naming conventions. Fix them by renaming to snake_case (e.g., myValue → my_value).</div>
+</div>
+<div class="error-card" id="E315">
+    <div>
+        <span class="error-code">E315</span>
+        <span class="error-title">Type Naming Convention</span>
+    </div>
+    <div class="error-hint">This issue means your type names don't follow OCaml naming conventions. Fix them by renaming to snake_case (e.g., myType → my_type).</div>
+</div>
+<div class="error-card" id="E320">
+    <div>
+        <span class="error-code">E320</span>
+        <span class="error-title">Long Identifier Names</span>
+    </div>
+    <div class="error-hint">This issue means your identifier has too many underscores making it hard to read. Fix it by removing redundant prefixes and suffixes:
+
+• In test files: remove 'test_' prefix (e.g., test_check_foo → check_foo or just foo)
+• In hint files: remove '_hint' suffix (e.g., complexity_hint → complexity)
+• In modules: remove '_module' suffix (e.g., parser_module → parser)
+• Remove redundant words that repeat the context (e.g., test_check_mli_files_with_doc → mli_with_doc)
+
+The file/module context already makes the purpose clear.</div>
+</div>
+<div class="error-card" id="E325">
+    <div>
+        <span class="error-code">E325</span>
+        <span class="error-title">Function Naming Pattern</span>
+    </div>
+    <div class="error-hint">This issue means your function names don't match their return types. Fix them by using consistent naming: get_* for extraction (returns value directly), find_* for search (returns option type).</div>
+</div>
+<h2 id="documentation">Documentation</h2>
+<div class="category">E400-E499 • Missing or incorrect documentation</div>
+<div class="error-card" id="E400">
+    <div>
+        <span class="error-code">E400</span>
+        <span class="error-title">Missing Module Documentation</span>
+    </div>
+    <div class="error-hint">This issue means your modules lack documentation making them hard to understand. Fix it by adding module documentation at the top of .mli files with a brief summary and description of the module's purpose.</div>
+</div>
+<div class="error-card" id="E405">
+    <div>
+        <span class="error-code">E405</span>
+        <span class="error-title">Missing Value Documentation</span>
+    </div>
+    <div class="error-hint">This issue means your public functions and values lack documentation making them hard to use. Fix it by adding documentation comments that explain what each function does, its parameters, and return value.</div>
+</div>
+<div class="error-card" id="E410">
+    <div>
+        <span class="error-code">E410</span>
+        <span class="error-title">Documentation Style Issues</span>
+    </div>
+    <div class="error-hint">This issue means your documentation doesn't follow OCaml conventions making it inconsistent. Fix it by following the standard OCaml documentation format with proper syntax and structure.</div>
+</div>
+<div class="error-card" id="E415">
+    <div>
+        <span class="error-code">E415</span>
+        <span class="error-title">Missing Standard Functions</span>
+    </div>
+    <div class="error-hint">This issue means your types lack standard functions making them hard to use in collections and debugging. Fix it by implementing equal, compare, pp (pretty-printer), and to_string functions for your types.</div>
+</div>
+<h2 id="project structure">Project Structure</h2>
+<div class="category">E500-E599 • Project organization and configuration issues</div>
+<div class="error-card" id="E500">
+    <div>
+        <span class="error-code">E500</span>
+        <span class="error-title">Missing Code Formatter</span>
+    </div>
+    <div class="error-hint">This issue means your project lacks consistent code formatting. Fix it by creating a .ocamlformat file in your project root with 'profile = default' and a version number to ensure consistent formatting.</div>
+</div>
+<div class="error-card" id="E505">
+    <div>
+        <span class="error-code">E505</span>
+        <span class="error-title">Missing Interface Files</span>
+    </div>
+    <div class="error-hint">This issue means your modules lack interface files making their public API unclear. Fix it by creating .mli files that document which functions and types should be public. Copy public signatures from the .ml file and remove private ones.</div>
+</div>
+<h2 id="testing">Testing</h2>
+<div class="category">E600-E699 • Test coverage and test quality issues</div>
+<div class="error-card" id="E600">
+    <div>
+        <span class="error-code">E600</span>
+        <span class="error-title">Test Module Convention</span>
+    </div>
+    <div class="error-hint">This issue means your test files don't follow the expected convention for test organization. Fix it by exporting a 'suite' value instead of running tests directly, allowing better test composition and organization.</div>
+</div>
+<div class="error-card" id="E605">
+    <div>
+        <span class="error-code">E605</span>
+        <span class="error-title">Missing Test Coverage</span>
+    </div>
+    <div class="error-hint">This issue means some of your library modules lack test coverage making bugs more likely. Fix it by creating corresponding test files for each library module to ensure your code works correctly.</div>
+</div>
+<div class="error-card" id="E610">
+    <div>
+        <span class="error-code">E610</span>
+        <span class="error-title">Orphaned Test Files</span>
+    </div>
+    <div class="error-hint">This issue means you have test files that don't correspond to any library module making your test organization confusing. Fix it by either removing orphaned test files or creating the corresponding library modules.</div>
+</div>
+<div class="error-card" id="E615">
+    <div>
+        <span class="error-code">E615</span>
+        <span class="error-title">Excluded Test Suites</span>
+    </div>
+    <div class="error-hint">This issue means some test suites aren't included in your main test runner so they never get executed. Fix it by adding them to the main test runner to ensure all tests are run during development.</div>
+</div>
+
+    <a href="#top" class="back-to-top">↑ Top</a>
+</body>
+</html>
