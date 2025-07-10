@@ -22,4 +22,6 @@
   logs
   fmt
   astring
+  sexplib0
+  parsexp
   (alcotest :with-test)))

@@ -12,7 +12,11 @@ let check_mli_for_files project_root files =
   let is_executable_module ml_file =
     let module_name = Filename.basename (Filename.remove_extension ml_file) in
     let module_name_capitalized = String.capitalize_ascii module_name in
-    List.mem module_name_capitalized executable_modules
+    let is_exe = List.mem module_name_capitalized executable_modules in
+    if is_exe then
+      Logs.debug (fun m ->
+          m "File %s is executable (module %s)" ml_file module_name_capitalized);
+    is_exe
   in
 
   let issues = ref [] in

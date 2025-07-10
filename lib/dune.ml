@@ -114,6 +114,53 @@ let is_executable project_root ml_file =
 (** Clear the dune describe cache *)
 let clear_cache () = Hashtbl.clear dune_describe_cache
 
+(** Extract module names from a modules list in dune describe *)
+let extract_module_names = function
+  | Sexplib0.Sexp.List modules ->
+      List.filter_map
+        (function
+          | Sexplib0.Sexp.List items ->
+              (* Look for ((name ModuleName) ...) *)
+              List.find_map
+                (function
+                  | Sexplib0.Sexp.List
+                      [ Sexplib0.Sexp.Atom "name"; Sexplib0.Sexp.Atom name ] ->
+                      Some name
+                  | _ -> None)
+                items
+          | _ -> None)
+        modules
+  | _ -> []
+
+(** Extract executable modules from dune describe output *)
+let extract_executables_from_sexp sexp =
+  (* The structure is (root ...) (build_context ...) (executables ...) ... *)
+  match sexp with
+  | Sexplib0.Sexp.List items ->
+      (* Look through items for executables *)
+      List.concat_map
+        (function
+          | Sexplib0.Sexp.List
+              (Sexplib0.Sexp.Atom "executables" :: exec_contents) ->
+              (* Found an executables section *)
+              List.concat_map
+                (function
+                  | Sexplib0.Sexp.List fields ->
+                      (* Look for modules field in each executable *)
+                      List.concat_map
+                        (function
+                          | Sexplib0.Sexp.List
+                              (Sexplib0.Sexp.Atom "modules"
+                              :: [ Sexplib0.Sexp.List modules ]) ->
+                              extract_module_names (Sexplib0.Sexp.List modules)
+                          | _ -> [])
+                        fields
+                  | _ -> [])
+                exec_contents
+          | _ -> [])
+        items
+  | _ -> []
+
 (** Get executable information for all files at once *)
 let get_executable_info project_root =
   match run_dune_describe project_root with
@@ -121,24 +168,16 @@ let get_executable_info project_root =
       Log.warn (fun m -> m "Could not run dune describe: %s" err);
       (* Return empty set if dune describe fails *)
       []
-  | Ok sexp_str ->
-      (* Parse executable and test modules from the sexp *)
-      let executables_regex = Re.compile (Re.str "executables") in
-      let tests_regex = Re.compile (Re.str "tests") in
-      let module_regex =
-        Re.compile
-          (Re.seq
-             [
-               Re.str "\"";
-               Re.group (Re.rep1 (Re.alt [ Re.alnum; Re.char '_' ]));
-               Re.str "\"";
-             ])
-      in
-
-      let has_executables =
-        Re.execp executables_regex sexp_str || Re.execp tests_regex sexp_str
-      in
-
-      if has_executables then
-        Re.all module_regex sexp_str |> List.map (fun m -> Re.Group.get m 1)
-      else []
+  | Ok sexp_str -> (
+      try
+        let sexp = Parsexp.Single.parse_string_exn sexp_str in
+        let executable_modules = extract_executables_from_sexp sexp in
+        Log.debug (fun m ->
+            m "Found executable modules: %s"
+              (String.concat ", " executable_modules));
+        executable_modules
+      with exn ->
+        Log.err (fun m ->
+            m "Failed to parse dune describe output: %s"
+              (Printexc.to_string exn));
+        [])
