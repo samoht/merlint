@@ -35,17 +35,8 @@ val of_json : Yojson.Safe.t -> t
 val get_values : t -> item list
 (** Get all values from outline *)
 
-val get_types : t -> item list
-(** Get all types from outline *)
-
-val get_modules : t -> item list
-(** Get all modules from outline *)
-
 val find_by_name : string -> t -> item option
 (** Find item by name *)
-
-val pp_item : item Fmt.t
-(** Pretty print item *)
 
 val pp : t Fmt.t
 (** Pretty print outline *)

@@ -97,12 +97,6 @@ let of_json json =
 (** Get all values from outline *)
 let get_values outline = List.filter (fun item -> item.kind = Value) outline
 
-(** Get all types from outline *)
-let get_types outline = List.filter (fun item -> item.kind = Type) outline
-
-(** Get all modules from outline *)
-let get_modules outline = List.filter (fun item -> item.kind = Module) outline
-
 (** Find item by name *)
 let find_by_name name outline =
   List.find_opt (fun item -> item.name = name) outline

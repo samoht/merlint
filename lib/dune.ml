@@ -10,14 +10,6 @@ let dune_describe_cache : (string, string) Hashtbl.t = Hashtbl.create 1
 type describe = Sexplib0.Sexp.t
 (** Parsed dune describe output *)
 
-type stanza_type = Library | Executable | Test
-
-type stanza_info = {
-  name : string;
-  stanza_type : stanza_type;
-  modules : string list;
-}
-
 let run_dune_describe project_root =
   (* Check cache first *)
   match Hashtbl.find_opt dune_describe_cache project_root with
@@ -97,15 +89,6 @@ let ensure_project_built project_root =
   else (
     Log.debug (fun m -> m "_build directory already exists");
     Ok ())
-
-let is_test_module module_name stanza_info =
-  (* Check if this module belongs to a test or executable stanza *)
-  List.exists
-    (fun info ->
-      match info.stanza_type with
-      | Test | Executable -> List.mem module_name info.modules
-      | Library -> false)
-    stanza_info
 
 let is_executable project_root ml_file =
   (* Only use dune describe to get actual stanza information *)

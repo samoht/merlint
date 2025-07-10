@@ -13,8 +13,5 @@ val analyze_file : string -> t
 val get_outline : string -> (Outline.t, string) result
 (** [get_outline file] gets the outline from Merlin for the given file *)
 
-val get_browse : string -> (Browse.t, string) result
-(** [get_browse file] gets the browse analysis from Merlin for the given file *)
-
 val get_parsetree : string -> (Parsetree.t, string) result
 (** [get_parsetree file] gets the parsetree from Merlin for the given file *)
