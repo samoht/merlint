@@ -52,6 +52,16 @@ let run_warning_rules _config files =
     ~passed:(warning_issues = []) ~issues:warning_issues
     ~file_count:(List.length files)
 
+let run_test_coverage_rules config files =
+  let coverage_issues =
+    Test_coverage.check_test_coverage config.project_root files
+  in
+  let runner_issues = Test_coverage.check_test_runner_completeness files in
+  let all_issues = coverage_issues @ runner_issues in
+
+  Report.create ~rule_name:"Test coverage (1:1 lib/test correspondence)"
+    ~passed:(all_issues = []) ~issues:all_issues ~file_count:(List.length files)
+
 (* Process a single file analysis *)
 let process_file_analysis config (file, analysis) =
   let complexity_issues =
@@ -121,5 +131,9 @@ let analyze_project config files =
     ("Naming Conventions", [ naming_report ]);
     ("Documentation", [ run_documentation_rules config all_files ]);
     ("Project Structure", [ run_format_rules config all_files ]);
-    ("Test Quality", [ run_test_convention_rules config all_files ]);
+    ( "Test Quality",
+      [
+        run_test_convention_rules config all_files;
+        run_test_coverage_rules config all_files;
+      ] );
   ]

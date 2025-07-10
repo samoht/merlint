@@ -7,3 +7,5 @@
  (deps
   %{bin:merlint}
   (source_tree samples)))
+
+(data_only_dirs samples)

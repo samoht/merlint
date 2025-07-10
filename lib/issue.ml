@@ -20,6 +20,9 @@ type issue_type =
   | Missing_mli_file
   | Test_exports_module
   | Silenced_warning
+  | Missing_test_file
+  | Test_without_library
+  | Test_suite_not_included
 
 type t =
   | Complexity_exceeded of {
@@ -100,6 +103,21 @@ type t =
       module_name : string;
     }
   | Silenced_warning of { location : Location.t; warning_number : string }
+  | Missing_test_file of {
+      module_name : string;
+      expected_test_file : string;
+      location : Location.t;
+    }
+  | Test_without_library of {
+      test_file : string;
+      expected_module : string;
+      location : Location.t;
+    }
+  | Test_suite_not_included of {
+      test_module : string;
+      test_runner_file : string;
+      location : Location.t;
+    }
 
 let pp ppf = function
   | Complexity_exceeded { name; location; complexity; threshold } ->
@@ -165,6 +183,15 @@ let pp ppf = function
   | Silenced_warning { location; warning_number } ->
       Fmt.pf ppf "%a: Warning %s is silenced - fix the underlying issue instead"
         Location.pp location warning_number
+  | Missing_test_file { location; module_name; expected_test_file } ->
+      Fmt.pf ppf "%a: Module '%s' is missing test file '%s'" Location.pp
+        location module_name expected_test_file
+  | Test_without_library { location; test_file; expected_module } ->
+      Fmt.pf ppf "%a: Test file '%s' has no corresponding library module '%s'"
+        Location.pp location test_file expected_module
+  | Test_suite_not_included { location; test_module; _ } ->
+      Fmt.pf ppf "%a: Test suite '%s.suite' is not included in test runner"
+        Location.pp location test_module
 
 let format v = Fmt.str "%a" pp v
 
@@ -194,6 +221,9 @@ let get_type = function
   | Missing_mli_file _ -> Missing_mli_file
   | Test_exports_module_name _ -> Test_exports_module
   | Silenced_warning _ -> Silenced_warning
+  | Missing_test_file _ -> Missing_test_file
+  | Test_without_library _ -> Test_without_library
+  | Test_suite_not_included _ -> Test_suite_not_included
 
 let hint_for_renames issue_type get_old_new issues =
   let renames = List.filter_map get_old_new issues in
@@ -464,6 +494,8 @@ let find_grouped_hint issue_type issues =
         \     - Remove [@warning \"-nn\"] attributes\n\
         \     - Remove [@@warning \"-nn\"] attributes\n\
         \     - Fix the code that triggers the warning"
+  | Missing_test_file | Test_without_library | Test_suite_not_included ->
+      hint_simple_cases issue_type
 
 (* Assign priority to issues - lower number = higher priority *)
 let priority = function
@@ -475,7 +507,8 @@ let priority = function
       3
   | Missing_mli_doc _ | Missing_value_doc _ | Bad_doc_style _
   | Missing_standard_function _ | Missing_ocamlformat_file _
-  | Test_exports_module_name _ ->
+  | Test_exports_module_name _ | Missing_test_file _ | Test_without_library _
+  | Test_suite_not_included _ ->
       4
 
 let find_location = function
@@ -497,7 +530,10 @@ let find_location = function
   | Long_identifier_name { location; _ }
   | Bad_function_naming { location; _ }
   | Test_exports_module_name { location; _ }
-  | Silenced_warning { location; _ } ->
+  | Silenced_warning { location; _ }
+  | Missing_test_file { location; _ }
+  | Test_without_library { location; _ }
+  | Test_suite_not_included { location; _ } ->
       Some location
   | _ -> None
 
@@ -518,3 +554,5 @@ let compare a b =
         match (find_location a, find_location b) with
         | Some l1, Some l2 -> Location.compare l1 l2
         | _ -> 0)
+
+let equal a b = compare a b = 0
