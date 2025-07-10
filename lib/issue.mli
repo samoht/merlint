@@ -25,6 +25,9 @@ type issue_type =
   | Missing_mli_file
   | Test_exports_module
   | Silenced_warning
+  | Missing_test_file
+  | Test_without_library
+  | Test_suite_not_included
 
 type t =
   | Complexity_exceeded of {
@@ -105,6 +108,21 @@ type t =
       module_name : string;
     }
   | Silenced_warning of { location : Location.t; warning_number : string }
+  | Missing_test_file of {
+      module_name : string;
+      expected_test_file : string;
+      location : Location.t;
+    }
+  | Test_without_library of {
+      test_file : string;
+      expected_module : string;
+      location : Location.t;
+    }
+  | Test_suite_not_included of {
+      test_module : string;
+      test_runner_file : string;
+      location : Location.t;
+    }
 
 val pp : t Fmt.t
 (** Pretty-printer for issues *)
@@ -120,3 +138,9 @@ val find_grouped_hint : issue_type -> t list -> string option
 
 val compare : t -> t -> int
 (** Compare issues by priority, then by location *)
+
+val priority : t -> int
+(** Get the priority of an issue (1 = highest) *)
+
+val equal : t -> t -> bool
+(** Check if two issues are equal *)

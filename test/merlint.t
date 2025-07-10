@@ -12,9 +12,21 @@ Test simple functions with low complexity
     ✗ Format rules (.ocamlformat, .mli files) (2 issues)
       samples/simple.ml:1:1: missing interface file
       (project): Missing .ocamlformat file for consistent formatting
-  ✓ Test Quality (0 total issues)
+  ✗ Test Quality (10 total issues)
+    ✓ Test conventions (export 'suite' not module name) (0 issues)
+    ✗ Test coverage (1:1 lib/test correspondence) (10 issues)
+      bad_names.ml:1:0: Module 'bad_names' is missing test file 'test_bad_names.ml'
+      bad_style.ml:1:0: Module 'bad_style' is missing test file 'test_bad_style.ml'
+      catch_all.ml:1:0: Module 'catch_all' is missing test file 'test_catch_all.ml'
+      complex.ml:1:0: Module 'complex' is missing test file 'test_complex.ml'
+      function_naming.ml:1:0: Module 'function_naming' is missing test file 'test_function_naming.ml'
+      long_function.ml:1:0: Module 'long_function' is missing test file 'test_long_function.ml'
+      samples/simple.ml:1:0: Module 'simple' is missing test file 'test_simple.ml'
+      stubs.ml:1:0: Module 'stubs' is missing test file 'test_stubs.ml'
+      uses_printf.ml:1:0: Module 'uses_printf' is missing test file 'test_uses_printf.ml'
+      uses_str.ml:1:0: Module 'uses_str' is missing test file 'test_uses_str.ml'
   
-  Summary: ✗ 2 total issues
+  Summary: ✗ 12 total issues
   ✗ Some checks failed. See details above.
   
   💡 Fix hints:
@@ -41,9 +53,21 @@ Test function with high cyclomatic complexity
     ✗ Format rules (.ocamlformat, .mli files) (2 issues)
       samples/complex.ml:1:1: missing interface file
       (project): Missing .ocamlformat file for consistent formatting
-  ✓ Test Quality (0 total issues)
+  ✗ Test Quality (10 total issues)
+    ✓ Test conventions (export 'suite' not module name) (0 issues)
+    ✗ Test coverage (1:1 lib/test correspondence) (10 issues)
+      bad_names.ml:1:0: Module 'bad_names' is missing test file 'test_bad_names.ml'
+      bad_style.ml:1:0: Module 'bad_style' is missing test file 'test_bad_style.ml'
+      catch_all.ml:1:0: Module 'catch_all' is missing test file 'test_catch_all.ml'
+      function_naming.ml:1:0: Module 'function_naming' is missing test file 'test_function_naming.ml'
+      long_function.ml:1:0: Module 'long_function' is missing test file 'test_long_function.ml'
+      samples/complex.ml:1:0: Module 'complex' is missing test file 'test_complex.ml'
+      simple.ml:1:0: Module 'simple' is missing test file 'test_simple.ml'
+      stubs.ml:1:0: Module 'stubs' is missing test file 'test_stubs.ml'
+      uses_printf.ml:1:0: Module 'uses_printf' is missing test file 'test_uses_printf.ml'
+      uses_str.ml:1:0: Module 'uses_str' is missing test file 'test_uses_str.ml'
   
-  Summary: ✗ 2 total issues
+  Summary: ✗ 12 total issues
   ✗ Some checks failed. See details above.
   
   💡 Fix hints:
@@ -73,9 +97,21 @@ Test long function detection
     ✗ Format rules (.ocamlformat, .mli files) (2 issues)
       samples/long_function.ml:1:1: missing interface file
       (project): Missing .ocamlformat file for consistent formatting
-  ✓ Test Quality (0 total issues)
+  ✗ Test Quality (10 total issues)
+    ✓ Test conventions (export 'suite' not module name) (0 issues)
+    ✗ Test coverage (1:1 lib/test correspondence) (10 issues)
+      bad_names.ml:1:0: Module 'bad_names' is missing test file 'test_bad_names.ml'
+      bad_style.ml:1:0: Module 'bad_style' is missing test file 'test_bad_style.ml'
+      catch_all.ml:1:0: Module 'catch_all' is missing test file 'test_catch_all.ml'
+      complex.ml:1:0: Module 'complex' is missing test file 'test_complex.ml'
+      function_naming.ml:1:0: Module 'function_naming' is missing test file 'test_function_naming.ml'
+      samples/long_function.ml:1:0: Module 'long_function' is missing test file 'test_long_function.ml'
+      simple.ml:1:0: Module 'simple' is missing test file 'test_simple.ml'
+      stubs.ml:1:0: Module 'stubs' is missing test file 'test_stubs.ml'
+      uses_printf.ml:1:0: Module 'uses_printf' is missing test file 'test_uses_printf.ml'
+      uses_str.ml:1:0: Module 'uses_str' is missing test file 'test_uses_str.ml'
   
-  Summary: ✗ 3 total issues
+  Summary: ✗ 13 total issues
   ✗ Some checks failed. See details above.
   
   💡 Fix hints:
@@ -111,9 +147,21 @@ Test naming conventions
     ✗ Format rules (.ocamlformat, .mli files) (2 issues)
       samples/bad_names.ml:1:1: missing interface file
       (project): Missing .ocamlformat file for consistent formatting
-  ✓ Test Quality (0 total issues)
+  ✗ Test Quality (10 total issues)
+    ✓ Test conventions (export 'suite' not module name) (0 issues)
+    ✗ Test coverage (1:1 lib/test correspondence) (10 issues)
+      bad_style.ml:1:0: Module 'bad_style' is missing test file 'test_bad_style.ml'
+      catch_all.ml:1:0: Module 'catch_all' is missing test file 'test_catch_all.ml'
+      complex.ml:1:0: Module 'complex' is missing test file 'test_complex.ml'
+      function_naming.ml:1:0: Module 'function_naming' is missing test file 'test_function_naming.ml'
+      long_function.ml:1:0: Module 'long_function' is missing test file 'test_long_function.ml'
+      samples/bad_names.ml:1:0: Module 'bad_names' is missing test file 'test_bad_names.ml'
+      simple.ml:1:0: Module 'simple' is missing test file 'test_simple.ml'
+      stubs.ml:1:0: Module 'stubs' is missing test file 'test_stubs.ml'
+      uses_printf.ml:1:0: Module 'uses_printf' is missing test file 'test_uses_printf.ml'
+      uses_str.ml:1:0: Module 'uses_str' is missing test file 'test_uses_str.ml'
   
-  Summary: ✗ 7 total issues
+  Summary: ✗ 17 total issues
   ✗ Some checks failed. See details above.
   
   💡 Fix hints:
@@ -150,9 +198,21 @@ Test documentation rules
   ✗ Project Structure (1 total issues)
     ✗ Format rules (.ocamlformat, .mli files) (1 issues)
       (project): Missing .ocamlformat file for consistent formatting
-  ✓ Test Quality (0 total issues)
+  ✗ Test Quality (10 total issues)
+    ✓ Test conventions (export 'suite' not module name) (0 issues)
+    ✗ Test coverage (1:1 lib/test correspondence) (10 issues)
+      bad_names.ml:1:0: Module 'bad_names' is missing test file 'test_bad_names.ml'
+      bad_style.ml:1:0: Module 'bad_style' is missing test file 'test_bad_style.ml'
+      catch_all.ml:1:0: Module 'catch_all' is missing test file 'test_catch_all.ml'
+      complex.ml:1:0: Module 'complex' is missing test file 'test_complex.ml'
+      function_naming.ml:1:0: Module 'function_naming' is missing test file 'test_function_naming.ml'
+      long_function.ml:1:0: Module 'long_function' is missing test file 'test_long_function.ml'
+      simple.ml:1:0: Module 'simple' is missing test file 'test_simple.ml'
+      stubs.ml:1:0: Module 'stubs' is missing test file 'test_stubs.ml'
+      uses_printf.ml:1:0: Module 'uses_printf' is missing test file 'test_uses_printf.ml'
+      uses_str.ml:1:0: Module 'uses_str' is missing test file 'test_uses_str.ml'
   
-  Summary: ✗ 2 total issues
+  Summary: ✗ 12 total issues
   ✗ Some checks failed. See details above.
   
   💡 Fix hints:
@@ -186,9 +246,21 @@ Test style rules - Obj.magic
     ✗ Format rules (.ocamlformat, .mli files) (2 issues)
       samples/bad_style.ml:1:1: missing interface file
       (project): Missing .ocamlformat file for consistent formatting
-  ✓ Test Quality (0 total issues)
+  ✗ Test Quality (10 total issues)
+    ✓ Test conventions (export 'suite' not module name) (0 issues)
+    ✗ Test coverage (1:1 lib/test correspondence) (10 issues)
+      bad_names.ml:1:0: Module 'bad_names' is missing test file 'test_bad_names.ml'
+      catch_all.ml:1:0: Module 'catch_all' is missing test file 'test_catch_all.ml'
+      complex.ml:1:0: Module 'complex' is missing test file 'test_complex.ml'
+      function_naming.ml:1:0: Module 'function_naming' is missing test file 'test_function_naming.ml'
+      long_function.ml:1:0: Module 'long_function' is missing test file 'test_long_function.ml'
+      samples/bad_style.ml:1:0: Module 'bad_style' is missing test file 'test_bad_style.ml'
+      simple.ml:1:0: Module 'simple' is missing test file 'test_simple.ml'
+      stubs.ml:1:0: Module 'stubs' is missing test file 'test_stubs.ml'
+      uses_printf.ml:1:0: Module 'uses_printf' is missing test file 'test_uses_printf.ml'
+      uses_str.ml:1:0: Module 'uses_str' is missing test file 'test_uses_str.ml'
   
-  Summary: ✗ 3 total issues
+  Summary: ✗ 13 total issues
   ✗ Some checks failed. See details above.
   
   💡 Fix hints:
@@ -222,9 +294,21 @@ Test style rules - Str module
     ✗ Format rules (.ocamlformat, .mli files) (2 issues)
       samples/uses_str.ml:1:1: missing interface file
       (project): Missing .ocamlformat file for consistent formatting
-  ✓ Test Quality (0 total issues)
+  ✗ Test Quality (10 total issues)
+    ✓ Test conventions (export 'suite' not module name) (0 issues)
+    ✗ Test coverage (1:1 lib/test correspondence) (10 issues)
+      bad_names.ml:1:0: Module 'bad_names' is missing test file 'test_bad_names.ml'
+      bad_style.ml:1:0: Module 'bad_style' is missing test file 'test_bad_style.ml'
+      catch_all.ml:1:0: Module 'catch_all' is missing test file 'test_catch_all.ml'
+      complex.ml:1:0: Module 'complex' is missing test file 'test_complex.ml'
+      function_naming.ml:1:0: Module 'function_naming' is missing test file 'test_function_naming.ml'
+      long_function.ml:1:0: Module 'long_function' is missing test file 'test_long_function.ml'
+      samples/uses_str.ml:1:0: Module 'uses_str' is missing test file 'test_uses_str.ml'
+      simple.ml:1:0: Module 'simple' is missing test file 'test_simple.ml'
+      stubs.ml:1:0: Module 'stubs' is missing test file 'test_stubs.ml'
+      uses_printf.ml:1:0: Module 'uses_printf' is missing test file 'test_uses_printf.ml'
   
-  Summary: ✗ 6 total issues
+  Summary: ✗ 16 total issues
   ✗ Some checks failed. See details above.
   
   💡 Fix hints:
@@ -261,9 +345,21 @@ Test Printf/Format module usage
     ✗ Format rules (.ocamlformat, .mli files) (2 issues)
       samples/uses_printf.ml:1:1: missing interface file
       (project): Missing .ocamlformat file for consistent formatting
-  ✓ Test Quality (0 total issues)
+  ✗ Test Quality (10 total issues)
+    ✓ Test conventions (export 'suite' not module name) (0 issues)
+    ✗ Test coverage (1:1 lib/test correspondence) (10 issues)
+      bad_names.ml:1:0: Module 'bad_names' is missing test file 'test_bad_names.ml'
+      bad_style.ml:1:0: Module 'bad_style' is missing test file 'test_bad_style.ml'
+      catch_all.ml:1:0: Module 'catch_all' is missing test file 'test_catch_all.ml'
+      complex.ml:1:0: Module 'complex' is missing test file 'test_complex.ml'
+      function_naming.ml:1:0: Module 'function_naming' is missing test file 'test_function_naming.ml'
+      long_function.ml:1:0: Module 'long_function' is missing test file 'test_long_function.ml'
+      samples/uses_printf.ml:1:0: Module 'uses_printf' is missing test file 'test_uses_printf.ml'
+      simple.ml:1:0: Module 'simple' is missing test file 'test_simple.ml'
+      stubs.ml:1:0: Module 'stubs' is missing test file 'test_stubs.ml'
+      uses_str.ml:1:0: Module 'uses_str' is missing test file 'test_uses_str.ml'
   
-  Summary: ✗ 6 total issues
+  Summary: ✗ 16 total issues
   ✗ Some checks failed. See details above.
   
   💡 Fix hints:
@@ -298,9 +394,21 @@ Test catch-all exception handler
     ✗ Format rules (.ocamlformat, .mli files) (2 issues)
       samples/catch_all.ml:1:1: missing interface file
       (project): Missing .ocamlformat file for consistent formatting
-  ✓ Test Quality (0 total issues)
+  ✗ Test Quality (10 total issues)
+    ✓ Test conventions (export 'suite' not module name) (0 issues)
+    ✗ Test coverage (1:1 lib/test correspondence) (10 issues)
+      bad_names.ml:1:0: Module 'bad_names' is missing test file 'test_bad_names.ml'
+      bad_style.ml:1:0: Module 'bad_style' is missing test file 'test_bad_style.ml'
+      complex.ml:1:0: Module 'complex' is missing test file 'test_complex.ml'
+      function_naming.ml:1:0: Module 'function_naming' is missing test file 'test_function_naming.ml'
+      long_function.ml:1:0: Module 'long_function' is missing test file 'test_long_function.ml'
+      samples/catch_all.ml:1:0: Module 'catch_all' is missing test file 'test_catch_all.ml'
+      simple.ml:1:0: Module 'simple' is missing test file 'test_simple.ml'
+      stubs.ml:1:0: Module 'stubs' is missing test file 'test_stubs.ml'
+      uses_printf.ml:1:0: Module 'uses_printf' is missing test file 'test_uses_printf.ml'
+      uses_str.ml:1:0: Module 'uses_str' is missing test file 'test_uses_str.ml'
   
-  Summary: ✗ 2 total issues
+  Summary: ✗ 12 total issues
   ✗ Some checks failed. See details above.
   
   💡 Fix hints:

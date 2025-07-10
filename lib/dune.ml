@@ -114,25 +114,7 @@ let is_executable project_root ml_file =
 (** Clear the dune describe cache *)
 let clear_cache () = Hashtbl.clear dune_describe_cache
 
-(** Extract module names from a modules list in dune describe *)
-let extract_module_names = function
-  | Sexplib0.Sexp.List modules ->
-      List.filter_map
-        (function
-          | Sexplib0.Sexp.List items ->
-              (* Look for ((name ModuleName) ...) *)
-              List.find_map
-                (function
-                  | Sexplib0.Sexp.List
-                      [ Sexplib0.Sexp.Atom "name"; Sexplib0.Sexp.Atom name ] ->
-                      Some name
-                  | _ -> None)
-                items
-          | _ -> None)
-        modules
-  | _ -> []
-
-(** Extract executable modules from dune describe output *)
+(** Extract executable names (not their modules) from dune describe output *)
 let extract_executables_from_sexp sexp =
   (* The structure is (root ...) (build_context ...) (executables ...) ... *)
   match sexp with
@@ -146,13 +128,18 @@ let extract_executables_from_sexp sexp =
               List.concat_map
                 (function
                   | Sexplib0.Sexp.List fields ->
-                      (* Look for modules field in each executable *)
+                      (* Look for names field to get actual executable names *)
                       List.concat_map
                         (function
                           | Sexplib0.Sexp.List
-                              (Sexplib0.Sexp.Atom "modules"
-                              :: [ Sexplib0.Sexp.List modules ]) ->
-                              extract_module_names (Sexplib0.Sexp.List modules)
+                              (Sexplib0.Sexp.Atom "names"
+                              :: [ Sexplib0.Sexp.List names ]) ->
+                              List.filter_map
+                                (function
+                                  | Sexplib0.Sexp.Atom name ->
+                                      Some (String.capitalize_ascii name)
+                                  | _ -> None)
+                                names
                           | _ -> [])
                         fields
                   | _ -> [])
