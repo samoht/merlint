@@ -20,17 +20,17 @@ ensure the codebase is robust and maintainable.
 A common way to structure tests is to categorize them, for example, by
 functionality (e.g., core API) or by layer (e.g., UI).
 
--   **`test/test.ml`**: A main test runner can aggregate test suites from
-    individual `test_*.ml` files.
--   **`test/test_*.ml`**: Each `test_*.ml` file contains the tests for a
+-   **`test/test.ml`** [E615]: A main test runner that aggregates test suites from
+    individual `test_*.ml` files. Ensure all test suites are included.
+-   **`test/test_*.ml`** [E605]: Each `test_*.ml` file contains the tests for a
     specific module. For example, `test/test_users.ml` would contain tests for
-    a `User` module.
+    a `User` module. Each library module should have a corresponding test file.
 -   **`test/dune`**: Defines the test executable.
 
 ### Individual Test Files
 
 Each `test_*.ml` file should export a `suite` value of type
-`(string * Alcotest.test_case list) list`.
+`(string * Alcotest.test_case list) list` [E600].
 
 The `suite` is a list of `(name, test_cases)` tuples, where:
 
@@ -79,6 +79,15 @@ let tests =
 
 let suite = [ ("users", tests) ]
 ```
+
+#### Test Coverage Rules
+
+-   **Missing Test Files** [E605]: Every library module should have a corresponding test file.
+    If `lib/user.ml` exists, then `test/test_user.ml` should also exist.
+-   **Orphaned Test Files** [E610]: Test files should correspond to actual library modules.
+    Remove test files that don't have corresponding library modules.
+-   **Test Suite Integration** [E615]: All test suites must be included in the main test runner
+    to ensure they are executed during testing.
 
 ### End-to-End Testing with Cram
 

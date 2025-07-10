@@ -14,6 +14,51 @@ let check_ocamlmerlin () =
   let cmd = "which ocamlmerlin > /dev/null 2>&1" in
   match Unix.system cmd with Unix.WEXITED 0 -> true | _ -> false
 
+let get_terminal_width () =
+  try
+    let ic = Unix.open_process_in "tput cols" in
+    let width = int_of_string (input_line ic) in
+    let _ = Unix.close_process_in ic in
+    width
+  with _ -> 80 (* fallback to 80 columns *)
+
+let wrap_line ?(max_width = 80) ?(indent = 4) text =
+  let terminal_width = get_terminal_width () in
+  let effective_width = min max_width terminal_width in
+  let prefix = "  • " in
+  let continuation_prefix = String.make (String.length prefix + indent) ' ' in
+
+  if String.length text + String.length prefix <= effective_width then
+    prefix ^ text
+  else
+    let words = String.split_on_char ' ' text in
+    let rec build_lines acc current_line current_length = function
+      | [] -> if current_line = "" then acc else current_line :: acc
+      | word :: rest ->
+          let word_len = String.length word in
+          let space_len = if current_line = "" then 0 else 1 in
+          let new_length = current_length + space_len + word_len in
+          if new_length <= effective_width - String.length prefix then
+            let new_line =
+              if current_line = "" then word else current_line ^ " " ^ word
+            in
+            build_lines acc new_line new_length rest
+          else
+            let completed_line =
+              if current_line = "" then word else current_line
+            in
+            build_lines (completed_line :: acc) word word_len rest
+    in
+    let lines = List.rev (build_lines [] "" 0 words) in
+    match lines with
+    | [] -> prefix
+    | first :: rest ->
+        let first_line = prefix ^ first in
+        let continuation_lines =
+          List.map (fun line -> continuation_prefix ^ line) rest
+        in
+        String.concat "\n" (first_line :: continuation_lines)
+
 let make_relative_to_cwd path =
   match Fpath.of_string path with
   | Error _ -> path (* fallback to original path *)
@@ -145,7 +190,10 @@ let print_fix_hints all_issues =
       (fun issue_type issues ->
         let sorted_issues = List.sort Merlint.Issue.compare issues in
         match Merlint.Issue.find_grouped_hint issue_type sorted_issues with
-        | Some hint -> Fmt.pr "@.  • %s@." hint
+        | Some hint ->
+            let error_code = Merlint.Issue.error_code issue_type in
+            let prefixed_hint = Fmt.str "[%s] %s" error_code hint in
+            Fmt.pr "%s@." (wrap_line prefixed_hint)
         | None -> ())
       issue_groups;
 

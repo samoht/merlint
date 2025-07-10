@@ -59,11 +59,11 @@ let test_get_type () =
     [
       ( Issue.Complexity_exceeded
           { name = "foo"; location; complexity = 15; threshold = 10 },
-        Issue.Complexity );
+        Issue_type.Complexity );
       ( Issue.Function_too_long
           { name = "bar"; location; length = 100; threshold = 50 },
-        Issue.Function_length );
-      (Issue.No_obj_magic { location }, Issue.Obj_magic);
+        Issue_type.Function_length );
+      (Issue.No_obj_magic { location }, Issue_type.Obj_magic);
     ]
   in
 
@@ -103,12 +103,12 @@ let test_grouped_hints () =
   (* Test that find_grouped_hint works for different issue types *)
   let test_cases =
     [
-      ( Issue.Complexity,
+      ( Issue_type.Complexity,
         [
           Issue.Complexity_exceeded
             { name = "foo"; location; complexity = 15; threshold = 10 };
         ] );
-      ( Issue.Missing_mli_file,
+      ( Issue_type.Missing_mli_file,
         [
           Issue.Missing_mli_file
             { ml_file = "test.ml"; expected_mli = "test.mli"; location };
