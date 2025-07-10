@@ -2,7 +2,7 @@
 opam-version: "2.0"
 synopsis: "OCaml linter enforcing modern coding conventions"
 description:
-  "An opinionated OCaml linter that enforces modern OCaml coding conventions and best practices with priority-based issue sorting"
+  "An opinionated OCaml linter that enforces modern OCaml coding conventions and best practices"
 maintainer: ["Thomas Gazagnaire"]
 authors: ["Merlint Contributors"]
 license: "ISC"
@@ -18,6 +18,7 @@ depends: [
   "fpath"
   "logs"
   "fmt"
+  "astring"
   "alcotest" {with-test}
   "odoc" {with-doc}
 ]

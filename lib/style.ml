@@ -111,73 +111,7 @@ let check_str_module filename text =
       [] matches
   else []
 
-let is_catch_all_pattern pattern =
-  match pattern with
-  | `Assoc fields -> (
-      match List.assoc_opt "class" fields with
-      | Some (`String "Ppat_any") -> true
-      | Some (`String "Ppat_var") -> (
-          (* Check if it's _something which is also a catch-all *)
-          match List.assoc_opt "name" fields with
-          | Some (`String name) -> String.starts_with ~prefix:"_" name
-          | _ -> false)
-      | _ -> false)
-  | _ -> false
-
-let extract_location_from_fields fields =
-  match List.assoc_opt "location" fields with
-  | Some (`Assoc loc_fields) -> (
-      match
-        ( List.assoc_opt "start" loc_fields,
-          List.assoc_opt "line" loc_fields,
-          List.assoc_opt "col" loc_fields )
-      with
-      | Some (`Int line), _, Some (`Int col)
-      | _, Some (`Int line), Some (`Int col) ->
-          Some (line, col)
-      | _ -> None)
-  | _ -> None
-
-let check_exception_case filename fields case =
-  match case with
-  | `Assoc case_fields -> (
-      match List.assoc_opt "pattern" case_fields with
-      | Some pattern when is_catch_all_pattern pattern -> (
-          match extract_location_from_fields fields with
-          | Some (line, col) ->
-              [
-                Issue.Catch_all_exception
-                  { location = { file = filename; line; col } };
-              ]
-          | None -> [])
-      | _ -> [])
-  | _ -> []
-
-let check_try_expression filename fields =
-  match List.assoc_opt "exceptions" fields with
-  | Some (`List cases) ->
-      List.fold_left
-        (fun acc case -> acc @ check_exception_case filename fields case)
-        [] cases
-  | _ -> []
-
-(* Parse JSON AST to check for catch-all exceptions *)
-let rec check_json_catch_all filename json =
-  match json with
-  | `Assoc fields -> (
-      match List.assoc_opt "class" fields with
-      | Some (`String "Pexp_try") -> check_try_expression filename fields
-      | _ ->
-          List.fold_left
-            (fun acc (_, child) -> acc @ check_json_catch_all filename child)
-            [] fields)
-  | `List items ->
-      List.fold_left
-        (fun acc item -> acc @ check_json_catch_all filename item)
-        [] items
-  | _ -> []
-
-(* Simple text-based check for catch-all - fallback *)
+(* Simple text-based check for catch-all *)
 let check_catch_all_text filename text =
   (* Look for patterns like "with _ ->" or "with _e ->" in try blocks *)
   let catch_all_regex =
@@ -214,7 +148,22 @@ let check_catch_all_text filename text =
 
 let check_printf_module filename text =
   let printf_regex = Re.compile (Re.str "Pexp_ident \"Printf.") in
-  let format_regex = Re.compile (Re.str "Pexp_ident \"Format.") in
+  (* Only flag specific Format functions that should be avoided *)
+  let format_regex =
+    Re.compile
+      (Re.alt
+         [
+           Re.str "Pexp_ident \"Format.printf\"";
+           Re.str "Pexp_ident \"Format.sprintf\"";
+           Re.str "Pexp_ident \"Format.fprintf\"";
+           Re.str "Pexp_ident \"Format.eprintf\"";
+           Re.str "Pexp_ident \"Format.asprintf\"";
+           Re.str "Pexp_ident \"Format.kasprintf\"";
+           Re.str "Pexp_ident \"Format.kfprintf\"";
+           Re.str "Pexp_ident \"Format.ikfprintf\"";
+           Re.str "Pexp_ident \"Format.ksprintf\"";
+         ])
+  in
 
   let check_module regex module_name =
     if Re.execp regex text then
@@ -237,21 +186,17 @@ let check_printf_module filename text =
 
   check_module printf_regex "Printf" @ check_module format_regex "Format"
 
-let check parsetree_data =
-  match parsetree_data with
-  | `String text ->
-      let filename = extract_filename_from_parsetree text in
-      let obj_magic_issues = check_obj_magic filename text in
-      let str_module_issues = check_str_module filename text in
-      let printf_module_issues = check_printf_module filename text in
+let check ~filename (parsetree : Parsetree.t) =
+  let text = parsetree.raw_text in
 
-      (* For catch-all, try the simple text-based approach *)
-      let catch_all_issues = check_catch_all_text filename text in
+  if text = "" then []
+  else
+    let obj_magic_issues = check_obj_magic filename text in
+    let str_module_issues = check_str_module filename text in
+    let printf_module_issues = check_printf_module filename text in
 
-      obj_magic_issues @ str_module_issues @ printf_module_issues
-      @ catch_all_issues
-  | json ->
-      (* If we get JSON, use the proper parser *)
-      let filename = "unknown" in
-      (* TODO: extract from JSON *)
-      check_json_catch_all filename json
+    (* For catch-all, try the simple text-based approach *)
+    let catch_all_issues = check_catch_all_text filename text in
+
+    obj_magic_issues @ str_module_issues @ printf_module_issues
+    @ catch_all_issues

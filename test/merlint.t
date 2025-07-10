@@ -77,7 +77,7 @@ Test long function detection
   💡 Fix hints:
   
     • Split these long functions by extracting logical sections into separate functions:
-       long_function.ml:2: function very_long_function
+       long_function.ml:2:0: function very_long_function
   
     • Create file '.ocamlformat' in project root with:
        profile = default
@@ -114,13 +114,13 @@ Test naming conventions
   💡 Fix hints:
   
     • Rename these variant constructors:
-       samples/bad_names.ml:3: MyModule → My_module
-       samples/bad_names.ml:7: WaitingForInput → Waiting_for_input
-       samples/bad_names.ml:7: ProcessingData → Processing_data
+       samples/bad_names.ml:3:7: MyModule → My_module
+       samples/bad_names.ml:7:14: WaitingForInput → Waiting_for_input
+       samples/bad_names.ml:7:32: ProcessingData → Processing_data
   
     • Rename these values:
-       samples/bad_names.ml:4: let myFunction → let my_function
-       samples/bad_names.ml:9: let checkValue → let check_value
+       samples/bad_names.ml:4:6: let myFunction → let my_function
+       samples/bad_names.ml:9:4: let checkValue → let check_value
   
     • Create file '.ocamlformat' in project root with:
        profile = default
@@ -173,7 +173,7 @@ Test style rules - Obj.magic
   ✓ Code Quality (0 total issues)
   ✗ Code Style (1 total issues)
     ✗ Style rules (no Obj.magic, no Str, no catch-all) (1 issues)
-      bad_style.ml:2:16: Never use Obj.magic
+      samples/bad_style.ml:2:16: Never use Obj.magic
   ✓ Naming Conventions (0 total issues)
   ✓ Documentation (0 total issues)
   ✗ Project Structure (2 total issues)
@@ -205,10 +205,10 @@ Test style rules - Str module
   ✓ Code Quality (0 total issues)
   ✗ Code Style (4 total issues)
     ✗ Style rules (no Obj.magic, no Str, no catch-all) (4 issues)
-      uses_str.ml:2:31: Use Re module instead of Str
-      uses_str.ml:2:20: Use Re module instead of Str
-      uses_str.ml:6:32: Use Re module instead of Str
-      uses_str.ml:6:12: Use Re module instead of Str
+      samples/uses_str.ml:2:31: Use Re module instead of Str
+      samples/uses_str.ml:2:20: Use Re module instead of Str
+      samples/uses_str.ml:6:32: Use Re module instead of Str
+      samples/uses_str.ml:6:12: Use Re module instead of Str
   ✓ Naming Conventions (0 total issues)
   ✓ Documentation (0 total issues)
   ✗ Project Structure (2 total issues)
@@ -243,10 +243,10 @@ Test Printf/Format module usage
   ✓ Code Quality (0 total issues)
   ✗ Code Style (4 total issues)
     ✗ Style rules (no Obj.magic, no Str, no catch-all) (4 issues)
-      uses_printf.ml:2:2: Use Fmt module instead of Printf
-      uses_printf.ml:3:2: Use Fmt module instead of Printf
-      uses_printf.ml:6:2: Use Fmt module instead of Format
-      uses_printf.ml:7:2: Use Fmt module instead of Format
+      samples/uses_printf.ml:2:2: Use Fmt module instead of Printf
+      samples/uses_printf.ml:3:2: Use Fmt module instead of Printf
+      samples/uses_printf.ml:6:2: Use Fmt module instead of Format
+      samples/uses_printf.ml:7:2: Use Fmt module instead of Format
   ✓ Naming Conventions (0 total issues)
   ✓ Documentation (0 total issues)
   ✗ Project Structure (2 total issues)

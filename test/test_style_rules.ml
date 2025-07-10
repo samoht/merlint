@@ -15,7 +15,8 @@ let extract_filename_parsetree () =
 
 let test_check_obj_magic () =
   let text = "Pexp_ident \"Obj.magic\" (bad_style.ml[2,27+16]..[2,27+25])" in
-  let issues = Style.check (`String text) in
+  let parsetree = Parsetree.of_json (`String text) in
+  let issues = Style.check ~filename:"bad_style.ml" parsetree in
   Alcotest.check Alcotest.int "issue count" 1 (List.length issues);
   match issues with
   | [ Issue.No_obj_magic { location = { file; line; col } } ] ->
@@ -26,7 +27,8 @@ let test_check_obj_magic () =
 
 let test_check_str_module () =
   let text = "Pexp_ident \"Str.split\" (uses_str.ml[2,28+20]..[2,28+29])" in
-  let issues = Style.check (`String text) in
+  let parsetree = Parsetree.of_json (`String text) in
+  let issues = Style.check ~filename:"uses_str.ml" parsetree in
   Alcotest.check Alcotest.int "issue count" 1 (List.length issues);
   match issues with
   | [ Issue.Use_str_module { location = { file; line; col } } ] ->
@@ -68,7 +70,8 @@ let test_full_parsetree_sample () =
     ]
 ]|}
   in
-  let issues = Style.check (`String sample_text) in
+  let parsetree = Parsetree.of_json (`String sample_text) in
+  let issues = Style.check ~filename:"bad_style.ml" parsetree in
   Alcotest.check Alcotest.bool "has issues" true (List.length issues > 0)
 
 let tests =

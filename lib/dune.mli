@@ -14,5 +14,8 @@ val run_dune_describe : string -> (string, string) result
 val ensure_project_built : string -> (unit, string) result
 (** Ensure the project is built by running 'dune build' if needed *)
 
-val is_test_or_binary : string -> stanza_info list -> bool
+val is_test_module : string -> stanza_info list -> bool
 (** Check if a module name belongs to a test or executable stanza *)
+
+val is_executable : string -> string -> bool
+(** Check if a file is an executable (binary or test) - no .mli needed *)

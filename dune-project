@@ -5,7 +5,7 @@
 (package
  (name merlint)
  (synopsis "OCaml linter enforcing modern coding conventions")
- (description "An opinionated OCaml linter that enforces modern OCaml coding conventions and best practices with priority-based issue sorting")
+ (description "An opinionated OCaml linter that enforces modern OCaml coding conventions and best practices")
  (maintainers "Thomas Gazagnaire")
  (authors "Merlint Contributors")
  (license "ISC")
@@ -21,4 +21,5 @@
   fpath
   logs
   fmt
+  astring
   (alcotest :with-test)))

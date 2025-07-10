@@ -3,76 +3,74 @@
     This module defines the types for all possible issues that merlint can
     detect, along with functions to format them for output. *)
 
-type location = { file : string; line : int; col : int }
-
 type issue_type =
-  | Complexity_issue
-  | Function_length_issue
-  | Deep_nesting_issue
-  | Obj_magic_issue
-  | Catch_all_exception_issue
-  | Str_module_issue
-  | Printf_module_issue
-  | Variant_naming_issue
-  | Module_naming_issue
-  | Value_naming_issue
-  | Type_naming_issue
-  | Long_identifier_issue
-  | Function_naming_issue
-  | Missing_mli_doc_issue
-  | Missing_value_doc_issue
-  | Bad_doc_style_issue
-  | Missing_standard_function_issue
-  | Missing_ocamlformat_file_issue
-  | Missing_mli_file_issue
+  | Complexity
+  | Function_length
+  | Deep_nesting
+  | Obj_magic
+  | Catch_all_exception
+  | Str_module
+  | Printf_module
+  | Variant_naming
+  | Module_naming
+  | Value_naming
+  | Type_naming
+  | Long_identifier
+  | Function_naming
+  | Missing_mli_doc
+  | Missing_value_doc
+  | Bad_doc_style
+  | Missing_standard_function
+  | Missing_ocamlformat_file
+  | Missing_mli_file
 
 type t =
   | Complexity_exceeded of {
       name : string;
-      location : location;
+      location : Location.t;
       complexity : int;
       threshold : int;
     }
   | Function_too_long of {
       name : string;
-      location : location;
+      location : Location.t;
       length : int;
       threshold : int;
     }
-  | No_obj_magic of { location : location }
+  | No_obj_magic of { location : Location.t }
   | Missing_mli_doc of { module_name : string; file : string }
-  | Missing_value_doc of { value_name : string; location : location }
+  | Missing_value_doc of { value_name : string; location : Location.t }
   | Bad_doc_style of {
       value_name : string;
-      location : location;
+      location : Location.t;
       message : string;
     }
   | Bad_variant_naming of {
       variant : string;
-      location : location;
+      location : Location.t;
       expected : string;
     }
   | Bad_module_naming of {
       module_name : string;
-      location : location;
+      location : Location.t;
       expected : string;
     }
   | Bad_value_naming of {
       value_name : string;
-      location : location;
+      location : Location.t;
       expected : string;
     }
   | Bad_type_naming of {
       type_name : string;
-      location : location;
+      location : Location.t;
       message : string;
     }
-  | Catch_all_exception of { location : location }
-  | Use_str_module of { location : location }
-  | Use_printf_module of { location : location; module_used : string }
+  | Catch_all_exception of { location : Location.t }
+  | Use_str_module of { location : Location.t }
+  | Use_printf_module of { location : Location.t; module_used : string }
   | Deep_nesting of {
       name : string;
-      location : location;
+      location : Location.t;
       depth : int;
       threshold : int;
     }
@@ -82,21 +80,21 @@ type t =
       missing : string list;
       file : string;
     }
-  | Missing_ocamlformat_file of { location : location }
+  | Missing_ocamlformat_file of { location : Location.t }
   | Missing_mli_file of {
       ml_file : string;
       expected_mli : string;
-      location : location;
+      location : Location.t;
     }
   | Long_identifier_name of {
       name : string;
-      location : location;
+      location : Location.t;
       underscore_count : int;
       threshold : int;
     }
   | Bad_function_naming of {
       function_name : string;
-      location : location;
+      location : Location.t;
       suggestion : string;
     }
 
@@ -106,7 +104,7 @@ val pp : t Fmt.t
 val format : t -> string
 (** [Deprecated] Use pp instead *)
 
-val get_issue_type : t -> issue_type
+val get_type : t -> issue_type
 (** Get the issue type for an issue *)
 
 val find_grouped_hint : issue_type -> t list -> string option

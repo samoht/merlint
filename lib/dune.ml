@@ -67,7 +67,7 @@ let ensure_project_built project_root =
     Log.debug (fun m -> m "_build directory already exists");
     Ok ())
 
-let is_test_or_binary module_name stanza_info =
+let is_test_module module_name stanza_info =
   (* Check if this module belongs to a test or executable stanza *)
   List.exists
     (fun info ->
@@ -75,3 +75,38 @@ let is_test_or_binary module_name stanza_info =
       | Test | Executable -> List.mem module_name info.modules
       | Library -> false)
     stanza_info
+
+let is_executable project_root ml_file =
+  (* Use dune describe to get actual stanza information *)
+  match run_dune_describe project_root with
+  | Error _ ->
+      (* Fallback to heuristics if dune describe fails *)
+      let dirname = Filename.dirname ml_file in
+      let basename = Filename.basename ml_file in
+      let path_parts = String.split_on_char '/' dirname in
+      let is_test_dir =
+        List.exists (fun part -> part = "test" || part = "tests") path_parts
+      in
+      let is_bin_dir =
+        List.exists (fun part -> part = "bin" || part = "binary") path_parts
+      in
+      let is_test_file =
+        String.ends_with ~suffix:"_test.ml" basename
+        || String.ends_with ~suffix:"test.ml" basename
+        || String.starts_with ~prefix:"test_" basename
+      in
+      let is_main_file =
+        basename = "main.ml" || basename = "app.ml" || basename = "cli.ml"
+      in
+      is_test_dir || is_bin_dir || is_test_file || is_main_file
+  | Ok sexp_str ->
+      (* Parse the s-expression and check if file belongs to executable stanza *)
+      let module_name = Filename.basename (Filename.remove_extension ml_file) in
+      let module_name_capitalized = String.capitalize_ascii module_name in
+      (* Use Re to find executable stanzas *)
+      let executables_regex = Re.compile (Re.str "executables") in
+      let module_regex = Re.compile (Re.str module_name_capitalized) in
+      let has_executable_stanza =
+        Re.execp executables_regex sexp_str && Re.execp module_regex sexp_str
+      in
+      has_executable_stanza
