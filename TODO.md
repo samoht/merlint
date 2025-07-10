@@ -1,5 +1,47 @@
 # TODO
 
+## High Priority
+
+- [ ] Use dune describe to list files in the project instead of scanning
+  - Currently we scan the filesystem directly, but dune describe can provide a more accurate list of project files
+  - Should respect dune's source tree configuration and exclusions
+
+## Medium Priority
+
+- [ ] Sort issues by severity/length (longest functions first as most actionable)
+  - Currently issues are not sorted by severity
+  - Longest functions should appear first as they are the most actionable items to fix
+  - Sort by: function length (descending), then complexity, then other issues
+
+- [ ] Detect when a function or type has the name of the module it belongs to
+  - Examples: `Process.process*` or `History.find_history`
+  - This is redundant naming and should be flagged as a style issue
+  - Should work for functions, types, and module names
+
+- [ ] Give a unique identifier to each error type (with gaps for future additions)
+  - Each issue type should have a unique error code (e.g., E001, E005, E010)
+  - Leave gaps for future error types (e.g., E001-E099 for complexity, E100-E199 for style)
+  - Error messages should reference the error code
+  - Update Issue.t type to include error codes
+
+- [ ] Generate an HTML page with all the rules and their numbers
+  - Create a static HTML page documenting all linting rules
+  - Include error codes, descriptions, examples, and fix suggestions
+  - Host on GitHub Pages for easy reference
+  - Auto-generate from the issue type definitions
+
+- [ ] Allow to turn off some checks with CLI options
+  - Add CLI flags like `-w +all -32-27` to enable/disable specific checks
+  - Similar to OCaml compiler warning flags
+  - Support ranges (e.g., `-w -100..199` to disable all style checks)
+  - Store configuration in .merlintrc or similar config file
+
+## Low Priority
+
+- [ ] Investigate why we have test_style_rules and test_rules_integration that don't correspond to any lib/*.ml files
+  - These test files exist but don't follow the 1:1 correspondence rule
+  - Decide if they should be renamed or excluded from the check
+
 ## Function Naming Convention Rule
 
 Implement a rule to enforce function naming conventions:
@@ -55,3 +97,21 @@ This would fit well with the existing `merlin_interface.ml` module:
 - Add more comprehensive documentation rules
 - Improve complexity analysis for more OCaml constructs
 - Add configuration file support for customizing thresholds
+
+## Completed
+
+- [x] Implement rule to check that test files export 'suite' instead of module name
+- [x] Implement rule to verify code doesn't silence warnings
+- [x] Move sample files from samples/ to test/samples/
+- [x] Fix test convention check to verify suite has proper Alcotest type
+- [x] Optimize dune describe calls to run once per project, not once per file
+- [x] Fix executable detection using parsexp instead of regex
+- [x] Create test coverage check ensuring 1:1 correspondence between lib and test files
+- [x] Use dune describe to find library modules instead of hardcoding paths
+- [x] Create test files for core modules: complexity, doc, dune, format, issue, location
+- [x] Create test files for: merlin, naming, report, rules, style, warning_checks modules
+- [x] Add Test_parser and Test_sexp suites to test runner (commented out as modules don't exist)
+- [x] Remove raw JSON from codebase and use structured types
+- [x] Implement verbose logging (-v and -vv flags)
+- [x] Fix various bugs in merlint OCaml linter
+- [x] Refactor long functions and replace Printf with Fmt in test coverage module
