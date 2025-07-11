@@ -68,8 +68,7 @@ Test long function detection
     case). Pure data definitions (lists, records) are also exempt from length
     checks. For better readability, consider using helper functions for complex
     logic. Aim for functions under 50 lines of actual logic.
-    - long_function.ml:2:0:
-      Function 'very_long_function' is too long (54 lines, threshold: 50)
+    - long_function.ml:2:0: Function 'very_long_function' is too long (54 lines, threshold: 50)
   ✓ Code Style (0 total issues)
   ✓ Naming Conventions (0 total issues)
   ✓ Documentation (0 total issues)
@@ -138,8 +137,7 @@ Test documentation rules
     This issue means your modules lack documentation making them hard to
     understand. Fix it by adding module documentation at the top of .mli files
     with a brief summary and description of the module's purpose.
-    - samples/missing_docs.mli:1:1:
-      Module 'missing_docs' is missing documentation comment
+    - samples/missing_docs.mli:1:1: Module 'missing_docs' is missing documentation comment
   ✗ Project Structure (1 total issues)
     [E500] Missing Code Formatter
     This issue means your project lacks consistent code formatting. Fix it by

@@ -173,22 +173,11 @@ let print_issue_group (error_code, issues) =
             match Merlint.Issue.get_location issue with
             | Some loc ->
                 let desc = Merlint.Issue.get_description issue in
-                (* Format as "- location: description" *)
-                let location_str = Fmt.str "%a" Merlint.Location.pp loc in
-                let full_line = Fmt.str "  - %s: %s" location_str desc in
-
-                (* Check if we need to wrap this line *)
-                let terminal_width = get_terminal_width () in
-                if String.length full_line <= terminal_width then
-                  Fmt.pr "  - %a: %s@."
-                    (Fmt.styled `Bold Merlint.Location.pp)
-                    loc desc
-                else
-                  (* Wrap the description part only *)
-                  (* Print location with colon, then newline and indented description *)
-                  Fmt.pr "  - %a:@.    %s@."
-                    (Fmt.styled `Bold Merlint.Location.pp)
-                    loc desc
+                (* Always print location: description on same line *)
+                (* Terminal will wrap naturally if too long *)
+                Fmt.pr "  - %a: %s@."
+                  (Fmt.styled `Bold Merlint.Location.pp)
+                  loc desc
             | None -> ())
           sorted_issues
 
