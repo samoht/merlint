@@ -132,33 +132,10 @@ Issues are automatically sorted by priority to help you focus on the most import
 
 ## Error Codes
 
-Each issue type has a unique error code that can be used with the `--rules` flag:
+For a complete reference of all error codes with detailed explanations and examples, visit:
+**https://samoht.github.io/merlint/**
 
-- **E001**: Cyclomatic complexity exceeded
-- **E005**: Function too long
-- **E010**: Deep nesting
-- **E100**: Unsafe type casting (Obj.magic)
-- **E105**: Catch-all exception handler
-- **E110**: Silenced compiler warning
-- **E200**: Deprecated Str module
-- **E205**: Outdated Printf/Format modules
-- **E300**: Variant naming convention
-- **E305**: Module naming convention
-- **E310**: Value naming convention
-- **E315**: Type naming convention
-- **E320**: Long identifier name
-- **E325**: Function naming pattern
-- **E330**: Redundant module name
-- **E400**: Missing module documentation
-- **E405**: Missing value documentation
-- **E410**: Bad documentation style
-- **E415**: Missing standard functions
-- **E500**: Missing .ocamlformat file
-- **E505**: Missing interface file
-- **E600**: Test module convention
-- **E605**: Missing test file
-- **E610**: Test without library
-- **E615**: Test suite not included
+Error codes can be used with the `--rules` flag to filter specific checks.
 
 ## Integration
 
@@ -186,6 +163,11 @@ Use merlint in your continuous integration:
 - name: Lint OCaml code
   run: merlint --quiet
 ```
+
+## Style Guide
+
+For detailed guidelines on OCaml coding conventions and best practices enforced by Merlint, see:
+**[docs/STYLE_GUIDE.md](docs/STYLE_GUIDE.md)**
 
 ## Development
 
