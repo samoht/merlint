@@ -130,40 +130,8 @@ let get_type = function
   | Test_without_library _ -> Test_without_library
   | Test_suite_not_included _ -> Test_suite_not_included
 
-(* Error codes with gaps for future additions *)
-let error_code = function
-  (* Complexity (E001-E099) *)
-  | Complexity -> "E001"
-  | Function_length -> "E005"
-  | Deep_nesting -> "E010"
-  (* Security/Safety (E100-E199) *)
-  | Obj_magic -> "E100"
-  | Catch_all_exception -> "E105"
-  | Silenced_warning -> "E110"
-  (* Style/Modernization (E200-E299) *)
-  | Str_module -> "E200"
-  | Printf_module -> "E205"
-  (* Naming Conventions (E300-E399) *)
-  | Variant_naming -> "E300"
-  | Module_naming -> "E305"
-  | Value_naming -> "E310"
-  | Type_naming -> "E315"
-  | Long_identifier -> "E320"
-  | Function_naming -> "E325"
-  | Redundant_module_name -> "E330"
-  (* Documentation (E400-E499) *)
-  | Missing_mli_doc -> "E400"
-  | Missing_value_doc -> "E405"
-  | Bad_doc_style -> "E410"
-  | Missing_standard_function -> "E415"
-  (* Project Structure (E500-E599) *)
-  | Missing_ocamlformat_file -> "E500"
-  | Missing_mli_file -> "E505"
-  (* Testing (E600-E699) *)
-  | Test_exports_module -> "E600"
-  | Missing_test_file -> "E605"
-  | Test_without_library -> "E610"
-  | Test_suite_not_included -> "E615"
+(* Get error code from Issue_type module *)
+let error_code = Issue_type.error_code
 
 (* Helper to style error codes *)
 let pp_error_code ppf code =

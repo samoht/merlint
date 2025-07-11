@@ -16,11 +16,11 @@ let check_ocamlmerlin () =
 
 let get_terminal_width () =
   try
-    let ic = Unix.open_process_in "tput cols" in
+    let ic = Unix.open_process_in "tput cols 2>/dev/null" in
     let width = int_of_string (input_line ic) in
     let _ = Unix.close_process_in ic in
     width
-  with _ -> 80 (* fallback to 80 columns *)
+  with _ -> 120 (* fallback to 120 columns for tests *)
 
 let make_relative_to_cwd path =
   match Fpath.of_string path with
@@ -125,7 +125,7 @@ let process_category_report (category_name, reports) =
   if total_issues > 0 then List.iter Merlint.Report.print_detailed reports;
   reports
 
-let wrap_hint_description ?(max_width = 80) text =
+let wrap_hint_description ?(max_width = 120) text =
   let terminal_width = get_terminal_width () in
   let effective_width = min max_width terminal_width in
   let indent_size = 2 in

@@ -2,10 +2,35 @@
 
 ## High Priority
 
-- [ ] Detect when a function or type has the name of the module it belongs to
+- [x] Detect when a function or type has the name of the module it belongs to
   - Examples: `Process.process*` or `History.find_history`
   - This is redundant naming and should be flagged as a style issue
   - Should work for functions, types, and module names
+  - DONE: Implemented as E330 - Redundant Module Names
+
+- [ ] Implement Unified Style Guide Data Model
+  1. **Create Data Model** (lib/data.ml and lib/data.mli)
+     - Define OCaml types for style guide sections, paragraphs, rules
+     - Include placeholders for rule references (e.g., [E205])
+  2. **Migrate Content** 
+     - Translate prompts/coding-style.md into OCaml data structures
+     - Preserve all prose, examples, and structure
+  3. **Implement Generators**
+     - Update bin/generate_docs.ml to generate both:
+       - docs/STYLE_GUIDE.md - Narrative "textbook" for learning
+       - docs/error-codes.html - Quick reference "dictionary" 
+     - Both generated from same source (lib/data.ml + lib/hints.ml)
+  4. **Update Build System**
+     - Update dune files to compile Data module
+     - Add promotion rules for both generated files
+  5. **Clean Up**
+     - Remove prompts/coding-style.md after verification
+     - This creates single source of truth for all style information
+
+- [ ] Fix E305 Module Naming Convention documentation
+  - Current docs say "Snake_case" but should be "lowercase_with_underscores"
+  - Example should be `MyModule` → `my_module` not `My_module`
+  - Update hints.ml and regenerate documentation
 
 - [ ] Allow to turn off some checks with CLI options
   - Add CLI flags like `-w +all -32-27` to enable/disable specific checks
@@ -15,13 +40,55 @@
 
 ## Medium Priority
 
+- [ ] Add documentation style section for E410
+  - E410 exists in error codes but has no reference in style guides
+  - Add section to prompts/code.md explaining expected documentation style
+  - Should explicitly reference [E410] for documentation style issues
+
+- [ ] Implement E411: Docstring Format Convention
+  - Enforce `[function_name arg1 arg2] is ...` pattern for function docs
+  - Use regex to check docstrings in .mli files start with `[<name> ...] is`
+  - Ensures consistent documentation style across codebase
+
 - [ ] Add rule to catch Error patterns and suggest using err_* helper functions
   - Detect `Error (Fmt.str ...)` patterns in code  
   - Suggest creating specific error helper functions like `err_invalid_input`, `err_file_not_found`
   - Helper functions should be defined at the top of the file for better organization
   - This promotes consistent error handling and reduces code duplication
 
+- [ ] Implement E510: Missing Log Source
+  - Each module should define its own log source
+  - Check that every .ml file contains at least one `Logs.Src.create` call
+  - Ensures proper logging configuration per module
+
+- [ ] Implement E620: Test Name Convention
+  - Test suite names should be lowercase, single words
+  - Test case names should be lowercase with underscores
+  - Inspect string literals passed to `Alcotest.test_case` and suite names
+
+- [ ] Implement E326: Redundant 'get_' Prefix
+  - Simple accessors shouldn't have `get_` prefix (use `User.name` not `User.get_name`)
+  - Reserve `get_` for functions with non-trivial computation that succeed
+  - Flag `get_*` functions that are just simple record field access
+  - Requires semantic analysis of function body
+
+- [ ] Implement E331: Missing Labels for Same-Type Parameters
+  - When a function has 2+ parameters of the same type, labels should be used
+  - Prevents confusion and argument order mistakes (e.g., `copy ~from ~to`)
+  - Check function signatures for multiple parameters with identical types
+  - Suggest adding labels when this pattern is detected
+
 ## Low Priority
+
+- [ ] Consolidate style guide documentation
+  - Currently fragmented across prompts/code.md, test.md, tests.md
+  - Consider creating single STYLE_GUIDE.md for consistency
+  - Would reduce risk of conflicting or incomplete advice
+
+- [ ] Merge redundant testing guides
+  - prompts/test.md and prompts/tests.md have overlapping content
+  - Creates confusion about which is authoritative
+  - Use prompts/tests.md as base (more detailed)
 
 - [ ] Investigate why we have test_style_rules and test_rules_integration that don't correspond to any lib/*.ml files
   - These test files exist but don't follow the 1:1 correspondence rule
