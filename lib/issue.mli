@@ -78,6 +78,12 @@ type t =
       location : Location.t;
       suggestion : string;
     }
+  | Redundant_module_name of {
+      item_name : string;
+      module_name : string;
+      location : Location.t;
+      item_type : string; (* "function" or "type" *)
+    }
   | Test_exports_module_name of {
       filename : string;
       location : Location.t;

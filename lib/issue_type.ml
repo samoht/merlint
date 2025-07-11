@@ -12,6 +12,7 @@ type t =
   | Type_naming
   | Long_identifier
   | Function_naming
+  | Redundant_module_name
   | Missing_mli_doc
   | Missing_value_doc
   | Bad_doc_style
