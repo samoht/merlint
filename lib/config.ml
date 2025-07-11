@@ -5,6 +5,7 @@ type t = {
   max_complexity : int;
   max_function_length : int;
   max_nesting : int;
+  exempt_data_definitions : bool; (* Don't check length for pure data *)
   (* Naming rules *)
   max_underscores_in_name : int;
   min_name_length_underscore : int;
@@ -23,6 +24,7 @@ let default =
     max_complexity = 10;
     max_function_length = 50;
     max_nesting = 3;
+    exempt_data_definitions = true;
     (* Naming defaults *)
     max_underscores_in_name = 3;
     min_name_length_underscore = 5;

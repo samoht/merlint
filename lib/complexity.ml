@@ -28,7 +28,11 @@ let create_issues config func_name location complexity length nesting
 
   (* Check function length - with special handling for pattern matching *)
   let adjusted_threshold =
-    if has_pattern && case_count > 10 then config.max_function_length * 2
+    if has_pattern then
+      (* For pattern matching heavy functions, allow 2-3 lines per case *)
+      let base_threshold = config.max_function_length in
+      let pattern_allowance = case_count * 2 in
+      max base_threshold (base_threshold + pattern_allowance)
     else config.max_function_length
   in
 

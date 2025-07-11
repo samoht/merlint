@@ -321,10 +321,10 @@ directly), find_* for search (returns option type).
 
 This issue means your functions are too long and hard to read. Fix them by
 extracting logical sections into separate functions with descriptive names.
-Note: Large pattern matching blocks are acceptable - functions with pattern
-matching get double the line limit when they have more than 10 cases. For
-better readability, consider using a helper function for each complex case.
-Aim for functions under 50 lines otherwise.
+Note: Functions with pattern matching get additional allowance (2 lines per case).
+Pure data definitions (lists, records) are also exempt from length checks.
+For better readability, consider using helper functions for complex logic.
+Aim for functions under 50 lines of actual logic.
 
 ### [E010] Deep Nesting
 

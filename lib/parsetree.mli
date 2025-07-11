@@ -4,6 +4,7 @@ type t = {
   has_function : bool;
   has_match : bool;
   case_count : int;
+  is_data : bool; (* True if primarily data definition *)
   raw_text : string; (* Keep raw text for style/naming analysis *)
 }
 (** Parsetree analysis result *)
@@ -19,6 +20,9 @@ val has_function : t -> bool
 
 val get_case_count : t -> int
 (** Get case count *)
+
+val is_data_definition : t -> bool
+(** Check if primarily data definition *)
 
 val pp : t Fmt.t
 (** Pretty print *)
