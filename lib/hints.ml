@@ -157,8 +157,8 @@ let long_identifier_hint () =
    just foo)\n\
    • In hint files: remove '_hint' suffix (e.g., complexity_hint → complexity)\n\
    • In modules: remove '_module' suffix (e.g., parser_module → parser)\n\
-   • Remove redundant words that repeat the context (e.g., \
-   test_check_mli_files_with_doc → mli_with_doc)\n\n\
+   • Remove redundant words that repeat the context (e.g., check_mli_doc → \
+   check_mli)\n\n\
    The file/module context already makes the purpose clear."
 
 let function_naming_hint () =
