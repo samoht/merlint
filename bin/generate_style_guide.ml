@@ -11,7 +11,7 @@ let rec element_to_markdown = function
   | Paragraph s -> Fmt.str "%s\n" s
   | Code s -> Fmt.str "```ocaml\n%s\n```\n" s
   | Rule issue_type ->
-      let rule = Rule.find Data.all_rules issue_type in
+      let rule = Rule.get Data.all_rules issue_type in
       let code = Issue_type.error_code issue_type in
       let examples_md =
         match rule.examples with
@@ -28,7 +28,7 @@ let rec element_to_markdown = function
       in
       Fmt.str "### [%s] %s\n\n%s%s\n" code rule.title rule.hint examples_md
 
-let generate_style_guide () =
+let generate () =
   let content =
     List.map element_to_markdown Guide.content |> String.concat "\n"
   in
@@ -47,7 +47,7 @@ let () =
   in
 
   (* Generate and write markdown *)
-  let markdown = generate_style_guide () in
+  let markdown = generate () in
   let oc = open_out output_path in
   output_string oc markdown;
   close_out oc;

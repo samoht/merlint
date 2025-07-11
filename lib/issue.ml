@@ -1,7 +1,5 @@
 open Issue_type
 
-type issue_type = Issue_type.t
-
 type t =
   | Complexity_exceeded of {
       name : string;
@@ -248,7 +246,7 @@ let pp_issue_content ppf issue =
 let pp_wrapped ppf issue = Fmt.box ~indent:7 pp_issue_content ppf issue
 let pp = pp_wrapped
 let format v = Fmt.str "%a" pp v
-let find_grouped_hint issue_type _issues = Hints.get_hint issue_type
+let get_grouped_hint issue_type _issues = Hints.get_hint issue_type
 
 (* Assign priority to issues - lower number = higher priority *)
 let priority = function

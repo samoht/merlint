@@ -3,8 +3,6 @@
     This module defines the types for all possible issues that merlint can
     detect, along with functions to format them for output. *)
 
-type issue_type = Issue_type.t
-
 type t =
   | Complexity_exceeded of {
       name : string;
@@ -112,13 +110,13 @@ val pp : t Fmt.t
 val format : t -> string
 (** [Deprecated] Use pp instead *)
 
-val get_type : t -> issue_type
+val get_type : t -> Issue_type.t
 (** Get the issue type for an issue *)
 
-val error_code : issue_type -> string
+val error_code : Issue_type.t -> string
 (** Get the error code for an issue type *)
 
-val find_grouped_hint : issue_type -> t list -> string
+val get_grouped_hint : Issue_type.t -> t list -> string
 (** Get a helpful hint for a group of issues of the same type *)
 
 val compare : t -> t -> int

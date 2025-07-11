@@ -40,8 +40,8 @@ val v :
   t
 (** Create a new rule *)
 
-val find : t list -> Issue_type.t -> t
-(** Find a rule by its issue type *)
+val get : t list -> Issue_type.t -> t
+(** Get a rule by its issue type *)
 
 val by_category : t list -> (category * t list) list
 (** Get all rules grouped by category *)

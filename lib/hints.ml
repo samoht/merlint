@@ -11,12 +11,12 @@ type hint = { text : string; examples : code_example list option }
 
 (** Get a short title for a specific issue type *)
 let get_hint_title issue_type =
-  let rule = Rule.find Data.all_rules issue_type in
+  let rule = Rule.get Data.all_rules issue_type in
   rule.title
 
 (** Get a structured hint with text and optional code examples *)
 let get_structured_hint issue_type =
-  let rule = Rule.find Data.all_rules issue_type in
+  let rule = Rule.get Data.all_rules issue_type in
   let examples =
     match rule.examples with
     | [] -> None

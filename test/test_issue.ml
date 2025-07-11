@@ -3,7 +3,7 @@ open Merlint
 (* Define an Alcotest testable for Issue.t *)
 let issue_testable = Alcotest.testable Issue.pp Issue.equal
 
-let test_issue_priority () =
+let test_priority () =
   (* Test that each issue has a defined priority *)
   let location = Location.create ~file:"test.ml" ~line:1 ~col:0 in
   let issues =
@@ -118,7 +118,7 @@ let test_grouped_hints () =
 
   List.iter
     (fun (issue_type, issues) ->
-      let hint = Issue.find_grouped_hint issue_type issues in
+      let hint = Issue.get_grouped_hint issue_type issues in
       Alcotest.(check bool)
         "grouped hint is non-empty" true
         (String.length hint > 0))
@@ -128,7 +128,7 @@ let suite =
   [
     ( "issue",
       [
-        Alcotest.test_case "issue priority" `Quick test_issue_priority;
+        Alcotest.test_case "issue priority" `Quick test_priority;
         Alcotest.test_case "to_string" `Quick test_to_string;
         Alcotest.test_case "get_type" `Quick test_get_type;
         Alcotest.test_case "pp" `Quick test_pp;
