@@ -4,6 +4,7 @@ type t = {
   has_function : bool;
   has_match : bool;
   case_count : int;
+  is_data : bool; (* True if primarily data definition *)
   raw_text : string; (* Keep raw text for style/naming analysis *)
 }
 (** Parsetree analysis result *)
@@ -49,6 +50,35 @@ let count_cases_in_string str =
       0 lines
   else 0
 
+(** Check if the parsetree represents primarily data (lists, records, constants)
+*)
+let is_data_definition str =
+  if String.contains str '\n' then
+    let lines = String.split_on_char '\n' str in
+    let total_lines = List.length lines in
+    let data_lines =
+      List.fold_left
+        (fun acc line ->
+          let trimmed = String.trim line in
+          if
+            String.starts_with ~prefix:"Pexp_constant" trimmed
+            || String.starts_with ~prefix:"Pexp_construct" trimmed
+            || String.starts_with ~prefix:"Pexp_variant" trimmed
+            || String.starts_with ~prefix:"Pexp_tuple" trimmed
+            || String.starts_with ~prefix:"Pexp_array" trimmed
+            || String.starts_with ~prefix:"Pexp_record" trimmed
+            || String.starts_with ~prefix:"Pconst_string" trimmed
+            || String.starts_with ~prefix:"Pconst_int" trimmed
+            || String.contains trimmed
+                 ':' (* List construction - checking for :: *)
+          then acc + 1
+          else acc)
+        0 lines
+    in
+    (* Consider it data if >80% of lines are data-related *)
+    float_of_int data_lines /. float_of_int total_lines > 0.8
+  else false
+
 (** Parse parsetree output *)
 let of_json json =
   match json with
@@ -57,10 +87,17 @@ let of_json json =
         has_function = has_function_indicators str;
         has_match = has_match_indicators str;
         case_count = count_cases_in_string str;
+        is_data = is_data_definition str;
         raw_text = str;
       }
   | _ ->
-      { has_function = false; has_match = false; case_count = 0; raw_text = "" }
+      {
+        has_function = false;
+        has_match = false;
+        case_count = 0;
+        is_data = false;
+        raw_text = "";
+      }
 
 (** Check if has pattern matching *)
 let has_pattern_matching t = t.has_match
@@ -70,6 +107,9 @@ let has_function t = t.has_function
 
 (** Get case count *)
 let get_case_count t = t.case_count
+
+(** Check if primarily data definition *)
+let is_data_definition t = t.is_data
 
 (** Pretty print *)
 let pp ppf t =

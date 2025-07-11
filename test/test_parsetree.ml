@@ -53,7 +53,13 @@ let test_parse_function_cases () =
 
 let test_pp () =
   let t =
-    { has_function = true; has_match = true; case_count = 5; raw_text = "" }
+    {
+      has_function = true;
+      has_match = true;
+      case_count = 5;
+      is_data = false;
+      raw_text = "";
+    }
   in
   let str = Fmt.str "%a" pp t in
   Alcotest.(check string)
