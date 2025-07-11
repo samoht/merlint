@@ -189,6 +189,7 @@ let all_issue_types =
     Issue_type.Type_naming;
     Issue_type.Long_identifier;
     Issue_type.Function_naming;
+    Issue_type.Redundant_module_name;
     (* Documentation *)
     Issue_type.Missing_mli_doc;
     Issue_type.Missing_value_doc;
@@ -215,49 +216,7 @@ let get_category issue_type =
   else if code_num < 600 then "Project Structure"
   else "Testing"
 
-let escape_html s =
-  s |> String.split_on_char '&' |> String.concat "&amp;"
-  |> String.split_on_char '<' |> String.concat "&lt;"
-  |> String.split_on_char '>' |> String.concat "&gt;"
-
-let format_hint_html hint =
-  (* Convert markdown-style code blocks to HTML *)
-  let lines = String.split_on_char '\n' hint in
-  let rec process_lines acc in_code = function
-    | [] -> List.rev acc
-    | line :: rest ->
-        if String.starts_with ~prefix:"```" line then
-          if in_code then process_lines ("</pre>" :: acc) false rest
-          else
-            let lang =
-              if String.length line > 3 then
-                String.sub line 3 (String.length line - 3)
-              else ""
-            in
-            process_lines
-              (("<pre class=\"code-example\"><code>"
-               ^ if lang <> "" then "<!-- " ^ lang ^ " -->" else "")
-              :: acc)
-              true rest
-        else if in_code then process_lines (escape_html line :: acc) true rest
-        else
-          (* Handle other formatting *)
-          let formatted =
-            let bad_re = Re.compile (Re.str "❌") in
-            let good_re = Re.compile (Re.str "✅") in
-            let bullet_re =
-              Re.compile (Re.seq [ Re.compl [ Re.char '\\' ]; Re.str "•" ])
-            in
-            line
-            |> Re.replace_string bad_re
-                 ~by:"<span class=\"bad-example\">❌</span>"
-            |> Re.replace_string good_re
-                 ~by:"<span class=\"good-example\">✅</span>"
-            |> Re.replace_string bullet_re ~by:"<br>•"
-          in
-          process_lines (formatted :: acc) false rest
-  in
-  String.concat "\n" (process_lines [] false lines)
+let format_hint_html hint = Hints.format_hint_html hint
 
 let generate_toc () =
   Fmt.str
@@ -278,7 +237,7 @@ let generate_toc () =
 let generate_error_section issue_type =
   let code = Issue.error_code issue_type in
   let title = Hints.get_hint_title issue_type in
-  let hint = Hints.get_hint issue_type in
+  let hint = Hints.get_structured_hint issue_type in
   Fmt.str
     {|<div class="error-card" id="%s">
     <div>

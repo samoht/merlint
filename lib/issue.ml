@@ -75,6 +75,12 @@ type t =
       location : Location.t;
       suggestion : string;
     }
+  | Redundant_module_name of {
+      item_name : string;
+      module_name : string;
+      location : Location.t;
+      item_type : string; (* "function" or "type" *)
+    }
   | Test_exports_module_name of {
       filename : string;
       location : Location.t;
@@ -111,6 +117,7 @@ let get_type = function
   | Bad_type_naming _ -> Type_naming
   | Long_identifier_name _ -> Long_identifier
   | Bad_function_naming _ -> Function_naming
+  | Redundant_module_name _ -> Redundant_module_name
   | Missing_mli_doc _ -> Missing_mli_doc
   | Missing_value_doc _ -> Missing_value_doc
   | Bad_doc_style _ -> Bad_doc_style
@@ -143,6 +150,7 @@ let error_code = function
   | Type_naming -> "E315"
   | Long_identifier -> "E320"
   | Function_naming -> "E325"
+  | Redundant_module_name -> "E330"
   (* Documentation (E400-E499) *)
   | Missing_mli_doc -> "E400"
   | Missing_value_doc -> "E405"
@@ -210,6 +218,11 @@ let pp_issue_content ppf issue =
         "%a %a:@ Function@ '%s'@ should@ use@ '%s'@ (get_*@ for@ extraction,@ \
          find_*@ for@ search)"
         pp_error_code code pp_location_styled location function_name suggestion
+  | Redundant_module_name { item_name; module_name; location; item_type } ->
+      Fmt.pf ppf "%a %a:@ %s@ '%s'@ redundantly@ includes@ module@ name@ '%s'"
+        pp_error_code code pp_location_styled location
+        (String.capitalize_ascii item_type)
+        item_name module_name
   | Missing_mli_doc { module_name; file } ->
       Fmt.pf ppf "%a %a:1:0:@ Module@ '%s'@ missing@ documentation@ comment"
         pp_error_code code
@@ -275,7 +288,8 @@ let priority = function
   | Complexity_exceeded _ | Deep_nesting _ | Function_too_long _ -> 2
   | Use_str_module _ | Use_printf_module _ | Bad_variant_naming _
   | Missing_mli_file _ | Bad_module_naming _ | Bad_value_naming _
-  | Bad_type_naming _ | Long_identifier_name _ | Bad_function_naming _ ->
+  | Bad_type_naming _ | Long_identifier_name _ | Bad_function_naming _
+  | Redundant_module_name _ ->
       3
   | Missing_mli_doc _ | Missing_value_doc _ | Bad_doc_style _
   | Missing_standard_function _ | Missing_ocamlformat_file _
@@ -301,6 +315,7 @@ let find_location = function
   | Missing_mli_file { location; _ }
   | Long_identifier_name { location; _ }
   | Bad_function_naming { location; _ }
+  | Redundant_module_name { location; _ }
   | Test_exports_module_name { location; _ }
   | Silenced_warning { location; _ }
   | Missing_test_file { location; _ }

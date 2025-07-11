@@ -83,9 +83,8 @@ let parse_item json =
         | _ -> None
       in
       let range =
-        match List.assoc_opt "location" items with
-        | Some loc -> parse_range loc
-        | None -> None
+        (* Merlin provides start and end directly, not under location *)
+        parse_range json
       in
       Some { name; kind; type_sig; range }
   | _ -> None

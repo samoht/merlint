@@ -313,6 +313,89 @@ let check_single_function _filename name kind type_sig location =
       else None
   | _ -> None
 
+let check_redundant_module_name filename outline_opt =
+  (* Extract module name from filename *)
+  let module_name =
+    filename |> Filename.basename |> Filename.chop_extension
+    |> String.lowercase_ascii
+  in
+
+  Logs.debug (fun m ->
+      m "Checking redundant module name for %s (module: %s)" filename
+        module_name);
+
+  match outline_opt with
+  | None ->
+      Logs.debug (fun m -> m "No outline for %s" filename);
+      []
+  | Some items ->
+      Logs.debug (fun m ->
+          m "Found %d items in outline for %s" (List.length items) filename);
+      List.filter_map
+        (fun (item : Outline.item) ->
+          let item_name_lower = String.lowercase_ascii item.name in
+          let location = extract_outline_location filename item in
+
+          Logs.debug (fun m ->
+              m "Checking item %s (kind: %s, type: %s, has_range: %b)" item.name
+                (match item.kind with
+                | Value -> "Value"
+                | Type -> "Type"
+                | _ -> "Other")
+                (Option.value ~default:"<none>" item.type_sig)
+                (Option.is_some item.range));
+
+          match item.kind with
+          | Outline.Value
+            when is_function_type (Option.value ~default:"" item.type_sig) ->
+              (* Check if function name starts with module name *)
+              let has_prefix =
+                String.starts_with ~prefix:(module_name ^ "_") item_name_lower
+              in
+              let is_exact = item_name_lower = module_name in
+              Logs.debug (fun m ->
+                  m "Function %s: prefix=%b exact=%b (module=%s)" item.name
+                    has_prefix is_exact module_name);
+              if has_prefix || is_exact then (
+                match location with
+                | Some loc ->
+                    Logs.debug (fun m ->
+                        m "Creating issue for function %s at %d:%d" item.name
+                          loc.line loc.col);
+                    Some
+                      (Issue.Redundant_module_name
+                         {
+                           item_name = item.name;
+                           module_name = String.capitalize_ascii module_name;
+                           location = loc;
+                           item_type = "function";
+                         })
+                | None ->
+                    Logs.debug (fun m ->
+                        m "No location for function %s" item.name);
+                    None)
+              else None
+          | Outline.Type ->
+              (* Check if type name includes module name *)
+              if
+                String.starts_with ~prefix:(module_name ^ "_") item_name_lower
+                || item_name_lower = module_name
+              then
+                match location with
+                | Some loc ->
+                    Some
+                      (Issue.Redundant_module_name
+                         {
+                           item_name = item.name;
+                           module_name = String.capitalize_ascii module_name;
+                           location = loc;
+                           item_type = "type";
+                         })
+                | None -> None
+              else None
+          | _ -> None)
+        items
+
 let check_function_naming filename outline_opt =
   match outline_opt with
   | None -> []
@@ -407,4 +490,6 @@ let check ~filename ~outline (parsetree : Parsetree.t) =
     in
     (* Check function naming once for the whole file *)
     let function_naming_issues = check_function_naming filename outline in
-    line_issues @ function_naming_issues
+    (* Check for redundant module name *)
+    let redundant_name_issues = check_redundant_module_name filename outline in
+    line_issues @ function_naming_issues @ redundant_name_issues
