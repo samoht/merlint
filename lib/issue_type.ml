@@ -51,3 +51,32 @@ let error_code = function
   | Missing_test_file -> "E605"
   | Test_without_library -> "E610"
   | Test_suite_not_included -> "E615"
+
+let all =
+  [
+    Complexity;
+    Function_length;
+    Deep_nesting;
+    Obj_magic;
+    Catch_all_exception;
+    Silenced_warning;
+    Str_module;
+    Printf_module;
+    Variant_naming;
+    Module_naming;
+    Value_naming;
+    Type_naming;
+    Long_identifier;
+    Function_naming;
+    Redundant_module_name;
+    Missing_mli_doc;
+    Missing_value_doc;
+    Bad_doc_style;
+    Missing_standard_function;
+    Missing_ocamlformat_file;
+    Missing_mli_file;
+    Test_exports_module;
+    Missing_test_file;
+    Test_without_library;
+    Test_suite_not_included;
+  ]

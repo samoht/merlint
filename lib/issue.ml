@@ -141,43 +141,48 @@ let pp_location_styled ppf (loc : Location.t) =
     (Fmt.styled `Bold Fmt.string)
     loc.file loc.start_line loc.start_col
 
+(* Helper to format a simple issue with location *)
+let pp_simple_issue ppf code location message =
+  Fmt.pf ppf "%a %a:@ %s" pp_error_code code pp_location_styled location message
+
+(* Helper to format a naming issue *)
+let pp_naming_issue ppf code location item_type name expected =
+  Fmt.pf ppf "%a %a:@ %s@ '%s'@ should@ be@ '%s'" pp_error_code code
+    pp_location_styled location item_type name expected
+
+(* Helper to format a threshold issue *)
+let pp_threshold_issue ppf code location name metric_type value threshold =
+  Fmt.pf ppf "%a %a:@ Function@ '%s'@ %s@ %d@ (threshold:@ %d)" pp_error_code
+    code pp_location_styled location name metric_type value threshold
+
 (* Helper to format issue content *)
 let pp_issue_content ppf issue =
   let code = error_code (get_type issue) in
   match issue with
   | Complexity_exceeded { name; location; complexity; threshold } ->
-      Fmt.pf ppf
-        "%a %a:@ Function@ '%s'@ has@ cyclomatic@ complexity@ of@ %d@ \
-         (threshold:@ %d)"
-        pp_error_code code pp_location_styled location name complexity threshold
+      pp_threshold_issue ppf code location name
+        "has@ cyclomatic@ complexity@ of" complexity threshold
   | Function_too_long { name; location; length; threshold } ->
       Fmt.pf ppf "%a %a:@ Function@ '%s'@ is@ %d@ lines@ long@ (threshold:@ %d)"
         pp_error_code code pp_location_styled location name length threshold
   | Deep_nesting { name; location; depth; threshold } ->
-      Fmt.pf ppf
-        "%a %a:@ Function@ '%s'@ has@ nesting@ depth@ of@ %d@ (threshold:@ %d)"
-        pp_error_code code pp_location_styled location name depth threshold
+      pp_threshold_issue ppf code location name "has@ nesting@ depth@ of" depth
+        threshold
   | No_obj_magic { location } ->
-      Fmt.pf ppf "%a %a:@ Never@ use@ Obj.magic" pp_error_code code
-        pp_location_styled location
+      pp_simple_issue ppf code location "Never@ use@ Obj.magic"
   | Catch_all_exception { location } ->
-      Fmt.pf ppf "%a %a:@ Avoid@ catch-all@ exception@ handler" pp_error_code
-        code pp_location_styled location
+      pp_simple_issue ppf code location "Avoid@ catch-all@ exception@ handler"
   | Use_str_module { location } ->
-      Fmt.pf ppf "%a %a:@ Use@ Re@ module@ instead@ of@ Str" pp_error_code code
-        pp_location_styled location
+      pp_simple_issue ppf code location "Use@ Re@ module@ instead@ of@ Str"
   | Use_printf_module { location; module_used } ->
-      Fmt.pf ppf "%a %a:@ Use@ Fmt@ module@ instead@ of@ %s" pp_error_code code
-        pp_location_styled location module_used
+      pp_simple_issue ppf code location
+        (Fmt.str "Use@ Fmt@ module@ instead@ of@ %s" module_used)
   | Bad_variant_naming { variant; location; expected } ->
-      Fmt.pf ppf "%a %a:@ Variant@ '%s'@ should@ be@ '%s'" pp_error_code code
-        pp_location_styled location variant expected
+      pp_naming_issue ppf code location "Variant" variant expected
   | Bad_module_naming { module_name; location; expected } ->
-      Fmt.pf ppf "%a %a:@ Module@ '%s'@ should@ be@ '%s'" pp_error_code code
-        pp_location_styled location module_name expected
+      pp_naming_issue ppf code location "Module" module_name expected
   | Bad_value_naming { value_name; location; expected } ->
-      Fmt.pf ppf "%a %a:@ Value@ '%s'@ should@ be@ '%s'" pp_error_code code
-        pp_location_styled location value_name expected
+      pp_naming_issue ppf code location "Value" value_name expected
   | Bad_type_naming { type_name; location; message } ->
       Fmt.pf ppf "%a %a:@ Type@ '%s'@ %s" pp_error_code code pp_location_styled
         location type_name message
@@ -216,8 +221,7 @@ let pp_issue_content ppf issue =
          formatting"
         pp_error_code code
   | Missing_mli_file { location; _ } ->
-      Fmt.pf ppf "%a %a:@ missing@ interface@ file" pp_error_code code
-        pp_location_styled location
+      pp_simple_issue ppf code location "missing@ interface@ file"
   | Long_identifier_name { name; location; underscore_count; _ } ->
       Fmt.pf ppf "%a %a:@ '%s'@ has@ too@ many@ underscores@ (%d)" pp_error_code
         code pp_location_styled location name underscore_count
@@ -251,7 +255,7 @@ let format v = Fmt.str "%a" pp v
 let get_grouped_hint issue_type _issues = Hints.get_hint issue_type
 
 (* Extract location from an issue *)
-let get_location = function
+let find_location = function
   | Complexity_exceeded { location; _ }
   | Function_too_long { location; _ }
   | No_obj_magic { location }
@@ -360,33 +364,6 @@ let priority = function
   | Test_exports_module_name _ | Missing_test_file _ | Test_without_library _
   | Test_suite_not_included _ ->
       4
-
-let find_location = function
-  | Complexity_exceeded { location; _ }
-  | Function_too_long { location; _ }
-  | No_obj_magic { location }
-  | Missing_value_doc { location; _ }
-  | Bad_doc_style { location; _ }
-  | Bad_variant_naming { location; _ }
-  | Bad_module_naming { location; _ }
-  | Bad_value_naming { location; _ }
-  | Bad_type_naming { location; _ }
-  | Catch_all_exception { location }
-  | Use_str_module { location }
-  | Use_printf_module { location; _ }
-  | Deep_nesting { location; _ }
-  | Missing_ocamlformat_file { location }
-  | Missing_mli_file { location; _ }
-  | Long_identifier_name { location; _ }
-  | Bad_function_naming { location; _ }
-  | Redundant_module_name { location; _ }
-  | Test_exports_module_name { location; _ }
-  | Silenced_warning { location; _ }
-  | Missing_test_file { location; _ }
-  | Test_without_library { location; _ }
-  | Test_suite_not_included { location; _ } ->
-      Some location
-  | _ -> None
 
 let find_file = function
   | Missing_mli_doc { file; _ } | Missing_standard_function { file; _ } ->

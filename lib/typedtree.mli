@@ -2,8 +2,7 @@
 
 type name = {
   prefix : string list;
-      (** Module path in reverse order, e.g., ["Obj"; "Stdlib"] for Stdlib.Obj
-      *)
+      (** Module path, e.g., ["Stdlib"; "Obj"] for Stdlib.Obj.magic *)
   base : string;  (** Base identifier, e.g., "magic" *)
 }
 (** Structured name type *)

@@ -119,7 +119,7 @@ val error_code : Issue_type.t -> string
 val get_grouped_hint : Issue_type.t -> t list -> string
 (** Get a helpful hint for a group of issues of the same type *)
 
-val get_location : t -> Location.t option
+val find_location : t -> Location.t option
 (** Extract location from an issue *)
 
 val get_description : t -> string

@@ -266,7 +266,7 @@ let test_multiple_identifiers_locations () =
   List.iter
     (fun id ->
       Alcotest.(check bool)
-        (Printf.sprintf "identifier %s has location" (name_to_string id.name))
+        (Fmt.str "identifier %s has location" (name_to_string id.name))
         true
         (Option.is_some id.location))
     result.identifiers
