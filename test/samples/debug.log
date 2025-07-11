@@ -1,5 +1,0 @@
-Entering directory '/Users/samoht/git/cyclomatic'
-Leaving directory '/Users/samoht/git/cyclomatic'
-Debug: Found 1 identifiers
-Debug: identifier prefix=[], base=*type-error*
-Type error detected for base: *type-error*
