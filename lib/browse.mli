@@ -1,6 +1,6 @@
 (** OCamlmerlin browse output - for finding value bindings and pattern info *)
 
-type location = Location.extended
+type location = Location.t
 (** Location information *)
 
 type pattern_info = { has_pattern_match : bool; case_count : int }

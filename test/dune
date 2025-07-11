@@ -1,7 +1,7 @@
 (executable
  (public_name test)
  (name test)
- (libraries merlint alcotest))
+ (libraries merlint alcotest logs.fmt fmt fmt.tty))
 
 (cram
  (deps

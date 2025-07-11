@@ -106,39 +106,25 @@ let should_exclude_file file exclude_patterns =
       && Re.execp (Re.compile (Re.str pattern_no_wildcards)) file)
     exclude_patterns
 
-let process_category_report (category_name, reports) =
-  let total_issues =
-    List.fold_left
-      (fun acc report -> acc + List.length report.Merlint.Report.issues)
-      0 reports
-  in
-  let category_passed =
-    List.for_all (fun report -> report.Merlint.Report.passed) reports
-  in
-
-  Fmt.pr "%s %s (%d total issues)@."
-    (Merlint.Report.print_color category_passed
-       (Merlint.Report.print_status category_passed))
-    category_name total_issues;
-
-  (* Only show detailed reports if there are issues *)
-  if total_issues > 0 then List.iter Merlint.Report.print_detailed reports;
-  reports
-
-let wrap_hint_description ?(max_width = 120) text =
+let wrap_text ?(indent = 2) ?(max_width = 120) text =
   let terminal_width = get_terminal_width () in
   let effective_width = min max_width terminal_width in
-  let indent_size = 2 in
-  let continuation_prefix = String.make indent_size ' ' in
+  let continuation_prefix = String.make indent ' ' in
 
-  let words = String.split_on_char ' ' text in
+  (* First normalize the text by joining all lines with spaces *)
+  let normalized_text =
+    text |> String.split_on_char '\n' |> List.map String.trim
+    |> String.concat " "
+  in
+
+  let words = String.split_on_char ' ' normalized_text in
   let rec build_lines acc current_line current_length = function
     | [] -> if current_line = "" then acc else current_line :: acc
     | word :: rest ->
         let word_len = String.length word in
         let space_len = if current_line = "" then 0 else 1 in
         let new_length = current_length + space_len + word_len in
-        if new_length <= effective_width - indent_size then
+        if new_length + indent <= effective_width then
           let new_line =
             if current_line = "" then word else current_line ^ " " ^ word
           in
@@ -156,53 +142,100 @@ let wrap_hint_description ?(max_width = 120) text =
       String.concat "\n"
         (List.map (fun line -> continuation_prefix ^ line) lines)
 
-let print_fix_hints all_issues =
-  if all_issues <> [] then (
-    Fmt.pr "@.%a Fix hints:@.@."
-      (Fmt.styled `Bold (Fmt.styled `Yellow Fmt.string))
-      "💡";
+let print_issue_group (error_code, issues) =
+  (* Sort issues within each group by location *)
+  let sorted_issues = List.sort Merlint.Issue.compare issues in
+  match sorted_issues with
+  | [] -> ()
+  | first_issue :: _ ->
+      let issue_type = Merlint.Issue.get_type first_issue in
 
-    (* Group issues by type and provide contextual hints *)
-    let module Issue_type_map = Map.Make (struct
-      type t = Merlint.Issue_type.t
+      (* Print error code and title *)
+      let title = Merlint.Hints.get_hint_title issue_type in
+      Fmt.pr "  %a %a@."
+        (Fmt.styled `Yellow Fmt.string)
+        (Fmt.str "[%s]" error_code)
+        (Fmt.styled `Bold Fmt.string)
+        title;
 
-      let compare = compare
-    end) in
-    let issue_groups =
-      List.fold_left
-        (fun acc issue ->
-          let issue_type = Merlint.Issue.get_type issue in
-          let current =
-            match Issue_type_map.find_opt issue_type acc with
-            | None -> []
-            | Some issues -> issues
-          in
-          Issue_type_map.add issue_type (issue :: current) acc)
-        Issue_type_map.empty all_issues
-    in
+      (* Print hint if available *)
+      let hint = Merlint.Issue.get_grouped_hint issue_type sorted_issues in
+      let wrapped_hint = wrap_text ~indent:2 hint in
+      (* Print each line of the hint in gray *)
+      String.split_on_char '\n' wrapped_hint
+      |> List.iter (fun line ->
+             Fmt.pr "%a@." (Fmt.styled `Faint Fmt.string) line);
 
-    (* Print grouped hints with issues sorted by severity *)
-    let first = ref true in
-    Issue_type_map.iter
-      (fun issue_type issues ->
-        let sorted_issues = List.sort Merlint.Issue.compare issues in
-        let hint = Merlint.Issue.get_grouped_hint issue_type sorted_issues in
-        if not !first then Fmt.pr "@.";
-        (* Add spacing between hints *)
-        first := false;
-        let error_code = Merlint.Issue.error_code issue_type in
-        let title = Merlint.Hints.get_hint_title issue_type in
-        (* Print error code in yellow with title *)
-        Fmt.pr "%a %a@."
-          (Fmt.styled `Yellow Fmt.string)
-          (Fmt.str "[%s]" error_code)
-          (Fmt.styled `Bold Fmt.string)
-          title;
-        (* Print wrapped description *)
-        Fmt.pr "%s@." (wrap_hint_description hint))
-      issue_groups;
+      (* Print each issue with location and description *)
+      if List.length sorted_issues > 0 then
+        List.iter
+          (fun issue ->
+            match Merlint.Issue.get_location issue with
+            | Some loc ->
+                let desc = Merlint.Issue.get_description issue in
+                (* Format as "- location: description" *)
+                let location_str = Fmt.str "%a" Merlint.Location.pp loc in
+                let full_line = Fmt.str "  - %s: %s" location_str desc in
 
-    exit 1)
+                (* Check if we need to wrap this line *)
+                let terminal_width = get_terminal_width () in
+                if String.length full_line <= terminal_width then
+                  Fmt.pr "  - %a: %s@."
+                    (Fmt.styled `Bold Merlint.Location.pp)
+                    loc desc
+                else
+                  (* Wrap the description part only *)
+                  (* Print location with colon, then newline and indented description *)
+                  Fmt.pr "  - %a:@.    %s@."
+                    (Fmt.styled `Bold Merlint.Location.pp)
+                    loc desc
+            | None -> ())
+          sorted_issues
+
+let process_category_report (category_name, reports) =
+  let total_issues =
+    List.fold_left
+      (fun acc report -> acc + List.length report.Merlint.Report.issues)
+      0 reports
+  in
+  let category_passed =
+    List.for_all (fun report -> report.Merlint.Report.passed) reports
+  in
+
+  Fmt.pr "%s %s (%d total issues)@."
+    (Merlint.Report.print_color category_passed
+       (Merlint.Report.print_status category_passed))
+    category_name total_issues;
+
+  (* Only show detailed reports if there are issues *)
+  (if total_issues > 0 then
+     (* Group all issues by error code *)
+     let all_issues =
+       List.concat_map (fun report -> report.Merlint.Report.issues) reports
+     in
+     let grouped_issues =
+       List.fold_left
+         (fun acc issue ->
+           let error_code =
+             Merlint.Issue.error_code (Merlint.Issue.get_type issue)
+           in
+           let current =
+             match List.assoc_opt error_code acc with
+             | Some issues -> issues
+             | None -> []
+           in
+           (error_code, issue :: current) :: List.remove_assoc error_code acc)
+         [] all_issues
+     in
+
+     (* Sort groups by error code and print each group *)
+     let sorted_groups =
+       List.sort (fun (a, _) (b, _) -> String.compare a b) grouped_issues
+     in
+     List.iter print_issue_group sorted_groups);
+  reports
+
+let print_fix_hints all_issues = if all_issues <> [] then exit 1
 
 let run_analysis project_root filtered_files =
   (* Set formatter margin based on terminal width *)
@@ -251,6 +284,13 @@ let analyze_files ?(exclude_patterns = []) files =
 
   (* Ensure project is built before running merlin-based analyses *)
   ensure_project_built project_root;
+
+  (* Add default exclusions for common test/debug directories when no paths specified *)
+  let exclude_patterns =
+    if files = [] && exclude_patterns = [] then
+      [ "debug_test"; "test_*"; "_test"; "*.pp.ml" ]
+    else exclude_patterns
+  in
 
   let all_files =
     if files = [] then

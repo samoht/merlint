@@ -15,8 +15,8 @@ let analyze_file_valid () =
     "outline should succeed" true
     (Result.is_ok result.outline);
   Alcotest.(check bool)
-    "parsetree should succeed" true
-    (Result.is_ok result.parsetree);
+    "typedtree should succeed" true
+    (Result.is_ok result.typedtree);
   Alcotest.(check bool)
     "browse should succeed" true
     (Result.is_ok result.browse)
@@ -36,8 +36,8 @@ let analyze_syntax_error () =
     "outline should fail" true
     (Result.is_error result.outline);
   Alcotest.(check bool)
-    "parsetree should fail" true
-    (Result.is_error result.parsetree);
+    "typedtree should fail" true
+    (Result.is_error result.typedtree);
   Alcotest.(check bool)
     "browse should fail" true
     (Result.is_error result.browse)
@@ -50,8 +50,8 @@ let analyze_file_nonexistent () =
     "outline should fail" true
     (Result.is_error result.outline);
   Alcotest.(check bool)
-    "parsetree should fail" true
-    (Result.is_error result.parsetree);
+    "typedtree should fail" true
+    (Result.is_error result.typedtree);
   Alcotest.(check bool)
     "browse should fail" true
     (Result.is_error result.browse)

@@ -74,13 +74,13 @@ let process_file_analysis config (file, analysis) =
   in
 
   let style_issues, naming_issues =
-    match analysis.Merlin.parsetree with
-    | Ok parsetree_result ->
-        let style = Style.check ~filename:file parsetree_result in
+    match analysis.Merlin.typedtree with
+    | Ok typedtree_result ->
+        let style = Style.check typedtree_result in
         let outline =
           match analysis.Merlin.outline with Ok o -> Some o | Error _ -> None
         in
-        let naming = Naming.check ~filename:file ~outline parsetree_result in
+        let naming = Naming.check ~filename:file ~outline typedtree_result in
         (style, naming)
     | Error _ -> ([], [])
   in

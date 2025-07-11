@@ -38,7 +38,9 @@ let check_line_for_warning filename line_num line =
       issues :=
         Issue.Silenced_warning
           {
-            location = Location.create ~file:filename ~line:line_num ~col:0;
+            location =
+              Location.create ~file:filename ~start_line:line_num ~start_col:0
+                ~end_line:line_num ~end_col:0;
             warning_number = warning_num;
           }
         :: !issues
@@ -51,7 +53,9 @@ let check_line_for_warning filename line_num line =
       issues :=
         Issue.Silenced_warning
           {
-            location = Location.create ~file:filename ~line:line_num ~col:0;
+            location =
+              Location.create ~file:filename ~start_line:line_num ~start_col:0
+                ~end_line:line_num ~end_col:0;
             warning_number = warning_num;
           }
         :: !issues

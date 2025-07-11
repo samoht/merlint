@@ -11,10 +11,10 @@ let snake_case_valid () =
   let content = "let my_function x = x + 1\nlet another_var = 42" in
   let temp_file = create_temp_file content in
 
-  match Merlin.get_parsetree temp_file with
-  | Ok parsetree_result ->
+  match Merlin.get_typedtree temp_file with
+  | Ok typedtree_result ->
       let issues =
-        Naming.check ~filename:temp_file ~outline:None parsetree_result
+        Naming.check ~filename:temp_file ~outline:None typedtree_result
       in
       Sys.remove temp_file;
       Alcotest.(check int) "no naming issues" 0 (List.length issues)
@@ -26,10 +26,10 @@ let camel_case_violation () =
   let content = "let myFunction x = x + 1\nlet anotherVar = 42" in
   let temp_file = create_temp_file content in
 
-  match Merlin.get_parsetree temp_file with
-  | Ok parsetree_result ->
+  match Merlin.get_typedtree temp_file with
+  | Ok typedtree_result ->
       let issues =
-        Naming.check ~filename:temp_file ~outline:None parsetree_result
+        Naming.check ~filename:temp_file ~outline:None typedtree_result
       in
       Sys.remove temp_file;
       Alcotest.(check int) "should have 2 issues" 2 (List.length issues);
@@ -56,10 +56,10 @@ let too_many_underscores () =
   let content = "let very_long_function_name x = x + 1" in
   let temp_file = create_temp_file content in
 
-  match Merlin.get_parsetree temp_file with
-  | Ok parsetree_result -> (
+  match Merlin.get_typedtree temp_file with
+  | Ok typedtree_result -> (
       let issues =
-        Naming.check ~filename:temp_file ~outline:None parsetree_result
+        Naming.check ~filename:temp_file ~outline:None typedtree_result
       in
       Sys.remove temp_file;
       Alcotest.(check int) "should have 1 issue" 1 (List.length issues);
@@ -77,10 +77,10 @@ let module_naming () =
   let content = "module MyModule = struct let x = 1 end" in
   let temp_file = create_temp_file content in
 
-  match Merlin.get_parsetree temp_file with
-  | Ok parsetree_result ->
+  match Merlin.get_typedtree temp_file with
+  | Ok typedtree_result ->
       let issues =
-        Naming.check ~filename:temp_file ~outline:None parsetree_result
+        Naming.check ~filename:temp_file ~outline:None typedtree_result
       in
       Sys.remove temp_file;
       (* Module names in PascalCase are valid *)
@@ -94,10 +94,10 @@ let type_naming () =
   let content = "type my_type = int\ntype AnotherType = string" in
   let temp_file = create_temp_file content in
 
-  match Merlin.get_parsetree temp_file with
-  | Ok parsetree_result ->
+  match Merlin.get_typedtree temp_file with
+  | Ok typedtree_result ->
       let issues =
-        Naming.check ~filename:temp_file ~outline:None parsetree_result
+        Naming.check ~filename:temp_file ~outline:None typedtree_result
       in
       Sys.remove temp_file;
       (* Both snake_case and PascalCase are valid for types *)

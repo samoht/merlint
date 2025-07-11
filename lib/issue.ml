@@ -137,7 +137,9 @@ let pp_error_code ppf code =
 
 (* Helper to style locations with bold filenames *)
 let pp_location_styled ppf (loc : Location.t) =
-  Fmt.pf ppf "%a:%d:%d" (Fmt.styled `Bold Fmt.string) loc.file loc.line loc.col
+  Fmt.pf ppf "%a:%d:%d"
+    (Fmt.styled `Bold Fmt.string)
+    loc.file loc.start_line loc.start_col
 
 (* Helper to format issue content *)
 let pp_issue_content ppf issue =
@@ -247,6 +249,102 @@ let pp_wrapped ppf issue = Fmt.box ~indent:7 pp_issue_content ppf issue
 let pp = pp_wrapped
 let format v = Fmt.str "%a" pp v
 let get_grouped_hint issue_type _issues = Hints.get_hint issue_type
+
+(* Extract location from an issue *)
+let get_location = function
+  | Complexity_exceeded { location; _ }
+  | Function_too_long { location; _ }
+  | No_obj_magic { location }
+  | Missing_value_doc { location; _ }
+  | Bad_doc_style { location; _ }
+  | Bad_variant_naming { location; _ }
+  | Bad_module_naming { location; _ }
+  | Bad_value_naming { location; _ }
+  | Bad_type_naming { location; _ }
+  | Catch_all_exception { location }
+  | Use_str_module { location }
+  | Use_printf_module { location; _ }
+  | Deep_nesting { location; _ }
+  | Long_identifier_name { location; _ }
+  | Bad_function_naming { location; _ }
+  | Redundant_module_name { location; _ } ->
+      Some location
+  | Missing_mli_doc { file; _ } ->
+      Some
+        Location.
+          { file; start_line = 1; start_col = 1; end_line = 1; end_col = 1 }
+  | Missing_ocamlformat_file { location } -> Some location
+  | Missing_mli_file { ml_file; _ } ->
+      Some
+        Location.
+          {
+            file = ml_file;
+            start_line = 1;
+            start_col = 1;
+            end_line = 1;
+            end_col = 1;
+          }
+  | Test_exports_module_name { location; _ }
+  | Missing_test_file { location; _ }
+  | Test_without_library { location; _ }
+  | Test_suite_not_included { location; _ } ->
+      Some location
+  | Silenced_warning { location; _ } -> Some location
+  | Missing_standard_function _ -> None
+
+(* Get issue description without location prefix *)
+let get_description = function
+  | Complexity_exceeded { name; complexity; threshold; _ } ->
+      Fmt.str "Function '%s' has cyclomatic complexity of %d (threshold: %d)"
+        name complexity threshold
+  | Function_too_long { name; length; threshold; _ } ->
+      Fmt.str "Function '%s' is too long (%d lines, threshold: %d)" name length
+        threshold
+  | No_obj_magic _ -> "Use of Obj.magic (unsafe type casting)"
+  | Missing_mli_doc { module_name; _ } ->
+      Fmt.str "Module '%s' is missing documentation comment" module_name
+  | Missing_value_doc { value_name; _ } ->
+      Fmt.str "Value '%s' is missing documentation comment" value_name
+  | Bad_doc_style { value_name; message; _ } ->
+      Fmt.str "Documentation for '%s': %s" value_name message
+  | Bad_variant_naming { variant; expected; _ } ->
+      Fmt.str "Variant '%s' should be '%s'" variant expected
+  | Bad_module_naming { module_name; expected; _ } ->
+      Fmt.str "Module '%s' should be '%s'" module_name expected
+  | Bad_value_naming { value_name; expected; _ } ->
+      Fmt.str "Value '%s' should be '%s'" value_name expected
+  | Bad_type_naming { type_name; message; _ } ->
+      Fmt.str "Type '%s': %s" type_name message
+  | Catch_all_exception _ -> "Catch-all exception handler"
+  | Use_str_module _ -> "Use of deprecated Str module"
+  | Use_printf_module { module_used; _ } ->
+      Fmt.str "Use Fmt module instead of %s" module_used
+  | Deep_nesting { name; depth; threshold; _ } ->
+      Fmt.str "Function '%s' has nesting depth of %d (threshold: %d)" name depth
+        threshold
+  | Long_identifier_name { name; underscore_count; _ } ->
+      Fmt.str "'%s' has too many underscores (%d)" name underscore_count
+  | Bad_function_naming { function_name; suggestion; _ } ->
+      Fmt.str "Function '%s' should be '%s'" function_name suggestion
+  | Redundant_module_name { item_name; module_name; _ } ->
+      Fmt.str "'%s' has redundant module prefix '%s'" item_name module_name
+  | Missing_ocamlformat_file _ -> "missing .ocamlformat file"
+  | Missing_mli_file _ -> "missing interface file"
+  | Test_exports_module_name { module_name; _ } ->
+      Fmt.str "Test file '%s' should export 'suite' not individual tests"
+        module_name
+  | Missing_test_file { module_name; expected_test_file; _ } ->
+      Fmt.str "Module '%s' is missing test file '%s'" module_name
+        expected_test_file
+  | Test_without_library { test_file; expected_module; _ } ->
+      Fmt.str "Test file '%s' has no corresponding module '%s'" test_file
+        expected_module
+  | Test_suite_not_included { test_module; _ } ->
+      Fmt.str "Test suite '%s.suite' is not included in test runner" test_module
+  | Silenced_warning { warning_number; _ } ->
+      Fmt.str "Warning '%s' is silenced" warning_number
+  | Missing_standard_function { type_name; missing; _ } ->
+      Fmt.str "Type '%s' is missing: %s" type_name (String.concat ", " missing)
 
 (* Assign priority to issues - lower number = higher priority *)
 let priority = function

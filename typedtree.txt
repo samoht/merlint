@@ -1,0 +1,22 @@
+[
+  structure_item (test_obj.ml[1,0+0]..test_obj.ml[1,0+28])
+    Tstr_value Nonrec
+    [
+      <def>
+        pattern (test_obj.ml[1,0+4]..test_obj.ml[1,0+13])
+          Tpat_var "dangerous/276"
+        expression (test_obj.ml[1,0+16]..test_obj.ml[1,0+28])
+          Texp_apply
+          expression (test_obj.ml[1,0+16]..test_obj.ml[1,0+25])
+            Texp_ident "Stdlib!.Obj.magic"
+          [
+            <arg>
+              Nolabel
+              expression (test_obj.ml[1,0+26]..test_obj.ml[1,0+28])
+                Texp_constant Const_int 42
+          ]
+    ]
+]
+
+
+

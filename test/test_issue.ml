@@ -5,7 +5,10 @@ let issue_testable = Alcotest.testable Issue.pp Issue.equal
 
 let test_priority () =
   (* Test that each issue has a defined priority *)
-  let location = Location.create ~file:"test.ml" ~line:1 ~col:0 in
+  let location =
+    Location.create ~file:"test.ml" ~start_line:1 ~start_col:0 ~end_line:1
+      ~end_col:0
+  in
   let issues =
     [
       Issue.Complexity_exceeded
@@ -31,7 +34,10 @@ let test_priority () =
     issues
 
 let test_to_string () =
-  let location = Location.create ~file:"test.ml" ~line:10 ~col:5 in
+  let location =
+    Location.create ~file:"test.ml" ~start_line:10 ~start_col:5 ~end_line:10
+      ~end_col:5
+  in
 
   let test_cases =
     [
@@ -54,7 +60,10 @@ let test_to_string () =
     test_cases
 
 let test_get_type () =
-  let location = Location.create ~file:"test.ml" ~line:1 ~col:0 in
+  let location =
+    Location.create ~file:"test.ml" ~start_line:1 ~start_col:0 ~end_line:1
+      ~end_col:0
+  in
   let test_cases =
     [
       ( Issue.Complexity_exceeded
@@ -76,7 +85,10 @@ let test_get_type () =
     test_cases
 
 let test_pp () =
-  let location = Location.create ~file:"test.ml" ~line:5 ~col:10 in
+  let location =
+    Location.create ~file:"test.ml" ~start_line:5 ~start_col:10 ~end_line:5
+      ~end_col:10
+  in
   let issue = Issue.No_obj_magic { location } in
 
   let output = Fmt.to_to_string Issue.pp issue in
@@ -85,8 +97,14 @@ let test_pp () =
     (Re.execp (Re.compile (Re.str "test.ml:5:10")) output)
 
 let test_equal () =
-  let loc1 = Location.create ~file:"test.ml" ~line:10 ~col:0 in
-  let loc2 = Location.create ~file:"test.ml" ~line:20 ~col:0 in
+  let loc1 =
+    Location.create ~file:"test.ml" ~start_line:10 ~start_col:0 ~end_line:1
+      ~end_col:0
+  in
+  let loc2 =
+    Location.create ~file:"test.ml" ~start_line:20 ~start_col:0 ~end_line:1
+      ~end_col:0
+  in
 
   let issue1 = Issue.No_obj_magic { location = loc1 } in
   let issue2 = Issue.No_obj_magic { location = loc1 } in
@@ -98,7 +116,10 @@ let test_equal () =
     (Issue.equal issue1 issue3)
 
 let test_grouped_hints () =
-  let location = Location.create ~file:"test.ml" ~line:1 ~col:0 in
+  let location =
+    Location.create ~file:"test.ml" ~start_line:1 ~start_col:0 ~end_line:1
+      ~end_col:0
+  in
 
   (* Test that find_grouped_hint works for different issue types *)
   let test_cases =
