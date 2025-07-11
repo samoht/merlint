@@ -206,7 +206,7 @@ let all_issue_types =
   ]
 
 let get_category issue_type =
-  let code = Issue.error_code issue_type in
+  let code = Issue_type.error_code issue_type in
   let code_num = int_of_string (String.sub code 1 (String.length code - 1)) in
   if code_num < 100 then "Complexity"
   else if code_num < 200 then "Security/Safety"
@@ -216,7 +216,33 @@ let get_category issue_type =
   else if code_num < 600 then "Project Structure"
   else "Testing"
 
-let format_hint_html hint = Hints.format_hint_html hint
+let format_hint_html hint =
+  let example_html =
+    match hint.Hints.examples with
+    | None -> ""
+    | Some examples ->
+        let formatted =
+          List.map
+            (fun ex ->
+              let label = if ex.Hints.is_good then "GOOD" else "BAD" in
+              let desc =
+                match ex.description with
+                | None -> ""
+                | Some d -> Fmt.str "<p class=\"example-description\">%s</p>" d
+              in
+              Fmt.str
+                {|<div class="example %s">
+  <h4>%s</h4>
+  %s
+  <pre><code class="language-ocaml">%s</code></pre>
+</div>|}
+                (if ex.is_good then "good" else "bad")
+                label desc ex.code)
+            examples
+        in
+        "\n" ^ String.concat "\n" formatted
+  in
+  Fmt.str "<p>%s</p>%s" hint.text example_html
 
 let generate_toc () =
   Fmt.str
@@ -235,8 +261,9 @@ let generate_toc () =
     |> String.concat "\n")
 
 let generate_error_section issue_type =
-  let code = Issue.error_code issue_type in
-  let title = Hints.get_hint_title issue_type in
+  let code = Issue_type.error_code issue_type in
+  let rule = Rule.find Data.all_rules issue_type in
+  let title = rule.title in
   let hint = Hints.get_structured_hint issue_type in
   Fmt.str
     {|<div class="error-card" id="%s">
