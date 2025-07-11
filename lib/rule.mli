@@ -42,15 +42,3 @@ val v :
 
 val get : t list -> Issue_type.t -> t
 (** Get a rule by its issue type *)
-
-val by_category : t list -> (category * t list) list
-(** Get all rules grouped by category *)
-
-val category_to_string : category -> string
-(** Get the string representation of a category *)
-
-val category_description : category -> string
-(** Get the description of a category *)
-
-val category_range : category -> string
-(** Get the error code range for a category *)

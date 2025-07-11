@@ -18,9 +18,3 @@ val get_hint : Issue_type.t -> string
 
 val get_structured_hint : Issue_type.t -> hint
 (** Get a structured hint with text and optional code examples *)
-
-val format_hint_plain : hint -> string
-(** Format hint as plain text for CLI output *)
-
-val format_hint_html : hint -> string
-(** Format hint as HTML for web output *)

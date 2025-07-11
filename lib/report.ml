@@ -39,7 +39,6 @@ let pp_summary ppf reports =
     Fmt.pf ppf "%a Some checks failed. See details above.@." (pp_color false)
       "✗"
 
-let print_detailed report = Fmt.pr "%a" pp report
 let print_summary reports = Fmt.pr "%a" pp_summary reports
 
 let get_all_issues reports =

@@ -146,28 +146,6 @@ let check_parsetree ~identifiers ~patterns =
 
   !issues
 
-(** Main check function with fallback *)
-let check_with_fallback file =
-  match Merlin.get_typedtree file with
-  | Error _ -> (
-      (* Fallback to parsetree immediately if typedtree fails *)
-      match Merlin.get_parsetree file with
-      | Ok parsetree ->
-          check_parsetree ~identifiers:parsetree.identifiers
-            ~patterns:parsetree.patterns
-      | Error _ -> [])
-  | Ok typedtree -> (
-      try
-        check_typedtree ~identifiers:typedtree.identifiers
-          ~patterns:typedtree.patterns
-      with Type_error_fallback_needed -> (
-        (* Fallback to parsetree when type errors are detected *)
-        match Merlin.get_parsetree file with
-        | Ok parsetree ->
-            check_parsetree ~identifiers:parsetree.identifiers
-              ~patterns:parsetree.patterns
-        | Error _ -> []))
-
 (** Legacy function for unit tests *)
 let check (typedtree : Typedtree.t) =
   try

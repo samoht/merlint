@@ -110,11 +110,6 @@ let get_typedtree file =
   | Ok json -> Ok (Typedtree.of_json_with_filename json file)
   | Error msg -> Error msg
 
-let get_parsetree file =
-  match dump_value "parsetree" file with
-  | Ok json -> Ok (Parsetree.of_json_with_filename json file)
-  | Error msg -> Error msg
-
 let analyze_file file =
   (* Run all three merlin commands for the file *)
   Log.info (fun m -> m "Analyzing file %s with merlin" file);

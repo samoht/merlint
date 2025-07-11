@@ -15,6 +15,3 @@ val get_outline : string -> (Outline.t, string) result
 
 val get_typedtree : string -> (Typedtree.t, string) result
 (** [get_typedtree file] gets the typedtree from Merlin for the given file *)
-
-val get_parsetree : string -> (Parsetree.t, string) result
-(** [get_parsetree file] gets the parsetree from Merlin for the given file *)
