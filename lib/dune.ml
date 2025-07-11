@@ -219,23 +219,26 @@ let extract_source_files sexp =
     | Sexplib0.Sexp.List items ->
         List.concat_map
           (function
-            | Sexplib0.Sexp.List (Sexplib0.Sexp.Atom "library" :: lib_contents)
-              ->
-                (* Check if it's a local library *)
-                let is_local =
-                  List.exists
-                    (function
-                      | Sexplib0.Sexp.List
-                          [
-                            Sexplib0.Sexp.Atom "local";
-                            Sexplib0.Sexp.Atom "true";
-                          ] ->
-                          true
-                      | _ -> false)
-                    lib_contents
-                in
-                if is_local then List.concat_map extract_modules lib_contents
-                else []
+            | Sexplib0.Sexp.List (Sexplib0.Sexp.Atom "library" :: rest) -> (
+                match rest with
+                | [ Sexplib0.Sexp.List lib_contents ] ->
+                    (* Library stanza has nested list structure *)
+                    let is_local =
+                      List.exists
+                        (function
+                          | Sexplib0.Sexp.List
+                              [
+                                Sexplib0.Sexp.Atom "local";
+                                Sexplib0.Sexp.Atom "true";
+                              ] ->
+                              true
+                          | _ -> false)
+                        lib_contents
+                    in
+                    if is_local then
+                      List.concat_map extract_modules lib_contents
+                    else []
+                | _ -> [])
             | Sexplib0.Sexp.List
                 (Sexplib0.Sexp.Atom "executables" :: exec_contents) ->
                 List.concat_map extract_modules exec_contents

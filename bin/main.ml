@@ -274,13 +274,6 @@ let analyze_files ?(exclude_patterns = []) files =
   (* Ensure project is built before running merlin-based analyses *)
   ensure_project_built project_root;
 
-  (* Add default exclusions for common test/debug directories when no paths specified *)
-  let exclude_patterns =
-    if files = [] && exclude_patterns = [] then
-      [ "debug_test"; "test_*"; "_test"; "*.pp.ml" ]
-    else exclude_patterns
-  in
-
   let all_files =
     if files = [] then
       (* Use dune describe to get project files *)
