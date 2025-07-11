@@ -8,13 +8,15 @@ Merlint analyzes your OCaml code and reports issues across multiple categories, 
 
 ### Code Quality (High Priority)
 - **Cyclomatic complexity**: Functions should have complexity ≤ 10
-- **Function length**: Functions should be ≤ 50 lines
+- **Function length**: Functions should be ≤ 50 lines (with automatic adjustments for pattern matching and data structures)
 - **Nesting depth**: Code should not nest deeper than 3 levels
 
 ### Code Style (High Priority)
 - **No Obj.magic**: Never use `Obj.magic` (highest priority)
 - **No catch-all**: Avoid `try ... with _ -> ...` patterns
 - **Use Re not Str**: Use `Re` module instead of `Str` for regular expressions
+- **Use Fmt not Printf**: Use `Fmt` module instead of `Printf` for formatting
+- **No silenced warnings**: Avoid `[@warning "-..."]` attributes
 
 ### Naming Conventions (Medium Priority)
 - **Modules**: Must use snake_case (e.g., `user_profile`)
@@ -22,15 +24,23 @@ Merlint analyzes your OCaml code and reports issues across multiple categories, 
 - **Values/Functions**: Must use snake_case
 - **Types**: Must use snake_case (primary type should be `t`)
 - **Long identifiers**: Avoid names with too many underscores (>3)
+- **Function naming**: Use `get_*` for direct access, `find_*` for optional returns
+- **Redundant names**: Avoid repeating module name in functions/types
 
 ### Documentation (Lower Priority)
 - **MLI files**: Must have module-level documentation comments
 - **Module interface files**: Every `.ml` file should have a corresponding `.mli`
 - **Value documentation**: Public values should be documented
+- **Standard functions**: Types should implement standard functions (pp, equal, compare)
 
 ### Project Structure
 - **OCamlformat**: Projects should include `.ocamlformat` file
 - **Interface files**: Missing `.mli` files for modules
+
+### Test Quality
+- **Test conventions**: Test files should export `suite` value for test runners
+- **Test coverage**: Library modules should have corresponding test files
+- **Test organization**: Tests should be included in the test runner
 
 ## Installation
 
@@ -57,6 +67,11 @@ merlint --quiet
 # Exclude directories or files
 merlint --exclude test/ --exclude _build/
 merlint --exclude "test/**" --exclude "*.temp.ml"
+
+# Filter rules (disable specific checks)
+merlint --rules A-E110          # All rules except E110 (silenced warnings)
+merlint --rules A-E205-E320     # All except Printf and long identifiers
+merlint -r A-E005              # All except long functions
 ```
 
 ### Output Modes
@@ -69,14 +84,27 @@ Analyzing 15 files
 
 ✓ Code Quality (0 total issues)
 ✗ Code Style (2 total issues)
-  ✗ Style rules (no Obj.magic, no Str, no catch-all) (2 issues)
-    src/utils.ml:33:8: Never use Obj.magic
-    src/parser.ml:45:2: Use Re module instead of Str
+  [E100] Unsafe Type Casting
+  This issue means you're using unsafe type casting that can crash your program.
+  Fix it by replacing Obj.magic with proper type definitions.
+  - src/utils.ml:33:8: Never use Obj.magic
+  [E200] Deprecated Str Module
+  This issue means you're using the outdated Str module. Fix it by using the
+  modern Re module which is more powerful and has better performance.
+  - src/parser.ml:45:2: Use Re module instead of Str
 ✗ Naming Conventions (3 total issues)
-  ✗ Naming conventions (snake_case) (3 issues)
-    src/types.ml:8:2: Variant 'waitingForInput' should be 'Waiting_for_input'
-    src/api.ml:12:4: 'very_long_function_name_with_many_underscores' has too many underscores (6)
-    src/types.ml:12:4: Module 'myModule' should be 'my_module'
+  [E300] Variant Naming Convention
+  This issue means your variant names don't follow OCaml conventions. Fix them
+  by using Snake_case (e.g., Some_value, Waiting_for_input).
+  - src/types.ml:8:2: Variant 'waitingForInput' should be 'Waiting_for_input'
+  [E320] Long Identifier Names
+  This issue means your identifier has too many underscores making it hard to
+  read. Fix it by removing redundant prefixes and suffixes.
+  - src/api.ml:12:4: 'very_long_function_name_with_many_underscores' has too many underscores (6)
+  [E305] Module Naming Convention
+  This issue means your module names don't follow OCaml conventions. Fix them
+  by renaming to snake_case (e.g., myModule → my_module).
+  - src/types.ml:12:4: Module 'myModule' should be 'my_module'
 
 Summary: ✗ 5 total issues
 ```
@@ -86,11 +114,11 @@ Summary: ✗ 5 total issues
 merlint --quiet
 ```
 ```
-src/utils.ml:33:8: Never use Obj.magic
-src/parser.ml:45:2: Use Re module instead of Str
-src/types.ml:8:2: Variant 'waitingForInput' should be 'Waiting_for_input'
-src/api.ml:12:4: 'very_long_function_name_with_many_underscores' has too many underscores (6)
-src/types.ml:12:4: Module 'myModule' should be 'my_module'
+[E100] src/utils.ml:33:8: Never use Obj.magic
+[E200] src/parser.ml:45:2: Use Re module instead of Str
+[E300] src/types.ml:8:2: Variant 'waitingForInput' should be 'Waiting_for_input'
+[E320] src/api.ml:12:4: 'very_long_function_name_with_many_underscores' has too many underscores (6)
+[E305] src/types.ml:12:4: Module 'myModule' should be 'my_module'
 ```
 
 ## Priority System
@@ -101,6 +129,36 @@ Issues are automatically sorted by priority to help you focus on the most import
 2. **High** (Priority 3-5): Complexity, nesting, function length
 3. **Medium** (Priority 6-12): Style issues, naming conventions, missing interfaces
 4. **Low** (Priority 13-17): Documentation, project structure
+
+## Error Codes
+
+Each issue type has a unique error code that can be used with the `--rules` flag:
+
+- **E001**: Cyclomatic complexity exceeded
+- **E005**: Function too long
+- **E010**: Deep nesting
+- **E100**: Unsafe type casting (Obj.magic)
+- **E105**: Catch-all exception handler
+- **E110**: Silenced compiler warning
+- **E200**: Deprecated Str module
+- **E205**: Outdated Printf/Format modules
+- **E300**: Variant naming convention
+- **E305**: Module naming convention
+- **E310**: Value naming convention
+- **E315**: Type naming convention
+- **E320**: Long identifier name
+- **E325**: Function naming pattern
+- **E330**: Redundant module name
+- **E400**: Missing module documentation
+- **E405**: Missing value documentation
+- **E410**: Bad documentation style
+- **E415**: Missing standard functions
+- **E500**: Missing .ocamlformat file
+- **E505**: Missing interface file
+- **E600**: Test module convention
+- **E605**: Missing test file
+- **E610**: Test without library
+- **E615**: Test suite not included
 
 ## Integration
 

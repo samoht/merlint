@@ -308,7 +308,7 @@ let generate_html () =
 let () =
   (* Get output path from command line or use default *)
   let output_path =
-    if Array.length Sys.argv > 1 then Sys.argv.(1) else "error-codes.html"
+    if Array.length Sys.argv > 1 then Sys.argv.(1) else "index.html"
   in
 
   (* Generate and write HTML *)

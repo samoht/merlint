@@ -1,5 +1,5 @@
 (rule
- (target error-codes.html)
+ (target index.html)
  (deps
   (source_tree ../lib))
  (action
