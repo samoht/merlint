@@ -16,3 +16,8 @@
  (public_name merlint-doc-gen)
  (name generate_docs)
  (libraries merlint unix re))
+
+(executable
+ (public_name merlint-style-gen)
+ (name generate_style_guide)
+ (libraries merlint fmt))

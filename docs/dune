@@ -5,3 +5,11 @@
  (action
   (run ../bin/generate_docs.exe %{target}))
  (mode promote))
+
+(rule
+ (target STYLE_GUIDE.md)
+ (deps
+  (source_tree ../lib))
+ (action
+  (run ../bin/generate_style_guide.exe %{target}))
+ (mode promote))
