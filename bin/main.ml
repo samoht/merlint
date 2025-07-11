@@ -164,7 +164,7 @@ let print_fix_hints all_issues =
 
     (* Group issues by type and provide contextual hints *)
     let module Issue_type_map = Map.Make (struct
-      type t = Merlint.Issue.issue_type
+      type t = Merlint.Issue_type.t
 
       let compare = compare
     end) in
@@ -186,7 +186,7 @@ let print_fix_hints all_issues =
     Issue_type_map.iter
       (fun issue_type issues ->
         let sorted_issues = List.sort Merlint.Issue.compare issues in
-        let hint = Merlint.Issue.find_grouped_hint issue_type sorted_issues in
+        let hint = Merlint.Issue.get_grouped_hint issue_type sorted_issues in
         if not !first then Fmt.pr "@.";
         (* Add spacing between hints *)
         first := false;

@@ -25,7 +25,7 @@ type t = {
 let v ~issue ~title ~category ?(examples = []) hint =
   { issue; title; category; hint; examples }
 
-let find rules issue_type =
+let get rules issue_type =
   match List.find_opt (fun rule -> rule.issue = issue_type) rules with
   | Some rule -> rule
   | None -> failwith (Fmt.str "No rule found for issue type")

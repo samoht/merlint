@@ -262,7 +262,7 @@ let generate_toc () =
 
 let generate_error_section issue_type =
   let code = Issue_type.error_code issue_type in
-  let rule = Rule.find Data.all_rules issue_type in
+  let rule = Rule.get Data.all_rules issue_type in
   let title = rule.title in
   let hint = Hints.get_structured_hint issue_type in
   Fmt.str

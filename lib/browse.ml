@@ -112,14 +112,14 @@ let extract_value_binding (json : Yojson.Safe.t) =
       Some { name; location; pattern_info }
   | _ -> None
 
-(** Find all value bindings in the tree *)
-let rec find_value_bindings (json : Yojson.Safe.t) =
+(** Get all value bindings in the tree *)
+let rec get_value_bindings (json : Yojson.Safe.t) =
   match json with
   | `Assoc items ->
       let current = extract_value_binding json |> Option.to_list in
       let children_bindings =
         match List.assoc_opt "children" items with
-        | Some (`List children) -> List.concat_map find_value_bindings children
+        | Some (`List children) -> List.concat_map get_value_bindings children
         | _ -> []
       in
       current @ children_bindings
@@ -128,7 +128,7 @@ let rec find_value_bindings (json : Yojson.Safe.t) =
 (** Parse browse output *)
 let of_json (json : Yojson.Safe.t) : t =
   match json with
-  | `List [ tree ] -> { value_bindings = find_value_bindings tree }
+  | `List [ tree ] -> { value_bindings = get_value_bindings tree }
   | _ -> { value_bindings = [] }
 
 (** Get all value bindings *)
