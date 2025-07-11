@@ -33,3 +33,6 @@ type t =
 
 val error_code : t -> string
 (** Get the error code for an issue type *)
+
+val all : t list
+(** All issue types *)

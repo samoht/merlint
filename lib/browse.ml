@@ -7,6 +7,8 @@ type value_binding = {
   name : string option;
   location : location option;
   pattern_info : pattern_info;
+  is_function : bool;
+  is_simple_list : bool;
 }
 
 type t = { value_bindings : value_binding list }
@@ -81,6 +83,67 @@ let rec count_cases json =
 (** Check if node or children contain cases (indicating pattern matching) *)
 let has_cases json = count_cases json > 0
 
+(** Check if an expression node represents a function (has pattern children) *)
+let is_function_expr json =
+  match json with
+  | `Assoc items -> (
+      match List.assoc_opt "kind" items with
+      | Some (`String "expression") -> (
+          match List.assoc_opt "children" items with
+          | Some (`List children) ->
+              List.exists
+                (fun child ->
+                  match child with
+                  | `Assoc child_items -> (
+                      match List.assoc_opt "kind" child_items with
+                      | Some (`String kind) ->
+                          Astring.String.is_prefix ~affix:"pattern" kind
+                      | _ -> false)
+                  | _ -> false)
+                children
+          | _ -> false)
+      | _ -> false)
+  | _ -> false
+
+(** Check if a kind string represents a field-related construct *)
+let is_field_kind kind =
+  match kind with
+  | "field" -> true
+  | "record_field" -> true
+  | kind when String.length kind > 0 && kind.[0] = '(' ->
+      (* Check for patterns like "(field ...)" or "Texp_field" *)
+      kind = "(field)"
+      || Astring.String.is_prefix ~affix:"(field " kind
+      || Astring.String.is_infix ~affix:"Texp_field" kind
+  | _ -> false
+
+(** Check if an expression is a simple data structure (list or record) *)
+let is_data_structure_expr json =
+  (* A data structure is characterized by:
+     - List: having only expression children 
+     - Record: having field children or being a record expression *)
+  match json with
+  | `Assoc items -> (
+      match List.assoc_opt "kind" items with
+      | Some (`String "expression") -> (
+          match List.assoc_opt "children" items with
+          | Some (`List children) ->
+              (* Check if all children are either expressions (list) or fields (record) *)
+              List.for_all
+                (fun child ->
+                  match child with
+                  | `Assoc child_items -> (
+                      match List.assoc_opt "kind" child_items with
+                      | Some (`String "expression") -> true
+                      | Some (`String "field") -> true
+                      | Some (`String kind) -> is_field_kind kind
+                      | _ -> false)
+                  | _ -> false)
+                children
+          | _ -> true (* No children means it's a simple value like [] or {} *))
+      | _ -> false)
+  | _ -> false
+
 (** Extract value binding info from a value_binding node *)
 let extract_value_binding (json : Yojson.Safe.t) =
   match json with
@@ -109,7 +172,33 @@ let extract_value_binding (json : Yojson.Safe.t) =
       let pattern_info =
         { has_pattern_match = has_cases json; case_count = count_cases json }
       in
-      Some { name; location; pattern_info }
+
+      (* Check if this is a function or a simple data structure *)
+      let is_function, is_simple_list =
+        match List.assoc_opt "children" items with
+        | Some (`List children) -> (
+            (* Find the expression child (second child typically) *)
+            let expr_child =
+              List.find_opt
+                (fun child ->
+                  match child with
+                  | `Assoc child_items -> (
+                      match List.assoc_opt "kind" child_items with
+                      | Some (`String "expression") -> true
+                      | _ -> false)
+                  | _ -> false)
+                children
+            in
+            match expr_child with
+            | Some expr ->
+                ( is_function_expr expr,
+                  if is_function_expr expr then false
+                  else is_data_structure_expr expr )
+            | None -> (false, false))
+        | _ -> (false, false)
+      in
+
+      Some { name; location; pattern_info; is_function; is_simple_list }
   | _ -> None
 
 (** Get all value bindings in the tree *)

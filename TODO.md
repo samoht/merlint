@@ -40,6 +40,12 @@
 
 ## Medium Priority
 
+- [ ] Add a rule to detect _ prefixed variables
+  - Variables prefixed with underscore indicate unused/ignored values
+  - Should check if these variables are actually used in the code
+  - If used, suggest removing the underscore prefix
+  - Helps maintain clarity about which variables are intentionally unused
+
 - [ ] Add documentation style section for E410
   - E410 exists in error codes but has no reference in style guides
   - Add section to lib/guide.ml explaining expected documentation style

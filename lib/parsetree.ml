@@ -100,6 +100,17 @@ let parse_location str =
 type block = { indent : int; content : string; loc : Location.t option }
 (** A block is the fundamental unit, not a line *)
 
+(** Empty accumulator for reuse *)
+let empty_acc =
+  {
+    identifiers = [];
+    patterns = [];
+    modules = [];
+    types = [];
+    exceptions = [];
+    variants = [];
+  }
+
 (** Pre-process the raw text into a list of blocks *)
 let preprocess_text text =
   let get_indent line =
@@ -132,8 +143,104 @@ let consume_block (blocks_ref : block list ref) =
       Some h
   | [] -> None
 
+(** Merge two accumulators *)
+let merge_acc child_acc acc =
+  {
+    identifiers = child_acc.identifiers @ acc.identifiers;
+    patterns = child_acc.patterns @ acc.patterns;
+    modules = child_acc.modules @ acc.modules;
+    types = child_acc.types @ acc.types;
+    exceptions = child_acc.exceptions @ acc.exceptions;
+    variants = child_acc.variants @ acc.variants;
+  }
+
+(** Process expression node *)
+let rec process_expression blocks_ref indent loc acc =
+  let child_acc = parse_node blocks_ref (indent + 2) loc empty_acc in
+  merge_acc child_acc acc
+
+(** Process pattern node *)
+and process_pattern blocks_ref indent loc acc =
+  let child_acc = parse_node blocks_ref (indent + 2) loc empty_acc in
+  {
+    acc with
+    patterns = child_acc.patterns @ acc.patterns;
+    variants = child_acc.variants @ acc.variants;
+  }
+
+(** Process identifier node *)
+and process_ident content parent_location acc =
+  let name = extract_quoted_string content |> Option.map parse_name in
+  match name with
+  | Some n ->
+      {
+        acc with
+        identifiers =
+          { name = n; location = parent_location } :: acc.identifiers;
+      }
+  | None -> acc
+
+(** Process variable pattern *)
+and process_var_pattern content parent_location acc =
+  let name = extract_quoted_string content |> Option.map parse_name in
+  match name with
+  | Some n ->
+      {
+        acc with
+        patterns = { name = n; location = parent_location } :: acc.patterns;
+      }
+  | None -> acc
+
+(** Process module declaration *)
+and process_module blocks_ref content indent current_loc acc =
+  match extract_quoted_string content with
+  | Some name_str ->
+      let name = parse_name name_str in
+      { acc with modules = { name; location = current_loc } :: acc.modules }
+  | None ->
+      (* Look in children for module_binding with the name *)
+      let child_acc =
+        parse_node blocks_ref (indent + 2) current_loc empty_acc
+      in
+      { acc with modules = child_acc.modules @ acc.modules }
+
+(** Process type declaration *)
+and process_type content current_loc acc =
+  let name = extract_quoted_string content |> Option.map parse_name in
+  match name with
+  | Some n ->
+      { acc with types = { name = n; location = current_loc } :: acc.types }
+  | None -> acc
+
+(** Process exception declaration *)
+and process_exception content current_loc acc =
+  let name = extract_quoted_string content |> Option.map parse_name in
+  match name with
+  | Some n ->
+      {
+        acc with
+        exceptions = { name = n; location = current_loc } :: acc.exceptions;
+      }
+  | None -> acc
+
+(** Process variant constructor *)
+and process_variant content parent_location acc =
+  let name = extract_quoted_string content |> Option.map parse_name in
+  match name with
+  | Some n ->
+      {
+        acc with
+        variants = { name = n; location = parent_location } :: acc.variants;
+      }
+  | None -> acc
+
+(** Process any other node by parsing its children *)
+and process_other blocks_ref indent current_loc acc =
+  let child_acc = parse_node blocks_ref (indent + 2) current_loc empty_acc in
+  merge_acc child_acc acc
+
 (** The main recursive parsing function *)
-let rec parse_node (blocks_ref : block list ref) (current_indent : int)
+and parse_node (blocks_ref : block list ref) (current_indent : int)
     (parent_location : Location.t option) (acc : t) : t =
   match peek_block blocks_ref with
   | None -> acc (* End of input *)
@@ -162,67 +269,10 @@ let rec parse_node (blocks_ref : block list ref) (current_indent : int)
       let new_acc =
         match node_type with
         | "expression" ->
-            (* Expression nodes contain location but not the identifier itself.
-               Parse children to find Pexp_ident etc. *)
-            let child_acc =
-              parse_node blocks_ref (block.indent + 2) current_loc
-                {
-                  identifiers = [];
-                  patterns = [];
-                  modules = [];
-                  types = [];
-                  exceptions = [];
-                  variants = [];
-                }
-            in
-            (* Merge child results directly - location already propagated *)
-            {
-              identifiers = child_acc.identifiers @ acc.identifiers;
-              patterns = child_acc.patterns @ acc.patterns;
-              modules = child_acc.modules @ acc.modules;
-              types = child_acc.types @ acc.types;
-              exceptions = child_acc.exceptions @ acc.exceptions;
-              variants = child_acc.variants @ acc.variants;
-            }
-        | "pattern" ->
-            (* Similar to expression, pattern nodes contain location *)
-            let child_acc =
-              parse_node blocks_ref (block.indent + 2) current_loc
-                {
-                  identifiers = [];
-                  patterns = [];
-                  modules = [];
-                  types = [];
-                  exceptions = [];
-                  variants = [];
-                }
-            in
-            {
-              acc with
-              patterns = child_acc.patterns @ acc.patterns;
-              variants = child_acc.variants @ acc.variants;
-            }
-        | "Pexp_ident" -> (
-            let name = extract_quoted_string content |> Option.map parse_name in
-            match name with
-            | Some n ->
-                (* Pexp_ident doesn't have its own location; it inherits from parent *)
-                {
-                  acc with
-                  identifiers =
-                    { name = n; location = parent_location } :: acc.identifiers;
-                }
-            | None -> acc)
-        | "Ppat_var" -> (
-            let name = extract_quoted_string content |> Option.map parse_name in
-            match name with
-            | Some n ->
-                {
-                  acc with
-                  patterns =
-                    { name = n; location = parent_location } :: acc.patterns;
-                }
-            | None -> acc)
+            process_expression blocks_ref block.indent current_loc acc
+        | "pattern" -> process_pattern blocks_ref block.indent current_loc acc
+        | "Pexp_ident" -> process_ident content parent_location acc
+        | "Ppat_var" -> process_var_pattern content parent_location acc
         | "Ppat_any" ->
             (* Catch-all pattern _ *)
             let name = { prefix = []; base = "_" } in
@@ -230,79 +280,12 @@ let rec parse_node (blocks_ref : block list ref) (current_indent : int)
               acc with
               patterns = { name; location = parent_location } :: acc.patterns;
             }
-        | "Pstr_module" -> (
-            (* Module name might be on the same line or in a child *)
-            match extract_quoted_string content with
-            | Some name_str ->
-                let name = parse_name name_str in
-                {
-                  acc with
-                  modules = { name; location = current_loc } :: acc.modules;
-                }
-            | None ->
-                (* Look in children for module_binding with the name *)
-                let child_acc =
-                  parse_node blocks_ref (block.indent + 2) current_loc
-                    {
-                      identifiers = [];
-                      patterns = [];
-                      modules = [];
-                      types = [];
-                      exceptions = [];
-                      variants = [];
-                    }
-                in
-                { acc with modules = child_acc.modules @ acc.modules })
-        | "Pstr_type" -> (
-            let name = extract_quoted_string content |> Option.map parse_name in
-            match name with
-            | Some n ->
-                {
-                  acc with
-                  types = { name = n; location = current_loc } :: acc.types;
-                }
-            | None -> acc)
-        | "Pstr_exception" -> (
-            let name = extract_quoted_string content |> Option.map parse_name in
-            match name with
-            | Some n ->
-                {
-                  acc with
-                  exceptions =
-                    { name = n; location = current_loc } :: acc.exceptions;
-                }
-            | None -> acc)
-        | "Ppat_construct" -> (
-            let name = extract_quoted_string content |> Option.map parse_name in
-            match name with
-            | Some n ->
-                {
-                  acc with
-                  variants =
-                    { name = n; location = parent_location } :: acc.variants;
-                }
-            | None -> acc)
-        | _ ->
-            (* For unrecognized nodes, still parse children in case they contain something useful *)
-            let child_acc =
-              parse_node blocks_ref (block.indent + 2) current_loc
-                {
-                  identifiers = [];
-                  patterns = [];
-                  modules = [];
-                  types = [];
-                  exceptions = [];
-                  variants = [];
-                }
-            in
-            {
-              identifiers = child_acc.identifiers @ acc.identifiers;
-              patterns = child_acc.patterns @ acc.patterns;
-              modules = child_acc.modules @ acc.modules;
-              types = child_acc.types @ acc.types;
-              exceptions = child_acc.exceptions @ acc.exceptions;
-              variants = child_acc.variants @ acc.variants;
-            }
+        | "Pstr_module" ->
+            process_module blocks_ref content block.indent current_loc acc
+        | "Pstr_type" -> process_type content current_loc acc
+        | "Pstr_exception" -> process_exception content current_loc acc
+        | "Ppat_construct" -> process_variant content parent_location acc
+        | _ -> process_other blocks_ref block.indent current_loc acc
       in
       (* Continue parsing at the same level *)
       parse_node blocks_ref current_indent parent_location new_acc
@@ -310,17 +293,7 @@ let rec parse_node (blocks_ref : block list ref) (current_indent : int)
 (** Parse identifiers from blocks *)
 let parse_from_blocks (blocks : block list) : t =
   let blocks_ref = ref blocks in
-  let initial_acc =
-    {
-      identifiers = [];
-      patterns = [];
-      modules = [];
-      types = [];
-      exceptions = [];
-      variants = [];
-    }
-  in
-  let result = parse_node blocks_ref 0 None initial_acc in
+  let result = parse_node blocks_ref 0 None empty_acc in
   (* Reverse to maintain order *)
   {
     identifiers = List.rev result.identifiers;

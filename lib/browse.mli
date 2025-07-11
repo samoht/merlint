@@ -10,6 +10,9 @@ type value_binding = {
   name : string option;
   location : location option;
   pattern_info : pattern_info;
+  is_function : bool;  (** True if the binding has function parameters *)
+  is_simple_list : bool;
+      (** True if the binding is just a data structure (list or record) *)
 }
 (** Value binding information *)
 

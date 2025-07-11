@@ -170,7 +170,7 @@ let print_issue_group (error_code, issues) =
       if List.length sorted_issues > 0 then
         List.iter
           (fun issue ->
-            match Merlint.Issue.get_location issue with
+            match Merlint.Issue.find_location issue with
             | Some loc ->
                 let desc = Merlint.Issue.get_description issue in
                 (* Always print location: description on same line *)
@@ -181,14 +181,44 @@ let print_issue_group (error_code, issues) =
             | None -> ())
           sorted_issues
 
-let process_category_report (category_name, reports) =
+(** Group issues by error code *)
+let group_issues_by_code issues =
+  List.fold_left
+    (fun acc issue ->
+      let error_code =
+        Merlint.Issue.error_code (Merlint.Issue.get_type issue)
+      in
+      let current =
+        match List.assoc_opt error_code acc with
+        | Some issues -> issues
+        | None -> []
+      in
+      (error_code, issue :: current) :: List.remove_assoc error_code acc)
+    [] issues
+
+let process_category_report rule_filter (category_name, reports) =
+  (* Filter issues in each report based on rule filter *)
+  let filtered_reports =
+    match rule_filter with
+    | None -> reports
+    | Some filter ->
+        List.map
+          (fun report ->
+            let filtered_issues =
+              Merlint.Rule_filter.filter_issues filter
+                report.Merlint.Report.issues
+            in
+            { report with Merlint.Report.issues = filtered_issues })
+          reports
+  in
+
   let total_issues =
     List.fold_left
       (fun acc report -> acc + List.length report.Merlint.Report.issues)
-      0 reports
+      0 filtered_reports
   in
   let category_passed =
-    List.for_all (fun report -> report.Merlint.Report.passed) reports
+    List.for_all (fun report -> report.Merlint.Report.passed) filtered_reports
   in
 
   Fmt.pr "%s %s (%d total issues)@."
@@ -200,33 +230,21 @@ let process_category_report (category_name, reports) =
   (if total_issues > 0 then
      (* Group all issues by error code *)
      let all_issues =
-       List.concat_map (fun report -> report.Merlint.Report.issues) reports
+       List.concat_map
+         (fun report -> report.Merlint.Report.issues)
+         filtered_reports
      in
-     let grouped_issues =
-       List.fold_left
-         (fun acc issue ->
-           let error_code =
-             Merlint.Issue.error_code (Merlint.Issue.get_type issue)
-           in
-           let current =
-             match List.assoc_opt error_code acc with
-             | Some issues -> issues
-             | None -> []
-           in
-           (error_code, issue :: current) :: List.remove_assoc error_code acc)
-         [] all_issues
-     in
-
+     let grouped_issues = group_issues_by_code all_issues in
      (* Sort groups by error code and print each group *)
      let sorted_groups =
        List.sort (fun (a, _) (b, _) -> String.compare a b) grouped_issues
      in
      List.iter print_issue_group sorted_groups);
-  reports
+  filtered_reports
 
 let print_fix_hints all_issues = if all_issues <> [] then exit 1
 
-let run_analysis project_root filtered_files =
+let run_analysis project_root filtered_files rule_filter =
   (* Set formatter margin based on terminal width *)
   let terminal_width = get_terminal_width () in
   Format.set_margin terminal_width;
@@ -244,7 +262,7 @@ let run_analysis project_root filtered_files =
   let all_reports =
     List.fold_left
       (fun acc category_report ->
-        let reports = process_category_report category_report in
+        let reports = process_category_report rule_filter category_report in
         reports @ acc)
       [] category_reports
   in
@@ -261,7 +279,7 @@ let ensure_project_built project_root =
       Fmt.epr "Function type analysis may not work properly.@.";
       Fmt.epr "Continuing with analysis...@."
 
-let analyze_files ?(exclude_patterns = []) files =
+let analyze_files ?(exclude_patterns = []) ?rule_filter files =
   (* Find project root and all files *)
   let project_root =
     match files with
@@ -303,7 +321,7 @@ let analyze_files ?(exclude_patterns = []) files =
       m "Analyzing %d files after exclusions" (List.length filtered_files));
   List.iter (fun file -> Log.debug (fun m -> m "  - %s" file)) filtered_files;
 
-  run_analysis project_root filtered_files
+  run_analysis project_root filtered_files rule_filter
 
 let files =
   let doc =
@@ -318,6 +336,14 @@ let exclude_flag =
      Supports simple glob patterns with * and path matching."
   in
   Arg.(value & opt_all string [] & info [ "exclude"; "e" ] ~docv:"PATTERN" ~doc)
+
+let rules_flag =
+  let doc =
+    "Filter rules to enable/disable specific checks. Format: A-E110-E205 where \
+     A means all rules, and E110, E205 are error codes to disable. Example: \
+     --rules A-E110 enables all rules except E110."
+  in
+  Arg.(value & opt (some string) None & info [ "rules"; "r" ] ~docv:"SPEC" ~doc)
 
 let log_level =
   let env = Cmd.Env.info "MERLINT_VERBOSE" in
@@ -343,7 +369,7 @@ let cmd =
   let info = Cmd.info "merlint" ~version:"0.1.0" ~doc ~man in
   Cmd.v info
     Term.(
-      const (fun style_renderer log_level exclude_patterns files ->
+      const (fun style_renderer log_level exclude_patterns rules_spec files ->
           setup_log ?style_renderer log_level;
           if not (check_ocamlmerlin ()) then (
             Log.err (fun m -> m "ocamlmerlin not found in PATH");
@@ -352,7 +378,20 @@ let cmd =
             Log.err (fun m ->
                 m "  2. opam install merlin  # If merlin is not installed");
             Stdlib.exit 1)
-          else analyze_files ~exclude_patterns files)
-      $ Fmt_cli.style_renderer () $ log_level $ exclude_flag $ files)
+          else
+            (* Parse rule filter if provided *)
+            let rule_filter =
+              match rules_spec with
+              | None -> None
+              | Some spec -> (
+                  match Merlint.Rule_filter.parse spec with
+                  | Ok filter -> Some filter
+                  | Error msg ->
+                      Log.err (fun m -> m "Invalid rules specification: %s" msg);
+                      Stdlib.exit 1)
+            in
+            analyze_files ~exclude_patterns ?rule_filter files)
+      $ Fmt_cli.style_renderer () $ log_level $ exclude_flag $ rules_flag
+      $ files)
 
 let () = Stdlib.exit (Cmd.eval cmd)

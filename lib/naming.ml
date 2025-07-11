@@ -59,35 +59,20 @@ let check_module_name name =
   let expected = to_snake_case name in
   if name <> expected then Some expected else None
 
-let[@warning "-32"] extract_location_from_parsetree text =
-  (* Extract location from parsetree text like:
-     "Ppat_var "convert" (bad_style.ml[2,27+4]..[2,27+11])"
-  *)
-  let location_regex =
-    Re.compile
-      (Re.seq
-         [
-           Re.str "(";
-           Re.group (Re.rep1 (Re.compl [ Re.char '[' ]));
-           (* filename - may contain dots *)
-           Re.str "[";
-           Re.group (Re.rep1 Re.digit);
-           (* line *)
-           Re.str ",";
-           Re.rep1 Re.digit;
-           (* offset *)
-           Re.str "+";
-           Re.group (Re.rep1 Re.digit);
-           (* col *)
-           Re.str "]";
-         ])
-  in
-  try
-    let substrings = Re.exec location_regex text in
-    let line = int_of_string (Re.Group.get substrings 2) in
-    let col = int_of_string (Re.Group.get substrings 3) in
-    Some (line, col)
-  with Not_found -> None
+(** Check if an item name has redundant module prefix *)
+let has_redundant_prefix item_name_lower module_name =
+  String.starts_with ~prefix:(module_name ^ "_") item_name_lower
+  || item_name_lower = module_name
+
+(** Create redundant module name issue *)
+let create_redundant_name_issue item module_name location item_type =
+  Issue.Redundant_module_name
+    {
+      item_name = item.Outline.name;
+      module_name = String.capitalize_ascii module_name;
+      location;
+      item_type;
+    }
 
 (* Helper to check if a type signature is a function type *)
 let is_function_type type_sig = String.contains type_sig '-'
@@ -174,70 +159,19 @@ let check_redundant_module_name filename outline_opt =
       Logs.debug (fun m -> m "No outline for %s" filename);
       []
   | Some items ->
-      Logs.debug (fun m ->
-          m "Found %d items in outline for %s" (List.length items) filename);
       List.filter_map
         (fun (item : Outline.item) ->
           let item_name_lower = String.lowercase_ascii item.name in
           let location = extract_outline_location filename item in
 
-          Logs.debug (fun m ->
-              m "Checking item %s (kind: %s, type: %s, has_range: %b)" item.name
-                (match item.kind with
-                | Value -> "Value"
-                | Type -> "Type"
-                | _ -> "Other")
-                (Option.value ~default:"<none>" item.type_sig)
-                (Option.is_some item.range));
-
-          match item.kind with
-          | Outline.Value
-            when is_function_type (Option.value ~default:"" item.type_sig) ->
-              (* Check if function name starts with module name *)
-              let has_prefix =
-                String.starts_with ~prefix:(module_name ^ "_") item_name_lower
-              in
-              let is_exact = item_name_lower = module_name in
-              Logs.debug (fun m ->
-                  m "Function %s: prefix=%b exact=%b (module=%s)" item.name
-                    has_prefix is_exact module_name);
-              if has_prefix || is_exact then (
-                match location with
-                | Some loc ->
-                    Logs.debug (fun m ->
-                        m "Creating issue for function %s at %d:%d" item.name
-                          loc.start_line loc.start_col);
-                    Some
-                      (Issue.Redundant_module_name
-                         {
-                           item_name = item.name;
-                           module_name = String.capitalize_ascii module_name;
-                           location = loc;
-                           item_type = "function";
-                         })
-                | None ->
-                    Logs.debug (fun m ->
-                        m "No location for function %s" item.name);
-                    None)
-              else None
-          | Outline.Type ->
-              (* Check if type name includes module name *)
-              if
-                String.starts_with ~prefix:(module_name ^ "_") item_name_lower
-                || item_name_lower = module_name
-              then
-                match location with
-                | Some loc ->
-                    Some
-                      (Issue.Redundant_module_name
-                         {
-                           item_name = item.name;
-                           module_name = String.capitalize_ascii module_name;
-                           location = loc;
-                           item_type = "type";
-                         })
-                | None -> None
-              else None
+          match (item.kind, location) with
+          | Outline.Value, Some loc
+            when is_function_type (Option.value ~default:"" item.type_sig)
+                 && has_redundant_prefix item_name_lower module_name ->
+              Some (create_redundant_name_issue item module_name loc "function")
+          | Outline.Type, Some loc
+            when has_redundant_prefix item_name_lower module_name ->
+              Some (create_redundant_name_issue item module_name loc "type")
           | _ -> None)
         items
 
@@ -256,88 +190,61 @@ let check_function_naming filename outline_opt =
           check_single_function filename name kind type_sig location)
         items
 
-let check_parsed_structure _filename typedtree =
-  let issues = ref [] in
-
-  (* Check value names *)
-  let patterns = typedtree.Typedtree.patterns in
-  List.iter
+(** Check a list of elements for naming issues *)
+let check_elements elements check_fn create_issue_fn =
+  List.filter_map
     (fun (elt : Typedtree.elt) ->
       let name_str = Typedtree.name_to_string elt.name in
-      match check_value_name name_str with
-      | Some expected -> (
-          match elt.location with
-          | Some loc ->
-              issues :=
-                Issue.Bad_value_naming
-                  { value_name = name_str; location = loc; expected }
-                :: !issues
-          | None -> ())
-      | None -> ())
-    patterns;
+      match (check_fn name_str, elt.location) with
+      | Some result, Some loc -> Some (create_issue_fn name_str loc result)
+      | _ -> None)
+    elements
+
+(** Built-in variant constructors to skip *)
+let builtin_variants = [ "::"; "[]"; "()"; "true"; "false"; "None"; "Some" ]
+
+let check_parsed_structure _filename typedtree =
+  (* Check value names *)
+  let value_issues =
+    check_elements typedtree.Typedtree.patterns check_value_name
+      (fun name_str loc expected ->
+        Issue.Bad_value_naming
+          { value_name = name_str; location = loc; expected })
+  in
 
   (* Check module names *)
-  let modules = typedtree.Typedtree.modules in
-  List.iter
-    (fun (elt : Typedtree.elt) ->
-      let name_str = Typedtree.name_to_string elt.name in
-      match check_module_name name_str with
-      | Some expected -> (
-          match elt.location with
-          | Some loc ->
-              issues :=
-                Issue.Bad_module_naming
-                  { module_name = name_str; location = loc; expected }
-                :: !issues
-          | None -> ())
-      | None -> ())
-    modules;
+  let module_issues =
+    check_elements typedtree.Typedtree.modules check_module_name
+      (fun name_str loc expected ->
+        Issue.Bad_module_naming
+          { module_name = name_str; location = loc; expected })
+  in
 
   (* Check type names *)
-  let types = typedtree.Typedtree.types in
-  List.iter
-    (fun (elt : Typedtree.elt) ->
-      let name_str = Typedtree.name_to_string elt.name in
-      if name_str <> "t" && name_str <> "id" then
-        let is_snake = name_str = to_snake_case name_str in
-        if not is_snake then
-          match elt.location with
-          | Some loc ->
-              issues :=
-                Issue.Bad_type_naming
-                  {
-                    type_name = name_str;
-                    location = loc;
-                    message = "should use snake_case";
-                  }
-                :: !issues
-          | None -> ())
-    types;
+  let type_issues =
+    check_elements typedtree.Typedtree.types
+      (fun name_str ->
+        if
+          name_str <> "t" && name_str <> "id"
+          && name_str <> to_snake_case name_str
+        then Some "should use snake_case"
+        else None)
+      (fun name_str loc message ->
+        Issue.Bad_type_naming { type_name = name_str; location = loc; message })
+  in
 
   (* Check variant constructors *)
-  let variants = typedtree.Typedtree.variants in
-  List.iter
-    (fun (elt : Typedtree.elt) ->
-      let name_str = Typedtree.name_to_string elt.name in
-      (* Skip built-in constructors *)
-      if
-        not
-          (List.mem name_str
-             [ "::"; "[]"; "()"; "true"; "false"; "None"; "Some" ])
-      then
-        match check_variant_name name_str with
-        | Some expected -> (
-            match elt.location with
-            | Some loc ->
-                issues :=
-                  Issue.Bad_variant_naming
-                    { variant = name_str; location = loc; expected }
-                  :: !issues
-            | None -> ())
-        | None -> ())
-    variants;
+  let variant_issues =
+    check_elements typedtree.Typedtree.variants
+      (fun name_str ->
+        if List.mem name_str builtin_variants then None
+        else check_variant_name name_str)
+      (fun name_str loc expected ->
+        Issue.Bad_variant_naming
+          { variant = name_str; location = loc; expected })
+  in
 
-  !issues
+  value_issues @ module_issues @ type_issues @ variant_issues
 
 let check ~filename ~outline (typedtree : Typedtree.t) =
   (* Check parsed structure *)
