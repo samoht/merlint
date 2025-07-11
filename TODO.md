@@ -8,7 +8,7 @@
   - Should work for functions, types, and module names
   - DONE: Implemented as E330 - Redundant Module Names
 
-- [ ] Implement Unified Style Guide Data Model
+- [x] Implement Unified Style Guide Data Model
   1. **Create Data Model** (lib/data.ml and lib/data.mli)
      - Define OCaml types for style guide sections, paragraphs, rules
      - Include placeholders for rule references (e.g., [E205])
@@ -42,7 +42,7 @@
 
 - [ ] Add documentation style section for E410
   - E410 exists in error codes but has no reference in style guides
-  - Add section to prompts/code.md explaining expected documentation style
+  - Add section to lib/guide.ml explaining expected documentation style
   - Should explicitly reference [E410] for documentation style issues
 
 - [ ] Implement E411: Docstring Format Convention
@@ -80,10 +80,10 @@
 
 ## Low Priority
 
-- [ ] Consolidate style guide documentation
-  - Currently fragmented across prompts/code.md, test.md, tests.md
-  - Consider creating single STYLE_GUIDE.md for consistency
-  - Would reduce risk of conflicting or incomplete advice
+- [x] Consolidate style guide documentation
+  - Previously fragmented across prompts/code.md, test.md, tests.md
+  - Created single STYLE_GUIDE.md generated from lib/guide.ml
+  - Reduces risk of conflicting or incomplete advice
 
 - [ ] Merge redundant testing guides
   - prompts/test.md and prompts/tests.md have overlapping content
