@@ -59,7 +59,7 @@ let check_module_name name =
   let expected = to_snake_case name in
   if name <> expected then Some expected else None
 
-let extract_location_from_parsetree text =
+let[@warning "-32"] extract_location_from_parsetree text =
   (* Extract location from parsetree text like:
      "Ppat_var "convert" (bad_style.ml[2,27+4]..[2,27+11])"
   *)
@@ -89,162 +89,6 @@ let extract_location_from_parsetree text =
     Some (line, col)
   with Not_found -> None
 
-let check_variant_in_parsetree filename text =
-  (* Look for variant names in parsetree text like:
-     "WaitingForInput" (bad_names.ml[7,97+14]..[7,97+29])
-     These appear in type declarations with quotes around the name *)
-  let variant_regex =
-    Re.compile
-      (Re.seq
-         [
-           Re.str "\"";
-           Re.group (Re.rep1 (Re.compl [ Re.char '"' ]));
-           Re.str "\" (";
-           Re.group (Re.rep1 (Re.compl [ Re.char '[' ]));
-           (* filename *)
-           Re.str "[";
-         ])
-  in
-  try
-    let matches = Re.all ~pos:0 variant_regex text in
-    List.fold_left
-      (fun acc group ->
-        let name = Re.Group.get group 1 in
-        (* Only check names that look like variants (start with uppercase letter A-Z) *)
-        if
-          String.length name > 0
-          && name.[0] >= 'A'
-          && name.[0] <= 'Z'
-          && String.for_all
-               (fun c ->
-                 (c >= 'A' && c <= 'Z')
-                 || (c >= 'a' && c <= 'z')
-                 || (c >= '0' && c <= '9')
-                 || c = '_')
-               name
-        then
-          match check_variant_name name with
-          | Some expected -> (
-              match extract_location_from_parsetree text with
-              | Some (line, col) ->
-                  Issue.Bad_variant_naming
-                    {
-                      variant = name;
-                      location = { file = filename; line; col };
-                      expected;
-                    }
-                  :: acc
-              | None -> acc)
-          | None -> acc
-        else acc)
-      [] matches
-  with Not_found -> []
-
-let check_value_in_parsetree filename text =
-  (* Look for Ppat_var "valueName" in parsetree text *)
-  let value_regex =
-    Re.compile
-      (Re.seq
-         [
-           Re.str "Ppat_var ";
-           Re.str "\"";
-           Re.group (Re.rep1 (Re.compl [ Re.char '"' ]));
-           Re.str "\"";
-         ])
-  in
-  try
-    let matches = Re.all ~pos:0 value_regex text in
-    List.fold_left
-      (fun acc group ->
-        let name = Re.Group.get group 1 in
-        (* Skip single letter variables and common short names *)
-        if String.length name > 1 && name <> "x" && name <> "y" && name <> "v"
-        then
-          match check_value_name name with
-          | Some expected -> (
-              match extract_location_from_parsetree text with
-              | Some (line, col) ->
-                  Issue.Bad_value_naming
-                    {
-                      value_name = name;
-                      location = { file = filename; line; col };
-                      expected;
-                    }
-                  :: acc
-              | None -> acc)
-          | None -> acc
-        else acc)
-      [] matches
-  with Not_found -> []
-
-let check_module_in_parsetree filename text =
-  (* Look for Pstr_module "ModuleName" in parsetree text *)
-  let module_regex =
-    Re.compile
-      (Re.seq
-         [
-           Re.str "Pstr_module";
-           Re.rep1 Re.space;
-           Re.str "\"";
-           Re.group (Re.rep1 (Re.compl [ Re.char '"' ]));
-           Re.str "\"";
-         ])
-  in
-  try
-    let matches = Re.all ~pos:0 module_regex text in
-    List.fold_left
-      (fun acc group ->
-        let name = Re.Group.get group 1 in
-        match check_module_name name with
-        | Some expected -> (
-            match extract_location_from_parsetree text with
-            | Some (line, col) ->
-                Issue.Bad_module_naming
-                  {
-                    module_name = name;
-                    location = { file = filename; line; col };
-                    expected;
-                  }
-                :: acc
-            | None -> acc)
-        | None -> acc)
-      [] matches
-  with Not_found -> []
-
-let check_type_in_parsetree filename text =
-  (* Look for type definitions in parsetree text *)
-  let type_regex =
-    Re.compile
-      (Re.seq
-         [
-           Re.str "type ";
-           Re.group (Re.rep1 (Re.compl [ Re.char ' ' ]));
-           Re.str " =";
-         ])
-  in
-  try
-    let substrings = Re.exec_opt type_regex text in
-    match substrings with
-    | Some substrings ->
-        let name = Re.Group.get substrings 1 in
-        if name <> "t" && name <> "id" then
-          let is_snake = name = to_snake_case name in
-          if not is_snake then
-            match extract_location_from_parsetree text with
-            | Some (line, col) ->
-                Some
-                  (Issue.Bad_type_naming
-                     {
-                       type_name = name;
-                       location = { file = filename; line; col };
-                       message = "should use snake_case";
-                     })
-            | None -> None
-          else None
-        else None
-    | None -> None
-  with Not_found -> None
-
 (* Helper to check if a type signature is a function type *)
 let is_function_type type_sig = String.contains type_sig '-'
 
@@ -272,8 +116,9 @@ let extract_outline_location filename (item : Outline.item) =
   match item.range with
   | Some range ->
       Some
-        (Location.create ~file:filename ~line:range.start.line
-           ~col:range.start.col)
+        (Location.create ~file:filename ~start_line:range.start.line
+           ~start_col:range.start.col ~end_line:range.start.line
+           ~end_col:range.start.col)
   | None -> None
 
 (* Check a single function for naming issues *)
@@ -361,7 +206,7 @@ let check_redundant_module_name filename outline_opt =
                 | Some loc ->
                     Logs.debug (fun m ->
                         m "Creating issue for function %s at %d:%d" item.name
-                          loc.line loc.col);
+                          loc.start_line loc.start_col);
                     Some
                       (Issue.Redundant_module_name
                          {
@@ -411,85 +256,133 @@ let check_function_naming filename outline_opt =
           check_single_function filename name kind type_sig location)
         items
 
-let check_long_identifier_name filename text =
+let check_parsed_structure _filename typedtree =
+  let issues = ref [] in
+
+  (* Check value names *)
+  let patterns = typedtree.Typedtree.patterns in
+  List.iter
+    (fun (elt : Typedtree.elt) ->
+      let name_str = Typedtree.name_to_string elt.name in
+      match check_value_name name_str with
+      | Some expected -> (
+          match elt.location with
+          | Some loc ->
+              issues :=
+                Issue.Bad_value_naming
+                  { value_name = name_str; location = loc; expected }
+                :: !issues
+          | None -> ())
+      | None -> ())
+    patterns;
+
+  (* Check module names *)
+  let modules = typedtree.Typedtree.modules in
+  List.iter
+    (fun (elt : Typedtree.elt) ->
+      let name_str = Typedtree.name_to_string elt.name in
+      match check_module_name name_str with
+      | Some expected -> (
+          match elt.location with
+          | Some loc ->
+              issues :=
+                Issue.Bad_module_naming
+                  { module_name = name_str; location = loc; expected }
+                :: !issues
+          | None -> ())
+      | None -> ())
+    modules;
+
+  (* Check type names *)
+  let types = typedtree.Typedtree.types in
+  List.iter
+    (fun (elt : Typedtree.elt) ->
+      let name_str = Typedtree.name_to_string elt.name in
+      if name_str <> "t" && name_str <> "id" then
+        let is_snake = name_str = to_snake_case name_str in
+        if not is_snake then
+          match elt.location with
+          | Some loc ->
+              issues :=
+                Issue.Bad_type_naming
+                  {
+                    type_name = name_str;
+                    location = loc;
+                    message = "should use snake_case";
+                  }
+                :: !issues
+          | None -> ())
+    types;
+
+  (* Check variant constructors *)
+  let variants = typedtree.Typedtree.variants in
+  List.iter
+    (fun (elt : Typedtree.elt) ->
+      let name_str = Typedtree.name_to_string elt.name in
+      (* Skip built-in constructors *)
+      if
+        not
+          (List.mem name_str
+             [ "::"; "[]"; "()"; "true"; "false"; "None"; "Some" ])
+      then
+        match check_variant_name name_str with
+        | Some expected -> (
+            match elt.location with
+            | Some loc ->
+                issues :=
+                  Issue.Bad_variant_naming
+                    { variant = name_str; location = loc; expected }
+                  :: !issues
+            | None -> ())
+        | None -> ())
+    variants;
+
+  !issues
+
+let check ~filename ~outline (typedtree : Typedtree.t) =
+  (* Check parsed structure *)
+  let structure_issues = check_parsed_structure filename typedtree in
+
+  (* Check long identifier names using the parsed structure *)
   let max_underscores = 3 in
-  let identifier_regex =
-    Re.compile
-      (Re.seq [ Re.group (Re.rep1 (Re.alt [ Re.alnum; Re.char '_' ])) ])
+  let all_elts =
+    typedtree.Typedtree.identifiers @ typedtree.Typedtree.patterns
+    @ typedtree.Typedtree.modules @ typedtree.Typedtree.types
+    @ typedtree.Typedtree.exceptions @ typedtree.Typedtree.variants
   in
-  try
-    let matches = Re.all ~pos:0 identifier_regex text in
-    List.fold_left
-      (fun acc group ->
-        let name = Re.Group.get group 1 in
-        let underscore_count =
-          String.fold_left
-            (fun count c -> if c = '_' then count + 1 else count)
-            0 name
-        in
-        if underscore_count > max_underscores && String.length name > 5 then
-          match extract_location_from_parsetree text with
-          | Some (line, col) ->
-              Issue.Long_identifier_name
-                {
-                  name;
-                  location = { file = filename; line; col };
-                  underscore_count;
-                  threshold = max_underscores;
-                }
-              :: acc
-          | None -> acc
-        else acc)
-      [] matches
-  with Not_found -> []
-
-let check_parsetree_line filename text =
-  let issues = [] in
-
-  (* Check for variant names *)
-  let variant_issues = check_variant_in_parsetree filename text in
-
-  (* Check for value names *)
-  let value_issues = check_value_in_parsetree filename text in
-
-  (* Check for module names *)
-  let module_issues = check_module_in_parsetree filename text in
-
-  (* Check for type names *)
-  let type_issues =
-    match check_type_in_parsetree filename text with
-    | Some v -> [ v ]
-    | None -> []
+  let long_name_issues =
+    all_elts
+    |> List.filter_map (fun (elt : Typedtree.elt) ->
+           (* Only check the base name, not the full qualified name *)
+           let base_name = elt.name.base in
+           let underscore_count =
+             String.fold_left
+               (fun count c -> if c = '_' then count + 1 else count)
+               0 base_name
+           in
+           if underscore_count > max_underscores && String.length base_name > 5
+           then
+             match elt.location with
+             | Some loc ->
+                 (* Use full name for display but count underscores only in base *)
+                 let full_name = Typedtree.name_to_string elt.name in
+                 Some
+                   (Issue.Long_identifier_name
+                      {
+                        name = full_name;
+                        location = loc;
+                        underscore_count;
+                        threshold = max_underscores;
+                      })
+             | None -> None
+           else None)
   in
 
-  (* Check for long identifier names *)
-  let long_name_issues = check_long_identifier_name filename text in
+  (* Check function naming from outline *)
+  let function_naming_issues = check_function_naming filename outline in
 
-  issues @ variant_issues @ value_issues @ module_issues @ type_issues
-  @ long_name_issues
+  (* Check for redundant module name *)
+  let redundant_name_issues = check_redundant_module_name filename outline in
 
-let check ~filename ~outline (parsetree : Parsetree.t) =
-  (* Extract raw text from parsetree for pattern matching *)
-  let text = parsetree.raw_text in
-
-  if text = "" then
-    (* No text to analyze, just check function naming *)
-    check_function_naming filename outline
-  else
-    (* Split text by lines and check each line *)
-    let lines = String.split_on_char '\n' text in
-    let line_issues =
-      List.fold_left
-        (fun acc line ->
-          let trimmed = String.trim line in
-          if trimmed <> "" then
-            let issues = check_parsetree_line filename trimmed in
-            issues @ acc
-          else acc)
-        [] lines
-    in
-    (* Check function naming once for the whole file *)
-    let function_naming_issues = check_function_naming filename outline in
-    (* Check for redundant module name *)
-    let redundant_name_issues = check_redundant_module_name filename outline in
-    line_issues @ function_naming_issues @ redundant_name_issues
+  structure_issues @ long_name_issues @ function_naming_issues
+  @ redundant_name_issues

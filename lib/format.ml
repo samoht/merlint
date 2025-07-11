@@ -3,7 +3,11 @@ let check_ocamlformat_exists project_root =
   if not (Sys.file_exists ocamlformat_path) then
     Some
       (Issue.Missing_ocamlformat_file
-         { location = { file = project_root; line = 1; col = 1 } })
+         {
+           location =
+             Location.create ~file:project_root ~start_line:1 ~start_col:1
+               ~end_line:1 ~end_col:1;
+         })
   else None
 
 let check_mli_for_files project_root files =
@@ -33,7 +37,9 @@ let check_mli_for_files project_root files =
                 {
                   ml_file;
                   expected_mli = mli_path;
-                  location = { file = ml_file; line = 1; col = 1 };
+                  location =
+                    Location.create ~file:ml_file ~start_line:1 ~start_col:1
+                      ~end_line:1 ~end_col:1;
                 }
               :: !issues)
     files;

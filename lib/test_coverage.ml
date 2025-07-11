@@ -133,8 +133,12 @@ let create_missing_test_issue module_name files =
   in
   let location =
     match lib_file with
-    | Some file -> Location.create ~file ~line:1 ~col:0
-    | None -> Location.create ~file:(Fmt.str "%s.ml" module_name) ~line:1 ~col:0
+    | Some file ->
+        Location.create ~file ~start_line:1 ~start_col:0 ~end_line:1 ~end_col:0
+    | None ->
+        Location.create
+          ~file:(Fmt.str "%s.ml" module_name)
+          ~start_line:1 ~start_col:0 ~end_line:1 ~end_col:0
   in
   Issue.Missing_test_file
     {
@@ -149,8 +153,11 @@ let create_extra_test_issue test_module files =
     match
       List.find_opt (fun f -> String.ends_with ~suffix:test_file f) files
     with
-    | Some file -> Location.create ~file ~line:1 ~col:0
-    | None -> Location.create ~file:test_file ~line:1 ~col:0
+    | Some file ->
+        Location.create ~file ~start_line:1 ~start_col:0 ~end_line:1 ~end_col:0
+    | None ->
+        Location.create ~file:test_file ~start_line:1 ~start_col:0 ~end_line:1
+          ~end_col:0
   in
   Issue.Test_without_library
     { test_file; expected_module = Fmt.str "%s.ml" test_module; location }
@@ -211,7 +218,9 @@ let check_test_runner_completeness dune_describe files =
               {
                 test_module = Fmt.str "Test_%s" mod_name;
                 test_runner_file = test_file;
-                location = Location.create ~file:test_file ~line:1 ~col:0;
+                location =
+                  Location.create ~file:test_file ~start_line:1 ~start_col:0
+                    ~end_line:1 ~end_col:0;
               })
           missing_suites
       with _ -> [])

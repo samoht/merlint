@@ -1,0 +1,3 @@
+(executables
+ (names minimal_test test_regex_parts test_exact_regex test_working_regex)
+ (libraries merlint fmt re))

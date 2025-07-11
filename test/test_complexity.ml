@@ -11,8 +11,8 @@ let analyze_browse_value () =
   let config = Complexity.default_config in
   (* Create a mock browse value *)
   let loc =
-    Location.create_extended ~file:"test.ml" ~start_line:1 ~start_col:0
-      ~end_line:60 ~end_col:0
+    Location.create ~file:"test.ml" ~start_line:1 ~start_col:0 ~end_line:60
+      ~end_col:0
   in
   let browse_value : Browse.t =
     {
@@ -40,8 +40,8 @@ let browse_value_with_pattern () =
   let config = Complexity.default_config in
   (* Create a mock browse value with pattern matching *)
   let loc =
-    Location.create_extended ~file:"test.ml" ~start_line:1 ~start_col:0
-      ~end_line:80 ~end_col:0
+    Location.create ~file:"test.ml" ~start_line:1 ~start_col:0 ~end_line:80
+      ~end_col:0
   in
   let browse_value : Browse.t =
     {

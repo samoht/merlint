@@ -6,7 +6,7 @@ module Log = (val Logs.src_log src : Logs.LOG)
 
 type t = {
   browse : (Browse.t, string) result;
-  parsetree : (Parsetree.t, string) result;
+  typedtree : (Typedtree.t, string) result;
   outline : (Outline.t, string) result;
 }
 
@@ -105,9 +105,14 @@ let get_browse file =
   | Ok json -> Ok (Browse.of_json json)
   | Error msg -> Error msg
 
+let get_typedtree file =
+  match dump_value "typedtree" file with
+  | Ok json -> Ok (Typedtree.of_json_with_filename json file)
+  | Error msg -> Error msg
+
 let get_parsetree file =
   match dump_value "parsetree" file with
-  | Ok json -> Ok (Parsetree.of_json json)
+  | Ok json -> Ok (Parsetree.of_json_with_filename json file)
   | Error msg -> Error msg
 
 let analyze_file file =
@@ -115,6 +120,6 @@ let analyze_file file =
   Log.info (fun m -> m "Analyzing file %s with merlin" file);
   {
     browse = get_browse file;
-    parsetree = get_parsetree file;
+    typedtree = get_typedtree file;
     outline = get_outline file;
   }

@@ -7,7 +7,9 @@ let test_create_report () =
         {
           value_name = "badName";
           expected = "bad_name";
-          location = Location.create ~file:"test.ml" ~line:1 ~col:4;
+          location =
+            Location.create ~file:"test.ml" ~start_line:1 ~start_col:4
+              ~end_line:1 ~end_col:4;
         };
     ]
   in
@@ -34,7 +36,9 @@ let test_get_all_issues () =
       {
         value_name = "bad1";
         expected = "bad_1";
-        location = Location.create ~file:"file1.ml" ~line:1 ~col:0;
+        location =
+          Location.create ~file:"file1.ml" ~start_line:1 ~start_col:0
+            ~end_line:1 ~end_col:0;
       }
   in
   let issue2 =
@@ -43,7 +47,9 @@ let test_get_all_issues () =
         name = "long_func";
         length = 100;
         threshold = 50;
-        location = Location.create ~file:"file2.ml" ~line:10 ~col:0;
+        location =
+          Location.create ~file:"file2.ml" ~start_line:10 ~start_col:0
+            ~end_line:10 ~end_col:0;
       }
   in
 
@@ -89,7 +95,9 @@ let test_pp_summary () =
             {
               value_name = "test";
               expected = "test";
-              location = Location.create ~file:"test.ml" ~line:1 ~col:0;
+              location =
+                Location.create ~file:"test.ml" ~start_line:1 ~start_col:0
+                  ~end_line:1 ~end_col:0;
             };
         ]
       ~file_count:5

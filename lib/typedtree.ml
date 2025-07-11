@@ -1,109 +1,421 @@
-(** OCamlmerlin typedtree output - focused on what we need *)
+(** Simplified Typedtree parser for identifier extraction *)
 
-type expression_desc =
-  | Texp_function
-  | Texp_match
-  | Texp_ifthenelse
-  | Texp_while
-  | Texp_for
-  | Texp_try
-  | Texp_let
-  | Texp_apply
-  | Texp_construct
-  | Texp_field
-  | Texp_ident
-  | Texp_constant
-  | Texp_record
-  | Texp_array
-  | Texp_tuple
-  | Texp_variant
-  | Texp_sequence
-  | Texp_assert
-  | Texp_lazy
-  | Texp_send
-  | Texp_new
-  | Texp_instvar
-  | Texp_setinstvar
-  | Texp_override
-  | Texp_letmodule
-  | Texp_letexception
-  | Texp_pack
-  | Texp_open
-  | Texp_unreachable
-  | Texp_extension_constructor
-  | Texp_hole
-  | Texp_other of string
+type name = { prefix : string list; base : string }
+(** Structured name type *)
 
-type pattern_desc =
-  | Tpat_any
-  | Tpat_var of string
-  | Tpat_alias
-  | Tpat_constant
-  | Tpat_tuple
-  | Tpat_construct
-  | Tpat_variant
-  | Tpat_record
-  | Tpat_array
-  | Tpat_or
-  | Tpat_lazy
-  | Tpat_exception
-  | Tpat_other of string
-
-type case = {
-  pattern : pattern_desc;
-  guard : expression_desc option;
-  expression : expression_desc;
-}
-
-type function_info = { cases : case list; is_function : bool }
+type elt = { name : name; location : Location.t option }
+(** Common element type for all extracted items *)
 
 type t = {
-  has_pattern_match : bool;
-  case_count : int;
-  function_info : function_info option;
+  identifiers : elt list;
+  patterns : elt list;
+  modules : elt list;
+  types : elt list;
+  exceptions : elt list;
+  variants : elt list;
 }
+(** Simplified representation focusing on identifiers *)
 
-(** Check for Tfunction_cases or Texp_match in string *)
-let has_pattern_match_indicators str =
-  String.contains str '\n'
-  &&
-  let lines = String.split_on_char '\n' str in
-  List.exists
-    (fun line ->
-      let trimmed = String.trim line in
-      String.starts_with ~prefix:"Texp_match" trimmed
-      || String.starts_with ~prefix:"Tfunction_cases" trimmed)
-    lines
+(** Extract quoted string from line *)
+let extract_quoted_string line =
+  let quote_regex =
+    Re.compile
+      (Re.seq
+         [
+           Re.str "\"";
+           Re.group (Re.rep (Re.compl [ Re.char '"' ]));
+           Re.str "\"";
+         ])
+  in
+  try
+    let m = Re.exec quote_regex line in
+    Some (Re.Group.get m 1)
+  with Not_found -> None
 
-(** Count cases in typedtree string output *)
-let count_cases_in_string str =
-  if String.contains str '\n' then
-    let lines = String.split_on_char '\n' str in
-    List.fold_left
-      (fun acc line ->
-        let trimmed = String.trim line in
-        if String.starts_with ~prefix:"case" trimmed then acc + 1 else acc)
-      0 lines
-  else 0
+(** Parse a structured name from a string like "Stdlib!.Obj.magic" The '!'
+    suffix on module names appears to indicate the fully qualified module path
+    as resolved by the type-checker (e.g., both Obj.magic and Stdlib.Obj.magic
+    appear as "Stdlib!.Obj.magic" in the typedtree) *)
+let parse_name str =
+  (* Remove unique suffix like /123 if present *)
+  let str =
+    match String.index_opt str '/' with
+    | Some i -> String.sub str 0 i
+    | None -> str
+  in
+  (* Split by . to get components *)
+  let parts = String.split_on_char '.' str in
+  match List.rev parts with
+  | [] -> { prefix = []; base = "" }
+  | base :: rev_modules ->
+      (* Process modules to handle ! separator - remove it as it's just a marker *)
+      let prefix =
+        List.fold_left
+          (fun acc m ->
+            (* Remove ! suffix from module names *)
+            let m =
+              if String.ends_with ~suffix:"!" m then
+                String.sub m 0 (String.length m - 1)
+              else m
+            in
+            m :: acc)
+          [] rev_modules
+      in
+      { prefix; base }
 
-(** Parse typedtree output - simplified for pattern matching detection *)
+(** Helper regex components for location parsing *)
+let filename = Re.rep1 (Re.compl [ Re.char '[' ])
+
+let number = Re.rep1 Re.digit
+
+let location_part =
+  Re.seq
+    [
+      Re.str "[";
+      Re.group number;
+      (* line *)
+      Re.str ",";
+      number;
+      (* char position - not captured *)
+      Re.str "+";
+      Re.group number;
+      (* column *)
+      Re.str "]";
+    ]
+
+let parse_location str =
+  (* Format: (filename[line,char+col]..filename[line,char+col]) *)
+  let loc_regex =
+    Re.compile
+      (Re.seq
+         [
+           Re.str "(";
+           Re.group filename;
+           (* filename *)
+           location_part;
+           (* start location *)
+           Re.str "..";
+           filename;
+           (* second filename - not captured *)
+           location_part;
+           (* end location *)
+           Re.str ")";
+         ])
+  in
+  try
+    let m = Re.exec loc_regex str in
+    let file = Re.Group.get m 1 in
+    let start_line = int_of_string (Re.Group.get m 2) in
+    let start_col = int_of_string (Re.Group.get m 3) in
+    let end_line = int_of_string (Re.Group.get m 4) in
+    let end_col = int_of_string (Re.Group.get m 5) in
+    Some (Location.create ~file ~start_line ~start_col ~end_line ~end_col)
+  with Not_found -> None
+
+type block = { indent : int; content : string; loc : Location.t option }
+(** A block is the fundamental unit, not a line *)
+
+(** Pre-process the raw text into a list of blocks *)
+let preprocess_text text =
+  let get_indent line =
+    let rec count i =
+      if i < String.length line && line.[i] = ' ' then count (i + 1) else i
+    in
+    count 0
+  in
+  String.split_on_char '\n' text
+  |> List.filter_map (fun line ->
+         let trimmed = String.trim line in
+         if trimmed = "" then None
+         else
+           Some
+             {
+               indent = get_indent line;
+               content = trimmed;
+               loc = parse_location line;
+             })
+
+(** Helper to peek at the next block without consuming it *)
+let peek_block (blocks_ref : block list ref) =
+  match !blocks_ref with h :: _ -> Some h | [] -> None
+
+(** Helper to consume the next block *)
+let consume_block (blocks_ref : block list ref) =
+  match !blocks_ref with
+  | h :: t ->
+      blocks_ref := t;
+      Some h
+  | [] -> None
+
+(** The main recursive parsing function *)
+let rec parse_node (blocks_ref : block list ref) (current_indent : int)
+    (parent_location : Location.t option) (acc : t) : t =
+  match peek_block blocks_ref with
+  | None -> acc (* End of input *)
+  | Some block when block.indent < current_indent -> acc (* End of this level *)
+  | Some block when block.indent > current_indent ->
+      (* Skip children that are too deeply indented - shouldn't happen at this level *)
+      let _ = consume_block blocks_ref in
+      parse_node blocks_ref current_indent parent_location acc
+  | Some block ->
+      let _ = consume_block blocks_ref in
+      (* Consume the block we're processing *)
+      let content = block.content in
+
+      (* Get the location from this block, or inherit from parent *)
+      let current_loc =
+        match block.loc with Some loc -> Some loc | None -> parent_location
+      in
+
+      (* Extract the node type (e.g., "Texp_ident") from the content *)
+      let node_type =
+        match String.index_opt content ' ' with
+        | Some i -> String.sub content 0 i
+        | None -> content
+      in
+
+      let new_acc =
+        match node_type with
+        | "expression" ->
+            (* Expression nodes contain location but not the identifier itself.
+               Parse children to find Texp_ident etc. *)
+            let child_acc =
+              parse_node blocks_ref (block.indent + 2) current_loc
+                {
+                  identifiers = [];
+                  patterns = [];
+                  modules = [];
+                  types = [];
+                  exceptions = [];
+                  variants = [];
+                }
+            in
+            (* Merge child results directly - location already propagated *)
+            {
+              identifiers = child_acc.identifiers @ acc.identifiers;
+              patterns = child_acc.patterns @ acc.patterns;
+              modules = child_acc.modules @ acc.modules;
+              types = child_acc.types @ acc.types;
+              exceptions = child_acc.exceptions @ acc.exceptions;
+              variants = child_acc.variants @ acc.variants;
+            }
+        | "pattern" ->
+            (* Similar to expression, pattern nodes contain location *)
+            let child_acc =
+              parse_node blocks_ref (block.indent + 2) current_loc
+                {
+                  identifiers = [];
+                  patterns = [];
+                  modules = [];
+                  types = [];
+                  exceptions = [];
+                  variants = [];
+                }
+            in
+            {
+              acc with
+              patterns = child_acc.patterns @ acc.patterns;
+              variants = child_acc.variants @ acc.variants;
+            }
+        | "Texp_ident" -> (
+            let name = extract_quoted_string content |> Option.map parse_name in
+            match name with
+            | Some n ->
+                (* Texp_ident doesn't have its own location; it inherits from parent *)
+                {
+                  acc with
+                  identifiers =
+                    { name = n; location = parent_location } :: acc.identifiers;
+                }
+            | None -> acc)
+        | "Tpat_var" -> (
+            let name = extract_quoted_string content |> Option.map parse_name in
+            match name with
+            | Some n ->
+                {
+                  acc with
+                  patterns =
+                    { name = n; location = parent_location } :: acc.patterns;
+                }
+            | None -> acc)
+        | "Tstr_module" -> (
+            (* Module name might be on the same line or in a child *)
+            match extract_quoted_string content with
+            | Some name_str ->
+                let name = parse_name name_str in
+                {
+                  acc with
+                  modules = { name; location = current_loc } :: acc.modules;
+                }
+            | None ->
+                (* Look in children for module_binding with the name *)
+                let child_acc =
+                  parse_node blocks_ref (block.indent + 2) current_loc
+                    {
+                      identifiers = [];
+                      patterns = [];
+                      modules = [];
+                      types = [];
+                      exceptions = [];
+                      variants = [];
+                    }
+                in
+                { acc with modules = child_acc.modules @ acc.modules })
+        | "module_binding" -> (
+            (* Module name is typically on the next line *)
+            match peek_block blocks_ref with
+            | Some next_block when next_block.indent > block.indent -> (
+                match extract_quoted_string next_block.content with
+                | Some name_str ->
+                    let _ = consume_block blocks_ref in
+                    let name = parse_name name_str in
+                    let result =
+                      {
+                        acc with
+                        modules =
+                          { name; location = current_loc } :: acc.modules;
+                      }
+                    in
+                    (* Continue parsing children *)
+                    parse_node blocks_ref (block.indent + 2) current_loc result
+                | None ->
+                    (* Continue parsing, module name might be deeper *)
+                    parse_node blocks_ref (block.indent + 2) current_loc acc)
+            | _ -> acc)
+        | "Tstr_type" -> (
+            let name = extract_quoted_string content |> Option.map parse_name in
+            match name with
+            | Some n ->
+                {
+                  acc with
+                  types = { name = n; location = current_loc } :: acc.types;
+                }
+            | None -> acc)
+        | "Tstr_exception" -> (
+            let name = extract_quoted_string content |> Option.map parse_name in
+            match name with
+            | Some n ->
+                {
+                  acc with
+                  exceptions =
+                    { name = n; location = current_loc } :: acc.exceptions;
+                }
+            | None -> acc)
+        | "Tpat_construct" -> (
+            let name = extract_quoted_string content |> Option.map parse_name in
+            match name with
+            | Some n ->
+                {
+                  acc with
+                  variants =
+                    { name = n; location = parent_location } :: acc.variants;
+                }
+            | None -> acc)
+        | _ ->
+            (* For unrecognized nodes, still parse children in case they contain something useful *)
+            let child_acc =
+              parse_node blocks_ref (block.indent + 2) current_loc
+                {
+                  identifiers = [];
+                  patterns = [];
+                  modules = [];
+                  types = [];
+                  exceptions = [];
+                  variants = [];
+                }
+            in
+            {
+              identifiers = child_acc.identifiers @ acc.identifiers;
+              patterns = child_acc.patterns @ acc.patterns;
+              modules = child_acc.modules @ acc.modules;
+              types = child_acc.types @ acc.types;
+              exceptions = child_acc.exceptions @ acc.exceptions;
+              variants = child_acc.variants @ acc.variants;
+            }
+      in
+      (* Continue parsing at the same level *)
+      parse_node blocks_ref current_indent parent_location new_acc
+
+(** Parse identifiers from blocks *)
+let parse_from_blocks (blocks : block list) : t =
+  let blocks_ref = ref blocks in
+  let initial_acc =
+    {
+      identifiers = [];
+      patterns = [];
+      modules = [];
+      types = [];
+      exceptions = [];
+      variants = [];
+    }
+  in
+  let result = parse_node blocks_ref 0 None initial_acc in
+  (* Reverse to maintain order *)
+  {
+    identifiers = List.rev result.identifiers;
+    patterns = List.rev result.patterns;
+    modules = List.rev result.modules;
+    types = List.rev result.types;
+    exceptions = List.rev result.exceptions;
+    variants = List.rev result.variants;
+  }
+
+(** Parse typedtree output from raw text *)
+let of_text text =
+  let blocks = preprocess_text text in
+  parse_from_blocks blocks
+
+(** Parse typedtree output from JSON (legacy) *)
 let of_json json =
   match json with
-  | `String str ->
+  | `String str -> of_text str
+  | _ ->
       {
-        has_pattern_match = has_pattern_match_indicators str;
-        case_count = count_cases_in_string str;
-        function_info = None;
-        (* Simplified for now *)
+        identifiers = [];
+        patterns = [];
+        modules = [];
+        types = [];
+        exceptions = [];
+        variants = [];
       }
-  | _ -> { has_pattern_match = false; case_count = 0; function_info = None }
 
-(** Check if has pattern matching *)
-let has_pattern_matching t = t.has_pattern_match
+(** Parse typedtree output from JSON with filename correction *)
+let of_json_with_filename json original_filename =
+  match json with
+  | `String str ->
+      let result = of_text str in
+      (* Fix filenames in all locations *)
+      let fix_location_filename loc =
+        match loc with
+        | None -> None
+        | Some l -> Some { l with Location.file = original_filename }
+      in
+      let fix_elt elt =
+        { elt with location = fix_location_filename elt.location }
+      in
+      {
+        identifiers = List.map fix_elt result.identifiers;
+        patterns = List.map fix_elt result.patterns;
+        modules = List.map fix_elt result.modules;
+        types = List.map fix_elt result.types;
+        exceptions = List.map fix_elt result.exceptions;
+        variants = List.map fix_elt result.variants;
+      }
+  | _ ->
+      {
+        identifiers = [];
+        patterns = [];
+        modules = [];
+        types = [];
+        exceptions = [];
+        variants = [];
+      }
 
-(** Get case count *)
-let get_case_count t = t.case_count
+(** Convert a structured name to a string *)
+let name_to_string (n : name) =
+  match n.prefix with
+  | [] -> n.base
+  | prefix -> String.concat "." prefix ^ "." ^ n.base
 
 (** Pretty print *)
-let pp ppf t =
-  Fmt.pf ppf "{ pattern_match: %b; cases: %d }" t.has_pattern_match t.case_count
+let pp ppf t = Fmt.pf ppf "{ identifiers: %d }" (List.length t.identifiers)

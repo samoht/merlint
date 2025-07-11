@@ -93,7 +93,9 @@ let check_test_file_exports filename content =
         Issue.Test_exports_module_name
           {
             filename;
-            location = Location.create ~file:filename ~line:1 ~col:0;
+            location =
+              Location.create ~file:filename ~start_line:1 ~start_col:0
+                ~end_line:1 ~end_col:0;
             module_name = module_base;
           };
       ]
@@ -138,7 +140,9 @@ let check_test_mli_file filename content =
         Issue.Test_exports_module_name
           {
             filename;
-            location = Location.create ~file:filename ~line:1 ~col:0;
+            location =
+              Location.create ~file:filename ~start_line:1 ~start_col:0
+                ~end_line:1 ~end_col:0;
             module_name = "incorrect interface";
           };
       ]

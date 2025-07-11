@@ -1,6 +1,6 @@
 (** OCamlmerlin browse output - for finding value bindings and pattern info *)
 
-type location = Location.extended
+type location = Location.t
 type pattern_info = { has_pattern_match : bool; case_count : int }
 
 type value_binding = {
@@ -36,8 +36,8 @@ let extract_location (json : Yojson.Safe.t) =
           let end_col = extract_pos end_p "col" in
           if filename <> "" && start_line > 0 then
             Some
-              (Location.create_extended ~file:filename ~start_line ~start_col
-                 ~end_line ~end_col)
+              (Location.create ~file:filename ~start_line ~start_col ~end_line
+                 ~end_col)
           else None
       | _ -> None)
   | `Bool _ | `Float _ | `Int _ | `Intlit _ | `List _ | `Null | `String _ ->

@@ -1,77 +1,179 @@
-(** Tests for Parsetree module *)
-
-open Merlint.Parsetree
+open Merlint
 
 let test_parse_empty () =
   let json = `String "" in
-  let result = of_json json in
-  Alcotest.(check bool) "no function" false (has_function result);
-  Alcotest.(check bool) "no match" false (has_pattern_matching result);
-  Alcotest.(check int) "no cases" 0 (get_case_count result)
+  let result = Parsetree.of_json json in
+  Alcotest.(check int) "no patterns" 0 (List.length result.patterns);
+  Alcotest.(check int) "no identifiers" 0 (List.length result.identifiers)
 
-let test_parse_with_function () =
+let test_parse_str_usage () =
   let json =
     `String
-      "structure_item (test.ml[1,0+0]..[3,50+1])\n\
-      \  Pstr_value Nonrec\n\
-      \    value_binding (test.ml[1,4+0]..[3,50+1])\n\
-      \      Ppat_var \"foo\" (test.ml[1,8+4]..[1,8+7])\n\
-      \      Pexp_fun"
+      {|[
+  structure_item (test.ml[1,0+0]..test.ml[1,0+31])
+    Pstr_value Nonrec
+    [
+      <def>
+        pattern (test.ml[1,0+4]..test.ml[1,0+11])
+          Ppat_var "pattern" (test.ml[1,0+4]..test.ml[1,0+11])
+        expression (test.ml[1,0+14]..test.ml[1,0+31])
+          Pexp_apply
+          expression (test.ml[1,0+14]..test.ml[1,0+24])
+            Pexp_ident "Str.regexp" (test.ml[1,0+14]..test.ml[1,0+24])
+          [
+            <arg>
+            Nolabel
+              expression (test.ml[1,0+25]..test.ml[1,0+31])
+                Pexp_constant
+                constant (test.ml[1,0+25]..test.ml[1,0+31])
+                  PConst_string("test",(test.ml[1,0+26]..test.ml[1,0+30]),None)
+          ]
+    ]
+]|}
   in
-  let result = of_json json in
-  Alcotest.(check bool) "has function" true (has_function result);
-  Alcotest.(check bool) "no match" false (has_pattern_matching result)
+  let result = Parsetree.of_json json in
+  Alcotest.(check int) "has identifiers" 1 (List.length result.identifiers);
+  Alcotest.(check int) "has patterns" 1 (List.length result.patterns);
 
-let test_parse_with_match () =
+  (* Check the Str.regexp identifier *)
+  match result.identifiers with
+  | [ id ] ->
+      Alcotest.(check string)
+        "str identifier" "Str.regexp"
+        (Parsetree.name_to_string id.name);
+      Alcotest.(check bool) "has location" true (Option.is_some id.location)
+  | _ -> Alcotest.fail "Expected exactly one identifier"
+
+let test_parse_catch_all () =
   let json =
     `String
-      "Pexp_match (test.ml[2,10+5]..[5,50+1])\n\
-      \  Pexp_ident \"x\"\n\
-      \  case\n\
-      \    Ppat_construct \"Some\"\n\
-      \  case\n\
-      \    Ppat_construct \"None\""
+      {|[
+  structure_item (test.ml[1,0+0]..test.ml[1,0+29])
+    Pstr_eval
+    expression (test.ml[1,0+0]..test.ml[1,0+29])
+      Pexp_try
+      expression (test.ml[1,0+4]..test.ml[1,0+14])
+        Pexp_apply
+        expression (test.ml[1,0+4]..test.ml[1,0+11])
+          Pexp_ident "List.hd" (test.ml[1,0+4]..test.ml[1,0+11])
+        [
+          <arg>
+          Nolabel
+            expression (test.ml[1,0+12]..test.ml[1,0+14])
+              Pexp_construct "[]" (test.ml[1,0+12]..test.ml[1,0+14])
+              None
+        ]
+      [
+        <case>
+          pattern (test.ml[1,0+20]..test.ml[1,0+21])
+            Ppat_any
+          expression (test.ml[1,0+25]..test.ml[1,0+29])
+            attribute "merlin.loc"
+              []
+            Pexp_construct "None" (test.ml[1,0+25]..test.ml[1,0+29])
+            None
+      ]
+]|}
   in
-  let result = of_json json in
-  Alcotest.(check bool) "has match" true (has_pattern_matching result);
-  Alcotest.(check int) "case count" 2 (get_case_count result)
+  let result = Parsetree.of_json json in
+  Alcotest.(check int) "has identifiers" 1 (List.length result.identifiers);
+  Alcotest.(check int) "has patterns" 1 (List.length result.patterns);
 
-let test_parse_function_cases () =
+  (* Check the catch-all pattern *)
+  match result.patterns with
+  | [ pattern ] ->
+      Alcotest.(check string)
+        "catch-all pattern" "_"
+        (Parsetree.name_to_string pattern.name);
+      Alcotest.(check bool)
+        "has location" true
+        (Option.is_some pattern.location)
+  | _ -> Alcotest.fail "Expected exactly one pattern"
+
+let test_parse_obj_magic () =
   let json =
     `String
-      "Pexp_function (test.ml[1,0+0]..[10,100+1])\n\
-      \  case\n\
-      \    pattern\n\
-      \  case\n\
-      \    pattern\n\
-      \  case\n\
-      \    pattern"
+      {|[
+  structure_item (test.ml[1,0+0]..test.ml[1,0+25])
+    Pstr_value Nonrec
+    [
+      <def>
+        pattern (test.ml[1,0+4]..test.ml[1,0+13])
+          Ppat_var "dangerous" (test.ml[1,0+4]..test.ml[1,0+13])
+        expression (test.ml[1,0+16]..test.ml[1,0+25])
+          Pexp_apply
+          expression (test.ml[1,0+16]..test.ml[1,0+25])
+            Pexp_ident "Obj.magic" (test.ml[1,0+16]..test.ml[1,0+25])
+          [
+            <arg>
+            Nolabel
+              expression (test.ml[1,0+26]..test.ml[1,0+28])
+                Pexp_constant
+                constant (test.ml[1,0+26]..test.ml[1,0+28])
+                  PConst_int(42,None)
+          ]
+    ]
+]|}
   in
-  let result = of_json json in
-  Alcotest.(check bool) "has match" true (has_pattern_matching result);
-  Alcotest.(check int) "case count" 3 (get_case_count result)
+  let result = Parsetree.of_json json in
+  Alcotest.(check int) "has identifiers" 1 (List.length result.identifiers);
+  Alcotest.(check int) "has patterns" 1 (List.length result.patterns);
 
-let test_pp () =
-  let t =
-    {
-      has_function = true;
-      has_match = true;
-      case_count = 5;
-      is_data = false;
-      raw_text = "";
-    }
+  (* Check the Obj.magic identifier *)
+  match result.identifiers with
+  | [ id ] ->
+      Alcotest.(check string)
+        "obj magic identifier" "Obj.magic"
+        (Parsetree.name_to_string id.name)
+  | _ -> Alcotest.fail "Expected exactly one identifier"
+
+let test_fallback_integration () =
+  (* Test with mock parsetree data that would normally come from a file with type errors *)
+  let mock_parsetree =
+    Parsetree.
+      {
+        identifiers =
+          [
+            {
+              name = { prefix = [ "Str" ]; base = "regexp" };
+              location =
+                Some
+                  Location.
+                    {
+                      file = "test.ml";
+                      start_line = 1;
+                      start_col = 14;
+                      end_line = 1;
+                      end_col = 24;
+                    };
+            };
+          ];
+        patterns = [];
+        modules = [];
+        types = [];
+        exceptions = [];
+        variants = [];
+      }
   in
-  let str = Fmt.str "%a" pp t in
-  Alcotest.(check string)
-    "pretty print" "{ function: true; match: true; cases: 5 }" str
+
+  let issues =
+    Style.check_parsetree ~identifiers:mock_parsetree.identifiers
+      ~patterns:mock_parsetree.patterns
+  in
+
+  (* Should find the Str usage issue *)
+  Alcotest.(check bool) "found str usage" true (List.length issues >= 1);
+  match issues with
+  | Issue.Use_str_module _ :: _ -> ()
+  | _ -> Alcotest.fail "Expected Str module usage issue"
 
 let tests =
   [
     Alcotest.test_case "parse_empty" `Quick test_parse_empty;
-    Alcotest.test_case "parse_with_function" `Quick test_parse_with_function;
-    Alcotest.test_case "parse_with_match" `Quick test_parse_with_match;
-    Alcotest.test_case "parse_function_cases" `Quick test_parse_function_cases;
-    Alcotest.test_case "pp" `Quick test_pp;
+    Alcotest.test_case "parse_str_usage" `Quick test_parse_str_usage;
+    Alcotest.test_case "parse_catch_all" `Quick test_parse_catch_all;
+    Alcotest.test_case "parse_obj_magic" `Quick test_parse_obj_magic;
+    Alcotest.test_case "fallback_integration" `Quick test_fallback_integration;
   ]
 
 let suite = [ ("parsetree", tests) ]

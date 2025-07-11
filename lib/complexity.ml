@@ -73,9 +73,8 @@ let analyze_value_binding config binding =
       (* Can't determine from browse *)
       let has_pattern = binding.pattern_info.has_pattern_match in
       let case_count = binding.pattern_info.case_count in
-      let simple_location = Location.to_simple location in
-      create_issues config name simple_location complexity length nesting
-        has_pattern case_count
+      create_issues config name location complexity length nesting has_pattern
+        case_count
   | _ -> []
 
 (** Main entry point - analyze browse output *)
