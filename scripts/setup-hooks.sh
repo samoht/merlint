@@ -85,17 +85,8 @@ if command -v prune >/dev/null 2>&1; then
     fi
 fi
 
-# 6. Check for AI attributions
-echo -e "\n${YELLOW}Checking commit message for AI attributions...${NC}"
-COMMIT_MSG_FILE=".git/COMMIT_EDITMSG"
-if [ -f "$COMMIT_MSG_FILE" ]; then
-    if grep -E "(Co-authored-by:.*Claude|Co-authored-by:.*GPT|Co-authored-by:.*AI|🤖|Generated with|AI-generated)" "$COMMIT_MSG_FILE" >/dev/null 2>&1; then
-        echo -e "${RED}Error: Commit message contains AI/Claude attribution.${NC}"
-        echo "Please remove AI-related attributions from your commit message."
-        echo "Found pattern: $(grep -E "(Co-authored-by:.*Claude|Co-authored-by:.*GPT|Co-authored-by:.*AI|🤖|Generated with|AI-generated)" "$COMMIT_MSG_FILE" | head -1)"
-        exit 1
-    fi
-fi
+# Note: AI attribution check moved to commit-msg hook only
+# Pre-commit hook should not check commit message since it may contain old content
 
 echo -e "\n${GREEN}All pre-commit checks passed! ✨${NC}"
 EOF
