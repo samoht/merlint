@@ -69,7 +69,7 @@ The codebase follows a clean separation between library and executable:
 
 3. **Key Data Flow**:
    ```
-   OCaml files → Merlin (via ocamlmerlin) → JSON AST → 
+   OCaml files → Merlin (via ocamlmerlin) → JSON AST →
    Various rule modules → Issues → Priority sorting → Report → Exit code
    ```
 
@@ -78,6 +78,12 @@ The codebase follows a clean separation between library and executable:
 - Uses Dune's cram test framework in `test/merlint.t`
 - Test samples in `test/samples/` demonstrate various complexity scenarios
 - Tests verify both detection accuracy and proper exit codes
+
+## Documentation
+
+- **Style Guide**: `docs/STYLE_GUIDE.md` - Generated style guide based on the rules implemented in Merlint
+- **Error Codes Reference**: docs/index.html - Comprehensive list of all error codes with examples
+- Documentation is auto-generated from the rule definitions using `dune build docs/`
 
 ## Important Notes
 
