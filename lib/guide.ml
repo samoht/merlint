@@ -282,23 +282,28 @@ let w = create_widget ~visibility:Visible ~border:Without_border|};
           Rule Function_length;
           Rule Deep_nesting;
           Paragraph
-            "**Complexity Management**: Break down functions with high \
-             cyclomatic complexity into smaller, focused helper functions with \
-             clear names.";
+            "**Complexity Management**: Break down functions with high \n\
+            \             cyclomatic complexity into smaller, focused helper \
+             functions with \n\
+            \             clear names.";
           Rule Complexity;
           Paragraph
-            "**Composition over Abstraction**: Favor the composition of small, \
-             concrete functions to build up complex behavior. Avoid deep \
-             abstractions and complex class hierarchies.";
+            "**Composition over Abstraction**: Favor the composition of small, \n\
+            \             concrete functions to build up complex behavior. \
+             Avoid deep \n\
+            \             abstractions and complex class hierarchies.";
           Paragraph
-            "**Data-Oriented Design**: Design functions to operate on simple, \
-             immutable data structures (records, variants, etc.). Avoid \
-             creating complex objects with hidden internal state.";
+            "**Data-Oriented Design**: Design functions to operate on simple, \n\
+            \             immutable data structures (records, variants, etc.). \
+             Avoid \n\
+            \             creating complex objects with hidden internal state.";
           Paragraph
-            "**Avoid Premature Generalization**: Write code that solves the \
-             problem at hand. Avoid adding unnecessary complexity or \
-             generality that is not required by the current needs of the \
-             project.";
+            "**Avoid Premature Generalization**: Write code that solves the \n\
+            \             problem at hand. Avoid adding unnecessary complexity \
+             or \n\
+            \             generality that is not required by the current needs \
+             of the \n\
+            \             project.";
         ] );
     Section
       ( "Logging",

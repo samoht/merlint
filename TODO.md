@@ -39,6 +39,12 @@
   - Optional argument placement: Optional args should come before mandatory ones
   - No useless open: Avoid `open` when only using 1-2 values from a module
 
+- [ ] Add KISS-derived rules for simplicity
+  - E342: Limit function parameters (max 4-5, suggest using records)
+  - E343: Flag complex boolean expressions (suggest extracting to named functions)
+  - E345: No single-letter variable names (except common idioms like x/xs, i)
+  - E348: No magic numbers (require named constants)
+
 - [ ] Add documentation style section for E410
   - E410 exists in error codes but has no reference in style guides
   - Add section to lib/guide.ml explaining expected documentation style

@@ -358,7 +358,9 @@ This issue means your code has too many nested conditions making it hard to
 follow. Fix it by using pattern matching, early returns with 'when' guards,
 or extracting nested logic into helper functions.
 
-**Complexity Management**: Break down functions with high cyclomatic complexity into smaller, focused helper functions with clear names.
+**Complexity Management**: Break down functions with high 
+             cyclomatic complexity into smaller, focused helper functions with 
+             clear names.
 
 ### [E001] High Cyclomatic Complexity
 
@@ -406,11 +408,18 @@ let process_data data user =
 ```
 
 
-**Composition over Abstraction**: Favor the composition of small, concrete functions to build up complex behavior. Avoid deep abstractions and complex class hierarchies.
+**Composition over Abstraction**: Favor the composition of small, 
+             concrete functions to build up complex behavior. Avoid deep 
+             abstractions and complex class hierarchies.
 
-**Data-Oriented Design**: Design functions to operate on simple, immutable data structures (records, variants, etc.). Avoid creating complex objects with hidden internal state.
+**Data-Oriented Design**: Design functions to operate on simple, 
+             immutable data structures (records, variants, etc.). Avoid 
+             creating complex objects with hidden internal state.
 
-**Avoid Premature Generalization**: Write code that solves the problem at hand. Avoid adding unnecessary complexity or generality that is not required by the current needs of the project.
+**Avoid Premature Generalization**: Write code that solves the 
+             problem at hand. Avoid adding unnecessary complexity or 
+             generality that is not required by the current needs of the 
+             project.
 
 ## Logging
 
