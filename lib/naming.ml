@@ -307,7 +307,7 @@ let check ~filename ~outline (typedtree : Typedtree.t) =
   let structure_issues = check_parsed_structure filename typedtree in
 
   (* Check long identifier names using the parsed structure *)
-  let max_underscores = 3 in
+  let max_underscores = 4 in
   let all_elts =
     typedtree.Typedtree.identifiers @ typedtree.Typedtree.patterns
     @ typedtree.Typedtree.modules @ typedtree.Typedtree.types

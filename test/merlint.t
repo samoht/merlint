@@ -220,9 +220,10 @@ Test Printf/Format module usage
   ✓ Code Quality (0 total issues)
   ✗ Code Style (4 total issues)
     [E205] Outdated Printf/Format Modules
-    This issue means you're using outdated Printf/Format modules for formatting.
-    Fix it by switching to the modern Fmt module: add 'fmt' to your dune
-    dependencies and replace Printf/Format functions with Fmt equivalents.
+    This is a style suggestion. While Printf and Format are part of OCaml's
+    standard library and perfectly fine to use, the Fmt library offers additional
+    features like custom formatters and better composability. Consider using Fmt
+    for new code, but Printf/Format remain valid choices for many use cases.
     - samples/uses_printf.ml:2:2: Use Fmt module instead of Printf
     - samples/uses_printf.ml:3:2: Use Fmt module instead of Printf
     - samples/uses_printf.ml:6:2: Use Fmt module instead of Format

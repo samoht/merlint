@@ -63,11 +63,13 @@ or extracting nested logic into helper functions.|};
       {|This issue means you're using unsafe type casting that can crash your
 program. Fix it by replacing Obj.magic with proper type definitions,
 variant types, or GADTs to represent different cases safely.|};
-    Rule.v ~issue:Catch_all_exception ~title:"Catch-All Exception Handlers"
+    Rule.v ~issue:Catch_all_exception ~title:"Underscore Pattern Warning"
       ~category:Security_safety
-      {|This issue means you're catching all exceptions which can hide bugs. Fix it
-by replacing catch-all handlers with specific exception patterns and add
-explicit handlers for each expected exception type.|};
+      {|WARNING: This rule currently detects ANY underscore (_) pattern, not just 
+exception handlers. This is a known limitation. The rule is intended to catch
+dangerous patterns like 'try ... with _ ->' but currently flags all uses of _.
+To avoid this warning, use named bindings with underscore prefix (e.g., _unused)
+for intentionally unused values. This will be fixed in a future version.|};
     Rule.v ~issue:Silenced_warning ~title:"Silenced Compiler Warnings"
       ~category:Security_safety
       {|This issue means you're hiding compiler warnings that indicate potential
@@ -94,10 +96,10 @@ let () = Fmt.pr "Processing %d items...@." count
 let pp_error ppf (msg, line) = 
   Fmt.pf ppf "Error: %s at line %d" msg line|};
         ]
-      {|This issue means you're using outdated Printf/Format modules for
-formatting. Fix it by switching to the modern Fmt module: add 'fmt' to your
-dune dependencies and replace Printf/Format functions with Fmt
-equivalents.|};
+      {|This is a style suggestion. While Printf and Format are part of OCaml's
+standard library and perfectly fine to use, the Fmt library offers additional
+features like custom formatters and better composability. Consider using Fmt
+for new code, but Printf/Format remain valid choices for many use cases.|};
     (* Naming Convention Rules *)
     Rule.v ~issue:Variant_naming ~title:"Variant Naming Convention"
       ~category:Naming_conventions
@@ -131,7 +133,7 @@ Fix them by renaming to snake_case (e.g., myValue → my_value).|};
 them by renaming to snake_case (e.g., myType → my_type).|};
     Rule.v ~issue:Long_identifier ~title:"Long Identifier Names"
       ~category:Naming_conventions
-      {|This issue means your identifier has too many underscores making it hard to
+      {|This issue means your identifier has too many underscores (more than 4) making it hard to
 read. Fix it by removing redundant prefixes and suffixes:
 
 • In test files: remove 'test_' prefix (e.g., test_check_foo → check_foo or

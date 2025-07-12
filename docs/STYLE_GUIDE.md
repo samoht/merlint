@@ -43,10 +43,10 @@ and a version number to ensure consistent formatting.
 
 ### [E205] Outdated Printf/Format Modules
 
-This issue means you're using outdated Printf/Format modules for
-formatting. Fix it by switching to the modern Fmt module: add 'fmt' to your
-dune dependencies and replace Printf/Format functions with Fmt
-equivalents.
+This is a style suggestion. While Printf and Format are part of OCaml's
+standard library and perfectly fine to use, the Fmt library offers additional
+features like custom formatters and better composability. Consider using Fmt
+for new code, but Printf/Format remain valid choices for many use cases.
 
 **Examples:**
 
@@ -210,11 +210,13 @@ let find_user_id json =
 
 **No Broad Exceptions**: Never use `try ... with _ -> ...`. Always match on specific exceptions.
 
-### [E105] Catch-All Exception Handlers
+### [E105] Underscore Pattern Warning
 
-This issue means you're catching all exceptions which can hide bugs. Fix it
-by replacing catch-all handlers with specific exception patterns and add
-explicit handlers for each expected exception type.
+WARNING: This rule currently detects ANY underscore (_) pattern, not just 
+exception handlers. This is a known limitation. The rule is intended to catch
+dangerous patterns like 'try ... with _ ->' but currently flags all uses of _.
+To avoid this warning, use named bindings with underscore prefix (e.g., _unused)
+for intentionally unused values. This will be fixed in a future version.
 
 **No Silenced Warnings**: Fix underlying issues instead of silencing compiler warnings with attributes like `[@warning "-nn"]`.
 
@@ -289,7 +291,7 @@ Fix them by renaming to snake_case (e.g., myValue → my_value).
 
 ### [E320] Long Identifier Names
 
-This issue means your identifier has too many underscores making it hard to
+This issue means your identifier has too many underscores (more than 4) making it hard to
 read. Fix it by removing redundant prefixes and suffixes:
 
 • In test files: remove 'test_' prefix (e.g., test_check_foo → check_foo or
