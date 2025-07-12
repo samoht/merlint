@@ -2,10 +2,11 @@
 
 ## High Priority
 
-- [ ] Fix E305 Module Naming Convention documentation
-  - Current docs say "Snake_case" but should be "lowercase_with_underscores"
-  - Example should be `MyModule` → `my_module` not `My_module`
-  - Update hints.ml and regenerate documentation
+- [ ] Enforce 1:1 mapping between test files and library modules
+  - Each lib/*.ml file should have a corresponding test/test_*.ml file
+  - No extra test files without corresponding library modules
+  - Tests for a feature should go in the test file for the module implementing it
+  - Example: tests for E335 (underscore bindings) go in test_naming.ml since the check is in naming.ml
 
 - [ ] Store configuration in .merlintrc or similar config file
   - Currently --rules flag is command-line only
@@ -62,24 +63,6 @@
   - These test files exist but don't follow the 1:1 correspondence rule
   - Decide if they should be renamed or excluded from the check
 
-## Recently Completed
-
-- [x] Add E335 rule to detect used underscore-prefixed bindings
-  - Variables prefixed with underscore that are actually used in code
-  - Implemented detection logic that tracks usage locations
-  - Added comprehensive tests
-
-- [x] Allow turning off checks with CLI options
-  - Implemented --rules flag with simple format: all-E110-E205, E300+E305, all-100..199
-  - No quotes needed for better usability
-
-- [x] Implement E330 Redundant Module Names 
-  - Detects when functions/types redundantly include module name
-  - Works for both functions and types
-
-- [x] Implement Unified Style Guide Data Model
-  - Created lib/data.ml with all style guide content
-  - Generates both STYLE_GUIDE.md and error-codes.html from single source
 
 ## Function Naming Convention Rule
 

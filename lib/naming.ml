@@ -55,8 +55,30 @@ let check_value_name name =
   if name <> expected && name <> String.lowercase_ascii name then Some expected
   else None
 
+let convert_module_name name =
+  (* Similar to to_snake_case but preserves the capital first letter for modules *)
+  if String.length name = 0 then name
+  else
+    let first_char = String.make 1 name.[0] in
+    let rest = String.sub name 1 (String.length name - 1) in
+    let rec convert acc = function
+      | [] -> String.concat "_" (List.rev acc)
+      | c :: rest when c >= 'A' && c <= 'Z' ->
+          if acc = [] then
+            convert [ String.make 1 (Char.lowercase_ascii c) ] rest
+          else convert (String.make 1 (Char.lowercase_ascii c) :: acc) rest
+      | c :: rest -> (
+          let ch = String.make 1 c in
+          match acc with
+          | [] -> convert [ ch ] rest
+          | h :: t -> convert ((h ^ ch) :: t) rest)
+    in
+    let converted_rest = convert [] (String.to_seq rest |> List.of_seq) in
+    if converted_rest = "" then first_char
+    else first_char ^ "_" ^ converted_rest
+
 let check_module_name name =
-  let expected = to_snake_case name in
+  let expected = convert_module_name name in
   if name <> expected then Some expected else None
 
 (** Check if an item name has redundant module prefix *)
