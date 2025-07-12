@@ -2,52 +2,16 @@
 
 ## High Priority
 
-- [x] Detect when a function or type has the name of the module it belongs to
-  - Examples: `Process.process*` or `History.find_history`
-  - This is redundant naming and should be flagged as a style issue
-  - Should work for functions, types, and module names
-  - DONE: Implemented as E330 - Redundant Module Names
-
-- [x] Implement Unified Style Guide Data Model
-  1. **Create Data Model** (lib/data.ml and lib/data.mli)
-     - Define OCaml types for style guide sections, paragraphs, rules
-     - Include placeholders for rule references (e.g., [E205])
-  2. **Migrate Content** 
-     - Translate prompts/coding-style.md into OCaml data structures
-     - Preserve all prose, examples, and structure
-  3. **Implement Generators**
-     - Update bin/generate_docs.ml to generate both:
-       - docs/STYLE_GUIDE.md - Narrative "textbook" for learning
-       - docs/error-codes.html - Quick reference "dictionary" 
-     - Both generated from same source (lib/data.ml + lib/hints.ml)
-  4. **Update Build System**
-     - Update dune files to compile Data module
-     - Add promotion rules for both generated files
-  5. **Clean Up**
-     - Remove prompts/coding-style.md after verification
-     - This creates single source of truth for all style information
-
 - [ ] Fix E305 Module Naming Convention documentation
   - Current docs say "Snake_case" but should be "lowercase_with_underscores"
   - Example should be `MyModule` → `my_module` not `My_module`
   - Update hints.ml and regenerate documentation
 
-- [x] Allow to turn off some checks with CLI options
-  - Added enhanced --rules flag supporting multiple formats:
-    - Legacy format: A-E110-E205 (all except E110 and E205)
-    - OCaml-style: "+all -110 -205" or "-100..199" for ranges
-    - Selective: "+E300 +E305" to enable only specific checks
-  - Implemented range support (e.g., -100..199 disables all security/safety checks)
-  - TODO: Store configuration in .merlintrc or similar config file
+- [ ] Store configuration in .merlintrc or similar config file
+  - Currently --rules flag is command-line only
+  - Would be useful to have project-level configuration
 
 ## Medium Priority
-
-- [x] Add a rule to detect _ prefixed variables
-  - Variables prefixed with underscore indicate unused/ignored values
-  - Should check if these variables are actually used in the code
-  - If used, suggest removing the underscore prefix
-  - Helps maintain clarity about which variables are intentionally unused
-  - DONE: Implemented as E335 - Used Underscore-Prefixed Binding
 
 - [ ] Add documentation style section for E410
   - E410 exists in error codes but has no reference in style guides
@@ -89,11 +53,6 @@
 
 ## Low Priority
 
-- [x] Consolidate style guide documentation
-  - Previously fragmented across prompts/code.md, test.md, tests.md
-  - Created single STYLE_GUIDE.md generated from lib/guide.ml
-  - Reduces risk of conflicting or incomplete advice
-
 - [ ] Merge redundant testing guides
   - prompts/test.md and prompts/tests.md have overlapping content
   - Creates confusion about which is authoritative
@@ -102,6 +61,25 @@
 - [ ] Investigate why we have test_style_rules and test_rules_integration that don't correspond to any lib/*.ml files
   - These test files exist but don't follow the 1:1 correspondence rule
   - Decide if they should be renamed or excluded from the check
+
+## Recently Completed
+
+- [x] Add E335 rule to detect used underscore-prefixed bindings
+  - Variables prefixed with underscore that are actually used in code
+  - Implemented detection logic that tracks usage locations
+  - Added comprehensive tests
+
+- [x] Allow turning off checks with CLI options
+  - Implemented --rules flag with simple format: all-E110-E205, E300+E305, all-100..199
+  - No quotes needed for better usability
+
+- [x] Implement E330 Redundant Module Names 
+  - Detects when functions/types redundantly include module name
+  - Works for both functions and types
+
+- [x] Implement Unified Style Guide Data Model
+  - Created lib/data.ml with all style guide content
+  - Generates both STYLE_GUIDE.md and error-codes.html from single source
 
 ## Function Naming Convention Rule
 
@@ -141,9 +119,9 @@ This requires Merlin integration for accurate type analysis:
    - `find_*` functions not returning option should be `get_*`
 
 ### Current Status
-- Issue type `Bad_function_naming` is defined but not implemented
-- Placeholder function exists that returns empty list
-- Needs proper Merlin integration for type analysis
+- Issue type `Bad_function_naming` is defined and partially implemented
+- Currently checks get_/find_ naming based on return types from outline
+- Could be enhanced with more semantic analysis
 
 ### Integration with Existing Code
 This would fit well with the existing `merlin_interface.ml` module:
@@ -159,25 +137,3 @@ This would fit well with the existing `merlin_interface.ml` module:
 - Improve complexity analysis for more OCaml constructs
 - Add configuration file support for customizing thresholds
 
-## Completed
-
-- [x] Don't expect tests for dune-generated main modules
-- [x] Use dune describe to list files in the project instead of scanning
-- [x] Sort issues by severity/length
-- [x] Give a unique identifier to each error type
-- [x] Generate an HTML page with all the rules and their numbers
-- [x] Implement rule to check that test files export 'suite' instead of module name
-- [x] Implement rule to verify code doesn't silence warnings
-- [x] Move sample files from samples/ to test/samples/
-- [x] Fix test convention check to verify suite has proper Alcotest type
-- [x] Optimize dune describe calls to run once per project, not once per file
-- [x] Fix executable detection using parsexp instead of regex
-- [x] Create test coverage check ensuring 1:1 correspondence between lib and test files
-- [x] Use dune describe to find library modules instead of hardcoding paths
-- [x] Create test files for core modules: complexity, doc, dune, format, issue, location
-- [x] Create test files for: merlin, naming, report, rules, style, warning_checks modules
-- [x] Add Test_parser and Test_sexp suites to test runner (commented out as modules don't exist)
-- [x] Remove raw JSON from codebase and use structured types
-- [x] Implement verbose logging (-v and -vv flags)
-- [x] Fix various bugs in merlint OCaml linter
-- [x] Refactor long functions and replace Printf with Fmt in test coverage module
