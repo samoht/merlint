@@ -9,7 +9,7 @@ body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     line-height: 1.6;
     color: #333;
-    max-width: 1200px;
+    max-width: 1400px;
     margin: 0 auto;
     padding: 20px;
     background: #f8f9fa;
@@ -18,63 +18,150 @@ h1 {
     color: #2c3e50;
     border-bottom: 3px solid #3498db;
     padding-bottom: 10px;
+    margin-bottom: 30px;
 }
 h2 {
     color: #34495e;
     margin-top: 40px;
+    margin-bottom: 20px;
     border-bottom: 1px solid #bdc3c7;
     padding-bottom: 8px;
 }
+p {
+    margin: 1em 0;
+    line-height: 1.7;
+}
+code {
+    background-color: #f4f4f4;
+    padding: 2px 4px;
+    border-radius: 3px;
+    font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+    font-size: 0.9em;
+    color: #e83e8c;
+}
+pre {
+    background-color: #f8f8f8;
+    color: #333;
+    padding: 12px 16px;
+    border-radius: 6px;
+    overflow-x: auto;
+    margin: 0.5em 0;
+    border: 1px solid #e1e4e8;
+}
+pre code {
+    background-color: transparent;
+    color: inherit;
+    padding: 0;
+    font-size: 0.875em;
+    line-height: 1.5;
+    font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+    white-space: pre;
+}
 .error-card {
     background: white;
-    border: 1px solid #ddd;
+    border: 1px solid #e5e7eb;
     border-radius: 8px;
-    padding: 20px;
-    margin: 20px 0;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    padding: 18px 20px;
+    margin: 16px 0;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    max-width: 1400px;
 }
 .error-code {
-    font-family: 'Courier New', monospace;
-    font-size: 1.2em;
+    font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+    font-size: 1.1em;
     font-weight: bold;
-    color: #e74c3c;
+    color: #dc2626;
     display: inline-block;
     background: #fee;
-    padding: 4px 8px;
+    padding: 3px 8px;
     border-radius: 4px;
     margin-right: 10px;
 }
 .error-title {
-    font-size: 1.1em;
-    font-weight: bold;
-    color: #2c3e50;
+    font-size: 1.05em;
+    font-weight: 600;
+    color: #1f2937;
     display: inline-block;
 }
 .error-hint {
-    margin-top: 15px;
-    padding: 15px;
-    background: #f0f8ff;
-    border-left: 4px solid #3498db;
-    border-radius: 4px;
-    white-space: pre-wrap;
+    margin-top: 12px;
+    padding: 0;
 }
-.code-example {
-    background: #f5f5f5;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    padding: 10px;
-    margin: 10px 0;
-    overflow-x: auto;
-    font-family: 'Courier New', monospace;
+.error-hint > p {
+    padding: 12px 16px;
+    background: #eff6ff;
+    border-left: 4px solid #3b82f6;
+    border-radius: 0 4px 4px 0;
+    margin: 0 0 12px 0;
+    line-height: 1.6;
+    color: #1e40af;
+}
+.examples-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin: 20px 0;
+}
+@media (max-width: 968px) {
+    .examples-grid {
+        grid-template-columns: 1fr;
+    }
+}
+.example {
+    border-radius: 6px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+.example.bad {
+    border: 1px solid #fecaca;
+    background-color: #fef2f2;
+}
+.example.good {
+    border: 1px solid #bbf7d0;
+    background-color: #f0fdf4;
+}
+.example h4 {
+    margin: 0;
+    padding: 8px 12px;
+    font-size: 0.8em;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.example.bad h4 {
+    background-color: #fecaca;
+    color: #991b1b;
+}
+.example.good h4 {
+    background-color: #bbf7d0;
+    color: #14532d;
+}
+.example-description {
+    padding: 8px 12px;
+    margin: 0;
+    color: #4b5563;
     font-size: 0.9em;
+    line-height: 1.5;
 }
-.bad-example {
-    color: #e74c3c;
-    font-weight: bold;
+.example pre {
+    margin: 0;
+    padding: 12px 16px;
+    border-radius: 0;
+    border-top: 1px solid rgba(0,0,0,0.1);
+    background-color: #f8f8f8;
+    font-size: 0.85em;
+    overflow-x: auto;
 }
-.good-example {
-    color: #27ae60;
-    font-weight: bold;
+.example.bad pre {
+    background-color: #fffafa;
+}
+.example.good pre {
+    background-color: #f8fffe;
+}
+.example pre code {
+    background-color: transparent;
+    color: #333;
+    padding: 0;
 }
 .category {
     color: #7f8c8d;
@@ -88,15 +175,29 @@ h2 {
     padding: 20px;
     margin-bottom: 30px;
 }
+.toc h2 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    border: none;
+    padding-bottom: 0;
+}
 .toc ul {
     list-style-type: none;
-    padding-left: 20px;
+    padding-left: 0;
+    margin: 0;
+}
+.toc li {
+    margin: 8px 0;
 }
 .toc a {
     color: #3498db;
     text-decoration: none;
+    display: block;
+    padding: 4px 0;
+    transition: color 0.2s ease;
 }
 .toc a:hover {
+    color: #2980b9;
     text-decoration: underline;
 }
 .back-to-top {
@@ -109,9 +210,52 @@ h2 {
     border-radius: 5px;
     text-decoration: none;
     opacity: 0.8;
+    transition: opacity 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 .back-to-top:hover {
     opacity: 1;
+}
+/* Additional styling */
+.error-code {
+    font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+    font-size: 1.1em;
+    font-weight: bold;
+    color: #dc2626;
+    display: inline-block;
+    background: #fee;
+    padding: 3px 8px;
+    border-radius: 4px;
+    margin-right: 10px;
+}
+.error-title {
+    font-size: 1.05em;
+    font-weight: 600;
+    color: #1f2937;
+    display: inline-block;
+}
+
+/* Syntax highlighting - minimal but effective */
+.kw { color: #0000ff; font-weight: 600; }  /* keywords */
+.st { color: #a31515; }  /* strings */
+.cm { color: #008200; font-style: italic; }  /* comments */
+.nu { color: #098658; }  /* numbers */
+.cn { color: #267f99; }  /* constructors */
+.md { color: #267f99; font-weight: 600; }  /* modules */
+.fn { color: #795E26; }  /* functions */
+
+/* Responsive design */
+@media (max-width: 768px) {
+    body {
+        padding: 10px;
+    }
+    .error-card {
+        padding: 15px;
+    }
+    pre {
+        padding: 10px;
+        font-size: 0.8em;
+    }
 }
     </style>
 </head>
@@ -140,43 +284,44 @@ h2 {
     </div>
     <div class="error-hint"><p>This issue means your functions have too much conditional logic. Fix them
 by extracting complex logic into smaller helper functions with clear names
-that describe their purpose.</p>
+that describe their purpose.</p><div class="examples-grid">
 <div class="example bad">
   <h4>BAD</h4>
   
-  <pre><code class="language-ocaml">let process_data data user =
-  if data.valid then
-    if user.authenticated then
-      if data.size < 1000 then
-        if has_permission user data then
-          (* complex processing logic *)
-        else Error "No permission"
-      else Error "Data too large"
-    else Error "Not authenticated"
-  else Error "Invalid data"</code></pre>
+  <pre><code><span class="kw">let</span> process_data data user =
+  <span class="kw">if</span> data.valid <span class="kw">then</span>
+    <span class="kw">if</span> user.authenticated <span class="kw">then</span>
+      <span class="kw">if</span> data.size &lt; <span class="nu">1000</span> <span class="kw">then</span>
+        <span class="kw">if</span> has_permission user data <span class="kw">then</span>
+          <span class="cm">(* complex processing logic *)</span>
+        <span class="kw">else</span> <span class="cn">Error</span> &quot;<span class="cn">No</span> permission&quot;
+      <span class="kw">else</span> <span class="cn">Error</span> &quot;<span class="cn">Data</span> too large&quot;
+    <span class="kw">else</span> <span class="cn">Error</span> &quot;<span class="cn">Not</span> authenticated&quot;
+  <span class="kw">else</span> <span class="cn">Error</span> &quot;<span class="cn">Invalid</span> data&quot;</code></pre>
 </div>
 <div class="example good">
   <h4>GOOD</h4>
   
-  <pre><code class="language-ocaml">let validate_data data = 
-  if not data.valid then Error "Invalid data" else Ok ()
+  <pre><code><span class="kw">let</span> validate_data data = 
+  <span class="kw">if</span> <span class="kw">not</span> data.valid <span class="kw">then</span> <span class="cn">Error</span> &quot;<span class="cn">Invalid</span> data&quot; <span class="kw">else</span> <span class="cn">Ok</span> ()
 
-let check_auth user = 
-  if not user.authenticated then Error "Not authenticated" else Ok ()
+<span class="kw">let</span> check_auth user = 
+  <span class="kw">if</span> <span class="kw">not</span> user.authenticated <span class="kw">then</span> <span class="cn">Error</span> &quot;<span class="cn">Not</span> authenticated&quot; <span class="kw">else</span> <span class="cn">Ok</span> ()
 
-let check_size data = 
-  if data.size >= 1000 then Error "Data too large" else Ok ()
+<span class="kw">let</span> check_size data = 
+  <span class="kw">if</span> data.size &gt;= <span class="nu">1000</span> <span class="kw">then</span> <span class="cn">Error</span> &quot;<span class="cn">Data</span> too large&quot; <span class="kw">else</span> <span class="cn">Ok</span> ()
 
-let check_permission user data = 
-  if not (has_permission user data) then Error "No permission" else Ok ()
+<span class="kw">let</span> check_permission user data = 
+  <span class="kw">if</span> <span class="kw">not</span> (has_permission user data) <span class="kw">then</span> <span class="cn">Error</span> &quot;<span class="cn">No</span> permission&quot; <span class="kw">else</span> <span class="cn">Ok</span> ()
 
-let process_data data user =
-  let open Result.Syntax in
-  let* () = validate_data data in
-  let* () = check_auth user in
-  let* () = check_size data in
-  let* () = check_permission user data in
-  (* complex processing logic *)</code></pre>
+<span class="kw">let</span> process_data data user =
+  <span class="kw">let</span> <span class="kw">open</span> <span class="cn">Result</span>.<span class="cn">Syntax</span> <span class="kw">in</span>
+  <span class="kw">let</span>* () = validate_data data <span class="kw">in</span>
+  <span class="kw">let</span>* () = check_auth user <span class="kw">in</span>
+  <span class="kw">let</span>* () = check_size data <span class="kw">in</span>
+  <span class="kw">let</span>* () = check_permission user data <span class="kw">in</span>
+  <span class="cm">(* complex processing logic *)</span></code></pre>
+</div>
 </div></div>
 </div>
 <div class="error-card" id="E005">
@@ -248,22 +393,23 @@ dune dependencies and replace Str functions with Re equivalents.</p></div>
     <div class="error-hint"><p>This issue means you're using outdated Printf/Format modules for
 formatting. Fix it by switching to the modern Fmt module: add 'fmt' to your
 dune dependencies and replace Printf/Format functions with Fmt
-equivalents.</p>
+equivalents.</p><div class="examples-grid">
 <div class="example bad">
   <h4>BAD</h4>
   
-  <pre><code class="language-ocaml">let error_msg = Printf.sprintf "Error: %s at line %d" msg line
-let () = Printf.printf "Processing %d items...\n" count</code></pre>
+  <pre><code><span class="kw">let</span> error_msg = <span class="cn">Printf</span>.sprintf &quot;<span class="cn">Error</span>: %s at line %d&quot; msg line
+<span class="kw">let</span> () = <span class="cn">Printf</span>.printf &quot;<span class="cn">Processing</span> %d items...\n&quot; count</code></pre>
 </div>
 <div class="example good">
   <h4>GOOD</h4>
   
-  <pre><code class="language-ocaml">let error_msg = Fmt.str "Error: %s at line %d" msg line
-let () = Fmt.pr "Processing %d items...@." count
+  <pre><code><span class="kw">let</span> error_msg = <span class="cn">Fmt</span>.str &quot;<span class="cn">Error</span>: %s at line %d&quot; msg line
+<span class="kw">let</span> () = <span class="cn">Fmt</span>.pr &quot;<span class="cn">Processing</span> %d items...@.&quot; count
 
-(* Even better with custom formatters *)
-let pp_error ppf (msg, line) = 
-  Fmt.pf ppf "Error: %s at line %d" msg line</code></pre>
+<span class="cm">(* Even better with custom formatters *)</span>
+<span class="kw">let</span> pp_error ppf (msg, line) = 
+  <span class="cn">Fmt</span>.pf ppf &quot;<span class="cn">Error</span>: %s at line %d&quot; msg line</code></pre>
+</div>
 </div></div>
 </div>
 <h2 id="naming conventions">Naming Conventions</h2>
@@ -275,22 +421,23 @@ let pp_error ppf (msg, line) =
     </div>
     <div class="error-hint"><p>This issue means your variant constructors don't follow OCaml naming
 conventions. Fix them by renaming to Snake_case (e.g., MyVariant →
-My_variant).</p>
+My_variant).</p><div class="examples-grid">
 <div class="example bad">
   <h4>BAD</h4>
   
-  <pre><code class="language-ocaml">type status = 
-  | WaitingForInput    (* CamelCase *)
-  | ProcessingData
-  | errorOccurred      (* lowerCamelCase *)</code></pre>
+  <pre><code><span class="kw">type</span> status = 
+  | <span class="cn">WaitingForInput</span>    <span class="cm">(* CamelCase *)</span>
+  | <span class="cn">ProcessingData</span>
+  | errorOccurred      <span class="cm">(* lowerCamelCase *)</span></code></pre>
 </div>
 <div class="example good">
   <h4>GOOD</h4>
   
-  <pre><code class="language-ocaml">type status = 
-  | Waiting_for_input  (* Snake_case *)
-  | Processing_data
-  | Error_occurred</code></pre>
+  <pre><code><span class="kw">type</span> status = 
+  | <span class="cn">Waiting_for_input</span>  <span class="cm">(* Snake_case *)</span>
+  | <span class="cn">Processing_data</span>
+  | <span class="cn">Error_occurred</span></code></pre>
+</div>
 </div></div>
 </div>
 <div class="error-card" id="E305">
@@ -350,23 +497,24 @@ directly), find_* for search (returns option type).</p></div>
     </div>
     <div class="error-hint"><p>This issue means your function or type name redundantly includes the module
 name. Fix it by removing the redundant prefix since the module context is
-already clear from usage.</p>
+already clear from usage.</p><div class="examples-grid">
 <div class="example bad">
   <h4>BAD</h4>
   
-  <pre><code class="language-ocaml">(* In process.ml *)
-let process_start () = ...
-let process_stop () = ...
-type process_config = ...</code></pre>
+  <pre><code><span class="cm">(* In process.ml *)</span>
+<span class="kw">let</span> process_start () = ...
+<span class="kw">let</span> process_stop () = ...
+<span class="kw">type</span> process_config = ...</code></pre>
 </div>
 <div class="example good">
   <h4>GOOD</h4>
   
-  <pre><code class="language-ocaml">(* In process.ml *)
-let start () = ...
-let stop () = ...
-type config = ...
-(* Usage: Process.start (), Process.config *)</code></pre>
+  <pre><code><span class="cm">(* In process.ml *)</span>
+<span class="kw">let</span> start () = ...
+<span class="kw">let</span> stop () = ...
+<span class="kw">type</span> config = ...
+<span class="cm">(* Usage: Process.start (), Process.config *)</span></code></pre>
+</div>
 </div></div>
 </div>
 <h2 id="documentation">Documentation</h2>
