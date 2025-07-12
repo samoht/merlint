@@ -242,7 +242,7 @@ let tls_config =
 ### [E305] Module Naming Convention
 
 This issue means your module names don't follow OCaml naming conventions.
-Fix them by renaming to lowercase_with_underscores (e.g., MyModule → my_module).
+Fix them by using underscores between words while keeping the first letter capitalized (e.g., MyModule → My_module).
 
 **Type Naming**: The primary type in a module is `t`. Identifiers are named `id`. Use snake_case for all type names.
 

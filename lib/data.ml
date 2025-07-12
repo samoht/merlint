@@ -120,7 +120,7 @@ My_variant).|};
     Rule.v ~issue:Module_naming ~title:"Module Naming Convention"
       ~category:Naming_conventions
       {|This issue means your module names don't follow OCaml naming conventions.
-Fix them by renaming to lowercase_with_underscores (e.g., MyModule → my_module).|};
+Fix them by using underscores between words while keeping the first letter capitalized (e.g., MyModule → My_module).|};
     Rule.v ~issue:Value_naming ~title:"Value Naming Convention"
       ~category:Naming_conventions
       {|This issue means your value names don't follow OCaml naming conventions.

@@ -74,7 +74,21 @@ let too_many_underscores () =
       Alcotest.fail "Failed to parse test file"
 
 let module_naming () =
-  let content = "module MyModule = struct let x = 1 end" in
+  let content =
+    {|
+module MyModule = struct 
+  let x = 1 
+end
+
+module AnotherModule = struct
+  let y = 2
+end
+
+module Already_snake = struct
+  let z = 3
+end
+|}
+  in
   let temp_file = create_temp_file content in
 
   match Merlin.get_typedtree temp_file with
@@ -83,9 +97,30 @@ let module_naming () =
         Naming.check ~filename:temp_file ~outline:None typedtree_result
       in
       Sys.remove temp_file;
-      (* Module names in PascalCase are valid *)
+      let module_issues =
+        List.filter
+          (fun issue ->
+            match issue with Issue.Bad_module_naming _ -> true | _ -> false)
+          issues
+      in
+      (* MyModule and AnotherModule should be flagged, but not Already_snake *)
       Alcotest.(check int)
-        "no issues for PascalCase module" 0 (List.length issues)
+        "should have 2 module naming issues" 2
+        (List.length module_issues);
+
+      List.iter
+        (fun issue ->
+          match issue with
+          | Issue.Bad_module_naming { module_name; expected; _ } ->
+              if module_name = "MyModule" then
+                Alcotest.(check string)
+                  "MyModule should become My_module" "My_module" expected
+              else if module_name = "AnotherModule" then
+                Alcotest.(check string)
+                  "AnotherModule should become Another_module" "Another_module"
+                  expected
+          | _ -> ())
+        module_issues
   | Error _ ->
       Sys.remove temp_file;
       Alcotest.fail "Failed to parse test file"
@@ -106,6 +141,115 @@ let type_naming () =
       Sys.remove temp_file;
       Alcotest.fail "Failed to parse test file"
 
+let detect_used_underscore () =
+  let source =
+    {|
+let _unused = 42
+let _used = "hello"
+let normal = 100
+
+let f () =
+  print_endline _used;
+  print_int normal
+|}
+  in
+  let temp_file = create_temp_file source in
+
+  match Merlin.get_typedtree temp_file with
+  | Error e ->
+      Sys.remove temp_file;
+      Alcotest.fail e
+  | Ok typedtree -> (
+      let issues = Naming.check ~filename:temp_file ~outline:None typedtree in
+      Sys.remove temp_file;
+      (* Should detect _used but not _unused or normal *)
+      let underscore_issues =
+        List.filter
+          (fun issue ->
+            match issue with
+            | Issue.Used_underscore_binding _ -> true
+            | _ -> false)
+          issues
+      in
+      Alcotest.(check int)
+        "number of underscore binding issues" 1
+        (List.length underscore_issues);
+
+      match List.hd underscore_issues with
+      | Issue.Used_underscore_binding { binding_name; _ } ->
+          Alcotest.(check string) "binding name" "_used" binding_name
+      | _ -> Alcotest.fail "Expected Used_underscore_binding issue")
+
+let no_false_positives_underscore () =
+  let source =
+    {|
+let normal_var = 42
+let another_var = "test"
+
+let f () =
+  print_int normal_var;
+  print_endline another_var
+|}
+  in
+  let temp_file = create_temp_file source in
+
+  match Merlin.get_typedtree temp_file with
+  | Error e ->
+      Sys.remove temp_file;
+      Alcotest.fail e
+  | Ok typedtree ->
+      let issues = Naming.check ~filename:temp_file ~outline:None typedtree in
+      Sys.remove temp_file;
+      let underscore_issues =
+        List.filter
+          (fun issue ->
+            match issue with
+            | Issue.Used_underscore_binding _ -> true
+            | _ -> false)
+          issues
+      in
+      Alcotest.(check int)
+        "no underscore binding issues" 0
+        (List.length underscore_issues)
+
+let multiple_underscore_usages () =
+  let source =
+    {|
+let _temp = "temporary"
+
+let f () =
+  print_endline _temp;
+  String.length _temp
+|}
+  in
+  let temp_file = create_temp_file source in
+
+  match Merlin.get_typedtree temp_file with
+  | Error e ->
+      Sys.remove temp_file;
+      Alcotest.fail e
+  | Ok typedtree -> (
+      let issues = Naming.check ~filename:temp_file ~outline:None typedtree in
+      Sys.remove temp_file;
+      let underscore_issues =
+        List.filter
+          (fun issue ->
+            match issue with
+            | Issue.Used_underscore_binding _ -> true
+            | _ -> false)
+          issues
+      in
+      Alcotest.(check int)
+        "one issue for multiple usages" 1
+        (List.length underscore_issues);
+
+      match List.hd underscore_issues with
+      | Issue.Used_underscore_binding { usage_locations; _ } ->
+          Alcotest.(check int)
+            "number of usage locations" 2
+            (List.length usage_locations)
+      | _ -> Alcotest.fail "Expected Used_underscore_binding issue")
+
 let suite =
   [
     ( "naming",
@@ -115,5 +259,11 @@ let suite =
         Alcotest.test_case "too many underscores" `Quick too_many_underscores;
         Alcotest.test_case "module naming" `Quick module_naming;
         Alcotest.test_case "type naming" `Quick type_naming;
+        Alcotest.test_case "detect used underscore binding" `Quick
+          detect_used_underscore;
+        Alcotest.test_case "no false positives for underscore bindings" `Quick
+          no_false_positives_underscore;
+        Alcotest.test_case "multiple underscore usages" `Quick
+          multiple_underscore_usages;
       ] );
   ]
