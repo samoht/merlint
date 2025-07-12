@@ -32,11 +32,13 @@
   - Example should be `MyModule` → `my_module` not `My_module`
   - Update hints.ml and regenerate documentation
 
-- [ ] Allow to turn off some checks with CLI options
-  - Add CLI flags like `-w +all -32-27` to enable/disable specific checks
-  - Similar to OCaml compiler warning flags
-  - Support ranges (e.g., `-w -100..199` to disable all style checks)
-  - Store configuration in .merlintrc or similar config file
+- [x] Allow to turn off some checks with CLI options
+  - Added enhanced --rules flag supporting multiple formats:
+    - Legacy format: A-E110-E205 (all except E110 and E205)
+    - OCaml-style: "+all -110 -205" or "-100..199" for ranges
+    - Selective: "+E300 +E305" to enable only specific checks
+  - Implemented range support (e.g., -100..199 disables all security/safety checks)
+  - TODO: Store configuration in .merlintrc or similar config file
 
 ## Medium Priority
 

@@ -37,68 +37,98 @@ let parse_error_code code =
   | "E615" -> Some Issue_type.Test_suite_not_included
   | _ -> None
 
-(** Parse a single warning specifier like "E110" or "A" *)
+(** Parse a range of error codes like "100..199" *)
+let parse_range range_str =
+  match String.split_on_char '.' range_str with
+  | [ start; ""; ""; stop ] | [ start; ""; stop ] -> (
+      try
+        let start_num = int_of_string start in
+        let stop_num = int_of_string stop in
+        let codes =
+          List.init
+            (stop_num - start_num + 1)
+            (fun i -> Fmt.str "E%03d" (start_num + i))
+        in
+        let issue_types = List.filter_map parse_error_code codes in
+        Ok issue_types
+      with _ -> Error (Fmt.str "Invalid range: %s" range_str))
+  | _ ->
+      Error
+        (Fmt.str "Invalid range format: %s (expected: start..stop)" range_str)
+
+(** Parse a single warning specifier like "E110" or "A" or "100..199" *)
 let parse_single_spec spec =
   match spec with
-  | "A" | "a" ->
+  | "A" | "a" | "all" ->
       (* All warnings *)
       Ok Issue_type.all
+  | s when String.contains s '.' ->
+      (* Range specification *)
+      parse_range s
   | code -> (
       match parse_error_code code with
       | Some issue_type -> Ok [ issue_type ]
       | None -> Error (Fmt.str "Unknown error code: %s" code))
 
-(** Parse warning specification like "A-E110-E205" *)
+(** Parse warning specification in simple format:
+    - "all,-E110,-E205" - all rules except E110 and E205
+    - "E300,E305" - only E300 and E305
+    - "all,-100..199" - all except security/safety rules (100-199) For backwards
+      compatibility, also supports legacy format:
+    - "A-E110-E205" - all rules except E110 and E205 *)
 let parse spec =
-  let parts = String.split_on_char '-' spec in
-  let rec process parts filter =
-    match parts with
-    | [] -> Ok filter
-    | "" :: rest -> process rest filter (* Skip empty parts *)
-    | "+" :: code :: rest when code <> "" -> (
-        (* Enable warnings *)
-        match parse_single_spec code with
-        | Ok types ->
-            let filter =
-              match filter.enabled with
-              | None -> { filter with enabled = Some types }
-              | Some existing ->
-                  { filter with enabled = Some (types @ existing) }
-            in
-            process rest filter
-        | Error e -> Error e)
-    | code :: rest when code <> "" -> (
-        (* Enable warnings *)
-        match parse_single_spec code with
-        | Ok types ->
-            let filter =
-              match filter.enabled with
-              | None -> { filter with enabled = Some types }
-              | Some existing ->
-                  { filter with enabled = Some (types @ existing) }
-            in
-            process rest filter
-        | Error e -> Error e)
-    | _ -> Error "Invalid warning specification"
+  (* First check for legacy format for backwards compatibility *)
+  let is_legacy_format =
+    let parts = String.split_on_char '-' spec in
+    match parts with "A" :: _ | "a" :: _ -> true | _ -> false
   in
 
-  (* Handle different formats *)
-  match parts with
-  | [] -> Ok empty
-  | first :: rest when first = "A" || first = "a" ->
-      (* Start with all enabled, then process exclusions *)
-      let rec process_exclusions parts filter =
-        match parts with
-        | [] -> Ok filter
-        | code :: rest -> (
-            match parse_single_spec code with
-            | Ok types ->
-                process_exclusions rest
-                  { filter with disabled = types @ filter.disabled }
-            | Error e -> Error e)
-      in
-      process_exclusions rest { enabled = None; disabled = [] }
-  | _ -> process parts empty
+  let tokens =
+    if is_legacy_format then
+      (* Legacy format: A-E110-E205 *)
+      let parts = String.split_on_char '-' spec in
+      match parts with
+      | "A" :: rest | "a" :: rest -> "all" :: List.map (fun s -> "-" ^ s) rest
+      | _ -> [ spec ]
+    else
+      (* New format: use commas *)
+      String.split_on_char ',' spec
+      |> List.map String.trim
+      |> List.filter (fun s -> s <> "")
+  in
+
+  let rec process tokens filter =
+    match tokens with
+    | [] -> Ok filter
+    | token :: rest when String.length token > 0 -> (
+        let is_disable = String.length token > 0 && String.get token 0 = '-' in
+        let code =
+          if is_disable then String.sub token 1 (String.length token - 1)
+          else token
+        in
+        match parse_single_spec code with
+        | Ok types ->
+            let filter =
+              if is_disable then
+                { filter with disabled = types @ filter.disabled }
+              else
+                match types with
+                | t when t = Issue_type.all ->
+                    (* Special case: "all" enables all *)
+                    { filter with enabled = None }
+                | _ -> (
+                    match filter.enabled with
+                    | None -> { filter with enabled = Some types }
+                    | Some existing ->
+                        { filter with enabled = Some (types @ existing) })
+            in
+            process rest filter
+        | Error e -> Error e)
+    | "" :: rest -> process rest filter (* Skip empty tokens *)
+    | _ -> Error "Invalid rule specification"
+  in
+
+  process tokens empty
 
 (** Check if an issue type is enabled *)
 let is_enabled filter issue_type =
