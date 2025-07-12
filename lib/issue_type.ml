@@ -13,6 +13,7 @@ type t =
   | Long_identifier
   | Function_naming
   | Redundant_module_name
+  | Used_underscore_binding
   | Missing_mli_doc
   | Missing_value_doc
   | Bad_doc_style
@@ -41,6 +42,7 @@ let error_code = function
   | Long_identifier -> "E320"
   | Function_naming -> "E325"
   | Redundant_module_name -> "E330"
+  | Used_underscore_binding -> "E335"
   | Missing_mli_doc -> "E400"
   | Missing_value_doc -> "E405"
   | Bad_doc_style -> "E410"
@@ -69,6 +71,7 @@ let all =
     Long_identifier;
     Function_naming;
     Redundant_module_name;
+    Used_underscore_binding;
     Missing_mli_doc;
     Missing_value_doc;
     Bad_doc_style;
