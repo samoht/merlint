@@ -2,6 +2,16 @@
 
 ## High Priority
 
+- [ ] Fix E105 Catch_all_exception to only detect exception handlers
+  - Currently flags ANY underscore pattern, not just in try...with
+  - Need to analyze AST context to identify exception handlers specifically
+  - Should only flag patterns like `try ... with _ ->` not all uses of `_`
+
+- [ ] Make E205 Printf_module less strict
+  - Printf and Format are part of stdlib and widely used
+  - Should be a suggestion/warning, not an error
+  - Or make it configurable/opt-in
+
 - [ ] Enforce 1:1 mapping between test files and library modules
   - Each lib/*.ml file should have a corresponding test/test_*.ml file
   - No extra test files without corresponding library modules
@@ -13,6 +23,22 @@
   - Would be useful to have project-level configuration
 
 ## Medium Priority
+
+- [ ] Make E415 Missing_standard_function more reasonable
+  - Currently requires equal/compare/pp/to_string for ALL types
+  - Should only apply to types exposed in .mli files
+  - Or make it configurable per project
+
+- [ ] Review E325 Function_naming (get_* vs find_*)
+  - Convention is reasonable but not universal in OCaml
+  - Standard library doesn't follow this strictly (List.find raises exception)
+  - Should be optional/configurable
+
+- [ ] Add missing rules that align with idiomatic OCaml
+  - Labeled arguments: Functions with 3+ same-type parameters should use labels
+  - Module type naming: Module types should be ALL_CAPS
+  - Optional argument placement: Optional args should come before mandatory ones
+  - No useless open: Avoid `open` when only using 1-2 values from a module
 
 - [ ] Add documentation style section for E410
   - E410 exists in error codes but has no reference in style guides
