@@ -25,6 +25,7 @@ let parse_error_code code =
   | "E320" -> Some Issue_type.Long_identifier
   | "E325" -> Some Issue_type.Function_naming
   | "E330" -> Some Issue_type.Redundant_module_name
+  | "E335" -> Some Issue_type.Used_underscore_binding
   | "E400" -> Some Issue_type.Missing_mli_doc
   | "E405" -> Some Issue_type.Missing_value_doc
   | "E410" -> Some Issue_type.Bad_doc_style
@@ -70,32 +71,33 @@ let parse_single_spec spec =
       | Some issue_type -> Ok [ issue_type ]
       | None -> Error (Fmt.str "Unknown error code: %s" code))
 
-(** Parse warning specification in simple format:
-    - "all,-E110,-E205" - all rules except E110 and E205
-    - "E300,E305" - only E300 and E305
-    - "all,-100..199" - all except security/safety rules (100-199) For backwards
-      compatibility, also supports legacy format:
-    - "A-E110-E205" - all rules except E110 and E205 *)
+(** Parse warning specification using simple format without quotes:
+    - "all-E110-E205" - all rules except E110 and E205
+    - "E300+E305" - only E300 and E305
+    - "all-100..199" - all except error codes 100-199 *)
 let parse spec =
-  (* First check for legacy format for backwards compatibility *)
-  let is_legacy_format =
-    let parts = String.split_on_char '-' spec in
-    match parts with "A" :: _ | "a" :: _ -> true | _ -> false
+  (* First extract positive selections (if any) *)
+  let parts = String.split_on_char '+' spec in
+  let base_spec, additions =
+    match parts with [] -> ("", []) | base :: rest -> (base, rest)
   in
 
+  (* Parse base spec and exclusions *)
   let tokens =
-    if is_legacy_format then
-      (* Legacy format: A-E110-E205 *)
-      let parts = String.split_on_char '-' spec in
-      match parts with
-      | "A" :: rest | "a" :: rest -> "all" :: List.map (fun s -> "-" ^ s) rest
-      | _ -> [ spec ]
-    else
-      (* New format: use commas *)
-      String.split_on_char ',' spec
-      |> List.map String.trim
-      |> List.filter (fun s -> s <> "")
+    if base_spec = "" && additions <> [] then
+      (* Only additions, no base *)
+      List.map (fun s -> s) additions
+    else if String.starts_with ~prefix:"all" base_spec then
+      (* all-E110-E205 format *)
+      let exclusions = String.split_on_char '-' base_spec |> List.tl in
+      ("all" :: List.map (fun s -> "-" ^ s) exclusions) @ additions
+    else if base_spec <> "" then
+      (* Single spec or range *)
+      base_spec :: additions
+    else []
   in
+
+  let tokens = List.map String.trim tokens |> List.filter (fun s -> s <> "") in
 
   let rec process tokens filter =
     match tokens with

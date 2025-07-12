@@ -82,6 +82,11 @@ type t =
       location : Location.t;
       item_type : string; (* "function" or "type" *)
     }
+  | Used_underscore_binding of {
+      binding_name : string;
+      location : Location.t;
+      usage_locations : Location.t list;
+    }
   | Test_exports_module_name of {
       filename : string;
       location : Location.t;

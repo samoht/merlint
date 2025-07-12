@@ -4,13 +4,10 @@ type t
 (** Rule filter configuration *)
 
 val parse : string -> (t, string) result
-(** Parse rule specification using comma-separated format:
-    - "all,-E110,-E205" - all rules except E110 and E205
-    - "E300,E305" - only E300 and E305
-    - "all,-100..199" - all except error codes 100-199
-
-    Legacy format is still supported for backwards compatibility:
-    - "A-E110-E205" - all rules except E110 and E205 *)
+(** Parse rule specification using simple format without quotes:
+    - "all-E110-E205" - all rules except E110 and E205
+    - "E300+E305" - only E300 and E305
+    - "all-100..199" - all except error codes 100-199 *)
 
 val is_enabled : t -> Issue_type.t -> bool
 (** Check if a specific issue type is enabled in the filter *)

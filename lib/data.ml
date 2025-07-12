@@ -166,6 +166,22 @@ type config = ...
       {|This issue means your function or type name redundantly includes the module
 name. Fix it by removing the redundant prefix since the module context is
 already clear from usage.|};
+    Rule.v ~issue:Used_underscore_binding
+      ~title:"Used Underscore-Prefixed Binding" ~category:Naming_conventions
+      ~examples:
+        [
+          bad
+            {|let _debug_mode = true in
+if _debug_mode then
+  print_endline "Debug mode enabled"|};
+          good
+            {|let debug_mode = true in
+if debug_mode then
+  print_endline "Debug mode enabled"|};
+        ]
+      {|This issue means a binding prefixed with underscore (indicating it should be
+unused) is actually used in the code. Fix it by removing the underscore prefix
+to clearly indicate the binding is intentionally used.|};
     (* Documentation Rules *)
     Rule.v ~issue:Missing_mli_doc ~title:"Missing Module Documentation"
       ~category:Documentation

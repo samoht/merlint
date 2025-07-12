@@ -42,11 +42,12 @@
 
 ## Medium Priority
 
-- [ ] Add a rule to detect _ prefixed variables
+- [x] Add a rule to detect _ prefixed variables
   - Variables prefixed with underscore indicate unused/ignored values
   - Should check if these variables are actually used in the code
   - If used, suggest removing the underscore prefix
   - Helps maintain clarity about which variables are intentionally unused
+  - DONE: Implemented as E335 - Used Underscore-Prefixed Binding
 
 - [ ] Add documentation style section for E410
   - E410 exists in error codes but has no reference in style guides

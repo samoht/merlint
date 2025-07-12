@@ -339,11 +339,9 @@ let exclude_flag =
 
 let rules_flag =
   let doc =
-    "Filter rules to enable/disable specific checks. Use comma-separated list \
-     with optional '-' prefix to disable. Examples: --rules 'all,-E110,-E205' \
-     (all except E110 and E205), --rules 'E300,E305' (only these two), --rules \
-     'all,-100..199' (all except codes 100-199). Legacy format 'A-E110-E205' \
-     is still supported."
+    "Filter rules to enable/disable specific checks. Simple format: --rules \
+     all-E110-E205 (all except E110 and E205), --rules E300+E305 (only these \
+     two), --rules all-100..199 (all except codes 100-199). No quotes needed!"
   in
   Arg.(value & opt (some string) None & info [ "rules"; "r" ] ~docv:"SPEC" ~doc)
 

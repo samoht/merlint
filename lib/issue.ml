@@ -79,6 +79,11 @@ type t =
       location : Location.t;
       item_type : string; (* "function" or "type" *)
     }
+  | Used_underscore_binding of {
+      binding_name : string;
+      location : Location.t;
+      usage_locations : Location.t list;
+    }
   | Test_exports_module_name of {
       filename : string;
       location : Location.t;
@@ -116,6 +121,7 @@ let get_type = function
   | Long_identifier_name _ -> Long_identifier
   | Bad_function_naming _ -> Function_naming
   | Redundant_module_name _ -> Redundant_module_name
+  | Used_underscore_binding _ -> Used_underscore_binding
   | Missing_mli_doc _ -> Missing_mli_doc
   | Missing_value_doc _ -> Missing_value_doc
   | Bad_doc_style _ -> Bad_doc_style
@@ -196,6 +202,13 @@ let pp_issue_content ppf issue =
         pp_error_code code pp_location_styled location
         (String.capitalize_ascii item_type)
         item_name module_name
+  | Used_underscore_binding { binding_name; location; usage_locations } ->
+      let usage_count = List.length usage_locations in
+      Fmt.pf ppf
+        "%a %a:@ Binding@ '%s'@ is@ prefixed@ with@ underscore@ but@ used@ %d@ \
+         time%s"
+        pp_error_code code pp_location_styled location binding_name usage_count
+        (if usage_count = 1 then "" else "s")
   | Missing_mli_doc { module_name; file } ->
       Fmt.pf ppf "%a %a:1:0:@ Module@ '%s'@ missing@ documentation@ comment"
         pp_error_code code
@@ -271,7 +284,8 @@ let find_location = function
   | Deep_nesting { location; _ }
   | Long_identifier_name { location; _ }
   | Bad_function_naming { location; _ }
-  | Redundant_module_name { location; _ } ->
+  | Redundant_module_name { location; _ }
+  | Used_underscore_binding { location; _ } ->
       Some location
   | Missing_mli_doc { file; _ } ->
       Some
@@ -332,6 +346,9 @@ let get_description = function
       Fmt.str "Function '%s' should be '%s'" function_name suggestion
   | Redundant_module_name { item_name; module_name; _ } ->
       Fmt.str "'%s' has redundant module prefix '%s'" item_name module_name
+  | Used_underscore_binding { binding_name; _ } ->
+      Fmt.str "Binding '%s' has underscore prefix but is used in code"
+        binding_name
   | Missing_ocamlformat_file _ -> "missing .ocamlformat file"
   | Missing_mli_file _ -> "missing interface file"
   | Test_exports_module_name { module_name; _ } ->
@@ -357,7 +374,7 @@ let priority = function
   | Use_str_module _ | Use_printf_module _ | Bad_variant_naming _
   | Missing_mli_file _ | Bad_module_naming _ | Bad_value_naming _
   | Bad_type_naming _ | Long_identifier_name _ | Bad_function_naming _
-  | Redundant_module_name _ ->
+  | Redundant_module_name _ | Used_underscore_binding _ ->
       3
   | Missing_mli_doc _ | Missing_value_doc _ | Bad_doc_style _
   | Missing_standard_function _ | Missing_ocamlformat_file _
