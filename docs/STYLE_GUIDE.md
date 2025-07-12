@@ -15,7 +15,11 @@ This document outlines the coding and testing conventions for this project. The 
 
 4. **Explicitness**: Make control flow and error handling explicit. Avoid exceptions for recoverable errors.
 
-5. **NEVER USE Obj.magic**: The `Obj` module is not part of the OCaml language and breaks type safety. There is always a better, type-safe solution.
+5. **Purity and Side-Effect Management**: Prefer pure functions. Isolate side-effects (I/O, state mutation) at the edges of the application. This is a fundamental principle for building maintainable, testable, and composable systems.
+
+6. **Be Deliberate with Dependencies**: Every dependency has a cost - maintenance burden, increased compile times, and expanded API surface. Before adding a new dependency, consider if the functionality can be achieved with existing tools or a small amount of code. When you do add dependencies, choose high-quality, well-maintained libraries.
+
+7. **NEVER USE Obj.magic**: The `Obj` module is not part of the OCaml language and breaks type safety. There is always a better, type-safe solution.
 
 ### [E100] Unsafe Type Casting
 
@@ -315,6 +319,26 @@ directly), find_* for search (returns option type).
 
 **Formatting**: Trust `ocamlformat`. No manual formatting.
 
+## API Design
+
+**Avoid Boolean Blindness**: Never use multiple boolean arguments in a function - they make call sites ambiguous and error-prone. Instead, use explicit variant types that leverage OCaml's type system for clarity.
+
+```ocaml
+(* BAD - Boolean blindness *)
+let create_widget visible bordered = ...
+let w = create_widget true false  (* What does this mean? *)
+
+(* GOOD - Explicit variants *)
+type visibility = Visible | Hidden
+type border = With_border | Without_border
+let create_widget ~visibility ~border = ...
+let w = create_widget ~visibility:Visible ~border:Without_border
+```
+
+**Use Phantom Types for Safety**: When appropriate, use phantom types to enforce invariants at compile time rather than runtime.
+
+**Builder Pattern for Complex Configuration**: For functions with many optional parameters, consider using a builder pattern with a record type rather than many optional arguments.
+
 ## Function Design
 
 **Keep Functions Small and Focused**: A function should do one thing well. Decompose complex logic into smaller, well-defined helper functions. This improves readability, testability, and reusability. Aim for functions under 50 lines. As a rule of thumb, avoid deep nesting of `match` or `if` statements; more than two or three levels is a strong signal that the function should be refactored.
@@ -381,8 +405,6 @@ let process_data data user =
   (* complex processing logic *)
 ```
 
-
-**Purity**: Prefer pure functions. Isolate side-effects (I/O, state mutation) at the edges of the application, primarily in the `bin/` and `lib/ui/` directories.
 
 **Composition over Abstraction**: Favor the composition of small, concrete functions to build up complex behavior. Avoid deep abstractions and complex class hierarchies.
 
