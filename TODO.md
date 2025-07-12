@@ -2,6 +2,18 @@
 
 ## High Priority
 
+- [ ] Implement E350 Boolean Blindness rule
+  - Flag functions with 2+ boolean parameters
+  - Suggest using variant types instead
+  - Example: `create_widget bool -> bool -> t` → use visibility and border types
+  - High impact for API clarity
+
+- [ ] Implement E351 Mutable State Detection
+  - Flag use of `ref`, `:=` operator, and `mutable` record fields
+  - Enforce immutability-first principle
+  - Allow suppression with [@warning "-mutable"] or similar
+  - Should catch: `let counter = ref 0`, `type t = { mutable x : int }`
+
 - [ ] Fix E105 Catch_all_exception to only detect exception handlers
   - Currently flags ANY underscore pattern, not just in try...with
   - Need to analyze AST context to identify exception handlers specifically
@@ -44,6 +56,18 @@
   - E343: Flag complex boolean expressions (suggest extracting to named functions)
   - E345: No single-letter variable names (except common idioms like x/xs, i)
   - E348: No magic numbers (require named constants)
+
+- [ ] Implement E352 Generic Label Detection
+  - Flag uninformative labels like ~f, ~x, ~k
+  - Enforce descriptive API design
+  - Good: ~compare, ~initial_value, ~on_error
+  - Bad: ~f, ~x, ~k, ~v
+
+- [ ] Implement E353 Modern Concurrency Enforcement
+  - Flag direct use of Unix module for concurrent operations
+  - Suggest using Eio or Lwt instead
+  - Similar to existing Str/Printf rules but for concurrency
+  - Allow Unix for non-concurrent operations (file stats, env vars)
 
 - [ ] Add documentation style section for E410
   - E410 exists in error codes but has no reference in style guides
