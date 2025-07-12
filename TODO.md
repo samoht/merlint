@@ -36,7 +36,6 @@
 
 - [ ] Add missing rules that align with idiomatic OCaml
   - Labeled arguments: Functions with 3+ same-type parameters should use labels
-  - Module type naming: Module types should be ALL_CAPS
   - Optional argument placement: Optional args should come before mandatory ones
   - No useless open: Avoid `open` when only using 1-2 values from a module
 

@@ -56,10 +56,9 @@
 ## Missing Rules Daniel Bünzli Would Want
 
 1. **Labeled arguments**: Functions with 3+ same-type parameters should use labels
-2. **Module type naming**: Module types should be `ALL_CAPS`
-3. **Optional argument placement**: Optional args should come before mandatory ones
-4. **Documentation style**: First sentence = summary, use imperative mood
-5. **No useless open**: Avoid `open` when only using 1-2 values from a module
+2. **Optional argument placement**: Optional args should come before mandatory ones
+3. **Documentation style**: First sentence = summary, use imperative mood
+4. **No useless open**: Avoid `open` when only using 1-2 values from a module
 
 ## Recommendations
 
