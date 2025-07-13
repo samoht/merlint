@@ -28,13 +28,12 @@ let parse_bool value =
   match String.lowercase_ascii value with
   | "true" | "yes" | "1" -> true
   | "false" | "no" | "0" -> false
-  | _ -> failwith (Printf.sprintf "Invalid boolean value: %s" value)
+  | _ -> Fmt.failwith "Invalid boolean value: %s" value
 
 (** Parse integer value *)
 let parse_int value =
   try int_of_string value
-  with Failure _ ->
-    failwith (Printf.sprintf "Invalid integer value: %s" value)
+  with Failure _ -> Fmt.failwith "Invalid integer value: %s" value
 
 (** Apply a configuration key-value pair to the config *)
 let apply_config (config : Config.t) key value : Config.t =
@@ -78,7 +77,7 @@ let load path =
           | Some (key, value) -> (
               try apply_config config key value
               with Failure msg ->
-                Printf.eprintf "Warning: %s (line: %s)\n" msg line;
+                Fmt.epr "Warning: %s (line: %s)\n" msg line;
                 config)
           | None -> config
         in
@@ -91,7 +90,7 @@ let load path =
   with
   | Sys_error _ -> Config.default
   | exn ->
-      Printf.eprintf "Warning: Error loading config from %s: %s\n" path
+      Fmt.epr "Warning: Error loading config from %s: %s\n" path
         (Printexc.to_string exn);
       Config.default
 

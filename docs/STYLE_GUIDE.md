@@ -123,8 +123,8 @@ let is_email s =
 
 ✅ **Good:**
 ```ocaml
-let is_email s = 
-  Re.execp (Re.compile (Re.seq [Re.any; Re.char '@'; Re.any])) s
+let email_re = Re.compile (Re.seq [Re.any; Re.char '@'; Re.any])
+let is_email s = Re.execp email_re s
 ```
 
 

@@ -489,8 +489,8 @@ dune dependencies and replace Str functions with Re equivalents.</p><div class="
 <div class="example good">
   <h4>GOOD</h4>
   
-  <pre><code><span class="kw">let</span> is_email s = 
-  <span class="cn">Re</span>.execp (<span class="cn">Re</span>.compile (<span class="cn">Re</span>.seq [<span class="cn">Re</span>.any; <span class="cn">Re</span>.char '@'; <span class="cn">Re</span>.any])) s</code></pre>
+  <pre><code><span class="kw">let</span> email_re = <span class="cn">Re</span>.compile (<span class="cn">Re</span>.seq [<span class="cn">Re</span>.any; <span class="cn">Re</span>.char '@'; <span class="cn">Re</span>.any])
+<span class="kw">let</span> is_email s = <span class="cn">Re</span>.execp email_re s</code></pre>
 </div>
 </div></div>
 </div>
