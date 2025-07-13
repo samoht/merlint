@@ -114,7 +114,7 @@ let analyze_project config files =
         List.map
           (fun file ->
             ( file,
-              Profiling.time (Printf.sprintf "Merlin: %s" file) (fun () ->
+              Profiling.time (Fmt.str "Merlin: %s" file) (fun () ->
                   Merlin.analyze_file file) ))
           ml_files)
   in

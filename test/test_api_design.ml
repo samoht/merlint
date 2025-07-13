@@ -16,7 +16,7 @@ let test_count_bool_params () =
   List.iter
     (fun (sig_str, expected) ->
       let actual = Api_design.count_bool_params sig_str in
-      check int (Printf.sprintf "bool count in '%s'" sig_str) expected actual)
+      check int (Fmt.str "bool count in '%s'" sig_str) expected actual)
     test_cases
 
 let create_temp_file content =
