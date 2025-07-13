@@ -84,6 +84,22 @@ type t =
       location : Location.t;
       usage_locations : Location.t list;
     }
+  | Error_pattern of {
+      location : Location.t;
+      error_message : string;
+      suggested_function : string;
+    }
+  | Boolean_blindness of {
+      function_name : string;
+      location : Location.t;
+      bool_count : int;
+      signature : string;
+    }
+  | Mutable_state of {
+      kind : string; (* "ref", "mutable", "array" *)
+      name : string;
+      location : Location.t;
+    }
   | Test_exports_module_name of {
       filename : string;
       location : Location.t;
@@ -122,6 +138,9 @@ let get_type = function
   | Bad_function_naming _ -> Function_naming
   | Redundant_module_name _ -> Redundant_module_name
   | Used_underscore_binding _ -> Used_underscore_binding
+  | Error_pattern _ -> Error_pattern
+  | Boolean_blindness _ -> Boolean_blindness
+  | Mutable_state _ -> Mutable_state
   | Missing_mli_doc _ -> Missing_mli_doc
   | Missing_value_doc _ -> Missing_value_doc
   | Bad_doc_style _ -> Bad_doc_style
@@ -209,6 +228,21 @@ let pp_issue_content ppf issue =
          time%s"
         pp_error_code code pp_location_styled location binding_name usage_count
         (if usage_count = 1 then "" else "s")
+  | Error_pattern { location; error_message; suggested_function } ->
+      Fmt.pf ppf
+        "%a %a:@ Error@ pattern@ '%s'@ should@ use@ helper@ function@ '%s'"
+        pp_error_code code pp_location_styled location error_message
+        suggested_function
+  | Boolean_blindness { function_name; location; bool_count; signature = _ } ->
+      Fmt.pf ppf
+        "%a %a:@ Function@ '%s'@ has@ %d@ boolean@ parameters@ making@ call@ \
+         sites@ ambiguous"
+        pp_error_code code pp_location_styled location function_name bool_count
+  | Mutable_state { kind; name; location } ->
+      Fmt.pf ppf "%a %a:@ %s@ '%s'@ introduces@ mutable@ state" pp_error_code
+        code pp_location_styled location
+        (String.capitalize_ascii kind)
+        name
   | Missing_mli_doc { module_name; file } ->
       Fmt.pf ppf "%a %a:1:0:@ Module@ '%s'@ missing@ documentation@ comment"
         pp_error_code code
@@ -285,7 +319,10 @@ let find_location = function
   | Long_identifier_name { location; _ }
   | Bad_function_naming { location; _ }
   | Redundant_module_name { location; _ }
-  | Used_underscore_binding { location; _ } ->
+  | Used_underscore_binding { location; _ }
+  | Error_pattern { location; _ }
+  | Boolean_blindness { location; _ }
+  | Mutable_state { location; _ } ->
       Some location
   | Missing_mli_doc { file; _ } ->
       Some
@@ -349,6 +386,15 @@ let get_description = function
   | Used_underscore_binding { binding_name; _ } ->
       Fmt.str "Binding '%s' has underscore prefix but is used in code"
         binding_name
+  | Error_pattern { error_message; suggested_function; _ } ->
+      Fmt.str "Error '%s' should use helper function '%s'" error_message
+        suggested_function
+  | Boolean_blindness { function_name; bool_count; _ } ->
+      Fmt.str "Function '%s' has %d boolean parameters" function_name bool_count
+  | Mutable_state { kind; name; _ } ->
+      Fmt.str "%s '%s' introduces mutable state"
+        (String.capitalize_ascii kind)
+        name
   | Missing_ocamlformat_file _ -> "missing .ocamlformat file"
   | Missing_mli_file _ -> "missing interface file"
   | Test_exports_module_name { module_name; _ } ->
@@ -369,12 +415,15 @@ let get_description = function
 
 (* Assign priority to issues - lower number = higher priority *)
 let priority = function
-  | No_obj_magic _ | Catch_all_exception _ | Silenced_warning _ -> 1
+  | No_obj_magic _ | Catch_all_exception _ | Silenced_warning _
+  | Mutable_state _ ->
+      1
   | Complexity_exceeded _ | Deep_nesting _ | Function_too_long _ -> 2
   | Use_str_module _ | Use_printf_module _ | Bad_variant_naming _
   | Missing_mli_file _ | Bad_module_naming _ | Bad_value_naming _
   | Bad_type_naming _ | Long_identifier_name _ | Bad_function_naming _
-  | Redundant_module_name _ | Used_underscore_binding _ ->
+  | Redundant_module_name _ | Used_underscore_binding _ | Error_pattern _
+  | Boolean_blindness _ ->
       3
   | Missing_mli_doc _ | Missing_value_doc _ | Bad_doc_style _
   | Missing_standard_function _ | Missing_ocamlformat_file _

@@ -81,7 +81,10 @@ let process_file_analysis config (file, analysis) =
           match analysis.Merlin.outline with Ok o -> Some o | Error _ -> None
         in
         let naming = Naming.check ~filename:file ~outline typedtree_result in
-        (style, naming)
+        let api_design =
+          Api_design.check ~filename:file ~outline typedtree_result
+        in
+        (style, naming @ api_design)
     | Error _ -> ([], [])
   in
 

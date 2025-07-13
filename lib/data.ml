@@ -81,7 +81,7 @@ the underlying issues that trigger the warnings.|};
       {|This issue means you're using the outdated Str module for regular
 expressions. Fix it by switching to the modern Re module: add 're' to your
 dune dependencies and replace Str functions with Re equivalents.|};
-    Rule.v ~issue:Printf_module ~title:"Outdated Printf/Format Modules"
+    Rule.v ~issue:Printf_module ~title:"Consider Using Fmt Module"
       ~category:Style_modernization
       ~examples:
         [
@@ -184,6 +184,86 @@ if debug_mode then
       {|This issue means a binding prefixed with underscore (indicating it should be
 unused) is actually used in the code. Fix it by removing the underscore prefix
 to clearly indicate the binding is intentionally used.|};
+    Rule.v ~issue:Boolean_blindness ~title:"Boolean Blindness"
+      ~category:Naming_conventions
+      ~examples:
+        [
+          bad
+            {|let create_window visible resizable fullscreen =
+  (* What do these booleans mean at the call site? *)
+  ...
+  
+let w = create_window true false true|};
+          good
+            {|type visibility = Visible | Hidden
+type window_mode = Windowed | Fullscreen
+type resizable = Resizable | Fixed_size
+
+let create_window ~visibility ~mode ~resizable =
+  ...
+  
+let w = create_window ~visibility:Visible ~mode:Fullscreen ~resizable:Fixed_size|};
+        ]
+      {|This issue means your function has multiple boolean parameters, making call
+sites ambiguous and error-prone. Fix it by using explicit variant types that
+leverage OCaml's type system for clarity and safety.|};
+    Rule.v ~issue:Error_pattern ~title:"Inline Error Construction"
+      ~category:Style_modernization
+      ~examples:
+        [
+          bad
+            {|let process_data data =
+  match validate data with
+  | None -> Error (Fmt.str "Invalid data: %s" data.id)
+  | Some v -> 
+      if v.size > max_size then
+        Error (Fmt.str "Data too large: %d" v.size)
+      else Ok v|};
+          good
+            {|(* Define error helpers at the top of the file *)
+let err_invalid_data id = Error (`Invalid_data id)
+let err_fmt fmt = Fmt.kstr (fun msg -> Error (`Msg msg)) fmt
+
+let process_data data =
+  match validate data with
+  | None -> err_invalid_data data.id
+  | Some v -> 
+      if v.size > max_size then
+        err_fmt "Data too large: %d bytes" v.size
+      else Ok v|};
+        ]
+      {|This issue means you're constructing errors inline instead of using helper
+functions. Fix by defining err_* functions at the top of your file for each
+error case. This promotes consistency, enables easy error message updates, and
+makes error handling patterns clearer.|};
+    Rule.v ~issue:Mutable_state ~title:"Global Mutable State"
+      ~category:Style_modernization
+      ~examples:
+        [
+          bad
+            {|(* Global mutable state - avoid this *)
+let counter = ref 0
+let incr_counter () = counter := !counter + 1
+
+let global_cache = Array.make 100 None
+let cached_results = Hashtbl.create 100|};
+          good
+            {|(* Local mutable state is fine *)
+let compute_sum lst =
+  let sum = ref 0 in
+  List.iter (fun x -> sum := !sum + x) lst;
+  !sum
+
+(* Or better, use functional approach *)
+let compute_sum lst = List.fold_left (+) 0 lst
+
+(* Pass state explicitly *)
+let incr_counter counter = counter + 1|};
+        ]
+      {|This issue warns about global mutable state which makes code harder to test
+and reason about. Local mutable state within functions is perfectly acceptable
+in OCaml. Fix by either using local refs within functions, or preferably by
+using functional approaches with explicit state passing.|};
     (* Documentation Rules *)
     Rule.v ~issue:Missing_mli_doc ~title:"Missing Module Documentation"
       ~category:Documentation

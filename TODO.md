@@ -2,37 +2,57 @@
 
 ## High Priority
 
-- [ ] Implement E350 Boolean Blindness rule
+- [x] Implement E350 Boolean Blindness rule
   - Flag functions with 2+ boolean parameters
   - Suggest using variant types instead
   - Example: `create_widget bool -> bool -> t` → use visibility and border types
   - High impact for API clarity
 
-- [ ] Implement E351 Mutable State Detection
-  - Flag use of `ref`, `:=` operator, and `mutable` record fields
-  - Enforce immutability-first principle
-  - Allow suppression with [@warning "-mutable"] or similar
-  - Should catch: `let counter = ref 0`, `type t = { mutable x : int }`
+- [x] Implement E351 Mutable State Detection (partial, needs refinement)
+  - ✓ Flag use of `ref` and `:=` operator
+  - ✓ Updated documentation to clarify only global mutable state is problematic
+  - TODO: Distinguish between global and local refs (requires scope analysis)
+  - TODO: Detect `mutable` record fields (requires deeper AST analysis)
+  - TODO: Detect array creation/mutation at global scope
+  - Currently flags all refs, but should only flag module-level refs
 
 - [ ] Fix E105 Catch_all_exception to only detect exception handlers
-  - Currently flags ANY underscore pattern, not just in try...with
-  - Need to analyze AST context to identify exception handlers specifically
+  - Currently the typedtree patterns don't provide enough context
   - Should only flag patterns like `try ... with _ ->` not all uses of `_`
+  - Plan: Use Parsetree traversal with Ast_iterator
+    1. Override the expression method to find Pexp_try nodes
+    2. Check exception handler cases for Ppat_any patterns
+    3. Only flag wildcard patterns within try...with expressions
+    4. This avoids false positives for valid underscore uses
+  - Implementation would go in lib/style.ml or new lib/ast_checks.ml
 
-- [ ] Make E205 Printf_module less strict
-  - Printf and Format are part of stdlib and widely used
-  - Should be a suggestion/warning, not an error
-  - Or make it configurable/opt-in
+- [x] Make E205 Printf_module less strict
+  - ✓ Changed title from "Outdated" to "Consider Using Fmt Module"
+  - ✓ Description already acknowledges Printf/Format are valid choices
+  - ✓ Priority is already medium (3), not highest
+  - Rule is now properly framed as a style suggestion
 
-- [ ] Enforce 1:1 mapping between test files and library modules
-  - Each lib/*.ml file should have a corresponding test/test_*.ml file
-  - No extra test files without corresponding library modules
-  - Tests for a feature should go in the test file for the module implementing it
-  - Example: tests for E335 (underscore bindings) go in test_naming.ml since the check is in naming.ml
+- [x] Enforce 1:1 mapping between test files and library modules
+  - ✓ Already implemented as E605 (Missing_test_file) and E610 (Test_without_library)
+  - ✓ Checks that each lib/*.ml file has a corresponding test/test_*.ml file
+  - ✓ Checks that test files have corresponding library modules
+  - ✓ Uses dune describe to find modules accurately
+  - Note: May not be showing in output due to dune describe parsing
 
-- [ ] Store configuration in .merlintrc or similar config file
-  - Currently --rules flag is command-line only
-  - Would be useful to have project-level configuration
+- [x] Store configuration in .merlintrc or similar config file
+  - ✓ Implemented config_file.ml to load .merlintrc files
+  - ✓ Searches up directory tree for config file
+  - ✓ Supports all existing configuration options
+  - ✓ Created .merlintrc.example as documentation
+  - ✓ Integrated with main.ml to load config automatically
+
+- [ ] Add code duplication detection
+  - Find duplicated code blocks across the codebase
+  - Compare AST subtree similarities or use token-based analysis
+  - State of the art: structural similarity, clone detection algorithms
+  - Could use hash-based detection for exact duplicates
+  - Or tree-edit distance for near-duplicates
+  - Suggest extracting common code into functions
 
 ## Medium Priority
 
@@ -79,11 +99,12 @@
   - Use regex to check docstrings in .mli files start with `[<name> ...] is`
   - Ensures consistent documentation style across codebase
 
-- [ ] Add rule to catch Error patterns and suggest using err_* helper functions
-  - Detect `Error (Fmt.str ...)` patterns in code  
-  - Suggest creating specific error helper functions like `err_invalid_input`, `err_file_not_found`
-  - Helper functions should be defined at the top of the file for better organization
-  - This promotes consistent error handling and reduces code duplication
+- [x] Add rule E340 to catch Error patterns and suggest using err_* helper functions (partial)
+  - ✓ Added issue types and documentation  
+  - ✓ Created infrastructure for detecting `Error (Fmt.str ...)` patterns
+  - TODO: Current implementation needs deeper AST analysis to properly detect the pattern
+  - Would need to analyze constructor applications with function calls as arguments
+  - Typedtree doesn't provide enough context for this pattern
 
 - [ ] Implement E510: Missing Log Source
   - Each module should define its own log source

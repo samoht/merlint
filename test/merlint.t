@@ -219,7 +219,7 @@ Test Printf/Format module usage
   
   ✓ Code Quality (0 total issues)
   ✗ Code Style (4 total issues)
-    [E205] Outdated Printf/Format Modules
+    [E205] Consider Using Fmt Module
     This is a style suggestion. While Printf and Format are part of OCaml's
     standard library and perfectly fine to use, the Fmt library offers additional
     features like custom formatters and better composability. Consider using Fmt

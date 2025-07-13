@@ -26,6 +26,7 @@ let parse_error_code code =
   | "E325" -> Some Issue_type.Function_naming
   | "E330" -> Some Issue_type.Redundant_module_name
   | "E335" -> Some Issue_type.Used_underscore_binding
+  | "E350" -> Some Issue_type.Boolean_blindness
   | "E400" -> Some Issue_type.Missing_mli_doc
   | "E405" -> Some Issue_type.Missing_value_doc
   | "E410" -> Some Issue_type.Bad_doc_style

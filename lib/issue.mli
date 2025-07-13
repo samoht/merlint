@@ -87,6 +87,22 @@ type t =
       location : Location.t;
       usage_locations : Location.t list;
     }
+  | Error_pattern of {
+      location : Location.t;
+      error_message : string;
+      suggested_function : string;
+    }
+  | Boolean_blindness of {
+      function_name : string;
+      location : Location.t;
+      bool_count : int;
+      signature : string;
+    }
+  | Mutable_state of {
+      kind : string; (* "ref", "mutable", "array" *)
+      name : string;
+      location : Location.t;
+    }
   | Test_exports_module_name of {
       filename : string;
       location : Location.t;

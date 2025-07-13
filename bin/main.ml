@@ -249,7 +249,8 @@ let run_analysis project_root filtered_files rule_filter =
   let terminal_width = get_terminal_width () in
   Format.set_margin terminal_width;
 
-  let rules_config = Merlint.Rules.default_config project_root in
+  let config = Merlint.Config_file.load_from_path project_root in
+  let rules_config = { Merlint.Rules.merlint_config = config; project_root } in
   Log.info (fun m ->
       m "Starting visual analysis on %d files" (List.length filtered_files));
   let category_reports =

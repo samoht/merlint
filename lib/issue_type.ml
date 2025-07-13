@@ -14,6 +14,9 @@ type t =
   | Function_naming
   | Redundant_module_name
   | Used_underscore_binding
+  | Error_pattern
+  | Boolean_blindness
+  | Mutable_state
   | Missing_mli_doc
   | Missing_value_doc
   | Bad_doc_style
@@ -43,6 +46,9 @@ let error_code = function
   | Function_naming -> "E325"
   | Redundant_module_name -> "E330"
   | Used_underscore_binding -> "E335"
+  | Error_pattern -> "E340"
+  | Boolean_blindness -> "E350"
+  | Mutable_state -> "E351"
   | Missing_mli_doc -> "E400"
   | Missing_value_doc -> "E405"
   | Bad_doc_style -> "E410"
@@ -72,6 +78,9 @@ let all =
     Function_naming;
     Redundant_module_name;
     Used_underscore_binding;
+    Error_pattern;
+    Boolean_blindness;
+    Mutable_state;
     Missing_mli_doc;
     Missing_value_doc;
     Bad_doc_style;
