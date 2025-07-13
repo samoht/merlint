@@ -244,10 +244,13 @@ let process_category_report rule_filter (category_name, reports) =
 
 let print_fix_hints all_issues = if all_issues <> [] then exit 1
 
-let run_analysis project_root filtered_files rule_filter =
+let run_analysis project_root filtered_files rule_filter show_profile =
   (* Set formatter margin based on terminal width *)
   let terminal_width = get_terminal_width () in
   Format.set_margin terminal_width;
+
+  (* Reset profiling if enabled *)
+  if show_profile then Merlint.Profiling.reset ();
 
   let config = Merlint.Config_file.load_from_path project_root in
   let rules_config = { Merlint.Rules.merlint_config = config; project_root } in
@@ -270,6 +273,10 @@ let run_analysis project_root filtered_files rule_filter =
 
   Merlint.Report.print_summary all_reports;
   let all_issues = Merlint.Report.get_all_issues all_reports in
+
+  (* Print profiling summary if enabled *)
+  if show_profile then Merlint.Profiling.print_summary ();
+
   print_fix_hints all_issues
 
 let ensure_project_built project_root =
@@ -280,7 +287,8 @@ let ensure_project_built project_root =
       Fmt.epr "Function type analysis may not work properly.@.";
       Fmt.epr "Continuing with analysis...@."
 
-let analyze_files ?(exclude_patterns = []) ?rule_filter files =
+let analyze_files ?(exclude_patterns = []) ?rule_filter ?(show_profile = false)
+    files =
   (* Find project root and all files *)
   let project_root =
     match files with
@@ -322,7 +330,7 @@ let analyze_files ?(exclude_patterns = []) ?rule_filter files =
       m "Analyzing %d files after exclusions" (List.length filtered_files));
   List.iter (fun file -> Log.debug (fun m -> m "  - %s" file)) filtered_files;
 
-  run_analysis project_root filtered_files rule_filter
+  run_analysis project_root filtered_files rule_filter show_profile
 
 let files =
   let doc =
@@ -350,6 +358,10 @@ let log_level =
   let env = Cmd.Env.info "MERLINT_VERBOSE" in
   Logs_cli.level ~env ()
 
+let profile_flag =
+  let doc = "Show profiling statistics for analysis operations" in
+  Arg.(value & flag & info [ "profile"; "p" ] ~doc)
+
 let cmd =
   let doc = "Analyze OCaml code for style issues" in
   let man =
@@ -370,7 +382,15 @@ let cmd =
   let info = Cmd.info "merlint" ~version:"0.1.0" ~doc ~man in
   Cmd.v info
     Term.(
-      const (fun style_renderer log_level exclude_patterns rules_spec files ->
+      const
+        (fun
+          style_renderer
+          log_level
+          exclude_patterns
+          rules_spec
+          show_profile
+          files
+        ->
           setup_log ?style_renderer log_level;
           if not (check_ocamlmerlin ()) then (
             Log.err (fun m -> m "ocamlmerlin not found in PATH");
@@ -391,8 +411,8 @@ let cmd =
                       Log.err (fun m -> m "Invalid rules specification: %s" msg);
                       Stdlib.exit 1)
             in
-            analyze_files ~exclude_patterns ?rule_filter files)
+            analyze_files ~exclude_patterns ?rule_filter ~show_profile files)
       $ Fmt_cli.style_renderer () $ log_level $ exclude_flag $ rules_flag
-      $ files)
+      $ profile_flag $ files)
 
 let () = Stdlib.exit (Cmd.eval cmd)
