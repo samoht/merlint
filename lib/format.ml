@@ -27,8 +27,15 @@ let check_mli_for_files project_root files =
   List.iter
     (fun ml_file ->
       if String.ends_with ~suffix:".ml" ml_file then
-        (* Only check for .mli files for library modules, not executables *)
-        if not (is_executable_module ml_file) then
+        (* Skip test files - they don't need .mli files *)
+        let is_test_file =
+          String.contains ml_file '/'
+          && (String.contains (Filename.dirname ml_file) '/'
+              && Filename.basename (Filename.dirname ml_file) = "test"
+             || String.starts_with ~prefix:"test_" (Filename.basename ml_file))
+        in
+        (* Only check for .mli files for library modules, not executables or test files *)
+        if (not (is_executable_module ml_file)) && not is_test_file then
           let base_name = Filename.remove_extension ml_file in
           let mli_path = base_name ^ ".mli" in
           if not (Sys.file_exists mli_path) then
