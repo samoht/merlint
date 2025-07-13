@@ -117,7 +117,7 @@ let to_int = function Int i -> Some i | _ -> None|};
       {|This issue means you're using unsafe type casting that can crash your
 program. Fix it by replacing Obj.magic with proper type definitions,
 variant types, or GADTs to represent different cases safely.|};
-    Rule.v ~issue:Catch_all_exception ~title:"Underscore Pattern Warning"
+    Rule.v ~issue:Catch_all_exception ~title:"Catch-all Exception Handler"
       ~category:Security_safety
       ~examples:
         [
@@ -125,13 +125,13 @@ variant types, or GADTs to represent different cases safely.|};
           good
             {|try risky_operation () with
 | Not_found -> default_value  
-| Invalid_argument _ -> error_value|};
+| Invalid_argument _ -> error_value
+| exn -> log_unexpected exn; raise exn|};
         ]
-      {|WARNING: This rule currently detects ANY underscore (_) pattern, not just 
-exception handlers. This is a known limitation. The rule is intended to catch
-dangerous patterns like 'try ... with _ ->' but currently flags all uses of _.
-To avoid this warning, use named bindings with underscore prefix (e.g., _unused)
-for intentionally unused values. This will be fixed in a future version.|};
+      {|This issue means you're catching all exceptions with a wildcard pattern,
+which can hide unexpected errors and make debugging difficult. Fix it by
+handling specific exceptions explicitly. If you must catch all exceptions,
+at least log them before re-raising or handling.|};
     Rule.v ~issue:Silenced_warning ~title:"Silenced Compiler Warnings"
       ~category:Security_safety
       ~examples:
@@ -521,4 +521,21 @@ let () = Alcotest.run "all" [
       {|This issue means some test suites aren't included in your main test runner
 so they never get executed. Fix it by adding them to the main test runner
 to ensure all tests are run during development.|};
+    (* Logging Rules *)
+    Rule.v ~issue:Missing_log_source ~title:"Missing Log Source"
+      ~category:Project_structure
+      ~examples:
+        [
+          bad
+            {|(* No log source defined in module *)
+let process () = print_endline "processing"|};
+          good
+            {|let log_src = Logs.Src.create "myapp.process"
+module Log = (val Logs.src_log log_src : Logs.LOG)
+
+let process () = Log.info (fun m -> m "processing")|};
+        ]
+      {|This issue means your module lacks a dedicated log source, making it harder
+to filter and control logging output. Fix it by defining a log source at the
+top of each module using Logs.Src.create with a hierarchical name.|};
   ]

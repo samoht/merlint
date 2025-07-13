@@ -124,6 +124,7 @@ type t =
       test_runner_file : string;
       location : Location.t;
     }
+  | Missing_log_source of { module_name : string; location : Location.t }
 
 val pp : t Fmt.t
 (** Pretty-printer for issues *)

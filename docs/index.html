@@ -426,13 +426,12 @@ variant types, or GADTs to represent different cases safely.</p><div class="exam
 <div class="error-card" id="E105">
     <div>
         <span class="error-code">E105</span>
-        <span class="error-title">Underscore Pattern Warning</span>
+        <span class="error-title">Catch-all Exception Handler</span>
     </div>
-    <div class="error-hint"><p>WARNING: This rule currently detects ANY underscore (_) pattern, not just 
-exception handlers. This is a known limitation. The rule is intended to catch
-dangerous patterns like 'try ... with _ -&gt;' but currently flags all uses of _.
-To avoid this warning, use named bindings with underscore prefix (e.g., _unused)
-for intentionally unused values. This will be fixed in a future version.</p><div class="examples-grid">
+    <div class="error-hint"><p>This issue means you're catching all exceptions with a wildcard pattern,
+which can hide unexpected errors and make debugging difficult. Fix it by
+handling specific exceptions explicitly. If you must catch all exceptions,
+at least log them before re-raising or handling.</p><div class="examples-grid">
 <div class="example bad">
   <h4>BAD</h4>
   
@@ -443,7 +442,8 @@ for intentionally unused values. This will be fixed in a future version.</p><div
   
   <pre><code><span class="kw">try</span> risky_operation () <span class="kw">with</span>
 | <span class="cn">Not_found</span> -&gt; default_value  
-| <span class="cn">Invalid_argument</span> _ -&gt; error_value</code></pre>
+| <span class="cn">Invalid_argument</span> _ -&gt; error_value
+| exn -&gt; log_unexpected exn; <span class="kw">raise</span> exn</code></pre>
 </div>
 </div></div>
 </div>
@@ -954,6 +954,30 @@ private ones.</p><div class="examples-grid">
 <span class="kw">type</span> t
 <span class="kw">val</span> create : string -&gt; int -&gt; t
 <span class="kw">val</span> name : t -&gt; string</code></pre>
+</div>
+</div></div>
+</div>
+<div class="error-card" id="E510">
+    <div>
+        <span class="error-code">E510</span>
+        <span class="error-title">Missing Log Source</span>
+    </div>
+    <div class="error-hint"><p>This issue means your module lacks a dedicated log source, making it harder
+to filter and control logging output. Fix it by defining a log source at the
+top of each module using Logs.Src.create with a hierarchical name.</p><div class="examples-grid">
+<div class="example bad">
+  <h4>BAD</h4>
+  
+  <pre><code><span class="cm">(* No log source defined in module *)</span>
+<span class="kw">let</span> process () = print_endline &quot;processing&quot;</code></pre>
+</div>
+<div class="example good">
+  <h4>GOOD</h4>
+  
+  <pre><code><span class="kw">let</span> log_src = <span class="cn">Logs</span>.<span class="cn">Src</span>.create &quot;myapp.process&quot;
+<span class="kw">module</span> <span class="cn">Log</span> = (<span class="kw">val</span> <span class="cn">Logs</span>.src_log log_src : <span class="cn">Logs</span>.<span class="cn">LOG</span>)
+
+<span class="kw">let</span> process () = <span class="cn">Log</span>.info (<span class="kw">fun</span> m -&gt; m &quot;processing&quot;)</code></pre>
 </div>
 </div></div>
 </div>

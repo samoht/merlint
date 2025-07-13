@@ -34,6 +34,8 @@ type t =
   | Missing_test_file
   | Test_without_library
   | Test_suite_not_included
+  (* Logging Rules *)
+  | Missing_log_source
 
 val error_code : t -> string
 (** Get the error code for an issue type *)

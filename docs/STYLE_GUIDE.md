@@ -343,13 +343,12 @@ let find_user_id json =
 
 **No Broad Exceptions**: Never use `try ... with _ -> ...`. Always match on specific exceptions.
 
-### [E105] Underscore Pattern Warning
+### [E105] Catch-all Exception Handler
 
-WARNING: This rule currently detects ANY underscore (_) pattern, not just 
-exception handlers. This is a known limitation. The rule is intended to catch
-dangerous patterns like 'try ... with _ ->' but currently flags all uses of _.
-To avoid this warning, use named bindings with underscore prefix (e.g., _unused)
-for intentionally unused values. This will be fixed in a future version.
+This issue means you're catching all exceptions with a wildcard pattern,
+which can hide unexpected errors and make debugging difficult. Fix it by
+handling specific exceptions explicitly. If you must catch all exceptions,
+at least log them before re-raising or handling.
 
 **Examples:**
 
@@ -363,6 +362,7 @@ try risky_operation () with _ -> default_value
 try risky_operation () with
 | Not_found -> default_value  
 | Invalid_argument _ -> error_value
+| exn -> log_unexpected exn; raise exn
 ```
 
 

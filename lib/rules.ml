@@ -88,7 +88,13 @@ let process_file_analysis config (file, analysis) =
     | Error _ -> ([], [])
   in
 
-  (complexity_issues, style_issues, naming_issues)
+  (* Run AST-based checks that need deeper analysis *)
+  let ast_issues =
+    Profiling.time (Fmt.str "AST checks: %s" file) (fun () ->
+        Ast_checks.analyze_file file)
+  in
+
+  (complexity_issues, style_issues @ ast_issues, naming_issues)
 
 (* Aggregate issues from all file analyses *)
 let aggregate_issues config file_analyses =

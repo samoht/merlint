@@ -121,6 +121,7 @@ type t =
       test_runner_file : string;
       location : Location.t;
     }
+  | Missing_log_source of { module_name : string; location : Location.t }
 
 let get_type = function
   | Complexity_exceeded _ -> Complexity
@@ -152,6 +153,7 @@ let get_type = function
   | Missing_test_file _ -> Missing_test_file
   | Test_without_library _ -> Test_without_library
   | Test_suite_not_included _ -> Test_suite_not_included
+  | Missing_log_source _ -> Missing_log_source
 
 (* Get error code from Issue_type module *)
 let error_code = Issue_type.error_code
@@ -294,6 +296,9 @@ let pp_issue_content ppf issue =
       Fmt.pf ppf
         "%a %a:@ Test@ suite@ '%s.suite'@ is@ not@ included@ in@ test@ runner"
         pp_error_code code pp_location_styled location test_module
+  | Missing_log_source { location; module_name } ->
+      Fmt.pf ppf "%a %a:@ Module@ '%s'@ is@ missing@ a@ log@ source@ definition"
+        pp_error_code code pp_location_styled location module_name
 
 (* Format issue with proper line wrapping using Fmt *)
 let pp_wrapped ppf issue = Fmt.box ~indent:7 pp_issue_content ppf issue
@@ -344,6 +349,7 @@ let find_location = function
   | Test_without_library { location; _ }
   | Test_suite_not_included { location; _ } ->
       Some location
+  | Missing_log_source { location; _ } -> Some location
   | Silenced_warning { location; _ } -> Some location
   | Missing_standard_function _ -> None
 
@@ -408,6 +414,8 @@ let get_description = function
         expected_module
   | Test_suite_not_included { test_module; _ } ->
       Fmt.str "Test suite '%s.suite' is not included in test runner" test_module
+  | Missing_log_source { module_name; _ } ->
+      Fmt.str "Module '%s' is missing a log source definition" module_name
   | Silenced_warning { warning_number; _ } ->
       Fmt.str "Warning '%s' is silenced" warning_number
   | Missing_standard_function { type_name; missing; _ } ->
@@ -428,7 +436,7 @@ let priority = function
   | Missing_mli_doc _ | Missing_value_doc _ | Bad_doc_style _
   | Missing_standard_function _ | Missing_ocamlformat_file _
   | Test_exports_module_name _ | Missing_test_file _ | Test_without_library _
-  | Test_suite_not_included _ ->
+  | Test_suite_not_included _ | Missing_log_source _ ->
       4
 
 let find_file = function

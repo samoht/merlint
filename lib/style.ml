@@ -129,7 +129,7 @@ let check_error_patterns identifiers =
   !issues
 
 (** Check typedtree data structure *)
-let check_typedtree ~identifiers ~patterns =
+let check_typedtree ~identifiers ~patterns:_ =
   let issues = ref [] in
 
   (* Check identifiers for problematic patterns *)
@@ -164,19 +164,9 @@ let check_typedtree ~identifiers ~patterns =
       | None -> ())
     identifiers;
 
-  (* Check patterns for catch-all exception handlers *)
-  List.iter
-    (fun (pattern : Typedtree.elt) ->
-      match pattern.location with
-      | Some loc ->
-          let name = pattern.name in
-          let base = name.base in
-
-          (* Check for catch-all pattern '_' *)
-          if base = "_" then
-            issues := Issue.Catch_all_exception { location = loc } :: !issues
-      | None -> ())
-    patterns;
+  (* Note: Catch-all exception detection moved to ast_checks.ml
+     because typedtree patterns don't provide enough context
+     to distinguish exception handlers from other underscore uses *)
 
   (* Add mutable state checks *)
   (* TODO: E351 disabled - too imprecise, needs to distinguish global vs local state

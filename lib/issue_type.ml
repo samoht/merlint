@@ -28,6 +28,8 @@ type t =
   | Missing_test_file
   | Test_without_library
   | Test_suite_not_included
+  (* Logging Rules *)
+  | Missing_log_source
 
 let error_code = function
   | Complexity -> "E001"
@@ -59,6 +61,7 @@ let error_code = function
   | Missing_test_file -> "E605"
   | Test_without_library -> "E610"
   | Test_suite_not_included -> "E615"
+  | Missing_log_source -> "E510"
 
 let all =
   [
@@ -91,4 +94,5 @@ let all =
     Missing_test_file;
     Test_without_library;
     Test_suite_not_included;
+    Missing_log_source;
   ]
