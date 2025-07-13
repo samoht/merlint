@@ -104,42 +104,70 @@ let analyze_project config files =
   let file_count = List.length ml_files in
 
   (* Run dune describe once at the beginning *)
-  let dune_describe = Dune.describe config.project_root in
+  let dune_describe =
+    Profiling.time "Dune describe" (fun () -> Dune.describe config.project_root)
+  in
 
   (* Analyze all ML files with merlin once *)
   let file_analyses =
-    List.map (fun file -> (file, Merlin.analyze_file file)) ml_files
+    Profiling.time "Merlin analysis (all files)" (fun () ->
+        List.map
+          (fun file ->
+            ( file,
+              Profiling.time (Printf.sprintf "Merlin: %s" file) (fun () ->
+                  Merlin.analyze_file file) ))
+          ml_files)
   in
 
   (* Run all analyses using the cached merlin results *)
   let complexity_issues, style_issues, naming_issues =
-    aggregate_issues config file_analyses
+    Profiling.time "Aggregate issues" (fun () ->
+        aggregate_issues config file_analyses)
   in
 
   (* Create reports *)
   let complexity_report =
-    Report.create
-      ~rule_name:"Complexity rules (complexity ≤10, length ≤50, nesting ≤3)"
-      ~passed:(complexity_issues = []) ~issues:complexity_issues ~file_count
+    Profiling.time "Complexity report" (fun () ->
+        Report.create
+          ~rule_name:"Complexity rules (complexity ≤10, length ≤50, nesting ≤3)"
+          ~passed:(complexity_issues = []) ~issues:complexity_issues ~file_count)
   in
   let style_report =
-    Report.create ~rule_name:"Style rules (no Obj.magic, no Str, no catch-all)"
-      ~passed:(style_issues = []) ~issues:style_issues ~file_count
+    Profiling.time "Style report" (fun () ->
+        Report.create
+          ~rule_name:"Style rules (no Obj.magic, no Str, no catch-all)"
+          ~passed:(style_issues = []) ~issues:style_issues ~file_count)
   in
   let naming_report =
-    Report.create ~rule_name:"Naming conventions (snake_case)"
-      ~passed:(naming_issues = []) ~issues:naming_issues ~file_count
+    Profiling.time "Naming report" (fun () ->
+        Report.create ~rule_name:"Naming conventions (snake_case)"
+          ~passed:(naming_issues = []) ~issues:naming_issues ~file_count)
   in
 
   [
-    ("Code Quality", [ complexity_report; run_warning_rules config all_files ]);
+    ( "Code Quality",
+      [
+        complexity_report;
+        Profiling.time "Warning rules" (fun () ->
+            run_warning_rules config all_files);
+      ] );
     ("Code Style", [ style_report ]);
     ("Naming Conventions", [ naming_report ]);
-    ("Documentation", [ run_documentation_rules config all_files ]);
-    ("Project Structure", [ run_format_rules config all_files ]);
+    ( "Documentation",
+      [
+        Profiling.time "Documentation rules" (fun () ->
+            run_documentation_rules config all_files);
+      ] );
+    ( "Project Structure",
+      [
+        Profiling.time "Format rules" (fun () ->
+            run_format_rules config all_files);
+      ] );
     ( "Test Quality",
       [
-        run_test_convention_rules config all_files;
-        run_test_coverage_rules dune_describe all_files;
+        Profiling.time "Test convention rules" (fun () ->
+            run_test_convention_rules config all_files);
+        Profiling.time "Test coverage rules" (fun () ->
+            run_test_coverage_rules dune_describe all_files);
       ] );
   ]

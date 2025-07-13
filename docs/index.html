@@ -413,8 +413,13 @@ variant types, or GADTs to represent different cases safely.</p><div class="exam
 <div class="example good">
   <h4>GOOD</h4>
   
-  <pre><code><span class="kw">type</span> 'a box = <span class="cn">Box</span> : 'b -&gt; 'b box
-<span class="kw">let</span> safe_coerce (<span class="cn">Box</span> x) = x</code></pre>
+  <pre><code><span class="cm">(* Use proper type conversions *)</span>
+<span class="kw">let</span> int_of_string_opt s =
+  <span class="kw">try</span> <span class="cn">Some</span> (int_of_string s) <span class="kw">with</span> _ -&gt; <span class="cn">None</span>
+
+<span class="cm">(* Or use variant types *)</span>
+<span class="kw">type</span> value = <span class="cn">Int</span> <span class="kw">of</span> int | <span class="cn">String</span> <span class="kw">of</span> string
+<span class="kw">let</span> to_int = <span class="kw">function</span> <span class="cn">Int</span> i -&gt; <span class="cn">Some</span> i | _ -&gt; <span class="cn">None</span></code></pre>
 </div>
 </div></div>
 </div>

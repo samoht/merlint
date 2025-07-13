@@ -105,8 +105,14 @@ or extracting nested logic into helper functions.|};
       ~examples:
         [
           bad {|let coerce x = Obj.magic x|};
-          good {|type 'a box = Box : 'b -> 'b box
-let safe_coerce (Box x) = x|};
+          good
+            {|(* Use proper type conversions *)
+let int_of_string_opt s =
+  try Some (int_of_string s) with _ -> None
+
+(* Or use variant types *)
+type value = Int of int | String of string
+let to_int = function Int i -> Some i | _ -> None|};
         ]
       {|This issue means you're using unsafe type casting that can crash your
 program. Fix it by replacing Obj.magic with proper type definitions,
@@ -149,8 +155,8 @@ the underlying issues that trigger the warnings.|};
           bad {|let is_email s = 
   Str.string_match (Str.regexp ".*@.*") s 0|};
           good
-            {|let is_email s = 
-  Re.execp (Re.compile (Re.seq [Re.any; Re.char '@'; Re.any])) s|};
+            {|let email_re = Re.compile (Re.seq [Re.any; Re.char '@'; Re.any])
+let is_email s = Re.execp email_re s|};
         ]
       {|This issue means you're using the outdated Str module for regular
 expressions. Fix it by switching to the modern Re module: add 're' to your
