@@ -390,7 +390,7 @@ dune dependencies and replace Str functions with Re equivalents.</p></div>
 <div class="error-card" id="E205">
     <div>
         <span class="error-code">E205</span>
-        <span class="error-title">Outdated Printf/Format Modules</span>
+        <span class="error-title">Consider Using Fmt Module</span>
     </div>
     <div class="error-hint"><p>This is a style suggestion. While Printf and Format are part of OCaml's
 standard library and perfectly fine to use, the Fmt library offers additional
@@ -516,6 +516,134 @@ already clear from usage.</p><div class="examples-grid">
 <span class="kw">let</span> stop () = ...
 <span class="kw">type</span> config = ...
 <span class="cm">(* Usage: Process.start (), Process.config *)</span></code></pre>
+</div>
+</div></div>
+</div>
+<div class="error-card" id="E335">
+    <div>
+        <span class="error-code">E335</span>
+        <span class="error-title">Used Underscore-Prefixed Binding</span>
+    </div>
+    <div class="error-hint"><p>This issue means a binding prefixed with underscore (indicating it should be
+unused) is actually used in the code. Fix it by removing the underscore prefix
+to clearly indicate the binding is intentionally used.</p><div class="examples-grid">
+<div class="example bad">
+  <h4>BAD</h4>
+  
+  <pre><code><span class="kw">let</span> _debug_mode = <span class="kw">true</span> <span class="kw">in</span>
+<span class="kw">if</span> _debug_mode <span class="kw">then</span>
+  print_endline &quot;<span class="cn">Debug</span> mode enabled&quot;</code></pre>
+</div>
+<div class="example good">
+  <h4>GOOD</h4>
+  
+  <pre><code><span class="kw">let</span> debug_mode = <span class="kw">true</span> <span class="kw">in</span>
+<span class="kw">if</span> debug_mode <span class="kw">then</span>
+  print_endline &quot;<span class="cn">Debug</span> mode enabled&quot;</code></pre>
+</div>
+</div></div>
+</div>
+<div class="error-card" id="E340">
+    <div>
+        <span class="error-code">E340</span>
+        <span class="error-title">Inline Error Construction</span>
+    </div>
+    <div class="error-hint"><p>This issue means you're constructing errors inline instead of using helper
+functions. Fix by defining err_* functions at the top of your file for each
+error case. This promotes consistency, enables easy error message updates, and
+makes error handling patterns clearer.</p><div class="examples-grid">
+<div class="example bad">
+  <h4>BAD</h4>
+  
+  <pre><code><span class="kw">let</span> process_data data =
+  <span class="kw">match</span> validate data <span class="kw">with</span>
+  | <span class="cn">None</span> -&gt; <span class="cn">Error</span> (<span class="cn">Fmt</span>.str &quot;<span class="cn">Invalid</span> data: %s&quot; data.id)
+  | <span class="cn">Some</span> v -&gt; 
+      <span class="kw">if</span> v.size &gt; max_size <span class="kw">then</span>
+        <span class="cn">Error</span> (<span class="cn">Fmt</span>.str &quot;<span class="cn">Data</span> too large: %d&quot; v.size)
+      <span class="kw">else</span> <span class="cn">Ok</span> v</code></pre>
+</div>
+<div class="example good">
+  <h4>GOOD</h4>
+  
+  <pre><code><span class="cm">(* Define error helpers at the top of the file *)</span>
+<span class="kw">let</span> err_invalid_data id = <span class="cn">Error</span> (`<span class="cn">Invalid_data</span> id)
+<span class="kw">let</span> err_fmt fmt = <span class="cn">Fmt</span>.kstr (<span class="kw">fun</span> msg -&gt; <span class="cn">Error</span> (`<span class="cn">Msg</span> msg)) fmt
+
+<span class="kw">let</span> process_data data =
+  <span class="kw">match</span> validate data <span class="kw">with</span>
+  | <span class="cn">None</span> -&gt; err_invalid_data data.id
+  | <span class="cn">Some</span> v -&gt; 
+      <span class="kw">if</span> v.size &gt; max_size <span class="kw">then</span>
+        err_fmt &quot;<span class="cn">Data</span> too large: %d bytes&quot; v.size
+      <span class="kw">else</span> <span class="cn">Ok</span> v</code></pre>
+</div>
+</div></div>
+</div>
+<div class="error-card" id="E350">
+    <div>
+        <span class="error-code">E350</span>
+        <span class="error-title">Boolean Blindness</span>
+    </div>
+    <div class="error-hint"><p>This issue means your function has multiple boolean parameters, making call
+sites ambiguous and error-prone. Fix it by using explicit variant types that
+leverage OCaml's type system for clarity and safety.</p><div class="examples-grid">
+<div class="example bad">
+  <h4>BAD</h4>
+  
+  <pre><code><span class="kw">let</span> create_window visible resizable fullscreen =
+  <span class="cm">(* What do these booleans mean at the call site? *)</span>
+  ...
+  
+<span class="kw">let</span> w = create_window <span class="kw">true</span> <span class="kw">false</span> <span class="kw">true</span></code></pre>
+</div>
+<div class="example good">
+  <h4>GOOD</h4>
+  
+  <pre><code><span class="kw">type</span> visibility = <span class="cn">Visible</span> | <span class="cn">Hidden</span>
+<span class="kw">type</span> window_mode = <span class="cn">Windowed</span> | <span class="cn">Fullscreen</span>
+<span class="kw">type</span> resizable = <span class="cn">Resizable</span> | <span class="cn">Fixed_size</span>
+
+<span class="kw">let</span> create_window ~visibility ~mode ~resizable =
+  ...
+  
+<span class="kw">let</span> w = create_window ~visibility:<span class="cn">Visible</span> ~mode:<span class="cn">Fullscreen</span> ~resizable:<span class="cn">Fixed_size</span></code></pre>
+</div>
+</div></div>
+</div>
+<div class="error-card" id="E351">
+    <div>
+        <span class="error-code">E351</span>
+        <span class="error-title">Global Mutable State</span>
+    </div>
+    <div class="error-hint"><p>This issue warns about global mutable state which makes code harder to test
+and reason about. Local mutable state within functions is perfectly acceptable
+in OCaml. Fix by either using local refs within functions, or preferably by
+using functional approaches with explicit state passing.</p><div class="examples-grid">
+<div class="example bad">
+  <h4>BAD</h4>
+  
+  <pre><code><span class="cm">(* Global mutable state - avoid this *)</span>
+<span class="kw">let</span> counter = <span class="kw">ref</span> <span class="nu">0</span>
+<span class="kw">let</span> incr_counter () = counter := !counter + <span class="nu">1</span>
+
+<span class="kw">let</span> global_cache = <span class="cn">Array</span>.make <span class="nu">100</span> <span class="cn">None</span>
+<span class="kw">let</span> cached_results = <span class="cn">Hashtbl</span>.create <span class="nu">100</span></code></pre>
+</div>
+<div class="example good">
+  <h4>GOOD</h4>
+  
+  <pre><code><span class="cm">(* Local mutable state is fine *)</span>
+<span class="kw">let</span> compute_sum lst =
+  <span class="kw">let</span> sum = <span class="kw">ref</span> <span class="nu">0</span> <span class="kw">in</span>
+  <span class="cn">List</span>.iter (<span class="kw">fun</span> x -&gt; sum := !sum + x) lst;
+  !sum
+
+<span class="cm">(* Or better, use functional approach *)</span>
+<span class="kw">let</span> compute_sum lst = <span class="cn">List</span>.fold_left (+) <span class="nu">0</span> lst
+
+<span class="cm">(* Pass state explicitly *)</span>
+<span class="kw">let</span> incr_counter counter = counter + <span class="nu">1</span></code></pre>
 </div>
 </div></div>
 </div>

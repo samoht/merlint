@@ -490,42 +490,8 @@ let categories =
     ("Testing", "E600-E699", "Test coverage and test quality issues");
   ]
 
-(* Get all issue types in order *)
-let all_issue_types =
-  [
-    (* Complexity *)
-    Issue_type.Complexity;
-    Issue_type.Function_length;
-    Issue_type.Deep_nesting;
-    (* Security/Safety *)
-    Issue_type.Obj_magic;
-    Issue_type.Catch_all_exception;
-    Issue_type.Silenced_warning;
-    (* Style/Modernization *)
-    Issue_type.Str_module;
-    Issue_type.Printf_module;
-    (* Naming Conventions *)
-    Issue_type.Variant_naming;
-    Issue_type.Module_naming;
-    Issue_type.Value_naming;
-    Issue_type.Type_naming;
-    Issue_type.Long_identifier;
-    Issue_type.Function_naming;
-    Issue_type.Redundant_module_name;
-    (* Documentation *)
-    Issue_type.Missing_mli_doc;
-    Issue_type.Missing_value_doc;
-    Issue_type.Bad_doc_style;
-    Issue_type.Missing_standard_function;
-    (* Project Structure *)
-    Issue_type.Missing_ocamlformat_file;
-    Issue_type.Missing_mli_file;
-    (* Testing *)
-    Issue_type.Test_exports_module;
-    Issue_type.Missing_test_file;
-    Issue_type.Test_without_library;
-    Issue_type.Test_suite_not_included;
-  ]
+(* Get all issue types from the single source of truth *)
+let all_issue_types = Issue_type.all
 
 let get_category issue_type =
   let code = Issue_type.error_code issue_type in

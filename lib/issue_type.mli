@@ -20,6 +20,9 @@ type t =
   | Function_naming
   | Redundant_module_name
   | Used_underscore_binding
+  | Error_pattern
+  | Boolean_blindness
+  | Mutable_state
   | Missing_mli_doc
   | Missing_value_doc
   | Bad_doc_style

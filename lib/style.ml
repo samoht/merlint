@@ -45,6 +45,89 @@ let is_printf_function base =
   || String.ends_with ~suffix:"sprintf" base
   || String.ends_with ~suffix:"asprintf" base
 
+(* TODO: E351 disabled - too imprecise, needs to distinguish global vs local state
+(** Check for mutable state patterns in identifiers *)
+let check_mutable_state identifiers =
+  let issues = ref [] in
+
+  List.iter
+    (fun (id : Typedtree.elt) ->
+      match id.location with
+      | Some loc -> (
+          let name = id.name in
+          let base = name.base in
+
+          (* Check for ref-related functions *)
+          match base with
+          | "ref" ->
+              (* This is a ref constructor *)
+              issues :=
+                Issue.Mutable_state
+                  { kind = "ref"; name = "<anonymous ref>"; location = loc }
+                :: !issues
+          | ":=" ->
+              (* Assignment operator *)
+              issues :=
+                Issue.Mutable_state
+                  { kind = "ref"; name = "assignment"; location = loc }
+                :: !issues
+          | _ -> ())
+      | None -> ())
+    identifiers;
+
+  !issues
+*)
+
+(** Check for Error pattern usage *)
+let check_error_patterns identifiers =
+  let issues = ref [] in
+  let error_seen = ref None in
+
+  List.iter
+    (fun (id : Typedtree.elt) ->
+      match id.location with
+      | Some loc -> (
+          let name = id.name in
+          let prefix = name.prefix in
+          let base = name.base in
+
+          match (prefix, base) with
+          | _, "Error" ->
+              (* Remember we saw Error constructor *)
+              error_seen := Some loc
+          | ([ "Stdlib"; "Format" ] | [ "Format" ]), "asprintf"
+          | [ "Fmt" ], "str" -> (
+              (* Check if this follows an Error constructor *)
+              match !error_seen with
+              | Some error_loc when error_loc.start_line = loc.start_line ->
+                  (* Same line, likely Error (Fmt.str ...) pattern *)
+                  let suggested =
+                    match String.split_on_char '"' base with
+                    | _ :: msg :: _ ->
+                        let clean_msg =
+                          String.map
+                            (fun c -> if c = ' ' || c = ':' then '_' else c)
+                            (String.lowercase_ascii msg)
+                        in
+                        "err_" ^ clean_msg
+                    | _ -> "err_<specific_error>"
+                  in
+                  issues :=
+                    Issue.Error_pattern
+                      {
+                        location = error_loc;
+                        error_message = "Error (Fmt.str ...)";
+                        suggested_function = suggested;
+                      }
+                    :: !issues;
+                  error_seen := None
+              | _ -> ())
+          | _ -> ())
+      | None -> ())
+    identifiers;
+
+  !issues
+
 (** Check typedtree data structure *)
 let check_typedtree ~identifiers ~patterns =
   let issues = ref [] in
@@ -94,6 +177,15 @@ let check_typedtree ~identifiers ~patterns =
             issues := Issue.Catch_all_exception { location = loc } :: !issues
       | None -> ())
     patterns;
+
+  (* Add mutable state checks *)
+  (* TODO: E351 disabled - too imprecise, needs to distinguish global vs local state
+  let mutable_issues = check_mutable_state identifiers in
+  issues := mutable_issues @ !issues; *)
+
+  (* Add error pattern checks *)
+  let error_pattern_issues = check_error_patterns identifiers in
+  issues := error_pattern_issues @ !issues;
 
   !issues
 
