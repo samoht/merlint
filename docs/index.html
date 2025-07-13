@@ -334,7 +334,31 @@ extracting logical sections into separate functions with descriptive names.
 Note: Functions with pattern matching get additional allowance (2 lines per case).
 Pure data structures (lists, records) are also exempt from length checks.
 For better readability, consider using helper functions for complex logic.
-Aim for functions under 50 lines of actual logic.</p></div>
+Aim for functions under 50 lines of actual logic.</p><div class="examples-grid">
+<div class="example bad">
+  <h4>BAD</h4>
+  
+  <pre><code><span class="kw">let</span> process_everything user data config =
+  <span class="cm">(* 100+ lines of mixed concerns: validation, processing, formatting *)</span>
+  <span class="kw">let</span> valid = check_user user &amp;&amp; verify_data data <span class="kw">in</span>
+  <span class="cm">(* ... many more lines ... *)</span>
+  format_output result</code></pre>
+</div>
+<div class="example good">
+  <h4>GOOD</h4>
+  
+  <pre><code><span class="kw">let</span> validate_inputs user data = 
+  check_user user &amp;&amp; verify_data data
+
+<span class="kw">let</span> process_data data config = 
+  <span class="cm">(* focused processing logic *)</span>
+
+<span class="kw">let</span> process_everything user data config =
+  <span class="kw">let</span> valid = validate_inputs user data <span class="kw">in</span>
+  <span class="kw">let</span> result = process_data data config <span class="kw">in</span>
+  format_output result</code></pre>
+</div>
+</div></div>
 </div>
 <div class="error-card" id="E010">
     <div>
@@ -343,7 +367,33 @@ Aim for functions under 50 lines of actual logic.</p></div>
     </div>
     <div class="error-hint"><p>This issue means your code has too many nested conditions making it hard to
 follow. Fix it by using pattern matching, early returns with 'when' guards,
-or extracting nested logic into helper functions.</p></div>
+or extracting nested logic into helper functions.</p><div class="examples-grid">
+<div class="example bad">
+  <h4>BAD</h4>
+  
+  <pre><code><span class="kw">let</span> process_order order user =
+  <span class="kw">if</span> order.valid <span class="kw">then</span>
+    <span class="kw">if</span> user.authenticated <span class="kw">then</span>
+      <span class="kw">if</span> order.total &gt; <span class="nu">0</span> <span class="kw">then</span>
+        <span class="kw">if</span> check_inventory order <span class="kw">then</span>
+          <span class="cm">(* deeply nested logic *)</span>
+          process_payment order
+        <span class="kw">else</span> <span class="cn">Error</span> &quot;<span class="cn">Out</span> <span class="kw">of</span> stock&quot;
+      <span class="kw">else</span> <span class="cn">Error</span> &quot;<span class="cn">Invalid</span> total&quot;
+    <span class="kw">else</span> <span class="cn">Error</span> &quot;<span class="cn">Not</span> authenticated&quot;
+  <span class="kw">else</span> <span class="cn">Error</span> &quot;<span class="cn">Invalid</span> order&quot;</code></pre>
+</div>
+<div class="example good">
+  <h4>GOOD</h4>
+  
+  <pre><code><span class="kw">let</span> process_order order user =
+  <span class="kw">if</span> <span class="kw">not</span> order.valid <span class="kw">then</span> <span class="cn">Error</span> &quot;<span class="cn">Invalid</span> order&quot; <span class="kw">else</span>
+  <span class="kw">if</span> <span class="kw">not</span> user.authenticated <span class="kw">then</span> <span class="cn">Error</span> &quot;<span class="cn">Not</span> authenticated&quot; <span class="kw">else</span>
+  <span class="kw">if</span> order.total &lt;= <span class="nu">0</span> <span class="kw">then</span> <span class="cn">Error</span> &quot;<span class="cn">Invalid</span> total&quot; <span class="kw">else</span>
+  <span class="kw">if</span> <span class="kw">not</span> (check_inventory order) <span class="kw">then</span> <span class="cn">Error</span> &quot;<span class="cn">Out</span> <span class="kw">of</span> stock&quot; <span class="kw">else</span>
+  process_payment order</code></pre>
+</div>
+</div></div>
 </div>
 <h2 id="security-safety">Security/Safety</h2>
 <div class="category">E100-E199 • Potential security vulnerabilities and unsafe code patterns</div>
@@ -354,7 +404,19 @@ or extracting nested logic into helper functions.</p></div>
     </div>
     <div class="error-hint"><p>This issue means you're using unsafe type casting that can crash your
 program. Fix it by replacing Obj.magic with proper type definitions,
-variant types, or GADTs to represent different cases safely.</p></div>
+variant types, or GADTs to represent different cases safely.</p><div class="examples-grid">
+<div class="example bad">
+  <h4>BAD</h4>
+  
+  <pre><code><span class="kw">let</span> coerce x = <span class="cn">Obj</span>.magic x</code></pre>
+</div>
+<div class="example good">
+  <h4>GOOD</h4>
+  
+  <pre><code><span class="kw">type</span> 'a box = <span class="cn">Box</span> : 'b -&gt; 'b box
+<span class="kw">let</span> safe_coerce (<span class="cn">Box</span> x) = x</code></pre>
+</div>
+</div></div>
 </div>
 <div class="error-card" id="E105">
     <div>
@@ -365,7 +427,20 @@ variant types, or GADTs to represent different cases safely.</p></div>
 exception handlers. This is a known limitation. The rule is intended to catch
 dangerous patterns like 'try ... with _ -&gt;' but currently flags all uses of _.
 To avoid this warning, use named bindings with underscore prefix (e.g., _unused)
-for intentionally unused values. This will be fixed in a future version.</p></div>
+for intentionally unused values. This will be fixed in a future version.</p><div class="examples-grid">
+<div class="example bad">
+  <h4>BAD</h4>
+  
+  <pre><code><span class="kw">try</span> risky_operation () <span class="kw">with</span> _ -&gt; default_value</code></pre>
+</div>
+<div class="example good">
+  <h4>GOOD</h4>
+  
+  <pre><code><span class="kw">try</span> risky_operation () <span class="kw">with</span>
+| <span class="cn">Not_found</span> -&gt; default_value  
+| <span class="cn">Invalid_argument</span> _ -&gt; error_value</code></pre>
+</div>
+</div></div>
 </div>
 <div class="error-card" id="E110">
     <div>
@@ -374,7 +449,21 @@ for intentionally unused values. This will be fixed in a future version.</p></di
     </div>
     <div class="error-hint"><p>This issue means you're hiding compiler warnings that indicate potential
 problems. Fix it by removing warning silencing attributes and addressing
-the underlying issues that trigger the warnings.</p></div>
+the underlying issues that trigger the warnings.</p><div class="examples-grid">
+<div class="example bad">
+  <h4>BAD</h4>
+  
+  <pre><code>[@@@ocaml.warning &quot;-<span class="nu">32</span>&quot;] <span class="cm">(* unused value *)</span>
+<span class="kw">let</span> unused_function x = x + <span class="nu">1</span></code></pre>
+</div>
+<div class="example good">
+  <h4>GOOD</h4>
+  
+  <pre><code><span class="cm">(* Remove unused code or use it *)</span>
+<span class="kw">let</span> helper x = x + <span class="nu">1</span>
+<span class="kw">let</span> result = helper <span class="nu">42</span></code></pre>
+</div>
+</div></div>
 </div>
 <h2 id="style-modernization">Style/Modernization</h2>
 <div class="category">E200-E299 • Code style and modernization recommendations</div>
@@ -385,7 +474,20 @@ the underlying issues that trigger the warnings.</p></div>
     </div>
     <div class="error-hint"><p>This issue means you're using the outdated Str module for regular
 expressions. Fix it by switching to the modern Re module: add 're' to your
-dune dependencies and replace Str functions with Re equivalents.</p></div>
+dune dependencies and replace Str functions with Re equivalents.</p><div class="examples-grid">
+<div class="example bad">
+  <h4>BAD</h4>
+  
+  <pre><code><span class="kw">let</span> is_email s = 
+  <span class="cn">Str</span>.string_match (<span class="cn">Str</span>.regexp &quot;.*@.*&quot;) s <span class="nu">0</span></code></pre>
+</div>
+<div class="example good">
+  <h4>GOOD</h4>
+  
+  <pre><code><span class="kw">let</span> is_email s = 
+  <span class="cn">Re</span>.execp (<span class="cn">Re</span>.compile (<span class="cn">Re</span>.seq [<span class="cn">Re</span>.any; <span class="cn">Re</span>.char '@'; <span class="cn">Re</span>.any])) s</code></pre>
+</div>
+</div></div>
 </div>
 <div class="error-card" id="E205">
     <div>
@@ -448,7 +550,18 @@ My_variant).</p><div class="examples-grid">
         <span class="error-title">Module Naming Convention</span>
     </div>
     <div class="error-hint"><p>This issue means your module names don't follow OCaml naming conventions.
-Fix them by using underscores between words while keeping the first letter capitalized (e.g., MyModule → My_module).</p></div>
+Fix them by using underscores between words while keeping the first letter capitalized (e.g., MyModule → My_module).</p><div class="examples-grid">
+<div class="example bad">
+  <h4>BAD</h4>
+  
+  <pre><code><span class="kw">module</span> <span class="cn">UserProfile</span> = <span class="kw">struct</span> ... <span class="kw">end</span></code></pre>
+</div>
+<div class="example good">
+  <h4>GOOD</h4>
+  
+  <pre><code><span class="kw">module</span> <span class="cn">User_profile</span> = <span class="kw">struct</span> ... <span class="kw">end</span></code></pre>
+</div>
+</div></div>
 </div>
 <div class="error-card" id="E310">
     <div>
@@ -456,7 +569,20 @@ Fix them by using underscores between words while keeping the first letter capit
         <span class="error-title">Value Naming Convention</span>
     </div>
     <div class="error-hint"><p>This issue means your value names don't follow OCaml naming conventions.
-Fix them by renaming to snake_case (e.g., myValue → my_value).</p></div>
+Fix them by renaming to snake_case (e.g., myValue → my_value).</p><div class="examples-grid">
+<div class="example bad">
+  <h4>BAD</h4>
+  
+  <pre><code><span class="kw">let</span> myValue = <span class="nu">42</span>
+<span class="kw">let</span> getUserName user = user.name</code></pre>
+</div>
+<div class="example good">
+  <h4>GOOD</h4>
+  
+  <pre><code><span class="kw">let</span> my_value = <span class="nu">42</span>
+<span class="kw">let</span> get_user_name user = user.name</code></pre>
+</div>
+</div></div>
 </div>
 <div class="error-card" id="E315">
     <div>
@@ -464,7 +590,20 @@ Fix them by renaming to snake_case (e.g., myValue → my_value).</p></div>
         <span class="error-title">Type Naming Convention</span>
     </div>
     <div class="error-hint"><p>This issue means your type names don't follow OCaml naming conventions. Fix
-them by renaming to snake_case (e.g., myType → my_type).</p></div>
+them by renaming to snake_case (e.g., myType → my_type).</p><div class="examples-grid">
+<div class="example bad">
+  <h4>BAD</h4>
+  
+  <pre><code><span class="kw">type</span> userProfile = { name: string }
+<span class="kw">type</span> <span class="cn">HTTPResponse</span> = <span class="cn">Ok</span> | <span class="cn">Error</span></code></pre>
+</div>
+<div class="example good">
+  <h4>GOOD</h4>
+  
+  <pre><code><span class="kw">type</span> user_profile = { name: string }
+<span class="kw">type</span> http_response = <span class="cn">Ok</span> | <span class="cn">Error</span></code></pre>
+</div>
+</div></div>
 </div>
 <div class="error-card" id="E320">
     <div>
@@ -481,7 +620,18 @@ read. Fix it by removing redundant prefixes and suffixes:
 • Remove redundant words that repeat the context (e.g., check_mli_doc →
   check_mli)
 
-The file/module context already makes the purpose clear.</p></div>
+The file/module context already makes the purpose clear.</p><div class="examples-grid">
+<div class="example bad">
+  <h4>BAD</h4>
+  
+  <pre><code><span class="kw">let</span> get_user_profile_data_from_database_by_id id = ...</code></pre>
+</div>
+<div class="example good">
+  <h4>GOOD</h4>
+  
+  <pre><code><span class="kw">let</span> get_user_by_id id = ...</code></pre>
+</div>
+</div></div>
 </div>
 <div class="error-card" id="E325">
     <div>
@@ -490,7 +640,20 @@ The file/module context already makes the purpose clear.</p></div>
     </div>
     <div class="error-hint"><p>This issue means your function names don't match their return types. Fix
 them by using consistent naming: get_* for extraction (returns value
-directly), find_* for search (returns option type).</p></div>
+directly), find_* for search (returns option type).</p><div class="examples-grid">
+<div class="example bad">
+  <h4>BAD</h4>
+  
+  <pre><code><span class="kw">let</span> get_user id = <span class="cn">List</span>.find_opt (<span class="kw">fun</span> u -&gt; u.id = id) users
+<span class="kw">let</span> find_name user = user.name</code></pre>
+</div>
+<div class="example good">
+  <h4>GOOD</h4>
+  
+  <pre><code><span class="kw">let</span> find_user id = <span class="cn">List</span>.find_opt (<span class="kw">fun</span> u -&gt; u.id = id) users  
+<span class="kw">let</span> get_name user = user.name</code></pre>
+</div>
+</div></div>
 </div>
 <div class="error-card" id="E330">
     <div>
@@ -656,7 +819,22 @@ using functional approaches with explicit state passing.</p><div class="examples
     </div>
     <div class="error-hint"><p>This issue means your modules lack documentation making them hard to
 understand. Fix it by adding module documentation at the top of .mli files
-with a brief summary and description of the module's purpose.</p></div>
+with a brief summary and description of the module's purpose.</p><div class="examples-grid">
+<div class="example bad">
+  <h4>BAD</h4>
+  
+  <pre><code><span class="cm">(* user.mli - no module doc *)</span>
+<span class="kw">val</span> create : string -&gt; t</code></pre>
+</div>
+<div class="example good">
+  <h4>GOOD</h4>
+  
+  <pre><code>(** <span class="cn">User</span> management <span class="kw">module</span> 
+    
+    <span class="cn">Handles</span> user creation <span class="kw">and</span> authentication. *)
+<span class="kw">val</span> create : string -&gt; t</code></pre>
+</div>
+</div></div>
 </div>
 <div class="error-card" id="E405">
     <div>
@@ -665,7 +843,20 @@ with a brief summary and description of the module's purpose.</p></div>
     </div>
     <div class="error-hint"><p>This issue means your public functions and values lack documentation making
 them hard to use. Fix it by adding documentation comments that explain what
-each function does, its parameters, and return value.</p></div>
+each function does, its parameters, and return value.</p><div class="examples-grid">
+<div class="example bad">
+  <h4>BAD</h4>
+  
+  <pre><code><span class="kw">val</span> parse : string -&gt; t</code></pre>
+</div>
+<div class="example good">
+  <h4>GOOD</h4>
+  
+  <pre><code>(** [parse str] converts a string <span class="kw">to</span> <span class="kw">type</span> [t].
+    @<span class="kw">raise</span> <span class="cn">Invalid_argument</span> <span class="kw">if</span> [str] is malformed. *)
+<span class="kw">val</span> parse : string -&gt; t</code></pre>
+</div>
+</div></div>
 </div>
 <div class="error-card" id="E410">
     <div>
@@ -674,7 +865,20 @@ each function does, its parameters, and return value.</p></div>
     </div>
     <div class="error-hint"><p>This issue means your documentation doesn't follow OCaml conventions making
 it inconsistent. Fix it by following the standard OCaml documentation
-format with proper syntax and structure.</p></div>
+format with proper syntax and structure.</p><div class="examples-grid">
+<div class="example bad">
+  <h4>BAD</h4>
+  
+  <pre><code><span class="cm">(* this function parses strings *)</span>
+<span class="kw">val</span> parse : string -&gt; t</code></pre>
+</div>
+<div class="example good">
+  <h4>GOOD</h4>
+  
+  <pre><code><span class="cm">(** [parse str] parses a string into type [t]. *)</span>
+<span class="kw">val</span> parse : string -&gt; t</code></pre>
+</div>
+</div></div>
 </div>
 <div class="error-card" id="E415">
     <div>
@@ -683,7 +887,22 @@ format with proper syntax and structure.</p></div>
     </div>
     <div class="error-hint"><p>This issue means your types lack standard functions making them hard to use
 in collections and debugging. Fix it by implementing equal, compare, pp
-(pretty-printer), and to_string functions for your types.</p></div>
+(pretty-printer), and to_string functions for your types.</p><div class="examples-grid">
+<div class="example bad">
+  <h4>BAD</h4>
+  
+  <pre><code><span class="kw">type</span> user = { id: int; name: string }
+<span class="cm">(* No standard functions *)</span></code></pre>
+</div>
+<div class="example good">
+  <h4>GOOD</h4>
+  
+  <pre><code><span class="kw">type</span> user = { id: int; name: string }
+<span class="kw">val</span> equal : user -&gt; user -&gt; bool
+<span class="kw">val</span> compare : user -&gt; user -&gt; int
+<span class="kw">val</span> pp : <span class="cn">Format</span>.formatter -&gt; user -&gt; unit</code></pre>
+</div>
+</div></div>
 </div>
 <h2 id="project structure">Project Structure</h2>
 <div class="category">E500-E599 • Project organization and configuration issues</div>
@@ -694,7 +913,20 @@ in collections and debugging. Fix it by implementing equal, compare, pp
     </div>
     <div class="error-hint"><p>This issue means your project lacks consistent code formatting. Fix it by
 creating a .ocamlformat file in your project root with 'profile = default'
-and a version number to ensure consistent formatting.</p></div>
+and a version number to ensure consistent formatting.</p><div class="examples-grid">
+<div class="example bad">
+  <h4>BAD</h4>
+  
+  <pre><code><span class="cm">(* No .ocamlformat file in project root *)</span></code></pre>
+</div>
+<div class="example good">
+  <h4>GOOD</h4>
+  
+  <pre><code><span class="cm">(* .ocamlformat *)</span>
+profile = default
+version = <span class="nu">0.26</span>.<span class="nu">2</span></code></pre>
+</div>
+</div></div>
 </div>
 <div class="error-card" id="E505">
     <div>
@@ -704,7 +936,21 @@ and a version number to ensure consistent formatting.</p></div>
     <div class="error-hint"><p>This issue means your modules lack interface files making their public API
 unclear. Fix it by creating .mli files that document which functions and
 types should be public. Copy public signatures from the .ml file and remove
-private ones.</p></div>
+private ones.</p><div class="examples-grid">
+<div class="example bad">
+  <h4>BAD</h4>
+  
+  <pre><code><span class="cm">(* Only user.ml exists, no user.mli *)</span></code></pre>
+</div>
+<div class="example good">
+  <h4>GOOD</h4>
+  
+  <pre><code><span class="cm">(* user.mli *)</span>
+<span class="kw">type</span> t
+<span class="kw">val</span> create : string -&gt; int -&gt; t
+<span class="kw">val</span> name : t -&gt; string</code></pre>
+</div>
+</div></div>
 </div>
 <h2 id="testing">Testing</h2>
 <div class="category">E600-E699 • Test coverage and test quality issues</div>
@@ -715,7 +961,20 @@ private ones.</p></div>
     </div>
     <div class="error-hint"><p>This issue means your test files don't follow the expected convention for
 test organization. Fix it by exporting a 'suite' value instead of running
-tests directly, allowing better test composition and organization.</p></div>
+tests directly, allowing better test composition and organization.</p><div class="examples-grid">
+<div class="example bad">
+  <h4>BAD</h4>
+  
+  <pre><code><span class="cm">(* test_user.ml *)</span>
+<span class="kw">let</span> () = <span class="cn">Alcotest</span>.run &quot;tests&quot; [(&quot;user&quot;, tests)]</code></pre>
+</div>
+<div class="example good">
+  <h4>GOOD</h4>
+  
+  <pre><code><span class="cm">(* test_user.ml *)</span>
+<span class="kw">let</span> suite = (&quot;user&quot;, tests)</code></pre>
+</div>
+</div></div>
 </div>
 <div class="error-card" id="E605">
     <div>
@@ -724,7 +983,19 @@ tests directly, allowing better test composition and organization.</p></div>
     </div>
     <div class="error-hint"><p>This issue means some of your library modules lack test coverage making
 bugs more likely. Fix it by creating corresponding test files for each
-library module to ensure your code works correctly.</p></div>
+library module to ensure your code works correctly.</p><div class="examples-grid">
+<div class="example bad">
+  <h4>BAD</h4>
+  
+  <pre><code><span class="cm">(* lib/parser.ml exists but no test/test_parser.ml *)</span></code></pre>
+</div>
+<div class="example good">
+  <h4>GOOD</h4>
+  
+  <pre><code><span class="cm">(* test/test_parser.ml *)</span>
+<span class="kw">let</span> suite = (&quot;parser&quot;, [test_parse; test_errors])</code></pre>
+</div>
+</div></div>
 </div>
 <div class="error-card" id="E610">
     <div>
@@ -733,7 +1004,18 @@ library module to ensure your code works correctly.</p></div>
     </div>
     <div class="error-hint"><p>This issue means you have test files that don't correspond to any library
 module making your test organization confusing. Fix it by either removing
-orphaned test files or creating the corresponding library modules.</p></div>
+orphaned test files or creating the corresponding library modules.</p><div class="examples-grid">
+<div class="example bad">
+  <h4>BAD</h4>
+  
+  <pre><code><span class="cm">(* test/test_old_feature.ml exists but lib/old_feature.ml was removed *)</span></code></pre>
+</div>
+<div class="example good">
+  <h4>GOOD</h4>
+  
+  <pre><code><span class="cm">(* Remove test/test_old_feature.ml or restore lib/old_feature.ml *)</span></code></pre>
+</div>
+</div></div>
 </div>
 <div class="error-card" id="E615">
     <div>
@@ -742,7 +1024,24 @@ orphaned test files or creating the corresponding library modules.</p></div>
     </div>
     <div class="error-hint"><p>This issue means some test suites aren't included in your main test runner
 so they never get executed. Fix it by adding them to the main test runner
-to ensure all tests are run during development.</p></div>
+to ensure all tests are run during development.</p><div class="examples-grid">
+<div class="example bad">
+  <h4>BAD</h4>
+  
+  <pre><code><span class="cm">(* test/test.ml *)</span>
+<span class="kw">let</span> () = <span class="cn">Alcotest</span>.run &quot;all&quot; [<span class="cn">Test_user</span>.suite] 
+<span class="cm">(* Missing Test_parser.suite *)</span></code></pre>
+</div>
+<div class="example good">
+  <h4>GOOD</h4>
+  
+  <pre><code><span class="cm">(* test/test.ml *)</span>
+<span class="kw">let</span> () = <span class="cn">Alcotest</span>.run &quot;all&quot; [
+  <span class="cn">Test_user</span>.suite;
+  <span class="cn">Test_parser</span>.suite
+]</code></pre>
+</div>
+</div></div>
 </div>
 
     <a href="#top" class="back-to-top">↑ Top</a>

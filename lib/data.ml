@@ -47,6 +47,26 @@ let process_data data user =
 by extracting complex logic into smaller helper functions with clear names
 that describe their purpose.|};
     Rule.v ~issue:Function_length ~title:"Long Functions" ~category:Complexity
+      ~examples:
+        [
+          bad
+            {|let process_everything user data config =
+  (* 100+ lines of mixed concerns: validation, processing, formatting *)
+  let valid = check_user user && verify_data data in
+  (* ... many more lines ... *)
+  format_output result|};
+          good
+            {|let validate_inputs user data = 
+  check_user user && verify_data data
+
+let process_data data config = 
+  (* focused processing logic *)
+
+let process_everything user data config =
+  let valid = validate_inputs user data in
+  let result = process_data data config in
+  format_output result|};
+        ]
       {|This issue means your functions are too long and hard to read. Fix them by
 extracting logical sections into separate functions with descriptive names.
 Note: Functions with pattern matching get additional allowance (2 lines per case).
@@ -54,17 +74,53 @@ Pure data structures (lists, records) are also exempt from length checks.
 For better readability, consider using helper functions for complex logic.
 Aim for functions under 50 lines of actual logic.|};
     Rule.v ~issue:Deep_nesting ~title:"Deep Nesting" ~category:Complexity
+      ~examples:
+        [
+          bad
+            {|let process_order order user =
+  if order.valid then
+    if user.authenticated then
+      if order.total > 0 then
+        if check_inventory order then
+          (* deeply nested logic *)
+          process_payment order
+        else Error "Out of stock"
+      else Error "Invalid total"
+    else Error "Not authenticated"
+  else Error "Invalid order"|};
+          good
+            {|let process_order order user =
+  if not order.valid then Error "Invalid order" else
+  if not user.authenticated then Error "Not authenticated" else
+  if order.total <= 0 then Error "Invalid total" else
+  if not (check_inventory order) then Error "Out of stock" else
+  process_payment order|};
+        ]
       {|This issue means your code has too many nested conditions making it hard to
 follow. Fix it by using pattern matching, early returns with 'when' guards,
 or extracting nested logic into helper functions.|};
     (* Security/Safety Rules *)
     Rule.v ~issue:Obj_magic ~title:"Unsafe Type Casting"
       ~category:Security_safety
+      ~examples:
+        [
+          bad {|let coerce x = Obj.magic x|};
+          good {|type 'a box = Box : 'b -> 'b box
+let safe_coerce (Box x) = x|};
+        ]
       {|This issue means you're using unsafe type casting that can crash your
 program. Fix it by replacing Obj.magic with proper type definitions,
 variant types, or GADTs to represent different cases safely.|};
     Rule.v ~issue:Catch_all_exception ~title:"Underscore Pattern Warning"
       ~category:Security_safety
+      ~examples:
+        [
+          bad {|try risky_operation () with _ -> default_value|};
+          good
+            {|try risky_operation () with
+| Not_found -> default_value  
+| Invalid_argument _ -> error_value|};
+        ]
       {|WARNING: This rule currently detects ANY underscore (_) pattern, not just 
 exception handlers. This is a known limitation. The rule is intended to catch
 dangerous patterns like 'try ... with _ ->' but currently flags all uses of _.
@@ -72,12 +128,30 @@ To avoid this warning, use named bindings with underscore prefix (e.g., _unused)
 for intentionally unused values. This will be fixed in a future version.|};
     Rule.v ~issue:Silenced_warning ~title:"Silenced Compiler Warnings"
       ~category:Security_safety
+      ~examples:
+        [
+          bad
+            {|[@@@ocaml.warning "-32"] (* unused value *)
+let unused_function x = x + 1|};
+          good
+            {|(* Remove unused code or use it *)
+let helper x = x + 1
+let result = helper 42|};
+        ]
       {|This issue means you're hiding compiler warnings that indicate potential
 problems. Fix it by removing warning silencing attributes and addressing
 the underlying issues that trigger the warnings.|};
     (* Style/Modernization Rules *)
     Rule.v ~issue:Str_module ~title:"Outdated Str Module"
       ~category:Style_modernization
+      ~examples:
+        [
+          bad {|let is_email s = 
+  Str.string_match (Str.regexp ".*@.*") s 0|};
+          good
+            {|let is_email s = 
+  Re.execp (Re.compile (Re.seq [Re.any; Re.char '@'; Re.any])) s|};
+        ]
       {|This issue means you're using the outdated Str module for regular
 expressions. Fix it by switching to the modern Re module: add 're' to your
 dune dependencies and replace Str functions with Re equivalents.|};
@@ -121,18 +195,44 @@ conventions. Fix them by renaming to Snake_case (e.g., MyVariant →
 My_variant).|};
     Rule.v ~issue:Module_naming ~title:"Module Naming Convention"
       ~category:Naming_conventions
+      ~examples:
+        [
+          bad {|module UserProfile = struct ... end|};
+          good {|module User_profile = struct ... end|};
+        ]
       {|This issue means your module names don't follow OCaml naming conventions.
 Fix them by using underscores between words while keeping the first letter capitalized (e.g., MyModule → My_module).|};
     Rule.v ~issue:Value_naming ~title:"Value Naming Convention"
       ~category:Naming_conventions
+      ~examples:
+        [
+          bad {|let myValue = 42
+let getUserName user = user.name|};
+          good {|let my_value = 42
+let get_user_name user = user.name|};
+        ]
       {|This issue means your value names don't follow OCaml naming conventions.
 Fix them by renaming to snake_case (e.g., myValue → my_value).|};
     Rule.v ~issue:Type_naming ~title:"Type Naming Convention"
       ~category:Naming_conventions
+      ~examples:
+        [
+          bad
+            {|type userProfile = { name: string }
+type HTTPResponse = Ok | Error|};
+          good
+            {|type user_profile = { name: string }
+type http_response = Ok | Error|};
+        ]
       {|This issue means your type names don't follow OCaml naming conventions. Fix
 them by renaming to snake_case (e.g., myType → my_type).|};
     Rule.v ~issue:Long_identifier ~title:"Long Identifier Names"
       ~category:Naming_conventions
+      ~examples:
+        [
+          bad {|let get_user_profile_data_from_database_by_id id = ...|};
+          good {|let get_user_by_id id = ...|};
+        ]
       {|This issue means your identifier has too many underscores (more than 4) making it hard to
 read. Fix it by removing redundant prefixes and suffixes:
 
@@ -146,6 +246,15 @@ read. Fix it by removing redundant prefixes and suffixes:
 The file/module context already makes the purpose clear.|};
     Rule.v ~issue:Function_naming ~title:"Function Naming Pattern"
       ~category:Naming_conventions
+      ~examples:
+        [
+          bad
+            {|let get_user id = List.find_opt (fun u -> u.id = id) users
+let find_name user = user.name|};
+          good
+            {|let find_user id = List.find_opt (fun u -> u.id = id) users  
+let get_name user = user.name|};
+        ]
       {|This issue means your function names don't match their return types. Fix
 them by using consistent naming: get_* for extraction (returns value
 directly), find_* for search (returns option type).|};
@@ -267,32 +376,85 @@ using functional approaches with explicit state passing.|};
     (* Documentation Rules *)
     Rule.v ~issue:Missing_mli_doc ~title:"Missing Module Documentation"
       ~category:Documentation
+      ~examples:
+        [
+          bad {|(* user.mli - no module doc *)
+val create : string -> t|};
+          good
+            {|(** User management module 
+    
+    Handles user creation and authentication. *)
+val create : string -> t|};
+        ]
       {|This issue means your modules lack documentation making them hard to
 understand. Fix it by adding module documentation at the top of .mli files
 with a brief summary and description of the module's purpose.|};
     Rule.v ~issue:Missing_value_doc ~title:"Missing Value Documentation"
       ~category:Documentation
+      ~examples:
+        [
+          bad {|val parse : string -> t|};
+          good
+            {|(** [parse str] converts a string to type [t].
+    @raise Invalid_argument if [str] is malformed. *)
+val parse : string -> t|};
+        ]
       {|This issue means your public functions and values lack documentation making
 them hard to use. Fix it by adding documentation comments that explain what
 each function does, its parameters, and return value.|};
     Rule.v ~issue:Bad_doc_style ~title:"Documentation Style Issues"
       ~category:Documentation
+      ~examples:
+        [
+          bad {|(* this function parses strings *)
+val parse : string -> t|};
+          good
+            {|(** [parse str] parses a string into type [t]. *)
+val parse : string -> t|};
+        ]
       {|This issue means your documentation doesn't follow OCaml conventions making
 it inconsistent. Fix it by following the standard OCaml documentation
 format with proper syntax and structure.|};
     Rule.v ~issue:Missing_standard_function ~title:"Missing Standard Functions"
       ~category:Documentation
+      ~examples:
+        [
+          bad
+            {|type user = { id: int; name: string }
+(* No standard functions *)|};
+          good
+            {|type user = { id: int; name: string }
+val equal : user -> user -> bool
+val compare : user -> user -> int
+val pp : Format.formatter -> user -> unit|};
+        ]
       {|This issue means your types lack standard functions making them hard to use
 in collections and debugging. Fix it by implementing equal, compare, pp
 (pretty-printer), and to_string functions for your types.|};
     (* Project Structure Rules *)
     Rule.v ~issue:Missing_ocamlformat_file ~title:"Missing Code Formatter"
       ~category:Project_structure
+      ~examples:
+        [
+          bad {|(* No .ocamlformat file in project root *)|};
+          good {|(* .ocamlformat *)
+profile = default
+version = 0.26.2|};
+        ]
       {|This issue means your project lacks consistent code formatting. Fix it by
 creating a .ocamlformat file in your project root with 'profile = default'
 and a version number to ensure consistent formatting.|};
     Rule.v ~issue:Missing_mli_file ~title:"Missing Interface Files"
       ~category:Project_structure
+      ~examples:
+        [
+          bad {|(* Only user.ml exists, no user.mli *)|};
+          good
+            {|(* user.mli *)
+type t
+val create : string -> int -> t
+val name : t -> string|};
+        ]
       {|This issue means your modules lack interface files making their public API
 unclear. Fix it by creating .mli files that document which functions and
 types should be public. Copy public signatures from the .ml file and remove
@@ -300,21 +462,56 @@ private ones.|};
     (* Testing Rules *)
     Rule.v ~issue:Test_exports_module ~title:"Test Module Convention"
       ~category:Testing
+      ~examples:
+        [
+          bad
+            {|(* test_user.ml *)
+let () = Alcotest.run "tests" [("user", tests)]|};
+          good {|(* test_user.ml *)
+let suite = ("user", tests)|};
+        ]
       {|This issue means your test files don't follow the expected convention for
 test organization. Fix it by exporting a 'suite' value instead of running
 tests directly, allowing better test composition and organization.|};
     Rule.v ~issue:Missing_test_file ~title:"Missing Test Coverage"
       ~category:Testing
+      ~examples:
+        [
+          bad {|(* lib/parser.ml exists but no test/test_parser.ml *)|};
+          good
+            {|(* test/test_parser.ml *)
+let suite = ("parser", [test_parse; test_errors])|};
+        ]
       {|This issue means some of your library modules lack test coverage making
 bugs more likely. Fix it by creating corresponding test files for each
 library module to ensure your code works correctly.|};
     Rule.v ~issue:Test_without_library ~title:"Orphaned Test Files"
       ~category:Testing
+      ~examples:
+        [
+          bad
+            {|(* test/test_old_feature.ml exists but lib/old_feature.ml was removed *)|};
+          good
+            {|(* Remove test/test_old_feature.ml or restore lib/old_feature.ml *)|};
+        ]
       {|This issue means you have test files that don't correspond to any library
 module making your test organization confusing. Fix it by either removing
 orphaned test files or creating the corresponding library modules.|};
     Rule.v ~issue:Test_suite_not_included ~title:"Excluded Test Suites"
       ~category:Testing
+      ~examples:
+        [
+          bad
+            {|(* test/test.ml *)
+let () = Alcotest.run "all" [Test_user.suite] 
+(* Missing Test_parser.suite *)|};
+          good
+            {|(* test/test.ml *)
+let () = Alcotest.run "all" [
+  Test_user.suite;
+  Test_parser.suite
+]|};
+        ]
       {|This issue means some test suites aren't included in your main test runner
 so they never get executed. Fix it by adding them to the main test runner
 to ensure all tests are run during development.|};
