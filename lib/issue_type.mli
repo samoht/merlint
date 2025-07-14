@@ -40,5 +40,8 @@ type t =
 val error_code : t -> string
 (** Get the error code for an issue type *)
 
+val of_error_code : string -> t option
+(** Get the issue type from an error code. Returns None if code is invalid *)
+
 val all : t list
-(** All issue types *)
+(** All issue types, sorted by error code *)

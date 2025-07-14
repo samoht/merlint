@@ -42,3 +42,6 @@ val v :
 
 val get : t list -> Issue_type.t -> t
 (** Get a rule by its issue type *)
+
+val category_name : category -> string
+(** Get the display name for a category *)

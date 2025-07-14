@@ -1,0 +1,3 @@
+(library
+ (name test_e600)
+ (modules bad good))

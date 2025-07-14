@@ -8,36 +8,7 @@ type t = {
 let empty = { enabled = None; disabled = [] }
 
 (** Parse error code to issue type *)
-let parse_error_code code =
-  match code with
-  | "E001" -> Some Issue_type.Complexity
-  | "E005" -> Some Issue_type.Function_length
-  | "E010" -> Some Issue_type.Deep_nesting
-  | "E100" -> Some Issue_type.Obj_magic
-  | "E105" -> Some Issue_type.Catch_all_exception
-  | "E110" -> Some Issue_type.Silenced_warning
-  | "E200" -> Some Issue_type.Str_module
-  | "E205" -> Some Issue_type.Printf_module
-  | "E300" -> Some Issue_type.Variant_naming
-  | "E305" -> Some Issue_type.Module_naming
-  | "E310" -> Some Issue_type.Value_naming
-  | "E315" -> Some Issue_type.Type_naming
-  | "E320" -> Some Issue_type.Long_identifier
-  | "E325" -> Some Issue_type.Function_naming
-  | "E330" -> Some Issue_type.Redundant_module_name
-  | "E335" -> Some Issue_type.Used_underscore_binding
-  | "E350" -> Some Issue_type.Boolean_blindness
-  | "E400" -> Some Issue_type.Missing_mli_doc
-  | "E405" -> Some Issue_type.Missing_value_doc
-  | "E410" -> Some Issue_type.Bad_doc_style
-  | "E415" -> Some Issue_type.Missing_standard_function
-  | "E500" -> Some Issue_type.Missing_ocamlformat_file
-  | "E505" -> Some Issue_type.Missing_mli_file
-  | "E600" -> Some Issue_type.Test_exports_module
-  | "E605" -> Some Issue_type.Missing_test_file
-  | "E610" -> Some Issue_type.Test_without_library
-  | "E615" -> Some Issue_type.Test_suite_not_included
-  | _ -> None
+let parse_error_code code = Issue_type.of_error_code code
 
 (** Parse a range of error codes like "100..199" *)
 let parse_range range_str =
@@ -70,7 +41,15 @@ let parse_single_spec spec =
   | code -> (
       match parse_error_code code with
       | Some issue_type -> Ok [ issue_type ]
-      | None -> Error (Fmt.str "Unknown error code: %s" code))
+      | None ->
+          let all_codes =
+            Issue_type.all
+            |> List.map Issue_type.error_code
+            |> List.sort String.compare |> String.concat ", "
+          in
+          Error
+            (Fmt.str "Unknown error code: %s. Available codes: %s" code
+               all_codes))
 
 (** Parse warning specification using simple format without quotes:
     - "all-E110-E205" - all rules except E110 and E205

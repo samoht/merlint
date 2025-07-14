@@ -189,6 +189,42 @@ This would fit well with the existing `merlin_interface.ml` module:
 - Create new `naming_analysis.ml` module for function naming checks
 - Call from `naming_rules.ml` alongside other naming checks
 
+## Testing Gaps
+
+### Summary of Testing Gaps
+
+- **`lib/complexity.ml`**
+  - Gaps: Complexity_exceeded, Deep_nesting
+  - Reason: The tests use mock data that doesn't simulate high complexity or deep nesting, so these checks are never triggered
+
+- **`lib/naming.ml`**
+  - Gaps: Bad_variant_naming, Bad_function_naming, Redundant_module_name
+  - Reason: The tests cover value, module, and type naming, but lack specific test cases for incorrect variant constructor names, get/find mismatches, or names that are redundant with the module name (e.g., My_module.my_module_do_thing)
+
+- **`lib/doc.ml`**
+  - Gaps: Missing_value_doc, Bad_doc_style
+  - Reason: The existing tests only check for the presence of the main module-level docstring ((** ... *)). They do not check if individual vals are missing documentation or if the documentation follows the [f x] is... style
+
+- **`lib/style.ml`**
+  - Gaps: Error_pattern, Mutable_state
+  - Reason: The tests cover Obj.magic, Str, Printf, and Catch_all_exception. However, there are no tests for the rule that discourages Error (Fmt.str ...) or the mutable state detection
+
+- **`lib/api_design.ml`**
+  - Status: Fully Tested
+  - Reason: The tests in test/test_api_design.ml correctly and thoroughly check for the Boolean_blindness rule
+
+- **`lib/format.ml`**
+  - Gaps: Missing_ocamlformat_file, Missing_mli_file
+  - Reason: The tests exist but are inconclusive. They rely on dune describe and file system operations that are not properly mocked, so they can't make specific assertions and instead just check that the functions run without crashing. The tests need to be rewritten with a mocked file system or a more controlled test project structure to be effective
+
+- **`lib/test_checks.ml`**
+  - Gap: Test_exports_module_name
+  - Reason: There is no test/test_test_checks.ml file, and no other unit tests appear to cover the logic in this module
+
+- **`lib/test_coverage.ml`**
+  - Gaps: Missing_test_file, Test_without_library, Test_suite_not_included
+  - Reason: There is no test/test_test_coverage.ml file. The logic, which depends heavily on the output of dune describe, is not unit-tested at all
+
 ## Other Improvements
 
 - Enhance catch-all exception detection with better AST parsing

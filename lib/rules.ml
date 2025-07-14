@@ -84,7 +84,14 @@ let process_file_analysis config (file, analysis) =
         let api_design =
           Api_design.check ~filename:file ~outline typedtree_result
         in
-        (style, naming @ api_design)
+        let mutable_state =
+          match outline with
+          | Some outline_data ->
+              Mutable_state.check_global_mutable_state ~filename:file
+                outline_data
+          | None -> []
+        in
+        (style @ mutable_state, naming @ api_design)
     | Error _ -> ([], [])
   in
 

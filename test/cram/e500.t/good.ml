@@ -1,0 +1,3 @@
+(* .ocamlformat *)
+profile = default
+version = 0.26.2

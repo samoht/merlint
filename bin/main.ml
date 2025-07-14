@@ -275,7 +275,9 @@ let run_analysis project_root filtered_files rule_filter show_profile =
   let all_issues = Merlint.Report.get_all_issues all_reports in
 
   (* Print profiling summary if enabled *)
-  if show_profile then Merlint.Profiling.print_summary ();
+  if show_profile then (
+    Merlint.Profiling.print_summary ();
+    Merlint.Profiling.print_per_file_summary ());
 
   print_fix_hints all_issues
 

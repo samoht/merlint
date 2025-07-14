@@ -3,8 +3,8 @@
     This module checks that test files follow proper conventions. *)
 
 let is_test_file filename =
-  String.ends_with ~suffix:"_test.ml" filename
-  || Filename.basename filename = "test.ml"
+  (* Only test executables named test.ml should follow this convention *)
+  Filename.basename filename = "test.ml"
 
 let has_test_runner content =
   Re.execp (Re.compile (Re.str "Alcotest.run")) content
@@ -101,12 +101,18 @@ let check_test_file_exports filename content =
       ]
     else []
 
-(** Check if a test .mli file exports only suite with correct type *)
+(** Check if a test_*.mli file exports only suite with correct type *)
 let check_test_mli_file filename content =
+  let basename = Filename.basename filename in
+  (* Only check test_*.mli files in test directories, not test.mli *)
   if
     not
-      (String.ends_with ~suffix:"_test.mli" filename
-      || Filename.basename filename = "test.mli")
+      (String.starts_with ~prefix:"test_" basename
+      && String.ends_with ~suffix:".mli" basename
+      && String.contains filename '/'
+      &&
+      let parts = String.split_on_char '/' filename in
+      List.exists (fun p -> p = "test" || p = "tests") parts)
   then []
   else
     (* Check if it has the correct suite signature *)

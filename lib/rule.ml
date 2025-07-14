@@ -29,3 +29,12 @@ let get rules issue_type =
   match List.find_opt (fun rule -> rule.issue = issue_type) rules with
   | Some rule -> rule
   | None -> failwith (Fmt.str "No rule found for issue type")
+
+let category_name = function
+  | Complexity -> "Code Quality"
+  | Security_safety -> "Code Style"
+  | Style_modernization -> "Code Style"
+  | Naming_conventions -> "Naming Conventions"
+  | Documentation -> "Documentation"
+  | Project_structure -> "Project Structure"
+  | Testing -> "Test Quality"

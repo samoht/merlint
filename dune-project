@@ -1,4 +1,5 @@
 (lang dune 3.0)
+(using directory-targets 0.1)
 (name merlint)
 (generate_opam_files true)
 

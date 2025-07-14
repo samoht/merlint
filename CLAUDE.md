@@ -75,9 +75,10 @@ The codebase follows a clean separation between library and executable:
 
 ## Testing Approach
 
-- Uses Dune's cram test framework in `test/merlint.t`
-- Test samples in `test/samples/` demonstrate various complexity scenarios
+- Uses Dune's cram test framework with auto-generated tests in `test/cram/`
+- Each rule has its own test directory with good/bad examples from `lib/data.ml`
 - Tests verify both detection accuracy and proper exit codes
+- **Important**: After adding or modifying rules/examples in `lib/data.ml`, run `dune build @cram` to regenerate the test suite
 
 ## Documentation
 

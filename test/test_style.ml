@@ -39,6 +39,7 @@ let test_no_style_issues () =
         types = [];
         exceptions = [];
         variants = [];
+        expressions = [];
       }
   in
   let issues = Style.check typedtree in
@@ -54,6 +55,7 @@ let test_obj_magic_usage () =
         types = [];
         exceptions = [];
         variants = [];
+        expressions = [];
       }
   in
   let issues = Style.check typedtree in
@@ -74,6 +76,7 @@ let test_str_module_usage () =
         types = [];
         exceptions = [];
         variants = [];
+        expressions = [];
       }
   in
   let issues = Style.check typedtree in
@@ -93,6 +96,7 @@ let test_catch_all_exception () =
         types = [];
         exceptions = [];
         variants = [];
+        expressions = [];
       }
   in
   let issues = Style.check typedtree in
@@ -116,6 +120,7 @@ let test_multiple_issues () =
         types = [];
         exceptions = [];
         variants = [];
+        expressions = [];
       }
   in
   let issues = Style.check typedtree in
@@ -134,6 +139,42 @@ let test_extract_filename () =
   let filename = Style.extract_filename_from_parsetree text in
   Alcotest.(check string) "filename" "/path/to/file.ml" filename
 
+let test_error_pattern () =
+  let loc = Some (mock_location "test.ml" 5 12) in
+  let typedtree =
+    Typedtree.
+      {
+        identifiers = [];
+        patterns = [];
+        modules = [];
+        types = [];
+        exceptions = [];
+        variants = [];
+        expressions =
+          [
+            ( Construct
+                {
+                  name = "Error";
+                  args =
+                    [
+                      Apply
+                        {
+                          func = Ident "Fmt.str";
+                          args = [ Constant "Invalid data" ];
+                        };
+                    ];
+                },
+              loc );
+          ];
+      }
+  in
+  let issues = Style.check typedtree in
+  Alcotest.(check int) "Error pattern detected" 1 (List.length issues);
+  match List.hd issues with
+  | Issue.Error_pattern { location; _ } ->
+      Alcotest.(check string) "correct file" "test.ml" location.file
+  | _ -> Alcotest.fail "Expected Error_pattern issue"
+
 let suite =
   [
     ( "style",
@@ -145,5 +186,6 @@ let suite =
         Alcotest.test_case "multiple issues" `Quick test_multiple_issues;
         Alcotest.test_case "extract location" `Quick test_extract_location;
         Alcotest.test_case "extract filename" `Quick test_extract_filename;
+        Alcotest.test_case "error pattern" `Quick test_error_pattern;
       ] );
   ]

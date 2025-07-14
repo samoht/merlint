@@ -37,3 +37,6 @@ _esy/
 
 # Test artifacts
 *.corrected
+
+# Generated files
+lib/examples.ml

@@ -1,0 +1,1 @@
+let coerce x = Obj.magic x

@@ -1,0 +1,26 @@
+let process_all x y =
+  let a = x + 1 in
+  let b = y + 1 in
+  let c = a * 2 in
+  let d = b * 2 in
+  let e = c + d in
+  let f = e * 2 in
+  let g = f + a in
+  let h = g + b in
+  let i = h * 2 in
+  let j = i + c in
+  let k = j + d in
+  let l = k * 2 in
+  let m = l + e in
+  let n = m + f in
+  let o = n * 2 in
+  let p = o + g in
+  let q = p + h in
+  let r = q * 2 in
+  let s = r + i in
+  let t = s + j in
+  let u = t * 2 in
+  let v = u + k in
+  let w = v + l in
+  let result = w + m + n + o + p + q + r + s + t + u + v in
+  result

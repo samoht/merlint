@@ -2,3 +2,19 @@
  (public_name merlint)
  (name merlint)
  (libraries yojson unix re logs fmt astring sexplib0 parsexp))
+
+(rule
+ (target examples.ml)
+ (deps
+  ../bin/generate_examples_ml.exe
+  (source_tree ../test/cram))
+ (action
+  (chdir
+   ..
+   (with-stdout-to
+    lib/examples.ml
+    (run bin/generate_examples_ml.exe)))))
+
+(alias
+ (name gen)
+ (deps examples.ml))

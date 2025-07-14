@@ -288,39 +288,36 @@ that describe their purpose.</p><div class="examples-grid">
 <div class="example bad">
   <h4>BAD</h4>
   
-  <pre><code><span class="kw">let</span> process_data data user =
-  <span class="kw">if</span> data.valid <span class="kw">then</span>
-    <span class="kw">if</span> user.authenticated <span class="kw">then</span>
-      <span class="kw">if</span> data.size &lt; <span class="nu">1000</span> <span class="kw">then</span>
-        <span class="kw">if</span> has_permission user data <span class="kw">then</span>
-          <span class="cm">(* complex processing logic *)</span>
-        <span class="kw">else</span> <span class="cn">Error</span> &quot;<span class="cn">No</span> permission&quot;
-      <span class="kw">else</span> <span class="cn">Error</span> &quot;<span class="cn">Data</span> too large&quot;
-    <span class="kw">else</span> <span class="cn">Error</span> &quot;<span class="cn">Not</span> authenticated&quot;
-  <span class="kw">else</span> <span class="cn">Error</span> &quot;<span class="cn">Invalid</span> data&quot;</code></pre>
+  <pre><code><span class="kw">let</span> check_input x y z =
+  <span class="kw">if</span> x &gt; <span class="nu">0</span> <span class="kw">then</span>
+    <span class="kw">if</span> y &gt; <span class="nu">0</span> <span class="kw">then</span>
+      <span class="kw">if</span> z &gt; <span class="nu">0</span> <span class="kw">then</span>
+        <span class="kw">if</span> x + y &gt; z <span class="kw">then</span>
+          <span class="kw">if</span> y + z &gt; x <span class="kw">then</span>
+            <span class="kw">if</span> x + z &gt; y <span class="kw">then</span>
+              &quot;valid&quot;
+            <span class="kw">else</span> &quot;invalid&quot;
+          <span class="kw">else</span> &quot;invalid&quot;
+        <span class="kw">else</span> &quot;invalid&quot;
+      <span class="kw">else</span> &quot;invalid&quot;
+    <span class="kw">else</span> &quot;invalid&quot;
+  <span class="kw">else</span> &quot;invalid&quot;</code></pre>
 </div>
 <div class="example good">
   <h4>GOOD</h4>
   
-  <pre><code><span class="kw">let</span> validate_data data = 
-  <span class="kw">if</span> <span class="kw">not</span> data.valid <span class="kw">then</span> <span class="cn">Error</span> &quot;<span class="cn">Invalid</span> data&quot; <span class="kw">else</span> <span class="cn">Ok</span> ()
+  <pre><code><span class="kw">let</span> check_positive x = x &gt; <span class="nu">0</span>
 
-<span class="kw">let</span> check_auth user = 
-  <span class="kw">if</span> <span class="kw">not</span> user.authenticated <span class="kw">then</span> <span class="cn">Error</span> &quot;<span class="cn">Not</span> authenticated&quot; <span class="kw">else</span> <span class="cn">Ok</span> ()
+<span class="kw">let</span> check_triangle x y z =
+  x + y &gt; z &amp;&amp; y + z &gt; x &amp;&amp; x + z &gt; y
 
-<span class="kw">let</span> check_size data = 
-  <span class="kw">if</span> data.size &gt;= <span class="nu">1000</span> <span class="kw">then</span> <span class="cn">Error</span> &quot;<span class="cn">Data</span> too large&quot; <span class="kw">else</span> <span class="cn">Ok</span> ()
-
-<span class="kw">let</span> check_permission user data = 
-  <span class="kw">if</span> <span class="kw">not</span> (has_permission user data) <span class="kw">then</span> <span class="cn">Error</span> &quot;<span class="cn">No</span> permission&quot; <span class="kw">else</span> <span class="cn">Ok</span> ()
-
-<span class="kw">let</span> process_data data user =
-  <span class="kw">let</span> <span class="kw">open</span> <span class="cn">Result</span>.<span class="cn">Syntax</span> <span class="kw">in</span>
-  <span class="kw">let</span>* () = validate_data data <span class="kw">in</span>
-  <span class="kw">let</span>* () = check_auth user <span class="kw">in</span>
-  <span class="kw">let</span>* () = check_size data <span class="kw">in</span>
-  <span class="kw">let</span>* () = check_permission user data <span class="kw">in</span>
-  <span class="cm">(* complex processing logic *)</span></code></pre>
+<span class="kw">let</span> check_input x y z =
+  <span class="kw">if</span> <span class="kw">not</span> (check_positive x &amp;&amp; check_positive y &amp;&amp; check_positive z) <span class="kw">then</span>
+    &quot;invalid&quot;
+  <span class="kw">else</span> <span class="kw">if</span> <span class="kw">not</span> (check_triangle x y z) <span class="kw">then</span>
+    &quot;invalid&quot;
+  <span class="kw">else</span>
+    &quot;valid&quot;</code></pre>
 </div>
 </div></div>
 </div>
@@ -338,25 +335,44 @@ Aim for functions under 50 lines of actual logic.</p><div class="examples-grid">
 <div class="example bad">
   <h4>BAD</h4>
   
-  <pre><code><span class="kw">let</span> process_everything user data config =
-  <span class="cm">(* 100+ lines of mixed concerns: validation, processing, formatting *)</span>
-  <span class="kw">let</span> valid = check_user user &amp;&amp; verify_data data <span class="kw">in</span>
-  <span class="cm">(* ... many more lines ... *)</span>
-  format_output result</code></pre>
+  <pre><code><span class="kw">let</span> process_all x y =
+  <span class="kw">let</span> a = x + <span class="nu">1</span> <span class="kw">in</span>
+  <span class="kw">let</span> b = y + <span class="nu">1</span> <span class="kw">in</span>
+  <span class="kw">let</span> c = a * <span class="nu">2</span> <span class="kw">in</span>
+  <span class="kw">let</span> d = b * <span class="nu">2</span> <span class="kw">in</span>
+  <span class="kw">let</span> e = c + d <span class="kw">in</span>
+  <span class="kw">let</span> f = e * <span class="nu">2</span> <span class="kw">in</span>
+  <span class="kw">let</span> g = f + a <span class="kw">in</span>
+  <span class="kw">let</span> h = g + b <span class="kw">in</span>
+  <span class="kw">let</span> i = h * <span class="nu">2</span> <span class="kw">in</span>
+  <span class="kw">let</span> j = i + c <span class="kw">in</span>
+  <span class="kw">let</span> k = j + d <span class="kw">in</span>
+  <span class="kw">let</span> l = k * <span class="nu">2</span> <span class="kw">in</span>
+  <span class="kw">let</span> m = l + e <span class="kw">in</span>
+  <span class="kw">let</span> n = m + f <span class="kw">in</span>
+  <span class="kw">let</span> o = n * <span class="nu">2</span> <span class="kw">in</span>
+  <span class="kw">let</span> p = o + g <span class="kw">in</span>
+  <span class="kw">let</span> q = p + h <span class="kw">in</span>
+  <span class="kw">let</span> r = q * <span class="nu">2</span> <span class="kw">in</span>
+  <span class="kw">let</span> s = r + i <span class="kw">in</span>
+  <span class="kw">let</span> t = s + j <span class="kw">in</span>
+  <span class="kw">let</span> u = t * <span class="nu">2</span> <span class="kw">in</span>
+  <span class="kw">let</span> v = u + k <span class="kw">in</span>
+  <span class="kw">let</span> w = v + l <span class="kw">in</span>
+  <span class="kw">let</span> result = w + m + n + o + p + q + r + s + t + u + v <span class="kw">in</span>
+  result</code></pre>
 </div>
 <div class="example good">
   <h4>GOOD</h4>
   
-  <pre><code><span class="kw">let</span> validate_inputs user data = 
-  check_user user &amp;&amp; verify_data data
+  <pre><code><span class="kw">let</span> step1 x y = (x + <span class="nu">1</span>, y + <span class="nu">1</span>)
+<span class="kw">let</span> step2 (a, b) = (a * <span class="nu">2</span>, b * <span class="nu">2</span>)
+<span class="kw">let</span> combine (c, d) = (c + d) * <span class="nu">2</span>
 
-<span class="kw">let</span> process_data data config = 
-  <span class="cm">(* focused processing logic *)</span>
-
-<span class="kw">let</span> process_everything user data config =
-  <span class="kw">let</span> valid = validate_inputs user data <span class="kw">in</span>
-  <span class="kw">let</span> result = process_data data config <span class="kw">in</span>
-  format_output result</code></pre>
+<span class="kw">let</span> process_all x y =
+  <span class="kw">let</span> (a, b) = step1 x y <span class="kw">in</span>
+  <span class="kw">let</span> (c, d) = step2 (a, b) <span class="kw">in</span>
+  combine (c, d)</code></pre>
 </div>
 </div></div>
 </div>
@@ -371,27 +387,24 @@ or extracting nested logic into helper functions.</p><div class="examples-grid">
 <div class="example bad">
   <h4>BAD</h4>
   
-  <pre><code><span class="kw">let</span> process_order order user =
-  <span class="kw">if</span> order.valid <span class="kw">then</span>
-    <span class="kw">if</span> user.authenticated <span class="kw">then</span>
-      <span class="kw">if</span> order.total &gt; <span class="nu">0</span> <span class="kw">then</span>
-        <span class="kw">if</span> check_inventory order <span class="kw">then</span>
-          <span class="cm">(* deeply nested logic *)</span>
-          process_payment order
-        <span class="kw">else</span> <span class="cn">Error</span> &quot;<span class="cn">Out</span> <span class="kw">of</span> stock&quot;
-      <span class="kw">else</span> <span class="cn">Error</span> &quot;<span class="cn">Invalid</span> total&quot;
-    <span class="kw">else</span> <span class="cn">Error</span> &quot;<span class="cn">Not</span> authenticated&quot;
-  <span class="kw">else</span> <span class="cn">Error</span> &quot;<span class="cn">Invalid</span> order&quot;</code></pre>
+  <pre><code><span class="kw">let</span> process x y z =
+  <span class="kw">if</span> x &gt; <span class="nu">0</span> <span class="kw">then</span>
+    <span class="kw">if</span> y &gt; <span class="nu">0</span> <span class="kw">then</span>
+      <span class="kw">if</span> z &gt; <span class="nu">0</span> <span class="kw">then</span>
+        <span class="kw">if</span> x &lt; <span class="nu">100</span> <span class="kw">then</span>
+          x + y + z
+        <span class="kw">else</span> <span class="nu">0</span>
+      <span class="kw">else</span> <span class="nu">0</span>
+    <span class="kw">else</span> <span class="nu">0</span>
+  <span class="kw">else</span> <span class="nu">0</span></code></pre>
 </div>
 <div class="example good">
   <h4>GOOD</h4>
   
-  <pre><code><span class="kw">let</span> process_order order user =
-  <span class="kw">if</span> <span class="kw">not</span> order.valid <span class="kw">then</span> <span class="cn">Error</span> &quot;<span class="cn">Invalid</span> order&quot; <span class="kw">else</span>
-  <span class="kw">if</span> <span class="kw">not</span> user.authenticated <span class="kw">then</span> <span class="cn">Error</span> &quot;<span class="cn">Not</span> authenticated&quot; <span class="kw">else</span>
-  <span class="kw">if</span> order.total &lt;= <span class="nu">0</span> <span class="kw">then</span> <span class="cn">Error</span> &quot;<span class="cn">Invalid</span> total&quot; <span class="kw">else</span>
-  <span class="kw">if</span> <span class="kw">not</span> (check_inventory order) <span class="kw">then</span> <span class="cn">Error</span> &quot;<span class="cn">Out</span> <span class="kw">of</span> stock&quot; <span class="kw">else</span>
-  process_payment order</code></pre>
+  <pre><code><span class="kw">let</span> process x y z =
+  <span class="kw">if</span> x &lt;= <span class="nu">0</span> || y &lt;= <span class="nu">0</span> || z &lt;= <span class="nu">0</span> <span class="kw">then</span> <span class="nu">0</span>
+  <span class="kw">else</span> <span class="kw">if</span> x &gt;= <span class="nu">100</span> <span class="kw">then</span> <span class="nu">0</span>
+  <span class="kw">else</span> x + y + z</code></pre>
 </div>
 </div></div>
 </div>
@@ -435,15 +448,14 @@ at least log them before re-raising or handling.</p><div class="examples-grid">
 <div class="example bad">
   <h4>BAD</h4>
   
-  <pre><code><span class="kw">try</span> risky_operation () <span class="kw">with</span> _ -&gt; default_value</code></pre>
+  <pre><code><span class="kw">try</span> int_of_string &quot;abc&quot; <span class="kw">with</span> _ -&gt; <span class="nu">0</span></code></pre>
 </div>
 <div class="example good">
   <h4>GOOD</h4>
   
-  <pre><code><span class="kw">try</span> risky_operation () <span class="kw">with</span>
-| <span class="cn">Not_found</span> -&gt; default_value  
-| <span class="cn">Invalid_argument</span> _ -&gt; error_value
-| exn -&gt; log_unexpected exn; <span class="kw">raise</span> exn</code></pre>
+  <pre><code><span class="kw">try</span> int_of_string &quot;abc&quot; <span class="kw">with</span>
+| <span class="cn">Failure</span> _ -&gt; <span class="nu">0</span>
+| exn -&gt; print_endline &quot;unexpected&quot;; <span class="kw">raise</span> exn</code></pre>
 </div>
 </div></div>
 </div>
@@ -483,14 +495,15 @@ dune dependencies and replace Str functions with Re equivalents.</p><div class="
 <div class="example bad">
   <h4>BAD</h4>
   
-  <pre><code><span class="kw">let</span> is_email s = 
+  <pre><code><span class="kw">let</span> contains_at s = 
   <span class="cn">Str</span>.string_match (<span class="cn">Str</span>.regexp &quot;.*@.*&quot;) s <span class="nu">0</span></code></pre>
 </div>
 <div class="example good">
   <h4>GOOD</h4>
   
-  <pre><code><span class="kw">let</span> email_re = <span class="cn">Re</span>.compile (<span class="cn">Re</span>.seq [<span class="cn">Re</span>.any; <span class="cn">Re</span>.char '@'; <span class="cn">Re</span>.any])
-<span class="kw">let</span> is_email s = <span class="cn">Re</span>.execp email_re s</code></pre>
+  <pre><code><span class="cm">(* Requires: opam install re *)</span>
+<span class="kw">let</span> at_re = <span class="cn">Re</span>.compile (<span class="cn">Re</span>.str &quot;@&quot;)
+<span class="kw">let</span> contains_at s = <span class="cn">Re</span>.execp at_re s</code></pre>
 </div>
 </div></div>
 </div>
@@ -506,18 +519,19 @@ for new code, but Printf/Format remain valid choices for many use cases.</p><div
 <div class="example bad">
   <h4>BAD</h4>
   
-  <pre><code><span class="kw">let</span> error_msg = <span class="cn">Printf</span>.sprintf &quot;<span class="cn">Error</span>: %s at line %d&quot; msg line
-<span class="kw">let</span> () = <span class="cn">Printf</span>.printf &quot;<span class="cn">Processing</span> %d items...\n&quot; count</code></pre>
+  <pre><code><span class="kw">let</span> make_error msg line = 
+  <span class="cn">Printf</span>.sprintf &quot;<span class="cn">Error</span>: %s at line %d&quot; msg line
+<span class="kw">let</span> print_count n = 
+  <span class="cn">Printf</span>.printf &quot;<span class="cn">Processing</span> %d items...\n&quot; n</code></pre>
 </div>
 <div class="example good">
   <h4>GOOD</h4>
   
-  <pre><code><span class="kw">let</span> error_msg = <span class="cn">Fmt</span>.str &quot;<span class="cn">Error</span>: %s at line %d&quot; msg line
-<span class="kw">let</span> () = <span class="cn">Fmt</span>.pr &quot;<span class="cn">Processing</span> %d items...@.&quot; count
-
-<span class="cm">(* Even better with custom formatters *)</span>
-<span class="kw">let</span> pp_error ppf (msg, line) = 
-  <span class="cn">Fmt</span>.pf ppf &quot;<span class="cn">Error</span>: %s at line %d&quot; msg line</code></pre>
+  <pre><code><span class="cm">(* Requires: opam install fmt *)</span>
+<span class="kw">let</span> make_error msg line = 
+  <span class="cn">Fmt</span>.str &quot;<span class="cn">Error</span>: %s at line %d&quot; msg line
+<span class="kw">let</span> print_count n = 
+  <span class="cn">Fmt</span>.pr &quot;<span class="cn">Processing</span> %d items...@.&quot; n</code></pre>
 </div>
 </div></div>
 </div>
@@ -559,12 +573,12 @@ Fix them by using underscores between words while keeping the first letter capit
 <div class="example bad">
   <h4>BAD</h4>
   
-  <pre><code><span class="kw">module</span> <span class="cn">UserProfile</span> = <span class="kw">struct</span> ... <span class="kw">end</span></code></pre>
+  <pre><code><span class="kw">module</span> <span class="cn">UserProfile</span> = <span class="kw">struct</span> <span class="kw">end</span></code></pre>
 </div>
 <div class="example good">
   <h4>GOOD</h4>
   
-  <pre><code><span class="kw">module</span> <span class="cn">User_profile</span> = <span class="kw">struct</span> ... <span class="kw">end</span></code></pre>
+  <pre><code><span class="kw">module</span> <span class="cn">User_profile</span> = <span class="kw">struct</span> <span class="kw">end</span></code></pre>
 </div>
 </div></div>
 </div>
@@ -629,12 +643,12 @@ The file/module context already makes the purpose clear.</p><div class="examples
 <div class="example bad">
   <h4>BAD</h4>
   
-  <pre><code><span class="kw">let</span> get_user_profile_data_from_database_by_id id = ...</code></pre>
+  <pre><code><span class="kw">let</span> get_user_profile_data_from_database_by_id id = <span class="nu">42</span></code></pre>
 </div>
 <div class="example good">
   <h4>GOOD</h4>
   
-  <pre><code><span class="kw">let</span> get_user_by_id id = ...</code></pre>
+  <pre><code><span class="kw">let</span> get_user_by_id id = <span class="nu">42</span></code></pre>
 </div>
 </div></div>
 </div>
@@ -649,14 +663,14 @@ directly), find_* for search (returns option type).</p><div class="examples-grid
 <div class="example bad">
   <h4>BAD</h4>
   
-  <pre><code><span class="kw">let</span> get_user id = <span class="cn">List</span>.find_opt (<span class="kw">fun</span> u -&gt; u.id = id) users
-<span class="kw">let</span> find_name user = user.name</code></pre>
+  <pre><code><span class="kw">let</span> get_user id = <span class="cn">None</span>  <span class="cm">(* returns option but named get_* *)</span>
+<span class="kw">let</span> find_name () = &quot;<span class="cn">John</span>&quot;  <span class="cm">(* returns string but named find_* *)</span></code></pre>
 </div>
 <div class="example good">
   <h4>GOOD</h4>
   
-  <pre><code><span class="kw">let</span> find_user id = <span class="cn">List</span>.find_opt (<span class="kw">fun</span> u -&gt; u.id = id) users  
-<span class="kw">let</span> get_name user = user.name</code></pre>
+  <pre><code><span class="kw">let</span> find_user id = <span class="cn">None</span>  <span class="cm">(* returns option, correctly named *)</span>
+<span class="kw">let</span> get_name () = &quot;<span class="cn">John</span>&quot;  <span class="cm">(* returns string, correctly named *)</span></code></pre>
 </div>
 </div></div>
 </div>
@@ -672,17 +686,17 @@ already clear from usage.</p><div class="examples-grid">
   <h4>BAD</h4>
   
   <pre><code><span class="cm">(* In process.ml *)</span>
-<span class="kw">let</span> process_start () = ...
-<span class="kw">let</span> process_stop () = ...
-<span class="kw">type</span> process_config = ...</code></pre>
+<span class="kw">let</span> process_start () = ()
+<span class="kw">let</span> process_stop () = ()
+<span class="kw">type</span> process_config = {timeout: int}</code></pre>
 </div>
 <div class="example good">
   <h4>GOOD</h4>
   
   <pre><code><span class="cm">(* In process.ml *)</span>
-<span class="kw">let</span> start () = ...
-<span class="kw">let</span> stop () = ...
-<span class="kw">type</span> config = ...
+<span class="kw">let</span> start () = ()
+<span class="kw">let</span> stop () = ()
+<span class="kw">type</span> config = {timeout: int}
 <span class="cm">(* Usage: Process.start (), Process.config *)</span></code></pre>
 </div>
 </div></div>
@@ -723,28 +737,28 @@ makes error handling patterns clearer.</p><div class="examples-grid">
 <div class="example bad">
   <h4>BAD</h4>
   
-  <pre><code><span class="kw">let</span> process_data data =
-  <span class="kw">match</span> validate data <span class="kw">with</span>
-  | <span class="cn">None</span> -&gt; <span class="cn">Error</span> (<span class="cn">Fmt</span>.str &quot;<span class="cn">Invalid</span> data: %s&quot; data.id)
-  | <span class="cn">Some</span> v -&gt; 
-      <span class="kw">if</span> v.size &gt; max_size <span class="kw">then</span>
-        <span class="cn">Error</span> (<span class="cn">Fmt</span>.str &quot;<span class="cn">Data</span> too large: %d&quot; v.size)
-      <span class="kw">else</span> <span class="cn">Ok</span> v</code></pre>
+  <pre><code><span class="kw">let</span> process_data x =
+  <span class="kw">match</span> x <span class="kw">with</span>
+  | <span class="nu">0</span> -&gt; <span class="cn">Error</span> (<span class="cn">Fmt</span>.str &quot;<span class="cn">Invalid</span> data: %d&quot; x)
+  | n -&gt; 
+      <span class="kw">if</span> n &gt; <span class="nu">100</span> <span class="kw">then</span>
+        <span class="cn">Error</span> (<span class="cn">Fmt</span>.str &quot;<span class="cn">Data</span> too large: %d&quot; n)
+      <span class="kw">else</span> <span class="cn">Ok</span> n</code></pre>
 </div>
 <div class="example good">
   <h4>GOOD</h4>
   
   <pre><code><span class="cm">(* Define error helpers at the top of the file *)</span>
-<span class="kw">let</span> err_invalid_data id = <span class="cn">Error</span> (`<span class="cn">Invalid_data</span> id)
+<span class="kw">let</span> err_invalid x = <span class="cn">Error</span> (`<span class="cn">Invalid</span> x)
 <span class="kw">let</span> err_fmt fmt = <span class="cn">Fmt</span>.kstr (<span class="kw">fun</span> msg -&gt; <span class="cn">Error</span> (`<span class="cn">Msg</span> msg)) fmt
 
-<span class="kw">let</span> process_data data =
-  <span class="kw">match</span> validate data <span class="kw">with</span>
-  | <span class="cn">None</span> -&gt; err_invalid_data data.id
-  | <span class="cn">Some</span> v -&gt; 
-      <span class="kw">if</span> v.size &gt; max_size <span class="kw">then</span>
-        err_fmt &quot;<span class="cn">Data</span> too large: %d bytes&quot; v.size
-      <span class="kw">else</span> <span class="cn">Ok</span> v</code></pre>
+<span class="kw">let</span> process_data x =
+  <span class="kw">match</span> x <span class="kw">with</span>
+  | <span class="nu">0</span> -&gt; err_invalid x
+  | n -&gt; 
+      <span class="kw">if</span> n &gt; <span class="nu">100</span> <span class="kw">then</span>
+        err_fmt &quot;<span class="cn">Too</span> large: %d&quot; n
+      <span class="kw">else</span> <span class="cn">Ok</span> n</code></pre>
 </div>
 </div></div>
 </div>
@@ -760,8 +774,9 @@ leverage OCaml's type system for clarity and safety.</p><div class="examples-gri
   <h4>BAD</h4>
   
   <pre><code><span class="kw">let</span> create_window visible resizable fullscreen =
-  <span class="cm">(* What do these booleans mean at the call site? *)</span>
-  ...
+  <span class="kw">if</span> visible &amp;&amp; fullscreen &amp;&amp; <span class="kw">not</span> resizable <span class="kw">then</span>
+    &quot;window&quot;
+  <span class="kw">else</span> &quot;no window&quot;
   
 <span class="kw">let</span> w = create_window <span class="kw">true</span> <span class="kw">false</span> <span class="kw">true</span></code></pre>
 </div>
@@ -1001,6 +1016,7 @@ tests directly, allowing better test composition and organization.</p><div class
   <h4>GOOD</h4>
   
   <pre><code><span class="cm">(* test_user.ml *)</span>
+<span class="kw">let</span> tests = []
 <span class="kw">let</span> suite = (&quot;user&quot;, tests)</code></pre>
 </div>
 </div></div>

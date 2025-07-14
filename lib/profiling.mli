@@ -14,3 +14,7 @@ val get_timings : unit -> timing list
 
 val print_summary : unit -> unit
 (** [print_summary ()] prints a formatted summary of all timings to stdout *)
+
+val print_per_file_summary : unit -> unit
+(** [print_per_file_summary ()] prints a per-file breakdown of timings to stdout
+*)

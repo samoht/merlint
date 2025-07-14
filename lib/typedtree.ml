@@ -6,6 +6,13 @@ type name = { prefix : string list; base : string }
 type elt = { name : name; location : Location.t option }
 (** Common element type for all extracted items *)
 
+type expr_node =
+  | Construct of { name : string; args : expr_node list }
+  | Apply of { func : expr_node; args : expr_node list }
+  | Ident of string
+  | Constant of string
+  | Other
+
 type t = {
   identifiers : elt list;
   patterns : elt list;
@@ -13,6 +20,7 @@ type t = {
   types : elt list;
   exceptions : elt list;
   variants : elt list;
+  expressions : (expr_node * Location.t option) list;
 }
 (** Simplified representation focusing on identifiers *)
 
@@ -124,6 +132,7 @@ let empty_acc =
     types = [];
     exceptions = [];
     variants = [];
+    expressions = [];
   }
 
 (** Pre-process the raw text into a list of blocks *)
@@ -171,10 +180,12 @@ let merge_acc child_acc acc =
     types = List.rev_append child_acc.types acc.types;
     exceptions = List.rev_append child_acc.exceptions acc.exceptions;
     variants = List.rev_append child_acc.variants acc.variants;
+    expressions = List.rev_append child_acc.expressions acc.expressions;
   }
 
 (** Process expression node *)
 let rec process_expression blocks_ref indent loc acc =
+  (* Process all children of the expression *)
   let child_acc = parse_node blocks_ref (indent + 2) loc empty_acc in
   merge_acc child_acc acc
 
@@ -339,6 +350,7 @@ let parse_from_blocks (blocks : block list) : t =
     types = List.rev result.types;
     exceptions = List.rev result.exceptions;
     variants = List.rev result.variants;
+    expressions = List.rev result.expressions;
   }
 
 (** Parse typedtree output from raw text *)
@@ -358,6 +370,7 @@ let of_json_with_filename json original_filename =
       if
         result.identifiers = [] && result.patterns = [] && result.modules = []
         && result.types = [] && result.exceptions = [] && result.variants = []
+        && result.expressions = []
       then result
       else
         (* Fix filenames in all locations *)
@@ -369,6 +382,7 @@ let of_json_with_filename json original_filename =
         let fix_elt elt =
           { elt with location = fix_location_filename elt.location }
         in
+        let fix_expr (expr, loc) = (expr, fix_location_filename loc) in
         {
           identifiers = List.map fix_elt result.identifiers;
           patterns = List.map fix_elt result.patterns;
@@ -376,6 +390,7 @@ let of_json_with_filename json original_filename =
           types = List.map fix_elt result.types;
           exceptions = List.map fix_elt result.exceptions;
           variants = List.map fix_elt result.variants;
+          expressions = List.map fix_expr result.expressions;
         }
   | _ -> empty_acc
 

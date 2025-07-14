@@ -90,18 +90,19 @@ for new code, but Printf/Format remain valid choices for many use cases.
 
 ❌ **Bad:**
 ```ocaml
-let error_msg = Printf.sprintf "Error: %s at line %d" msg line
-let () = Printf.printf "Processing %d items...\n" count
+let make_error msg line = 
+  Printf.sprintf "Error: %s at line %d" msg line
+let print_count n = 
+  Printf.printf "Processing %d items...\n" n
 ```
 
 ✅ **Good:**
 ```ocaml
-let error_msg = Fmt.str "Error: %s at line %d" msg line
-let () = Fmt.pr "Processing %d items...@." count
-
-(* Even better with custom formatters *)
-let pp_error ppf (msg, line) = 
-  Fmt.pf ppf "Error: %s at line %d" msg line
+(* Requires: opam install fmt *)
+let make_error msg line = 
+  Fmt.str "Error: %s at line %d" msg line
+let print_count n = 
+  Fmt.pr "Processing %d items...@." n
 ```
 
 
@@ -117,14 +118,15 @@ dune dependencies and replace Str functions with Re equivalents.
 
 ❌ **Bad:**
 ```ocaml
-let is_email s = 
+let contains_at s = 
   Str.string_match (Str.regexp ".*@.*") s 0
 ```
 
 ✅ **Good:**
 ```ocaml
-let email_re = Re.compile (Re.seq [Re.any; Re.char '@'; Re.any])
-let is_email s = Re.execp email_re s
+(* Requires: opam install re *)
+let at_re = Re.compile (Re.str "@")
+let contains_at s = Re.execp at_re s
 ```
 
 
@@ -354,15 +356,14 @@ at least log them before re-raising or handling.
 
 ❌ **Bad:**
 ```ocaml
-try risky_operation () with _ -> default_value
+try int_of_string "abc" with _ -> 0
 ```
 
 ✅ **Good:**
 ```ocaml
-try risky_operation () with
-| Not_found -> default_value  
-| Invalid_argument _ -> error_value
-| exn -> log_unexpected exn; raise exn
+try int_of_string "abc" with
+| Failure _ -> 0
+| exn -> print_endline "unexpected"; raise exn
 ```
 
 
@@ -414,12 +415,12 @@ Fix them by using underscores between words while keeping the first letter capit
 
 ❌ **Bad:**
 ```ocaml
-module UserProfile = struct ... end
+module UserProfile = struct end
 ```
 
 ✅ **Good:**
 ```ocaml
-module User_profile = struct ... end
+module User_profile = struct end
 ```
 
 
@@ -514,12 +515,12 @@ The file/module context already makes the purpose clear.
 
 ❌ **Bad:**
 ```ocaml
-let get_user_profile_data_from_database_by_id id = ...
+let get_user_profile_data_from_database_by_id id = 42
 ```
 
 ✅ **Good:**
 ```ocaml
-let get_user_by_id id = ...
+let get_user_by_id id = 42
 ```
 
 
@@ -535,14 +536,14 @@ directly), find_* for search (returns option type).
 
 ❌ **Bad:**
 ```ocaml
-let get_user id = List.find_opt (fun u -> u.id = id) users
-let find_name user = user.name
+let get_user id = None  (* returns option but named get_* *)
+let find_name () = "John"  (* returns string but named find_* *)
 ```
 
 ✅ **Good:**
 ```ocaml
-let find_user id = List.find_opt (fun u -> u.id = id) users  
-let get_name user = user.name
+let find_user id = None  (* returns option, correctly named *)
+let get_name () = "John"  (* returns string, correctly named *)
 ```
 
 
@@ -587,25 +588,44 @@ Aim for functions under 50 lines of actual logic.
 
 ❌ **Bad:**
 ```ocaml
-let process_everything user data config =
-  (* 100+ lines of mixed concerns: validation, processing, formatting *)
-  let valid = check_user user && verify_data data in
-  (* ... many more lines ... *)
-  format_output result
+let process_all x y =
+  let a = x + 1 in
+  let b = y + 1 in
+  let c = a * 2 in
+  let d = b * 2 in
+  let e = c + d in
+  let f = e * 2 in
+  let g = f + a in
+  let h = g + b in
+  let i = h * 2 in
+  let j = i + c in
+  let k = j + d in
+  let l = k * 2 in
+  let m = l + e in
+  let n = m + f in
+  let o = n * 2 in
+  let p = o + g in
+  let q = p + h in
+  let r = q * 2 in
+  let s = r + i in
+  let t = s + j in
+  let u = t * 2 in
+  let v = u + k in
+  let w = v + l in
+  let result = w + m + n + o + p + q + r + s + t + u + v in
+  result
 ```
 
 ✅ **Good:**
 ```ocaml
-let validate_inputs user data = 
-  check_user user && verify_data data
+let step1 x y = (x + 1, y + 1)
+let step2 (a, b) = (a * 2, b * 2)
+let combine (c, d) = (c + d) * 2
 
-let process_data data config = 
-  (* focused processing logic *)
-
-let process_everything user data config =
-  let valid = validate_inputs user data in
-  let result = process_data data config in
-  format_output result
+let process_all x y =
+  let (a, b) = step1 x y in
+  let (c, d) = step2 (a, b) in
+  combine (c, d)
 ```
 
 
@@ -619,27 +639,24 @@ or extracting nested logic into helper functions.
 
 ❌ **Bad:**
 ```ocaml
-let process_order order user =
-  if order.valid then
-    if user.authenticated then
-      if order.total > 0 then
-        if check_inventory order then
-          (* deeply nested logic *)
-          process_payment order
-        else Error "Out of stock"
-      else Error "Invalid total"
-    else Error "Not authenticated"
-  else Error "Invalid order"
+let process x y z =
+  if x > 0 then
+    if y > 0 then
+      if z > 0 then
+        if x < 100 then
+          x + y + z
+        else 0
+      else 0
+    else 0
+  else 0
 ```
 
 ✅ **Good:**
 ```ocaml
-let process_order order user =
-  if not order.valid then Error "Invalid order" else
-  if not user.authenticated then Error "Not authenticated" else
-  if order.total <= 0 then Error "Invalid total" else
-  if not (check_inventory order) then Error "Out of stock" else
-  process_payment order
+let process x y z =
+  if x <= 0 || y <= 0 || z <= 0 then 0
+  else if x >= 100 then 0
+  else x + y + z
 ```
 
 
@@ -657,39 +674,36 @@ that describe their purpose.
 
 ❌ **Bad:**
 ```ocaml
-let process_data data user =
-  if data.valid then
-    if user.authenticated then
-      if data.size < 1000 then
-        if has_permission user data then
-          (* complex processing logic *)
-        else Error "No permission"
-      else Error "Data too large"
-    else Error "Not authenticated"
-  else Error "Invalid data"
+let check_input x y z =
+  if x > 0 then
+    if y > 0 then
+      if z > 0 then
+        if x + y > z then
+          if y + z > x then
+            if x + z > y then
+              "valid"
+            else "invalid"
+          else "invalid"
+        else "invalid"
+      else "invalid"
+    else "invalid"
+  else "invalid"
 ```
 
 ✅ **Good:**
 ```ocaml
-let validate_data data = 
-  if not data.valid then Error "Invalid data" else Ok ()
+let check_positive x = x > 0
 
-let check_auth user = 
-  if not user.authenticated then Error "Not authenticated" else Ok ()
+let check_triangle x y z =
+  x + y > z && y + z > x && x + z > y
 
-let check_size data = 
-  if data.size >= 1000 then Error "Data too large" else Ok ()
-
-let check_permission user data = 
-  if not (has_permission user data) then Error "No permission" else Ok ()
-
-let process_data data user =
-  let open Result.Syntax in
-  let* () = validate_data data in
-  let* () = check_auth user in
-  let* () = check_size data in
-  let* () = check_permission user data in
-  (* complex processing logic *)
+let check_input x y z =
+  if not (check_positive x && check_positive y && check_positive z) then
+    "invalid"
+  else if not (check_triangle x y z) then
+    "invalid"
+  else
+    "valid"
 ```
 
 
@@ -803,6 +817,7 @@ let () = Alcotest.run "tests" [("user", tests)]
 ✅ **Good:**
 ```ocaml
 (* test_user.ml *)
+let tests = []
 let suite = ("user", tests)
 ```
 

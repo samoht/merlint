@@ -78,58 +78,37 @@ let check_mutable_state identifiers =
   !issues
 *)
 
-(** Check for Error pattern usage *)
-let check_error_patterns identifiers =
+(** Check for Error pattern usage using expression trees *)
+let check_error_patterns expressions =
   let issues = ref [] in
-  let error_seen = ref None in
 
   List.iter
-    (fun (id : Typedtree.elt) ->
-      match id.location with
-      | Some loc -> (
-          let name = id.name in
-          let prefix = name.prefix in
-          let base = name.base in
-
-          match (prefix, base) with
-          | _, "Error" ->
-              (* Remember we saw Error constructor *)
-              error_seen := Some loc
-          | ([ "Stdlib"; "Format" ] | [ "Format" ]), "asprintf"
-          | [ "Fmt" ], "str" -> (
-              (* Check if this follows an Error constructor *)
-              match !error_seen with
-              | Some error_loc when error_loc.start_line = loc.start_line ->
-                  (* Same line, likely Error (Fmt.str ...) pattern *)
-                  let suggested =
-                    match String.split_on_char '"' base with
-                    | _ :: msg :: _ ->
-                        let clean_msg =
-                          String.map
-                            (fun c -> if c = ' ' || c = ':' then '_' else c)
-                            (String.lowercase_ascii msg)
-                        in
-                        "err_" ^ clean_msg
-                    | _ -> "err_<specific_error>"
-                  in
+    (fun (expr, loc) ->
+      match expr with
+      | Typedtree.Construct { name = "Error"; args } -> (
+          (* Check if any argument is Fmt.str *)
+          match args with
+          | [ Typedtree.Apply { func = Typedtree.Ident id; _ } ]
+            when String.ends_with ~suffix:"Fmt.str" id -> (
+              match loc with
+              | Some location ->
                   issues :=
                     Issue.Error_pattern
                       {
-                        location = error_loc;
+                        location;
                         error_message = "Error (Fmt.str ...)";
-                        suggested_function = suggested;
+                        suggested_function = "err_fmt";
                       }
-                    :: !issues;
-                  error_seen := None
-              | _ -> ())
+                    :: !issues
+              | None -> ())
           | _ -> ())
-      | None -> ())
-    identifiers;
+      | _ -> ())
+    expressions;
 
   !issues
 
 (** Check typedtree data structure *)
-let check_typedtree ~identifiers ~patterns:_ =
+let check_typedtree ~identifiers ~patterns:_ ~expressions =
   let issues = ref [] in
 
   (* Check identifiers for problematic patterns *)
@@ -143,16 +122,28 @@ let check_typedtree ~identifiers ~patterns:_ =
 
           (* Pattern match on the module path and base identifier *)
           match (prefix, base) with
-          | [ "Stdlib"; "Obj" ], _ ->
+          | ([ "Obj" ] | [ "Stdlib"; "Obj" ]), "magic" ->
               issues := Issue.No_obj_magic { location = loc } :: !issues
           | [ "Stdlib"; "Str" ], _ ->
+              issues := Issue.Use_str_module { location = loc } :: !issues
+          | [ "Str" ], _ ->
               issues := Issue.Use_str_module { location = loc } :: !issues
           | [ "Stdlib"; "Printf" ], _ ->
               issues :=
                 Issue.Use_printf_module
                   { location = loc; module_used = "Printf" }
                 :: !issues
+          | [ "Printf" ], _ ->
+              issues :=
+                Issue.Use_printf_module
+                  { location = loc; module_used = "Printf" }
+                :: !issues
           | [ "Stdlib"; "Format" ], base when is_printf_function base ->
+              issues :=
+                Issue.Use_printf_module
+                  { location = loc; module_used = "Format" }
+                :: !issues
+          | [ "Format" ], base when is_printf_function base ->
               issues :=
                 Issue.Use_printf_module
                   { location = loc; module_used = "Format" }
@@ -168,13 +159,12 @@ let check_typedtree ~identifiers ~patterns:_ =
      because typedtree patterns don't provide enough context
      to distinguish exception handlers from other underscore uses *)
 
-  (* Add mutable state checks *)
-  (* TODO: E351 disabled - too imprecise, needs to distinguish global vs local state
-  let mutable_issues = check_mutable_state identifiers in
-  issues := mutable_issues @ !issues; *)
+  (* Note: Mutable state detection moved to mutable_state.ml
+     and is now called from rules.ml with outline data to detect
+     only global mutable state, not local refs inside functions *)
 
   (* Add error pattern checks *)
-  let error_pattern_issues = check_error_patterns identifiers in
+  let error_pattern_issues = check_error_patterns expressions in
   issues := error_pattern_issues @ !issues;
 
   !issues
@@ -232,5 +222,8 @@ let check_parsetree ~identifiers ~patterns =
 let check (typedtree : Typedtree.t) =
   try
     check_typedtree ~identifiers:typedtree.identifiers
-      ~patterns:typedtree.patterns
-  with Type_error_fallback_needed -> []
+      ~patterns:typedtree.patterns ~expressions:typedtree.expressions
+  with Type_error_fallback_needed ->
+    (* Fall back to parsetree when type errors are present *)
+    []
+(* TODO: Need parsetree data to implement fallback *)
