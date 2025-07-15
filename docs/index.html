@@ -335,31 +335,60 @@ Aim for functions under 50 lines of actual logic.</p><div class="examples-grid">
 <div class="example bad">
   <h4>BAD</h4>
   
-  <pre><code><span class="kw">let</span> process_all x y =
+  <pre><code><span class="kw">let</span> process_all_data x y z =
+  <span class="cm">(* This function is intentionally long to demonstrate the rule *)</span>
   <span class="kw">let</span> a = x + <span class="nu">1</span> <span class="kw">in</span>
   <span class="kw">let</span> b = y + <span class="nu">1</span> <span class="kw">in</span>
-  <span class="kw">let</span> c = a * <span class="nu">2</span> <span class="kw">in</span>
-  <span class="kw">let</span> d = b * <span class="nu">2</span> <span class="kw">in</span>
-  <span class="kw">let</span> e = c + d <span class="kw">in</span>
-  <span class="kw">let</span> f = e * <span class="nu">2</span> <span class="kw">in</span>
-  <span class="kw">let</span> g = f + a <span class="kw">in</span>
-  <span class="kw">let</span> h = g + b <span class="kw">in</span>
-  <span class="kw">let</span> i = h * <span class="nu">2</span> <span class="kw">in</span>
-  <span class="kw">let</span> j = i + c <span class="kw">in</span>
-  <span class="kw">let</span> k = j + d <span class="kw">in</span>
-  <span class="kw">let</span> l = k * <span class="nu">2</span> <span class="kw">in</span>
-  <span class="kw">let</span> m = l + e <span class="kw">in</span>
-  <span class="kw">let</span> n = m + f <span class="kw">in</span>
-  <span class="kw">let</span> o = n * <span class="nu">2</span> <span class="kw">in</span>
-  <span class="kw">let</span> p = o + g <span class="kw">in</span>
-  <span class="kw">let</span> q = p + h <span class="kw">in</span>
-  <span class="kw">let</span> r = q * <span class="nu">2</span> <span class="kw">in</span>
-  <span class="kw">let</span> s = r + i <span class="kw">in</span>
-  <span class="kw">let</span> t = s + j <span class="kw">in</span>
-  <span class="kw">let</span> u = t * <span class="nu">2</span> <span class="kw">in</span>
-  <span class="kw">let</span> v = u + k <span class="kw">in</span>
-  <span class="kw">let</span> w = v + l <span class="kw">in</span>
-  <span class="kw">let</span> result = w + m + n + o + p + q + r + s + t + u + v <span class="kw">in</span>
+  <span class="kw">let</span> c = z + <span class="nu">1</span> <span class="kw">in</span>
+  <span class="kw">let</span> d = a * <span class="nu">2</span> <span class="kw">in</span>
+  <span class="kw">let</span> e = b * <span class="nu">2</span> <span class="kw">in</span>
+  <span class="kw">let</span> f = c * <span class="nu">2</span> <span class="kw">in</span>
+  <span class="kw">let</span> g = d + e <span class="kw">in</span>
+  <span class="kw">let</span> h = e + f <span class="kw">in</span>
+  <span class="kw">let</span> i = f + d <span class="kw">in</span>
+  <span class="kw">let</span> j = g * <span class="nu">2</span> <span class="kw">in</span>
+  <span class="kw">let</span> k = h * <span class="nu">2</span> <span class="kw">in</span>
+  <span class="kw">let</span> l = i * <span class="nu">2</span> <span class="kw">in</span>
+  <span class="kw">let</span> m = j + k <span class="kw">in</span>
+  <span class="kw">let</span> n = k + l <span class="kw">in</span>
+  <span class="kw">let</span> o = l + j <span class="kw">in</span>
+  <span class="kw">let</span> p = m * <span class="nu">2</span> <span class="kw">in</span>
+  <span class="kw">let</span> q = n * <span class="nu">2</span> <span class="kw">in</span>
+  <span class="kw">let</span> r = o * <span class="nu">2</span> <span class="kw">in</span>
+  <span class="kw">let</span> s = p + q <span class="kw">in</span>
+  <span class="kw">let</span> t = q + r <span class="kw">in</span>
+  <span class="kw">let</span> u = r + p <span class="kw">in</span>
+  <span class="kw">let</span> v = s * <span class="nu">2</span> <span class="kw">in</span>
+  <span class="kw">let</span> w = t * <span class="nu">2</span> <span class="kw">in</span>
+  <span class="kw">let</span> x1 = u * <span class="nu">2</span> <span class="kw">in</span>
+  <span class="kw">let</span> y1 = v + w <span class="kw">in</span>
+  <span class="kw">let</span> z1 = w + x1 <span class="kw">in</span>
+  <span class="kw">let</span> a1 = x1 + v <span class="kw">in</span>
+  <span class="kw">let</span> b1 = y1 * <span class="nu">2</span> <span class="kw">in</span>
+  <span class="kw">let</span> c1 = z1 * <span class="nu">2</span> <span class="kw">in</span>
+  <span class="kw">let</span> d1 = a1 * <span class="nu">2</span> <span class="kw">in</span>
+  <span class="kw">let</span> e1 = b1 + c1 <span class="kw">in</span>
+  <span class="kw">let</span> f1 = c1 + d1 <span class="kw">in</span>
+  <span class="kw">let</span> g1 = d1 + b1 <span class="kw">in</span>
+  <span class="kw">let</span> h1 = e1 * <span class="nu">2</span> <span class="kw">in</span>
+  <span class="kw">let</span> i1 = f1 * <span class="nu">2</span> <span class="kw">in</span>
+  <span class="kw">let</span> j1 = g1 * <span class="nu">2</span> <span class="kw">in</span>
+  <span class="kw">let</span> k1 = h1 + i1 <span class="kw">in</span>
+  <span class="kw">let</span> l1 = i1 + j1 <span class="kw">in</span>
+  <span class="kw">let</span> m1 = j1 + h1 <span class="kw">in</span>
+  <span class="kw">let</span> n1 = k1 * <span class="nu">2</span> <span class="kw">in</span>
+  <span class="kw">let</span> o1 = l1 * <span class="nu">2</span> <span class="kw">in</span>
+  <span class="kw">let</span> p1 = m1 * <span class="nu">2</span> <span class="kw">in</span>
+  <span class="kw">let</span> q1 = n1 + o1 <span class="kw">in</span>
+  <span class="kw">let</span> r1 = o1 + p1 <span class="kw">in</span>
+  <span class="kw">let</span> s1 = p1 + n1 <span class="kw">in</span>
+  <span class="kw">let</span> t1 = q1 * <span class="nu">2</span> <span class="kw">in</span>
+  <span class="kw">let</span> u1 = r1 * <span class="nu">2</span> <span class="kw">in</span>
+  <span class="kw">let</span> v1 = s1 * <span class="nu">2</span> <span class="kw">in</span>
+  <span class="kw">let</span> w1 = t1 + u1 <span class="kw">in</span>
+  <span class="kw">let</span> x2 = u1 + v1 <span class="kw">in</span>
+  <span class="kw">let</span> y2 = v1 + t1 <span class="kw">in</span>
+  <span class="kw">let</span> result = w1 + x2 + y2 <span class="kw">in</span>
   result</code></pre>
 </div>
 <div class="example good">
