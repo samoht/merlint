@@ -7,7 +7,7 @@ Test bad example - should find bad documentation style:
   ✓ Code Quality (0 total issues)
   ✓ Code Style (0 total issues)
   ✓ Naming Conventions (0 total issues)
-  ✓ Documentation (0 total issues)
+  ✗ Documentation (0 total issues)
   ✗ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   
@@ -23,7 +23,7 @@ Test good example - should find no issues:
   ✓ Code Quality (0 total issues)
   ✓ Code Style (0 total issues)
   ✓ Naming Conventions (0 total issues)
-  ✓ Documentation (0 total issues)
+  ✗ Documentation (0 total issues)
   ✗ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   
