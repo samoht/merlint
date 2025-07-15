@@ -1,2 +1,2 @@
-(** [parse str] parses a string into type [t]. *)
-val parse : string -> t
+type t = string
+let parse s = s

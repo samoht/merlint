@@ -1,5 +1,5 @@
 Test bad example - should find bad documentation style:
-  $ merlint -r E410 bad.ml
+  $ merlint -r E410 bad.mli
   Running merlint analysis...
   
   Analyzing 1 files
@@ -15,7 +15,7 @@ Test bad example - should find bad documentation style:
   ✗ Some checks failed. See details above.
 
 Test good example - should find no issues:
-  $ merlint -r E410 good.ml
+  $ merlint -r E410 good.mli
   Running merlint analysis...
   
   Analyzing 1 files

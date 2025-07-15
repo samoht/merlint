@@ -1,3 +1,4 @@
 (library
  (name test_e340)
- (modules bad good))
+ (modules bad good)
+ (libraries fmt))

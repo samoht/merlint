@@ -1,5 +1,5 @@
 Test bad example - should find missing standard functions:
-  $ merlint -r E415 bad.ml
+  $ merlint -r E415 bad.mli
   Running merlint analysis...
   
   Analyzing 1 files
@@ -15,7 +15,7 @@ Test bad example - should find missing standard functions:
   ✗ Some checks failed. See details above.
 
 Test good example - should find no issues:
-  $ merlint -r E415 good.ml
+  $ merlint -r E415 good.mli
   Running merlint analysis...
   
   Analyzing 1 files

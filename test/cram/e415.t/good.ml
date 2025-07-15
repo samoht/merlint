@@ -1,4 +1,6 @@
 type user = { id: int; name: string }
-val equal : user -> user -> bool
-val compare : user -> user -> int
-val pp : Format.formatter -> user -> unit
+let equal a b = a.id = b.id && a.name = b.name
+let compare a b = 
+  let c = Int.compare a.id b.id in
+  if c = 0 then String.compare a.name b.name else c
+let pp fmt u = Format.fprintf fmt "{id=%d; name=%S}" u.id u.name

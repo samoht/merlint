@@ -1,5 +1,5 @@
 Test bad example - should find missing value documentation:
-  $ merlint -r E405 bad.ml
+  $ merlint -r E405 bad.mli
   Running merlint analysis...
   
   Analyzing 1 files
@@ -15,7 +15,7 @@ Test bad example - should find missing value documentation:
   ✗ Some checks failed. See details above.
 
 Test good example - should find no issues:
-  $ merlint -r E405 good.ml
+  $ merlint -r E405 good.mli
   Running merlint analysis...
   
   Analyzing 1 files

@@ -164,21 +164,21 @@ with a brief summary and description of the module's purpose.|};
     Rule.v ~issue:Missing_value_doc ~title:"Missing Value Documentation"
       ~category:Documentation
       ~examples:
-        [ Rule.bad Examples.E405.bad_ml; Rule.good Examples.E405.good_ml ]
+        [ Rule.bad Examples.E405.bad_mli; Rule.good Examples.E405.good_mli ]
       {|This issue means your public functions and values lack documentation making
 them hard to use. Fix it by adding documentation comments that explain what
 each function does, its parameters, and return value.|};
     Rule.v ~issue:Bad_doc_style ~title:"Documentation Style Issues"
       ~category:Documentation
       ~examples:
-        [ Rule.bad Examples.E410.bad_ml; Rule.good Examples.E410.good_ml ]
+        [ Rule.bad Examples.E410.bad_mli; Rule.good Examples.E410.good_mli ]
       {|This issue means your documentation doesn't follow OCaml conventions making
 it inconsistent. Fix it by following the standard OCaml documentation
 format with proper syntax and structure.|};
     Rule.v ~issue:Missing_standard_function ~title:"Missing Standard Functions"
       ~category:Documentation
       ~examples:
-        [ Rule.bad Examples.E415.bad_ml; Rule.good Examples.E415.good_ml ]
+        [ Rule.bad Examples.E415.bad_mli; Rule.good Examples.E415.good_mli ]
       {|This issue means your types lack standard functions making them hard to use
 in collections and debugging. Fix it by implementing equal, compare, pp
 (pretty-printer), and to_string functions for your types.|};
