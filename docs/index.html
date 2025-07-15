@@ -645,12 +645,12 @@ The file/module context already makes the purpose clear.</p><div class="examples
 <div class="example bad">
   <h4>BAD</h4>
   
-  <pre><code><span class="kw">let</span> get_user_profile_data_from_database_by_id id = <span class="nu">42</span></code></pre>
+  <pre><code><span class="kw">let</span> get_user_profile_data_from_database_by_id () = <span class="nu">42</span></code></pre>
 </div>
 <div class="example good">
   <h4>GOOD</h4>
   
-  <pre><code><span class="kw">let</span> get_user_by_id id = <span class="nu">42</span></code></pre>
+  <pre><code><span class="kw">let</span> get_user_by_id () = <span class="nu">42</span></code></pre>
 </div>
 </div></div>
 </div>
@@ -790,7 +790,9 @@ leverage OCaml's type system for clarity and safety.</p><div class="examples-gri
 <span class="kw">type</span> resizable = <span class="cn">Resizable</span> | <span class="cn">Fixed_size</span>
 
 <span class="kw">let</span> create_window ~visibility ~mode ~resizable =
-  ...
+  <span class="kw">match</span> visibility, mode, resizable <span class="kw">with</span>
+  | <span class="cn">Visible</span>, <span class="cn">Fullscreen</span>, <span class="cn">Fixed_size</span> -&gt; &quot;window&quot;
+  | _ -&gt; &quot;no window&quot;
   
 <span class="kw">let</span> w = create_window ~visibility:<span class="cn">Visible</span> ~mode:<span class="cn">Fullscreen</span> ~resizable:<span class="cn">Fixed_size</span></code></pre>
 </div>
@@ -845,16 +847,14 @@ with a brief summary and description of the module's purpose.</p><div class="exa
 <div class="example bad">
   <h4>BAD</h4>
   
-  <pre><code><span class="cm">(* user.mli - no module doc *)</span>
-<span class="kw">val</span> create : string -&gt; t</code></pre>
+  <pre><code><span class="kw">type</span> t = string
+<span class="kw">let</span> create s = s</code></pre>
 </div>
 <div class="example good">
   <h4>GOOD</h4>
   
-  <pre><code>(** <span class="cn">User</span> management <span class="kw">module</span> 
-    
-    <span class="cn">Handles</span> user creation <span class="kw">and</span> authentication. *)
-<span class="kw">val</span> create : string -&gt; t</code></pre>
+  <pre><code><span class="kw">type</span> t = string
+<span class="kw">let</span> create s = s</code></pre>
 </div>
 </div></div>
 </div>
@@ -869,12 +869,15 @@ each function does, its parameters, and return value.</p><div class="examples-gr
 <div class="example bad">
   <h4>BAD</h4>
   
-  <pre><code><span class="kw">val</span> parse : string -&gt; t</code></pre>
+  <pre><code><span class="kw">type</span> t
+<span class="kw">val</span> parse : string -&gt; t</code></pre>
 </div>
 <div class="example good">
   <h4>GOOD</h4>
   
-  <pre><code>(** [parse str] converts a string <span class="kw">to</span> <span class="kw">type</span> [t].
+  <pre><code><span class="kw">type</span> t
+
+(** [parse str] converts a string <span class="kw">to</span> <span class="kw">type</span> [t].
     @<span class="kw">raise</span> <span class="cn">Invalid_argument</span> <span class="kw">if</span> [str] is malformed. *)
 <span class="kw">val</span> parse : string -&gt; t</code></pre>
 </div>
@@ -891,13 +894,17 @@ format with proper syntax and structure.</p><div class="examples-grid">
 <div class="example bad">
   <h4>BAD</h4>
   
-  <pre><code><span class="cm">(* this function parses strings *)</span>
+  <pre><code><span class="kw">type</span> t
+
+<span class="cm">(* this function parses strings *)</span>
 <span class="kw">val</span> parse : string -&gt; t</code></pre>
 </div>
 <div class="example good">
   <h4>GOOD</h4>
   
-  <pre><code><span class="cm">(** [parse str] parses a string into type [t]. *)</span>
+  <pre><code><span class="kw">type</span> t
+
+<span class="cm">(** [parse str] parses a string into type [t]. *)</span>
 <span class="kw">val</span> parse : string -&gt; t</code></pre>
 </div>
 </div></div>
@@ -913,8 +920,7 @@ in collections and debugging. Fix it by implementing equal, compare, pp
 <div class="example bad">
   <h4>BAD</h4>
   
-  <pre><code><span class="kw">type</span> user = { id: int; name: string }
-<span class="cm">(* No standard functions *)</span></code></pre>
+  <pre><code><span class="kw">type</span> user = { id: int; name: string }</code></pre>
 </div>
 <div class="example good">
   <h4>GOOD</h4>
@@ -1012,6 +1018,7 @@ tests directly, allowing better test composition and organization.</p><div class
   <h4>BAD</h4>
   
   <pre><code><span class="cm">(* test_user.ml *)</span>
+<span class="kw">let</span> tests = []
 <span class="kw">let</span> () = <span class="cn">Alcotest</span>.run &quot;tests&quot; [(&quot;user&quot;, tests)]</code></pre>
 </div>
 <div class="example good">
@@ -1040,6 +1047,8 @@ library module to ensure your code works correctly.</p><div class="examples-grid
   <h4>GOOD</h4>
   
   <pre><code><span class="cm">(* test/test_parser.ml *)</span>
+<span class="kw">let</span> test_parse = <span class="kw">fun</span> () -&gt; ()
+<span class="kw">let</span> test_errors = <span class="kw">fun</span> () -&gt; ()
 <span class="kw">let</span> suite = (&quot;parser&quot;, [test_parse; test_errors])</code></pre>
 </div>
 </div></div>
@@ -1076,6 +1085,9 @@ to ensure all tests are run during development.</p><div class="examples-grid">
   <h4>BAD</h4>
   
   <pre><code><span class="cm">(* test/test.ml *)</span>
+<span class="kw">module</span> <span class="cn">Test_user</span> = <span class="kw">struct</span>
+  <span class="kw">let</span> suite = (&quot;user&quot;, [])
+<span class="kw">end</span>
 <span class="kw">let</span> () = <span class="cn">Alcotest</span>.run &quot;all&quot; [<span class="cn">Test_user</span>.suite] 
 <span class="cm">(* Missing Test_parser.suite *)</span></code></pre>
 </div>
@@ -1083,6 +1095,12 @@ to ensure all tests are run during development.</p><div class="examples-grid">
   <h4>GOOD</h4>
   
   <pre><code><span class="cm">(* test/test.ml *)</span>
+<span class="kw">module</span> <span class="cn">Test_user</span> = <span class="kw">struct</span>
+  <span class="kw">let</span> suite = (&quot;user&quot;, [])
+<span class="kw">end</span>
+<span class="kw">module</span> <span class="cn">Test_parser</span> = <span class="kw">struct</span>
+  <span class="kw">let</span> suite = (&quot;parser&quot;, [])
+<span class="kw">end</span>
 <span class="kw">let</span> () = <span class="cn">Alcotest</span>.run &quot;all&quot; [
   <span class="cn">Test_user</span>.suite;
   <span class="cn">Test_parser</span>.suite

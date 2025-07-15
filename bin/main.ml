@@ -196,29 +196,15 @@ let group_issues_by_code issues =
       (error_code, issue :: current) :: List.remove_assoc error_code acc)
     [] issues
 
-let process_category_report rule_filter (category_name, reports) =
-  (* Filter issues in each report based on rule filter *)
-  let filtered_reports =
-    match rule_filter with
-    | None -> reports
-    | Some filter ->
-        List.map
-          (fun report ->
-            let filtered_issues =
-              Merlint.Rule_filter.filter_issues filter
-                report.Merlint.Report.issues
-            in
-            { report with Merlint.Report.issues = filtered_issues })
-          reports
-  in
-
+let process_category_report _rule_filter (category_name, reports) =
   let total_issues =
     List.fold_left
       (fun acc report -> acc + List.length report.Merlint.Report.issues)
-      0 filtered_reports
+      0 reports
   in
+
   let category_passed =
-    List.for_all (fun report -> report.Merlint.Report.passed) filtered_reports
+    List.for_all (fun report -> report.Merlint.Report.passed) reports
   in
 
   Fmt.pr "%s %s (%d total issues)@."
@@ -230,9 +216,7 @@ let process_category_report rule_filter (category_name, reports) =
   (if total_issues > 0 then
      (* Group all issues by error code *)
      let all_issues =
-       List.concat_map
-         (fun report -> report.Merlint.Report.issues)
-         filtered_reports
+       List.concat_map (fun report -> report.Merlint.Report.issues) reports
      in
      let grouped_issues = group_issues_by_code all_issues in
      (* Sort groups by error code and print each group *)
@@ -240,7 +224,7 @@ let process_category_report rule_filter (category_name, reports) =
        List.sort (fun (a, _) (b, _) -> String.compare a b) grouped_issues
      in
      List.iter print_issue_group sorted_groups);
-  filtered_reports
+  reports
 
 let print_fix_hints all_issues = if all_issues <> [] then exit 1
 
@@ -257,7 +241,7 @@ let run_analysis project_root filtered_files rule_filter show_profile =
   Log.info (fun m ->
       m "Starting visual analysis on %d files" (List.length filtered_files));
   let category_reports =
-    Merlint.Rules.analyze_project rules_config filtered_files
+    Merlint.Rules.analyze_project rules_config filtered_files rule_filter
   in
 
   Fmt.pr "Running merlint analysis...@.@.";

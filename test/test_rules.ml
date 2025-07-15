@@ -55,7 +55,7 @@ let analyze_project_empty () =
   Unix.mkdir temp_dir 0o755;
 
   let config = Rules.default_config temp_dir in
-  let categories = Rules.analyze_project config [] in
+  let categories = Rules.analyze_project config [] None in
 
   Unix.rmdir temp_dir;
 
@@ -85,7 +85,7 @@ let analyze_with_file () =
   close_out oc;
 
   let config = Rules.default_config temp_dir in
-  let categories = Rules.analyze_project config [ test_file ] in
+  let categories = Rules.analyze_project config [ test_file ] None in
 
   Sys.remove test_file;
   Unix.rmdir temp_dir;

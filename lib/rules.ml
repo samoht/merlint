@@ -20,20 +20,29 @@ let get_project_root file =
 let default_config project_root =
   { merlint_config = Config.default; project_root }
 
-let run_format_rules config files =
-  let issues = Format.check config.project_root files in
-  Report.create ~rule_name:"Format rules (.ocamlformat, .mli files)"
-    ~passed:(issues = []) ~issues ~file_count:1
+let filter_issues rule_filter issues =
+  match rule_filter with
+  | None -> issues
+  | Some filter -> Rule_filter.filter_issues filter issues
 
-let run_documentation_rules _config files =
+let run_format_rules config files rule_filter =
+  let issues = Format.check config.project_root files in
+  let filtered_issues = filter_issues rule_filter issues in
+  Report.create ~rule_name:"Format rules (.ocamlformat, .mli files)"
+    ~passed:(filtered_issues = []) ~issues:filtered_issues ~file_count:1
+
+let run_documentation_rules _config files rule_filter =
   let mli_files = List.filter (String.ends_with ~suffix:".mli") files in
   let issues = Doc.check_mli_files mli_files in
+  let filtered_issues = filter_issues rule_filter issues in
 
   Report.create ~rule_name:"Documentation rules (module docs)"
-    ~passed:(issues = []) ~issues ~file_count:(List.length mli_files)
+    ~passed:(filtered_issues = []) ~issues:filtered_issues
+    ~file_count:(List.length mli_files)
 
-let run_test_convention_rules _config files =
+let run_test_convention_rules _config files rule_filter =
   let test_issues = Test_checks.check files in
+  let filtered_issues = filter_issues rule_filter test_issues in
   let test_files =
     List.filter
       (fun f ->
@@ -42,25 +51,28 @@ let run_test_convention_rules _config files =
   in
 
   Report.create ~rule_name:"Test conventions (export 'suite' not module name)"
-    ~passed:(test_issues = []) ~issues:test_issues
+    ~passed:(filtered_issues = []) ~issues:filtered_issues
     ~file_count:(List.length test_files)
 
-let run_warning_rules _config files =
+let run_warning_rules _config files rule_filter =
   let warning_issues = Warning_checks.check files in
+  let filtered_issues = filter_issues rule_filter warning_issues in
 
   Report.create ~rule_name:"Warning rules (no silenced warnings)"
-    ~passed:(warning_issues = []) ~issues:warning_issues
+    ~passed:(filtered_issues = []) ~issues:filtered_issues
     ~file_count:(List.length files)
 
-let run_test_coverage_rules dune_describe files =
+let run_test_coverage_rules dune_describe files rule_filter =
   let coverage_issues = Test_coverage.check_test_coverage dune_describe files in
   let runner_issues =
     Test_coverage.check_test_runner_completeness dune_describe files
   in
   let all_issues = coverage_issues @ runner_issues in
+  let filtered_issues = filter_issues rule_filter all_issues in
 
   Report.create ~rule_name:"Test coverage (1:1 lib/test correspondence)"
-    ~passed:(all_issues = []) ~issues:all_issues ~file_count:(List.length files)
+    ~passed:(filtered_issues = []) ~issues:filtered_issues
+    ~file_count:(List.length files)
 
 (* Process a single file analysis *)
 let process_file_analysis config (file, analysis) =
@@ -111,7 +123,7 @@ let aggregate_issues config file_analyses =
       (c @ comp, s @ style, n @ naming))
     ([], [], []) file_analyses
 
-let analyze_project config files =
+let analyze_project config files rule_filter =
   let ml_files = List.filter (String.ends_with ~suffix:".ml") files in
   let all_files = files in
   let file_count = List.length ml_files in
@@ -138,49 +150,62 @@ let analyze_project config files =
         aggregate_issues config file_analyses)
   in
 
-  (* Create reports *)
+  (* Filter issues based on rule filter *)
+  let complexity_issues_filtered =
+    filter_issues rule_filter complexity_issues
+  in
+  let style_issues_filtered = filter_issues rule_filter style_issues in
+  let naming_issues_filtered = filter_issues rule_filter naming_issues in
+
+  (* Create reports with filtered issues *)
   let complexity_report =
     Profiling.time "Complexity report" (fun () ->
         Report.create
           ~rule_name:"Complexity rules (complexity ≤10, length ≤50, nesting ≤3)"
-          ~passed:(complexity_issues = []) ~issues:complexity_issues ~file_count)
+          ~passed:(complexity_issues_filtered = [])
+          ~issues:complexity_issues_filtered ~file_count)
   in
   let style_report =
     Profiling.time "Style report" (fun () ->
         Report.create
           ~rule_name:"Style rules (no Obj.magic, no Str, no catch-all)"
-          ~passed:(style_issues = []) ~issues:style_issues ~file_count)
+          ~passed:(style_issues_filtered = [])
+          ~issues:style_issues_filtered ~file_count)
   in
   let naming_report =
     Profiling.time "Naming report" (fun () ->
         Report.create ~rule_name:"Naming conventions (snake_case)"
-          ~passed:(naming_issues = []) ~issues:naming_issues ~file_count)
+          ~passed:(naming_issues_filtered = [])
+          ~issues:naming_issues_filtered ~file_count)
   in
 
-  [
-    ( "Code Quality",
-      [
-        complexity_report;
-        Profiling.time "Warning rules" (fun () ->
-            run_warning_rules config all_files);
-      ] );
-    ("Code Style", [ style_report ]);
-    ("Naming Conventions", [ naming_report ]);
-    ( "Documentation",
-      [
-        Profiling.time "Documentation rules" (fun () ->
-            run_documentation_rules config all_files);
-      ] );
-    ( "Project Structure",
-      [
-        Profiling.time "Format rules" (fun () ->
-            run_format_rules config all_files);
-      ] );
-    ( "Test Quality",
-      [
-        Profiling.time "Test convention rules" (fun () ->
-            run_test_convention_rules config all_files);
-        Profiling.time "Test coverage rules" (fun () ->
-            run_test_coverage_rules dune_describe all_files);
-      ] );
-  ]
+  let all_categories =
+    [
+      ( "Code Quality",
+        [
+          complexity_report;
+          Profiling.time "Warning rules" (fun () ->
+              run_warning_rules config all_files rule_filter);
+        ] );
+      ("Code Style", [ style_report ]);
+      ("Naming Conventions", [ naming_report ]);
+      ( "Documentation",
+        [
+          Profiling.time "Documentation rules" (fun () ->
+              run_documentation_rules config all_files rule_filter);
+        ] );
+      ( "Project Structure",
+        [
+          Profiling.time "Format rules" (fun () ->
+              run_format_rules config all_files rule_filter);
+        ] );
+      ( "Test Quality",
+        [
+          Profiling.time "Test convention rules" (fun () ->
+              run_test_convention_rules config all_files rule_filter);
+          Profiling.time "Test coverage rules" (fun () ->
+              run_test_coverage_rules dune_describe all_files rule_filter);
+        ] );
+    ]
+  in
+  all_categories

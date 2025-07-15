@@ -13,7 +13,7 @@ let test_analyze_simple_file () =
   let project_root = Merlint.Rules.get_project_root temp_file in
   let rules_config = Merlint.Rules.{ merlint_config = config; project_root } in
   let category_reports =
-    Merlint.Rules.analyze_project rules_config [ temp_file ]
+    Merlint.Rules.analyze_project rules_config [ temp_file ] None
   in
   let issues =
     List.fold_left
@@ -41,7 +41,7 @@ let no_issues_clean_code () =
   let project_root = Merlint.Rules.get_project_root temp_file in
   let rules_config = Merlint.Rules.{ merlint_config = config; project_root } in
   let category_reports =
-    Merlint.Rules.analyze_project rules_config [ temp_file ]
+    Merlint.Rules.analyze_project rules_config [ temp_file ] None
   in
   let issues =
     List.fold_left

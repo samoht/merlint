@@ -154,16 +154,14 @@ with a brief summary and description of the module's purpose.
 
 ❌ **Bad:**
 ```ocaml
-(* user.mli - no module doc *)
-val create : string -> t
+type t = string
+let create s = s
 ```
 
 ✅ **Good:**
 ```ocaml
-(** User management module 
-    
-    Handles user creation and authentication. *)
-val create : string -> t
+type t = string
+let create s = s
 ```
 
 
@@ -185,11 +183,14 @@ each function does, its parameters, and return value.
 
 ❌ **Bad:**
 ```ocaml
+type t
 val parse : string -> t
 ```
 
 ✅ **Good:**
 ```ocaml
+type t
+
 (** [parse str] converts a string to type [t].
     @raise Invalid_argument if [str] is malformed. *)
 val parse : string -> t
@@ -225,7 +226,6 @@ in collections and debugging. Fix it by implementing equal, compare, pp
 ❌ **Bad:**
 ```ocaml
 type user = { id: int; name: string }
-(* No standard functions *)
 ```
 
 ✅ **Good:**
@@ -517,12 +517,12 @@ The file/module context already makes the purpose clear.
 
 ❌ **Bad:**
 ```ocaml
-let get_user_profile_data_from_database_by_id id = 42
+let get_user_profile_data_from_database_by_id () = 42
 ```
 
 ✅ **Good:**
 ```ocaml
-let get_user_by_id id = 42
+let get_user_by_id () = 42
 ```
 
 
@@ -777,6 +777,8 @@ library module to ensure your code works correctly.
 ✅ **Good:**
 ```ocaml
 (* test/test_parser.ml *)
+let test_parse = fun () -> ()
+let test_errors = fun () -> ()
 let suite = ("parser", [test_parse; test_errors])
 ```
 
@@ -813,6 +815,7 @@ tests directly, allowing better test composition and organization.
 ❌ **Bad:**
 ```ocaml
 (* test_user.ml *)
+let tests = []
 let () = Alcotest.run "tests" [("user", tests)]
 ```
 
@@ -837,6 +840,9 @@ to ensure all tests are run during development.
 ❌ **Bad:**
 ```ocaml
 (* test/test.ml *)
+module Test_user = struct
+  let suite = ("user", [])
+end
 let () = Alcotest.run "all" [Test_user.suite] 
 (* Missing Test_parser.suite *)
 ```
@@ -844,6 +850,12 @@ let () = Alcotest.run "all" [Test_user.suite]
 ✅ **Good:**
 ```ocaml
 (* test/test.ml *)
+module Test_user = struct
+  let suite = ("user", [])
+end
+module Test_parser = struct
+  let suite = ("parser", [])
+end
 let () = Alcotest.run "all" [
   Test_user.suite;
   Test_parser.suite
