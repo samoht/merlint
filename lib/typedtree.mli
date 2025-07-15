@@ -1,14 +1,6 @@
 (** Simplified Typedtree parser for identifier extraction *)
 
-type name = {
-  prefix : string list;
-      (** Module path, e.g., ["Stdlib"; "Obj"] for Stdlib.Obj.magic *)
-  base : string;  (** Base identifier, e.g., "magic" *)
-}
-(** Structured name type *)
-
-type elt = { name : name; location : Location.t option }
-(** Common element type for all extracted items *)
+open Ast
 
 type expr_node =
   | Construct of { name : string; args : expr_node list }
@@ -40,9 +32,6 @@ val of_json : Yojson.Safe.t -> t
 
 val of_json_with_filename : Yojson.Safe.t -> string -> t
 (** Parse typedtree output from JSON with filename correction *)
-
-val name_to_string : name -> string
-(** Convert a structured name to a string *)
 
 val pp : t Fmt.t
 (** Pretty print *)

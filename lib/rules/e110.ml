@@ -1,7 +1,4 @@
-(** Warning silence detection
-
-    This module checks for code that silences warnings instead of fixing them.
-*)
+(** E110: Silenced Warning *)
 
 let warning_attr_regex =
   Re.compile

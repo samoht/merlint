@@ -1,3 +1,2 @@
-(library
- (name test_e330)
- (modules bad good))
+; We don't need dune for simple test files
+; merlint will analyze the files directly

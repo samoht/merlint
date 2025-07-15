@@ -1,14 +1,10 @@
 (** OCamlmerlin browse output - for finding value bindings and pattern info *)
 
-type location = Location.t
-(** Location information *)
-
 type pattern_info = { has_pattern_match : bool; case_count : int }
 (** Pattern info for a value binding *)
 
 type value_binding = {
-  name : string option;
-  location : location option;
+  ast_elt : Ast.elt;
   pattern_info : pattern_info;
   is_function : bool;  (** True if the binding has function parameters *)
   is_simple_list : bool;

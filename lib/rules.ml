@@ -1,5 +1,7 @@
 (** Centralized rules coordinator for all merlint checks *)
 
+exception Disabled of string
+
 type config = { merlint_config : Config.t; project_root : string }
 
 let get_project_root file =
@@ -26,23 +28,25 @@ let filter_issues rule_filter issues =
   | Some filter -> Rule_filter.filter_issues filter issues
 
 let run_format_rules config files rule_filter =
-  let issues = Format.check config.project_root files in
+  let e500_issues = E500.check config.project_root in
+  let e505_issues = E505.check config.project_root files in
+  let issues = e500_issues @ e505_issues in
   let filtered_issues = filter_issues rule_filter issues in
   Report.create ~rule_name:"Format rules (.ocamlformat, .mli files)"
     ~passed:(filtered_issues = []) ~issues:filtered_issues ~file_count:1
 
 let run_documentation_rules _config files rule_filter =
+  let e400_issues = E400.check files in
+  let filtered_issues = filter_issues rule_filter e400_issues in
   let mli_files = List.filter (String.ends_with ~suffix:".mli") files in
-  let issues = Doc.check_mli_files mli_files in
-  let filtered_issues = filter_issues rule_filter issues in
 
   Report.create ~rule_name:"Documentation rules (module docs)"
     ~passed:(filtered_issues = []) ~issues:filtered_issues
     ~file_count:(List.length mli_files)
 
 let run_test_convention_rules _config files rule_filter =
-  let test_issues = Test_checks.check files in
-  let filtered_issues = filter_issues rule_filter test_issues in
+  let e600_issues = E600.check files in
+  let filtered_issues = filter_issues rule_filter e600_issues in
   let test_files =
     List.filter
       (fun f ->
@@ -55,19 +59,24 @@ let run_test_convention_rules _config files rule_filter =
     ~file_count:(List.length test_files)
 
 let run_warning_rules _config files rule_filter =
-  let warning_issues = Warning_checks.check files in
-  let filtered_issues = filter_issues rule_filter warning_issues in
+  let e110_issues = E110.check files in
+  let filtered_issues = filter_issues rule_filter e110_issues in
 
   Report.create ~rule_name:"Warning rules (no silenced warnings)"
     ~passed:(filtered_issues = []) ~issues:filtered_issues
     ~file_count:(List.length files)
 
 let run_test_coverage_rules dune_describe files rule_filter =
-  let coverage_issues = Test_coverage.check_test_coverage dune_describe files in
-  let runner_issues =
-    Test_coverage.check_test_runner_completeness dune_describe files
+  let e605_issues =
+    try E605.check dune_describe files with Issue.Disabled _ -> []
   in
-  let all_issues = coverage_issues @ runner_issues in
+  let e610_issues =
+    try E610.check dune_describe files with Issue.Disabled _ -> []
+  in
+  let e615_issues =
+    try E615.check dune_describe files with Issue.Disabled _ -> []
+  in
+  let all_issues = e605_issues @ e610_issues @ e615_issues in
   let filtered_issues = filter_issues rule_filter all_issues in
 
   Report.create ~rule_name:"Test coverage (1:1 lib/test correspondence)"
@@ -79,41 +88,74 @@ let process_file_analysis config (file, analysis) =
   let complexity_issues =
     match analysis.Merlin.browse with
     | Ok browse_result ->
-        Complexity.analyze_browse_value
-          (Config.to_complexity_config config.merlint_config)
-          browse_result
+        let e001_config =
+          { E001.max_complexity = config.merlint_config.max_complexity }
+        in
+        let e010_config =
+          { E010.max_nesting = config.merlint_config.max_nesting }
+        in
+        let e001_issues = E001.check e001_config browse_result in
+        let e010_issues = E010.check e010_config browse_result in
+        (* Also keep the original complexity checks for function length *)
+        let e005_config =
+          {
+            E005.max_function_length = config.merlint_config.max_function_length;
+          }
+        in
+        let e005_issues = E005.check e005_config browse_result in
+        e001_issues @ e010_issues @ e005_issues
     | Error _ -> []
   in
 
   let style_issues, naming_issues =
     match analysis.Merlin.typedtree with
     | Ok typedtree_result ->
-        let style = Style.check typedtree_result in
+        let e100_issues = E100.check typedtree_result in
+        let e200_issues = E200.check typedtree_result in
+        let e205_issues = E205.check typedtree_result in
         let outline =
           match analysis.Merlin.outline with Ok o -> Some o | Error _ -> None
         in
-        let naming = Naming.check ~filename:file ~outline typedtree_result in
-        let api_design =
-          Api_design.check ~filename:file ~outline typedtree_result
+        let e310_issues =
+          try E310.check ~filename:file ~outline typedtree_result
+          with Issue.Disabled _ -> []
         in
-        let mutable_state =
+        let e315_issues = E315.check typedtree_result in
+        let e320_issues = E320.check typedtree_result in
+        let e325_issues = E325.check ~filename:file ~outline in
+        let e330_issues = E330.check ~filename:file ~outline in
+        let e335_issues = E335.check typedtree_result in
+        let e300_issues = E300.check typedtree_result in
+        let e305_issues = E305.check typedtree_result in
+        let e350_issues = E350.check ~filename:file ~outline typedtree_result in
+        let e351_issues =
           match outline with
           | Some outline_data ->
-              Mutable_state.check_global_mutable_state ~filename:file
-                outline_data
+              E351.check_global_mutable_state ~filename:file outline_data
           | None -> []
         in
-        (style @ mutable_state, naming @ api_design)
+        ( e100_issues @ e200_issues @ e205_issues @ e351_issues,
+          e310_issues @ e315_issues @ e320_issues @ e325_issues @ e330_issues
+          @ e335_issues @ e300_issues @ e305_issues @ e350_issues )
     | Error _ -> ([], [])
   in
 
-  (* Run AST-based checks that need deeper analysis *)
-  let ast_issues =
-    Profiling.time (Fmt.str "AST checks: %s" file) (fun () ->
-        Ast_checks.analyze_file file)
+  (* E105 is now a text-based check - moved to pattern_issues section *)
+  let e105_issues = [] in
+
+  (* Run text-based pattern detection *)
+  let pattern_issues =
+    if String.ends_with ~suffix:".ml" file then
+      try
+        let content = In_channel.with_open_text file In_channel.input_all in
+        let e340_text_issues = E340.check file content in
+        let e105_text_issues = E105.check file content in
+        e340_text_issues @ e105_text_issues
+      with _ -> []
+    else []
   in
 
-  (complexity_issues, style_issues @ ast_issues, naming_issues)
+  (complexity_issues, style_issues @ e105_issues @ pattern_issues, naming_issues)
 
 (* Aggregate issues from all file analyses *)
 let aggregate_issues config file_analyses =

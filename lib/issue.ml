@@ -471,3 +471,5 @@ let compare a b =
           | _ -> 0)
 
 let equal a b = compare a b = 0
+
+exception Disabled of string

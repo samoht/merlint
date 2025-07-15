@@ -1,5 +1,9 @@
 (** Centralized rules coordinator for all merlint checks *)
 
+exception Disabled of string
+(** Exception raised when a rule is temporarily disabled or not yet implemented.
+*)
+
 type config = { merlint_config : Config.t; project_root : string }
 
 val get_project_root : string -> string

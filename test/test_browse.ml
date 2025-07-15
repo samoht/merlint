@@ -41,8 +41,9 @@ let test_parse_value_binding () =
   Alcotest.(check int) "one binding" 1 (List.length bindings);
 
   let binding = List.hd bindings in
-  Alcotest.(check (option string)) "name" (Some "foo") binding.name;
-  Alcotest.(check bool) "has location" true (binding.location <> None)
+  let name_str = Merlint.Ast.name_to_string binding.ast_elt.name in
+  Alcotest.(check string) "name" "foo" name_str;
+  Alcotest.(check bool) "has location" true (binding.ast_elt.location <> None)
 
 let test_pattern_matching_detection () =
   (* Test case with pattern matching *)

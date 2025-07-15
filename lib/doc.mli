@@ -1,8 +1,8 @@
-(** Documentation rules
+(** Legacy documentation module - all checks have been moved to rules/e400.ml *)
 
-    This module enforces documentation requirements for OCaml code, particularly
-    ensuring that .mli files have proper module-level documentation. *)
+val check_mli_documentation_content :
+  module_name:string -> filename:string -> string -> Issue.t option
+(** Legacy function for unit tests - exposed for testing *)
 
 val check_mli_files : string list -> Issue.t list
-(** [check_mli_files files] checks that all .mli files have module
-    documentation. *)
+(** Legacy function for unit tests - now delegates to E400.check *)

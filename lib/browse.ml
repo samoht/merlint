@@ -1,11 +1,9 @@
 (** OCamlmerlin browse output - for finding value bindings and pattern info *)
 
-type location = Location.t
 type pattern_info = { has_pattern_match : bool; case_count : int }
 
 type value_binding = {
-  name : string option;
-  location : location option;
+  ast_elt : Ast.elt;
   pattern_info : pattern_info;
   is_function : bool;
   is_simple_list : bool;
@@ -53,12 +51,9 @@ let extract_var_name kind_str =
       let after_var =
         Astring.String.with_index_range ~first:(idx + 10) kind_str
       in
-      match Astring.String.cut ~sep:"\"" after_var with
-      | Some (name, _) -> (
-          (* Remove /uid suffix if present *)
-          match Astring.String.cut ~sep:"/" name with
-          | Some (n, _) -> Some n
-          | None -> Some name)
+      match Ast.extract_quoted_string after_var with
+      | Some name_str ->
+          Some (Ast.parse_name ~handle_bang_suffix:false name_str)
       | None -> None)
   | None -> None
 
@@ -152,7 +147,7 @@ let extract_value_binding (json : Yojson.Safe.t) =
          | Some (`String "value_binding") -> true
          | _ -> false ->
       (* Look for the pattern child to get the name *)
-      let name =
+      let name_opt =
         match List.assoc_opt "children" items with
         | Some (`List children) ->
             List.find_map
@@ -168,7 +163,17 @@ let extract_value_binding (json : Yojson.Safe.t) =
               children
         | _ -> None
       in
-      let location = extract_location json in
+      let location_opt = extract_location json in
+
+      let ast_elt =
+        let name =
+          Option.value
+            ~default:(Ast.parse_name ~handle_bang_suffix:false "")
+            name_opt
+        in
+        { Ast.name; location = location_opt }
+      in
+
       let pattern_info =
         { has_pattern_match = has_cases json; case_count = count_cases json }
       in
@@ -198,7 +203,7 @@ let extract_value_binding (json : Yojson.Safe.t) =
         | _ -> (false, false)
       in
 
-      Some { name; location; pattern_info; is_function; is_simple_list }
+      Some { ast_elt; pattern_info; is_function; is_simple_list }
   | _ -> None
 
 (** Get all value bindings in the tree *)

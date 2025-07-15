@@ -119,7 +119,10 @@ directly), find_* for search (returns option type).|};
     Rule.v ~issue:Redundant_module_name ~title:"Redundant Module Names"
       ~category:Naming_conventions
       ~examples:
-        [ Rule.bad Examples.E330.bad_ml; Rule.good Examples.E330.good_ml ]
+        [
+          Rule.bad Examples.E330.Bad.process_ml;
+          Rule.good Examples.E330.Good.process_ml;
+        ]
       {|This issue means your function or type name redundantly includes the module
 name. Fix it by removing the redundant prefix since the module context is
 already clear from usage.|};

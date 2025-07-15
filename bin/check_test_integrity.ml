@@ -30,11 +30,22 @@ let check_test_files cram_dir error_code =
   let test_dir = Filename.concat cram_dir (error_code ^ ".t") in
   let bad_file = Filename.concat test_dir "bad.ml" in
   let good_file = Filename.concat test_dir "good.ml" in
+  (* Also check for subdirectory structure *)
+  let bad_dir = Filename.concat test_dir "bad" in
+  let good_dir = Filename.concat test_dir "good" in
   let run_file = Filename.concat test_dir "run.t" in
   let dune_project_file = Filename.concat test_dir "dune-project" in
   let dune_file = Filename.concat test_dir "dune" in
-  let bad_exists = Sys.file_exists bad_file in
-  let good_exists = Sys.file_exists good_file in
+
+  (* Either regular files or directory structure is acceptable *)
+  let bad_exists =
+    Sys.file_exists bad_file
+    || (Sys.file_exists bad_dir && Sys.is_directory bad_dir)
+  in
+  let good_exists =
+    Sys.file_exists good_file
+    || (Sys.file_exists good_dir && Sys.is_directory good_dir)
+  in
   let run_exists = Sys.file_exists run_file in
   let dune_project_exists = Sys.file_exists dune_project_file in
   let dune_exists = Sys.file_exists dune_file in
@@ -80,7 +91,7 @@ let check_run_t_format cram_dir error_code =
              && string_contains line "merlint"
              && string_contains line "-r"
              && string_contains line rule_code
-             && string_contains line "bad.ml"
+             && (string_contains line "bad.ml" || string_contains line "bad/")
         in
         let has_good =
           has_good_test
@@ -88,7 +99,7 @@ let check_run_t_format cram_dir error_code =
              && string_contains line "merlint"
              && string_contains line "-r"
              && string_contains line rule_code
-             && string_contains line "good.ml"
+             && (string_contains line "good.ml" || string_contains line "good/")
         in
         check_lines has_bad has_good new_wrong_formats
       with End_of_file ->
@@ -111,8 +122,11 @@ let check_run_t_output cram_dir error_code =
         if String.starts_with ~prefix:"  $ merlint" line then
           (* Start of a new test *)
           let test_name =
-            if string_contains line "bad.ml" then "bad"
-            else if string_contains line "good.ml" then "good"
+            if string_contains line "bad.ml" || string_contains line "bad/" then
+              "bad"
+            else if
+              string_contains line "good.ml" || string_contains line "good/"
+            then "good"
             else ""
           in
           (* Process previous test if any *)

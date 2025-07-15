@@ -1,10 +1,6 @@
 (** Simplified Typedtree parser for identifier extraction *)
 
-type name = { prefix : string list; base : string }
-(** Structured name type *)
-
-type elt = { name : name; location : Location.t option }
-(** Common element type for all extracted items *)
+open Ast
 
 type expr_node =
   | Construct of { name : string; args : expr_node list }
@@ -24,104 +20,8 @@ type t = {
 }
 (** Simplified representation focusing on identifiers *)
 
-(** Compiled regex for extracting quoted strings *)
-let quote_regex =
-  Re.compile
-    (Re.seq
-       [
-         Re.str "\""; Re.group (Re.rep (Re.compl [ Re.char '"' ])); Re.str "\"";
-       ])
-
-(** Extract quoted string from line *)
-let extract_quoted_string line =
-  try
-    let m = Re.exec quote_regex line in
-    Some (Re.Group.get m 1)
-  with Not_found -> None
-
-(** Parse a structured name from a string like "Stdlib!.Obj.magic" The '!'
-    suffix on module names appears to indicate the fully qualified module path
-    as resolved by the type-checker (e.g., both Obj.magic and Stdlib.Obj.magic
-    appear as "Stdlib!.Obj.magic" in the typedtree) *)
-let parse_name str =
-  (* Remove unique suffix like /123 if present *)
-  let str =
-    match String.index_opt str '/' with
-    | Some i -> String.sub str 0 i
-    | None -> str
-  in
-  (* Split by . to get components *)
-  let parts = String.split_on_char '.' str in
-  match List.rev parts with
-  | [] -> { prefix = []; base = "" }
-  | base :: rev_modules ->
-      (* Process modules to handle ! separator - remove it as it's just a marker *)
-      let prefix =
-        List.fold_left
-          (fun acc m ->
-            (* Remove ! suffix from module names *)
-            let len = String.length m in
-            let m =
-              if len > 0 && m.[len - 1] = '!' then String.sub m 0 (len - 1)
-              else m
-            in
-            m :: acc)
-          [] rev_modules
-      in
-      { prefix; base }
-
-(** Helper regex components for location parsing *)
-let filename = Re.rep1 (Re.compl [ Re.char '[' ])
-
-let number = Re.rep1 Re.digit
-
-let location_part =
-  Re.seq
-    [
-      Re.str "[";
-      Re.group number;
-      (* line *)
-      Re.str ",";
-      number;
-      (* char position - not captured *)
-      Re.str "+";
-      Re.group number;
-      (* column *)
-      Re.str "]";
-    ]
-
-(** Compiled regex for parsing locations *)
-let loc_regex =
-  Re.compile
-    (Re.seq
-       [
-         Re.str "(";
-         Re.group filename;
-         (* filename *)
-         location_part;
-         (* start location *)
-         Re.str "..";
-         filename;
-         (* second filename - not captured *)
-         location_part;
-         (* end location *)
-         Re.str ")";
-       ])
-
-let parse_location str =
-  (* Format: (filename[line,char+col]..filename[line,char+col]) *)
-  try
-    let m = Re.exec loc_regex str in
-    let file = Re.Group.get m 1 in
-    let start_line = int_of_string (Re.Group.get m 2) in
-    let start_col = int_of_string (Re.Group.get m 3) in
-    let end_line = int_of_string (Re.Group.get m 4) in
-    let end_col = int_of_string (Re.Group.get m 5) in
-    Some (Location.create ~file ~start_line ~start_col ~end_line ~end_col)
-  with Not_found -> None
-
-type block = { indent : int; content : string; loc : Location.t option }
-(** A block is the fundamental unit, not a line *)
+(* Configure Ast functions for typedtree *)
+let parse_name str = parse_name ~handle_bang_suffix:true str
 
 (** Empty accumulator for reuse *)
 let empty_acc =
@@ -136,40 +36,7 @@ let empty_acc =
   }
 
 (** Pre-process the raw text into a list of blocks *)
-let preprocess_text text =
-  let get_indent line =
-    let len = String.length line in
-    let rec count i = if i < len && line.[i] = ' ' then count (i + 1) else i in
-    count 0
-  in
-  String.split_on_char '\n' text
-  |> List.filter_map (fun line ->
-         let len = String.length line in
-         if len = 0 then None
-         else
-           let indent = get_indent line in
-           let trimmed = String.trim line in
-           if trimmed = "" then None
-           else
-             (* Only parse location if line contains location pattern *)
-             let loc =
-               if String.contains line '(' && String.contains line '[' then
-                 parse_location line
-               else None
-             in
-             Some { indent; content = trimmed; loc })
-
-(** Helper to peek at the next block without consuming it *)
-let peek_block (blocks_ref : block list ref) =
-  match !blocks_ref with h :: _ -> Some h | [] -> None
-
-(** Helper to consume the next block *)
-let consume_block (blocks_ref : block list ref) =
-  match !blocks_ref with
-  | h :: t ->
-      blocks_ref := t;
-      Some h
-  | [] -> None
+let preprocess_text text = Ast.preprocess_text ~parse_loc_from_line:true text
 
 (** Merge two accumulators *)
 let merge_acc child_acc acc =
@@ -323,7 +190,7 @@ and parse_node (blocks_ref : block list ref) (current_indent : int)
         | "expression" ->
             process_expression blocks_ref block.indent current_loc acc
         | "pattern" -> process_pattern blocks_ref block.indent current_loc acc
-        | "Texp_ident" -> process_ident content parent_location acc
+        | "Texp_ident" -> process_ident content current_loc acc
         | "Tpat_var" -> process_var_pattern content parent_location acc
         | "Tstr_module" ->
             process_module blocks_ref content block.indent current_loc acc
@@ -393,12 +260,6 @@ let of_json_with_filename json original_filename =
           expressions = List.map fix_expr result.expressions;
         }
   | _ -> empty_acc
-
-(** Convert a structured name to a string *)
-let name_to_string (n : name) =
-  match n.prefix with
-  | [] -> n.base
-  | prefix -> String.concat "." prefix ^ "." ^ n.base
 
 (** Pretty print *)
 let pp ppf t = Fmt.pf ppf "{ identifiers: %d }" (List.length t.identifiers)

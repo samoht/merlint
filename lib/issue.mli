@@ -155,3 +155,7 @@ val priority : t -> int
 
 val equal : t -> t -> bool
 (** Check if two issues are equal *)
+
+exception Disabled of string
+(** Exception raised when a rule is temporarily disabled or not yet implemented.
+*)

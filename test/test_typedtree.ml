@@ -1,6 +1,7 @@
 (** Tests for Typedtree module *)
 
 open Merlint.Typedtree
+open Merlint.Ast
 
 let test_parse_empty () =
   let json = `String "" in

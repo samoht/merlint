@@ -48,7 +48,7 @@ let check_global_mutable_state ~filename outline =
 
 (** Check for local mutable state usage (refs created inside functions) This is
     more complex and would require AST analysis *)
-let check_local_mutable_state ~filename:_ _typedtree =
+let _check_local_mutable_state ~filename:_ _typedtree =
   (* TODO: This would need deeper AST analysis to determine scope
      For now, we only check global state via outline *)
   []

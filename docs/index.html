@@ -716,7 +716,7 @@ already clear from usage.</p><div class="examples-grid">
 <div class="example bad">
   <h4>BAD</h4>
   
-  <pre><code><span class="cm">(* In process.ml *)</span>
+  <pre><code><span class="cm">(* Module process.ml *)</span>
 <span class="kw">let</span> process_start () = ()
 <span class="kw">let</span> process_stop () = ()
 <span class="kw">type</span> process_config = {timeout: int}</code></pre>
@@ -780,15 +780,15 @@ makes error handling patterns clearer.</p><div class="examples-grid">
   <h4>GOOD</h4>
   
   <pre><code><span class="cm">(* Define error helpers at the top of the file *)</span>
-<span class="kw">let</span> err_invalid x = <span class="cn">Error</span> (`<span class="cn">Invalid</span> x)
-<span class="kw">let</span> err_fmt fmt = <span class="cn">Fmt</span>.kstr (<span class="kw">fun</span> msg -&gt; <span class="cn">Error</span> (`<span class="cn">Msg</span> msg)) fmt
+<span class="kw">let</span> err_invalid x = <span class="cn">Error</span> (<span class="cn">Fmt</span>.str &quot;<span class="cn">Invalid</span> data: %d&quot; x)
+<span class="kw">let</span> err_too_large n = <span class="cn">Error</span> (<span class="cn">Fmt</span>.str &quot;<span class="cn">Data</span> too large: %d&quot; n)
 
 <span class="kw">let</span> process_data x =
   <span class="kw">match</span> x <span class="kw">with</span>
   | <span class="nu">0</span> -&gt; err_invalid x
   | n -&gt; 
       <span class="kw">if</span> n &gt; <span class="nu">100</span> <span class="kw">then</span>
-        err_fmt &quot;<span class="cn">Too</span> large: %d&quot; n
+        err_too_large n
       <span class="kw">else</span> <span class="cn">Ok</span> n</code></pre>
 </div>
 </div></div>

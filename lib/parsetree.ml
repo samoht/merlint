@@ -1,10 +1,6 @@
 (** Parsetree parser for fallback identifier extraction *)
 
-type name = { prefix : string list; base : string }
-(** Structured name type *)
-
-type elt = { name : name; location : Location.t option }
-(** Common element type for all extracted items *)
+open Ast
 
 type t = {
   identifiers : elt list;
@@ -15,90 +11,6 @@ type t = {
   variants : elt list;
 }
 (** Simplified representation focusing on identifiers *)
-
-(** Extract quoted string from line *)
-let extract_quoted_string line =
-  let quote_regex =
-    Re.compile
-      (Re.seq
-         [
-           Re.str "\"";
-           Re.group (Re.rep (Re.compl [ Re.char '"' ]));
-           Re.str "\"";
-         ])
-  in
-  try
-    let m = Re.exec quote_regex line in
-    Some (Re.Group.get m 1)
-  with Not_found -> None
-
-(** Parse a structured name from a string like "Str.regexp" *)
-let parse_name str =
-  (* Remove unique suffix like /123 if present *)
-  let str =
-    match String.index_opt str '/' with
-    | Some i -> String.sub str 0 i
-    | None -> str
-  in
-  (* Split by . to get components *)
-  let parts = String.split_on_char '.' str in
-  match List.rev parts with
-  | [] -> { prefix = []; base = "" }
-  | base :: rev_modules ->
-      let prefix = List.rev rev_modules in
-      { prefix; base }
-
-(** Helper regex components for location parsing *)
-let filename = Re.rep1 (Re.compl [ Re.char '[' ])
-
-let number = Re.rep1 Re.digit
-
-let location_part =
-  Re.seq
-    [
-      Re.str "[";
-      Re.group number;
-      (* line *)
-      Re.str ",";
-      number;
-      (* char position - not captured *)
-      Re.str "+";
-      Re.group number;
-      (* column *)
-      Re.str "]";
-    ]
-
-let parse_location str =
-  (* Format: (filename[line,char+col]..filename[line,char+col]) *)
-  let loc_regex =
-    Re.compile
-      (Re.seq
-         [
-           Re.str "(";
-           Re.group filename;
-           (* filename *)
-           location_part;
-           (* start location *)
-           Re.str "..";
-           filename;
-           (* second filename - not captured *)
-           location_part;
-           (* end location *)
-           Re.str ")";
-         ])
-  in
-  try
-    let m = Re.exec loc_regex str in
-    let file = Re.Group.get m 1 in
-    let start_line = int_of_string (Re.Group.get m 2) in
-    let start_col = int_of_string (Re.Group.get m 3) in
-    let end_line = int_of_string (Re.Group.get m 4) in
-    let end_col = int_of_string (Re.Group.get m 5) in
-    Some (Location.create ~file ~start_line ~start_col ~end_line ~end_col)
-  with Not_found -> None
-
-type block = { indent : int; content : string; loc : Location.t option }
-(** A block is the fundamental unit, not a line *)
 
 (** Empty accumulator for reuse *)
 let empty_acc =
@@ -111,37 +23,9 @@ let empty_acc =
     variants = [];
   }
 
-(** Pre-process the raw text into a list of blocks *)
-let preprocess_text text =
-  let get_indent line =
-    let rec count i =
-      if i < String.length line && line.[i] = ' ' then count (i + 1) else i
-    in
-    count 0
-  in
-  String.split_on_char '\n' text
-  |> List.filter_map (fun line ->
-         let trimmed = String.trim line in
-         if trimmed = "" then None
-         else
-           Some
-             {
-               indent = get_indent line;
-               content = trimmed;
-               loc = parse_location line;
-             })
-
-(** Helper to peek at the next block without consuming it *)
-let peek_block (blocks_ref : block list ref) =
-  match !blocks_ref with h :: _ -> Some h | [] -> None
-
-(** Helper to consume the next block *)
-let consume_block (blocks_ref : block list ref) =
-  match !blocks_ref with
-  | h :: t ->
-      blocks_ref := t;
-      Some h
-  | [] -> None
+(* Configure Ast functions for parsetree *)
+let parse_name str = parse_name ~handle_bang_suffix:false str
+let preprocess_text text = preprocess_text ~parse_loc_from_line:true text
 
 (** Merge two accumulators *)
 let merge_acc child_acc acc =
@@ -354,12 +238,6 @@ let of_json_with_filename json original_filename =
         exceptions = [];
         variants = [];
       }
-
-(** Convert a structured name to a string *)
-let name_to_string (n : name) =
-  match n.prefix with
-  | [] -> n.base
-  | prefix -> String.concat "." prefix ^ "." ^ n.base
 
 (** Pretty print *)
 let pp ppf t = Fmt.pf ppf "{ identifiers: %d }" (List.length t.identifiers)

@@ -19,8 +19,8 @@ let analyze_browse_value () =
       value_bindings =
         [
           {
-            name = Some "test_func";
-            location = Some loc;
+            ast_elt =
+              { Ast.name = Ast.parse_name "test_func"; location = Some loc };
             pattern_info = { has_pattern_match = false; case_count = 0 };
             is_function = true;
             is_simple_list = false;
@@ -50,8 +50,8 @@ let browse_value_with_pattern () =
       value_bindings =
         [
           {
-            name = Some "test_func";
-            location = Some loc;
+            ast_elt =
+              { Ast.name = Ast.parse_name "test_func"; location = Some loc };
             pattern_info = { has_pattern_match = true; case_count = 15 };
             is_function = true;
             is_simple_list = false;
@@ -77,8 +77,8 @@ let long_data_structure_exempt () =
       value_bindings =
         [
           {
-            name = Some "my_data";
-            location = Some loc;
+            ast_elt =
+              { Ast.name = Ast.parse_name "my_data"; location = Some loc };
             pattern_info = { has_pattern_match = false; case_count = 0 };
             is_function = false;
             is_simple_list = true;
@@ -104,8 +104,8 @@ let complex_value_not_exempt () =
       value_bindings =
         [
           {
-            name = Some "complex_value";
-            location = Some loc;
+            ast_elt =
+              { Ast.name = Ast.parse_name "complex_value"; location = Some loc };
             pattern_info = { has_pattern_match = false; case_count = 0 };
             is_function = false;
             is_simple_list = false;
