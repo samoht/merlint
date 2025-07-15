@@ -1,0 +1,11 @@
+(cram
+ (deps %{bin:merlint}))
+
+(rule
+ (alias runtest)
+ (deps
+  ../../bin/check_test_integrity.exe
+  (source_tree .))
+ (action
+  (chdir ../..
+   (run bin/check_test_integrity.exe))))

@@ -146,11 +146,7 @@ let check_run_t_output cram_dir error_code =
   else []
 
 let main () =
-  (* Check if we're in test/ directory (when run by dune runtest) *)
-  let cram_dir =
-    if Sys.file_exists "cram" && Sys.is_directory "cram" then "cram"
-    else "test/cram"
-  in
+  let cram_dir = "test/cram" in
   let errors = ref [] in
 
   (* Get all defined rules and test directories *)

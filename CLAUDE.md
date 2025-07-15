@@ -41,6 +41,13 @@ dune exec merlint -- --exclude test/ --exclude _build/
 merlint lib/ src/
 ```
 
+### Running Individual Cram Tests
+```bash
+# Run a specific cram test (omit the .t extension!)
+dune build @test/cram/e200
+dune build @test/cram/e001
+```
+
 ### Development Setup
 ```bash
 # Install dependencies
@@ -75,10 +82,11 @@ The codebase follows a clean separation between library and executable:
 
 ## Testing Approach
 
-- Uses Dune's cram test framework with auto-generated tests in `test/cram/`
-- Each rule has its own test directory with good/bad examples from `lib/data.ml`
+- Uses Dune's cram test framework in `test/cram/`
+- Each rule has its own test directory (e.g., `e001.t/`) with good.ml and bad.ml examples
+- Test examples are the source of truth - `lib/examples.ml` is auto-generated from test files
 - Tests verify both detection accuracy and proper exit codes
-- **Important**: After adding or modifying rules/examples in `lib/data.ml`, run `dune build @cram` to regenerate the test suite
+- Test integrity is automatically checked during `dune test`
 
 ## Documentation
 

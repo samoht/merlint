@@ -3,17 +3,6 @@
  (name test)
  (libraries merlint alcotest logs.fmt fmt fmt.tty))
 
-(cram
- (deps %{bin:merlint}))
-
-(rule
- (alias runtest)
- (deps
-  ../bin/check_test_integrity.exe
-  (source_tree cram))
- (action
-  (run ../bin/check_test_integrity.exe)))
-
 (rule
  (alias runtest)
  (deps
