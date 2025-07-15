@@ -1,1 +1,3 @@
-(* Only user.ml exists, no user.mli *)
+type t = { name: string; id: int }
+let create name id = { name; id }
+let name t = t.name

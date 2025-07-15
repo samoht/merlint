@@ -18,7 +18,7 @@ Test bad example - should find redundant module name:
     purpose clear.
     - bad.ml:1:4: 'get_user_profile_data_from_database_by_id' has too many underscores (7)
   ✓ Documentation (0 total issues)
-  ✗ Project Structure (0 total issues)
+  ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   
   Summary: ✗ 1 total issues
@@ -35,8 +35,8 @@ Test good example - should find no issues:
   ✓ Code Style (0 total issues)
   ✓ Naming Conventions (0 total issues)
   ✓ Documentation (0 total issues)
-  ✗ Project Structure (0 total issues)
+  ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   
-  Summary: ✗ 0 total issues
-  ✗ Some checks failed. See details above.
+  Summary: ✓ 0 total issues
+  ✓ All checks passed!

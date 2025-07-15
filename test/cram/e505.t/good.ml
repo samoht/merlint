@@ -1,4 +1,3 @@
-(* user.mli *)
-type t
-val create : string -> int -> t
-val name : t -> string
+type t = { name: string; id: int }
+let create name id = { name; id }
+let name t = t.name

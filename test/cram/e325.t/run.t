@@ -14,7 +14,7 @@ Test bad example - should find used underscore binding:
     - bad.ml:1:0: Function 'get_user' should be 'find_user'
     - bad.ml:2:0: Function 'find_name' should be 'get_name'
   ✓ Documentation (0 total issues)
-  ✗ Project Structure (0 total issues)
+  ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   
   Summary: ✗ 2 total issues
@@ -31,8 +31,8 @@ Test good example - should find no issues:
   ✓ Code Style (0 total issues)
   ✓ Naming Conventions (0 total issues)
   ✓ Documentation (0 total issues)
-  ✗ Project Structure (0 total issues)
+  ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   
-  Summary: ✗ 0 total issues
-  ✗ Some checks failed. See details above.
+  Summary: ✓ 0 total issues
+  ✓ All checks passed!

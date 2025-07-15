@@ -13,7 +13,7 @@ Test bad example - should find long identifier name:
     - bad.ml:2:4: Value 'myValue' should be 'my_value'
     - bad.ml:3:4: Value 'getUserName' should be 'get_user_name'
   ✓ Documentation (0 total issues)
-  ✗ Project Structure (0 total issues)
+  ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   
   Summary: ✗ 2 total issues
@@ -30,8 +30,8 @@ Test good example - should find no issues:
   ✓ Code Style (0 total issues)
   ✓ Naming Conventions (0 total issues)
   ✓ Documentation (0 total issues)
-  ✗ Project Structure (0 total issues)
+  ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   
-  Summary: ✗ 0 total issues
-  ✗ Some checks failed. See details above.
+  Summary: ✓ 0 total issues
+  ✓ All checks passed!

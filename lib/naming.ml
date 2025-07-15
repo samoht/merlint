@@ -291,6 +291,9 @@ let check_parsed_structure _filename typedtree =
 
   (* Check variant constructors *)
   let variant_issues =
+    (* TODO: Debug why variants are not being detected from typedtree.
+       Merlin might not be providing variant information for type definitions,
+       only for variant usage in patterns. *)
     check_elements typedtree.Typedtree.variants
       (fun name_str ->
         if List.mem name_str builtin_variants then None

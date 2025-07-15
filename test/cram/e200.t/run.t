@@ -14,7 +14,7 @@ Test bad example - should find bad variant naming:
     - bad.ml:2:20: Use of deprecated Str module
   ✓ Naming Conventions (0 total issues)
   ✓ Documentation (0 total issues)
-  ✗ Project Structure (0 total issues)
+  ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   
   Summary: ✗ 2 total issues
@@ -31,8 +31,8 @@ Test good example - should find no issues:
   ✓ Code Style (0 total issues)
   ✓ Naming Conventions (0 total issues)
   ✓ Documentation (0 total issues)
-  ✗ Project Structure (0 total issues)
+  ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   
-  Summary: ✗ 0 total issues
-  ✗ Some checks failed. See details above.
+  Summary: ✓ 0 total issues
+  ✓ All checks passed!

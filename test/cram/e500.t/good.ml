@@ -1,3 +1,2 @@
-(* .ocamlformat *)
-profile = default
-version = 0.26.2
+(* This project has .ocamlformat configured *)
+let well_formatted = true

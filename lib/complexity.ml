@@ -102,8 +102,12 @@ let analyze_value_binding config binding =
         issues
       else
         (* Normal analysis for functions and non-list values *)
+        (* TODO: Actually calculate cyclomatic complexity by counting decision points
+           (if/match/while/for/etc) instead of using a hardcoded value of 1 *)
         let complexity = 1 in
         (* Base complexity *)
+        (* TODO: Actually calculate nesting depth by analyzing the AST instead of
+           using a hardcoded value of 0 *)
         let nesting = 0 in
         (* Can't determine from browse *)
         let has_pattern = binding.pattern_info.has_pattern_match in

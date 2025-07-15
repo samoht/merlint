@@ -9,6 +9,7 @@ let warning_attr_regex =
        [
          Re.str "[@";
          Re.rep Re.space;
+         Re.opt (Re.seq [ Re.str "ocaml"; Re.str "." ]);
          Re.str "warning";
          Re.rep Re.space;
          Re.str "\"-";
@@ -22,6 +23,21 @@ let warning_attr2_regex =
        [
          Re.str "[@@";
          Re.rep Re.space;
+         Re.opt (Re.seq [ Re.str "ocaml"; Re.str "." ]);
+         Re.str "warning";
+         Re.rep Re.space;
+         Re.str "\"-";
+         Re.group (Re.rep1 Re.digit);
+         Re.str "\"";
+       ])
+
+let warning_attr3_regex =
+  Re.compile
+    (Re.seq
+       [
+         Re.str "[@@@";
+         Re.rep Re.space;
+         Re.opt (Re.seq [ Re.str "ocaml"; Re.str "." ]);
          Re.str "warning";
          Re.rep Re.space;
          Re.str "\"-";
@@ -48,6 +64,21 @@ let check_line_for_warning filename line_num line =
 
   (* Check for [@@warning] *)
   (match Re.exec_opt warning_attr2_regex line with
+  | Some m ->
+      let warning_num = Re.Group.get m 1 in
+      issues :=
+        Issue.Silenced_warning
+          {
+            location =
+              Location.create ~file:filename ~start_line:line_num ~start_col:0
+                ~end_line:line_num ~end_col:0;
+            warning_number = warning_num;
+          }
+        :: !issues
+  | None -> ());
+
+  (* Check for [@@@warning] *)
+  (match Re.exec_opt warning_attr3_regex line with
   | Some m ->
       let warning_num = Re.Group.get m 1 in
       issues :=

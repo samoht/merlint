@@ -211,6 +211,9 @@ let check_parsetree ~identifiers ~patterns =
           let base = name.base in
 
           (* Check for catch-all pattern '_' *)
+          (* TODO: This is too simplistic - it catches ALL underscore patterns,
+             not just those in exception handlers. Need AST context to determine
+             if this is actually in a try-with block *)
           if base = "_" then
             issues := Issue.Catch_all_exception { location = loc } :: !issues
       | None -> ())

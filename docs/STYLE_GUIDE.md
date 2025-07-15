@@ -67,9 +67,8 @@ and a version number to ensure consistent formatting.
 
 ✅ **Good:**
 ```ocaml
-(* .ocamlformat *)
-profile = default
-version = 0.26.2
+(* This project has .ocamlformat configured *)
+let well_formatted = true
 ```
 
 
@@ -268,15 +267,16 @@ private ones.
 
 ❌ **Bad:**
 ```ocaml
-(* Only user.ml exists, no user.mli *)
+type t = { name: string; id: int }
+let create name id = { name; id }
+let name t = t.name
 ```
 
 ✅ **Good:**
 ```ocaml
-(* user.mli *)
-type t
-val create : string -> int -> t
-val name : t -> string
+type t = { name: string; id: int }
+let create name id = { name; id }
+let name t = t.name
 ```
 
 
@@ -297,9 +297,8 @@ and a version number to ensure consistent formatting.
 
 ✅ **Good:**
 ```ocaml
-(* .ocamlformat *)
-profile = default
-version = 0.26.2
+(* This project has .ocamlformat configured *)
+let well_formatted = true
 ```
 
 
@@ -814,16 +813,16 @@ tests directly, allowing better test composition and organization.
 
 ❌ **Bad:**
 ```ocaml
-(* test_user.ml *)
+(* test.ml - main test executable *)
 let tests = []
-let () = Alcotest.run "tests" [("user", tests)]
+let () = Alcotest.run "test_user" [("user", tests)]
 ```
 
 ✅ **Good:**
 ```ocaml
-(* test_user.ml *)
-let tests = []
-let suite = ("user", tests)
+(* test.ml - main test executable *)
+let suite = ("user", [])
+let () = Alcotest.run "Test suite description" [suite]
 ```
 
 

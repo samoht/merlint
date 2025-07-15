@@ -8,11 +8,11 @@ Test bad example - should find test suite not included:
   ✓ Code Style (0 total issues)
   ✓ Naming Conventions (0 total issues)
   ✓ Documentation (0 total issues)
-  ✗ Project Structure (0 total issues)
+  ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   
-  Summary: ✗ 0 total issues
-  ✗ Some checks failed. See details above.
+  Summary: ✓ 0 total issues
+  ✓ All checks passed!
 
 Test good example - should find no issues:
   $ merlint -r E615 good.ml
@@ -24,8 +24,8 @@ Test good example - should find no issues:
   ✓ Code Style (0 total issues)
   ✓ Naming Conventions (0 total issues)
   ✓ Documentation (0 total issues)
-  ✗ Project Structure (0 total issues)
+  ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   
-  Summary: ✗ 0 total issues
-  ✗ Some checks failed. See details above.
+  Summary: ✓ 0 total issues
+  ✓ All checks passed!

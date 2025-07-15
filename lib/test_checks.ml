@@ -4,6 +4,10 @@
 
 let is_test_file filename =
   (* Only test executables named test.ml should follow this convention *)
+  (* TODO: This doesn't work with cram test infrastructure which expects
+     all test files to be named bad.ml/good.ml. Either the cram test
+     infrastructure needs to support custom filenames per rule, or this
+     check needs to be relaxed to check more test file patterns. *)
   Filename.basename filename = "test.ml"
 
 let has_test_runner content =

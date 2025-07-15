@@ -1,3 +1,3 @@
-(* test_user.ml *)
+(* test.ml - main test executable *)
 let tests = []
-let () = Alcotest.run "tests" [("user", tests)]
+let () = Alcotest.run "test_user" [("user", tests)]
