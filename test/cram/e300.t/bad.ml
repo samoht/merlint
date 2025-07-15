@@ -1,4 +1,4 @@
 type status = 
-  | WaitingForInput    (* CamelCase *)
+  | WaitingForInput
   | ProcessingData
-  | errorOccurred      (* lowerCamelCase *)
+  | ErrorOccurred

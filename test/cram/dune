@@ -7,5 +7,6 @@
   ../../bin/check_test_integrity.exe
   (source_tree .))
  (action
-  (chdir ../..
+  (chdir
+   ../..
    (run bin/check_test_integrity.exe))))

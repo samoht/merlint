@@ -1,2 +1,2 @@
-type userProfile = { name: string }
-type HTTPResponse = Ok | Error
+type userProfile = { name : string }
+type http_response = HttpOk | HttpError

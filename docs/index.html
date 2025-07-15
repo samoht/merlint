@@ -549,9 +549,9 @@ My_variant).</p><div class="examples-grid">
   <h4>BAD</h4>
   
   <pre><code><span class="kw">type</span> status = 
-  | <span class="cn">WaitingForInput</span>    <span class="cm">(* CamelCase *)</span>
+  | <span class="cn">WaitingForInput</span>
   | <span class="cn">ProcessingData</span>
-  | errorOccurred      <span class="cm">(* lowerCamelCase *)</span></code></pre>
+  | <span class="cn">ErrorOccurred</span></code></pre>
 </div>
 <div class="example good">
   <h4>GOOD</h4>
@@ -592,13 +592,15 @@ Fix them by renaming to snake_case (e.g., myValue → my_value).</p><div class="
 <div class="example bad">
   <h4>BAD</h4>
   
-  <pre><code><span class="kw">let</span> myValue = <span class="nu">42</span>
+  <pre><code><span class="kw">type</span> user = { name : string }
+<span class="kw">let</span> myValue = <span class="nu">42</span>
 <span class="kw">let</span> getUserName user = user.name</code></pre>
 </div>
 <div class="example good">
   <h4>GOOD</h4>
   
-  <pre><code><span class="kw">let</span> my_value = <span class="nu">42</span>
+  <pre><code><span class="kw">type</span> user = { name : string }
+<span class="kw">let</span> my_value = <span class="nu">42</span>
 <span class="kw">let</span> get_user_name user = user.name</code></pre>
 </div>
 </div></div>
@@ -613,8 +615,8 @@ them by renaming to snake_case (e.g., myType → my_type).</p><div class="exampl
 <div class="example bad">
   <h4>BAD</h4>
   
-  <pre><code><span class="kw">type</span> userProfile = { name: string }
-<span class="kw">type</span> <span class="cn">HTTPResponse</span> = <span class="cn">Ok</span> | <span class="cn">Error</span></code></pre>
+  <pre><code><span class="kw">type</span> userProfile = { name : string }
+<span class="kw">type</span> http_response = <span class="cn">HttpOk</span> | <span class="cn">HttpError</span></code></pre>
 </div>
 <div class="example good">
   <h4>GOOD</h4>
@@ -663,13 +665,13 @@ directly), find_* for search (returns option type).</p><div class="examples-grid
 <div class="example bad">
   <h4>BAD</h4>
   
-  <pre><code><span class="kw">let</span> get_user id = <span class="cn">None</span>  <span class="cm">(* returns option but named get_* *)</span>
+  <pre><code><span class="kw">let</span> get_user () = <span class="cn">None</span>  <span class="cm">(* returns option but named get_* *)</span>
 <span class="kw">let</span> find_name () = &quot;<span class="cn">John</span>&quot;  <span class="cm">(* returns string but named find_* *)</span></code></pre>
 </div>
 <div class="example good">
   <h4>GOOD</h4>
   
-  <pre><code><span class="kw">let</span> find_user id = <span class="cn">None</span>  <span class="cm">(* returns option, correctly named *)</span>
+  <pre><code><span class="kw">let</span> find_user () = <span class="cn">None</span>  <span class="cm">(* returns option, correctly named *)</span>
 <span class="kw">let</span> get_name () = &quot;<span class="cn">John</span>&quot;  <span class="cm">(* returns string, correctly named *)</span></code></pre>
 </div>
 </div></div>

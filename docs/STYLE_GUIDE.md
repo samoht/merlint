@@ -435,8 +435,8 @@ them by renaming to snake_case (e.g., myType → my_type).
 
 ❌ **Bad:**
 ```ocaml
-type userProfile = { name: string }
-type HTTPResponse = Ok | Error
+type userProfile = { name : string }
+type http_response = HttpOk | HttpError
 ```
 
 ✅ **Good:**
@@ -459,9 +459,9 @@ My_variant).
 ❌ **Bad:**
 ```ocaml
 type status = 
-  | WaitingForInput    (* CamelCase *)
+  | WaitingForInput
   | ProcessingData
-  | errorOccurred      (* lowerCamelCase *)
+  | ErrorOccurred
 ```
 
 ✅ **Good:**
@@ -484,12 +484,14 @@ Fix them by renaming to snake_case (e.g., myValue → my_value).
 
 ❌ **Bad:**
 ```ocaml
+type user = { name : string }
 let myValue = 42
 let getUserName user = user.name
 ```
 
 ✅ **Good:**
 ```ocaml
+type user = { name : string }
 let my_value = 42
 let get_user_name user = user.name
 ```
@@ -536,13 +538,13 @@ directly), find_* for search (returns option type).
 
 ❌ **Bad:**
 ```ocaml
-let get_user id = None  (* returns option but named get_* *)
+let get_user () = None  (* returns option but named get_* *)
 let find_name () = "John"  (* returns string but named find_* *)
 ```
 
 ✅ **Good:**
 ```ocaml
-let find_user id = None  (* returns option, correctly named *)
+let find_user () = None  (* returns option, correctly named *)
 let get_name () = "John"  (* returns string, correctly named *)
 ```
 

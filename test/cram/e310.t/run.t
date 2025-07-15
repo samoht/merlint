@@ -10,8 +10,8 @@ Test bad example - should find long identifier name:
     [E310] Value Naming Convention
     This issue means your value names don't follow OCaml naming conventions. Fix
     them by renaming to snake_case (e.g., myValue → my_value).
-    - bad.ml:1:4: Value 'myValue' should be 'my_value'
-    - bad.ml:2:4: Value 'getUserName' should be 'get_user_name'
+    - bad.ml:2:4: Value 'myValue' should be 'my_value'
+    - bad.ml:3:4: Value 'getUserName' should be 'get_user_name'
   ✓ Documentation (0 total issues)
   ✗ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)

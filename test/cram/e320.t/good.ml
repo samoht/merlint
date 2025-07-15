@@ -1,1 +1,1 @@
-let get_user_by_id id = 42
+let get_user_by_id () = 42
