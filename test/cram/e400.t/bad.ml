@@ -1,2 +1,2 @@
-(* user.mli - no module doc *)
-val create : string -> t
+type t = string
+let create s = s
