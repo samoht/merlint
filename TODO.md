@@ -225,6 +225,35 @@ This would fit well with the existing `merlin_interface.ml` module:
   - Gaps: Missing_test_file, Test_without_library, Test_suite_not_included
   - Reason: There is no test/test_test_coverage.ml file. The logic, which depends heavily on the output of dune describe, is not unit-tested at all
 
+## Broken Tests (Rules Not Detecting Issues)
+
+As of 2025-07-15, these tests have bad.ml files that don't trigger their rules:
+
+### Complexity Rules (not implemented)
+- **E001** - High Cyclomatic Complexity: Always returns complexity of 1
+- **E005** - Long Functions: May work but test functions might be too short
+- **E010** - Deep Nesting: Always returns nesting depth of 0
+
+### Naming Convention Rules (detection issues)
+- **E300** - Variant Naming: Merlin may not provide variant info from type definitions
+- **E305** - Module Naming: Module naming detection not working
+- **E315** - Type Naming: Type naming detection not working  
+- **E330** - Redundant Module Names: May not be detecting redundant prefixes correctly
+
+### Documentation Rules (not implemented)
+- **E405** - Missing Value Documentation: Rule not implemented
+- **E410** - Documentation Style: Rule not implemented (should detect `(* *)` vs `(** *)`)
+- **E415** - Missing Standard Functions: Rule not implemented
+
+### Other Rules
+- **E105** - Catch-all Exception: Too broad - catches ALL `_` patterns, not just in try-with
+- **E340** - Inline Error Construction: Pattern detection not working
+- **E510** - Missing Log Source: Rule not implemented
+- **E600** - Test Module Convention: Only checks files named exactly "test.ml"
+- **E605** - Missing Test File: Rule not fully implemented
+- **E610** - Test Without Library: Rule not implemented
+- **E615** - Test Suite Not Included: Rule not implemented
+
 ## Other Improvements
 
 - Enhance catch-all exception detection with better AST parsing

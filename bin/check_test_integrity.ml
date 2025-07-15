@@ -280,19 +280,12 @@ let main () =
                   output_lines
               in
               if not has_exit_1 then
-                (* TODO: This check assumes all rules are implemented and working.
-                   Many rules are not yet implemented (E001, E005, E010, E105, E110,
-                   E300, E305, E315, E330, E340, E405, E410, E415, E510, E600, E605,
-                   E610, E615) so their bad.ml tests correctly show exit code 0.
-                   This check should be made optional or aware of unimplemented rules. *)
-                (* Temporarily disabled until all rules are implemented
                 errors :=
                   sprintf
                     "Error: %s/%s.t/run.t: bad.ml test doesn't show exit code \
                      [1] - should find issues"
                     cram_dir rule_code
-                  :: !errors *)
-                ()
+                  :: !errors
               else if test_name = "good" then
                 (* good.ml should be successful (no exit code [1] at the end) *)
                 let has_exit_1 =
