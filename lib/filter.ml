@@ -122,4 +122,4 @@ let is_enabled filter issue_type =
 
 (** Filter a list of issues *)
 let filter_issues filter issues =
-  List.filter (fun issue -> is_enabled filter (Issue.get_type issue)) issues
+  List.filter (fun issue -> is_enabled filter (Issue.kind issue)) issues

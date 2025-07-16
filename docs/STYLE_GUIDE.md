@@ -31,7 +31,7 @@ variant types, or GADTs to represent different cases safely.
 
 ❌ **Bad:**
 ```ocaml
-let coerce x = Obj.magic x
+let coerce x = Stdlib.Obj.magic x
 ```
 
 ✅ **Good:**
@@ -90,9 +90,9 @@ for new code, but Printf/Format remain valid choices for many use cases.
 ❌ **Bad:**
 ```ocaml
 let make_error msg line = 
-  Printf.sprintf "Error: %s at line %d" msg line
+  Stdlib.Printf.sprintf "Error: %s at line %d" msg line
 let print_count n = 
-  Printf.printf "Processing %d items...\n" n
+  Stdlib.Printf.printf "Processing %d items...\n" n
 ```
 
 ✅ **Good:**
@@ -118,7 +118,7 @@ dune dependencies and replace Str functions with Re equivalents.
 ❌ **Bad:**
 ```ocaml
 let contains_at s = 
-  Str.string_match (Str.regexp ".*@.*") s 0
+  Stdlib.Str.string_match (Stdlib.Str.regexp ".*@.*") s 0
 ```
 
 ✅ **Good:**

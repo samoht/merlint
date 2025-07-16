@@ -29,8 +29,8 @@ let analyze_value_binding config binding =
 
         if complexity > config.max_complexity then
           [
-            Issue.Complexity_exceeded
-              { name; location; complexity; threshold = config.max_complexity };
+            Issue.complexity_exceeded ~name ~loc:location ~complexity
+              ~threshold:config.max_complexity;
           ]
         else []
   | None -> []
@@ -38,5 +38,9 @@ let analyze_value_binding config binding =
 let check (ctx : Context.file) =
   let config = { max_complexity = ctx.config.max_complexity } in
   let browse_data = Context.browse ctx in
-  let bindings = Browse.get_value_bindings browse_data in
-  List.concat_map (analyze_value_binding config) bindings
+
+  (* Use traverse helper to process only function bindings *)
+  let function_bindings =
+    Traverse.filter_functions browse_data.value_bindings
+  in
+  List.concat_map (analyze_value_binding config) function_bindings

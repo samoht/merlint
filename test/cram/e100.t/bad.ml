@@ -1,1 +1,1 @@
-let coerce x = Obj.magic x
+let coerce x = Stdlib.Obj.magic x

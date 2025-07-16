@@ -138,7 +138,7 @@ let analyze_project config files rule_filter =
   let category_issues = Hashtbl.create 10 in
   List.iter
     (fun issue ->
-      let issue_type = Issue.get_type issue in
+      let issue_type = Issue.kind issue in
       let rule = Rule.get Data.all_rules issue_type in
       let current =
         try Hashtbl.find category_issues rule.Rule.category

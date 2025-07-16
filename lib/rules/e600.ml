@@ -76,14 +76,11 @@ let check_test_file_exports filename content =
     if exports_module_name content module_base && not (exports_suite content)
     then
       [
-        Issue.Test_exports_module_name
-          {
-            filename;
-            location =
-              Location.create ~file:filename ~start_line:1 ~start_col:0
-                ~end_line:1 ~end_col:0;
-            module_name = module_base;
-          };
+        Issue.test_exports_module_name ~filename
+          ~loc:
+            (Location.create ~file:filename ~start_line:1 ~start_col:0
+               ~end_line:1 ~end_col:0)
+          ~module_name:module_base;
       ]
     else []
 
@@ -129,14 +126,11 @@ let check_test_mli_file filename content =
     in
     if (not has_correct_suite) || val_lines <> [] then
       [
-        Issue.Test_exports_module_name
-          {
-            filename;
-            location =
-              Location.create ~file:filename ~start_line:1 ~start_col:0
-                ~end_line:1 ~end_col:0;
-            module_name = get_module_name filename;
-          };
+        Issue.test_exports_module_name ~filename
+          ~loc:
+            (Location.create ~file:filename ~start_line:1 ~start_col:0
+               ~end_line:1 ~end_col:0)
+          ~module_name:(get_module_name filename);
       ]
     else []
 

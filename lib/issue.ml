@@ -32,8 +32,8 @@ type kind =
   (* Logging Rules *)
   | Missing_log_source
 
-(** Concrete issue instances *)
-type t =
+(** Issue data types - specific data for each issue kind *)
+type data =
   | Complexity_exceeded of {
       name : string;
       location : Location.t;
@@ -156,37 +156,182 @@ type t =
     }
   | Missing_log_source of { module_name : string; location : Location.t }
 
-let get_type = function
-  | Complexity_exceeded _ -> Complexity
-  | Function_too_long _ -> Function_length
-  | Deep_nesting _ -> Deep_nesting
-  | No_obj_magic _ -> Obj_magic
-  | Catch_all_exception _ -> Catch_all_exception
-  | Use_str_module _ -> Str_module
-  | Use_printf_module _ -> Printf_module
-  | Bad_variant_naming _ -> Variant_naming
-  | Bad_module_naming _ -> Module_naming
-  | Bad_value_naming _ -> Value_naming
-  | Bad_type_naming _ -> Type_naming
-  | Long_identifier_name _ -> Long_identifier
-  | Bad_function_naming _ -> Function_naming
-  | Redundant_module_name _ -> Redundant_module_name
-  | Used_underscore_binding _ -> Used_underscore_binding
-  | Error_pattern _ -> Error_pattern
-  | Boolean_blindness _ -> Boolean_blindness
-  | Mutable_state _ -> Mutable_state
-  | Missing_mli_doc _ -> Missing_mli_doc
-  | Missing_value_doc _ -> Missing_value_doc
-  | Bad_doc_style _ -> Bad_doc_style
-  | Missing_standard_function _ -> Missing_standard_function
-  | Missing_ocamlformat_file _ -> Missing_ocamlformat_file
-  | Missing_mli_file _ -> Missing_mli_file
-  | Test_exports_module_name _ -> Test_exports_module
-  | Silenced_warning _ -> Silenced_warning
-  | Missing_test_file _ -> Missing_test_file
-  | Test_without_library _ -> Test_without_library
-  | Test_suite_not_included _ -> Test_suite_not_included
-  | Missing_log_source _ -> Missing_log_source
+type t = { kind : kind; data : data }
+(** Concrete issue instances *)
+
+let kind issue = issue.kind
+
+(* Helper functions to construct issues with the new structure *)
+let complexity_exceeded ~name ~loc ~complexity ~threshold =
+  {
+    kind = Complexity;
+    data = Complexity_exceeded { name; location = loc; complexity; threshold };
+  }
+
+let function_too_long ~name ~loc ~length ~threshold =
+  {
+    kind = Function_length;
+    data = Function_too_long { name; location = loc; length; threshold };
+  }
+
+let no_obj_magic ~loc =
+  { kind = Obj_magic; data = No_obj_magic { location = loc } }
+
+let missing_mli_doc ~module_name ~file =
+  { kind = Missing_mli_doc; data = Missing_mli_doc { module_name; file } }
+
+let missing_value_doc ~value_name ~loc =
+  {
+    kind = Missing_value_doc;
+    data = Missing_value_doc { value_name; location = loc };
+  }
+
+let bad_doc_style ~value_name ~loc ~message =
+  {
+    kind = Bad_doc_style;
+    data = Bad_doc_style { value_name; location = loc; message };
+  }
+
+let bad_variant_naming ~variant ~loc ~expected =
+  {
+    kind = Variant_naming;
+    data = Bad_variant_naming { variant; location = loc; expected };
+  }
+
+let bad_module_naming ~module_name ~loc ~expected =
+  {
+    kind = Module_naming;
+    data = Bad_module_naming { module_name; location = loc; expected };
+  }
+
+let bad_value_naming ~value_name ~loc ~expected =
+  {
+    kind = Value_naming;
+    data = Bad_value_naming { value_name; location = loc; expected };
+  }
+
+let bad_type_naming ~type_name ~loc ~message =
+  {
+    kind = Type_naming;
+    data = Bad_type_naming { type_name; location = loc; message };
+  }
+
+let catch_all_exception ~loc =
+  { kind = Catch_all_exception; data = Catch_all_exception { location = loc } }
+
+let use_str_module ~loc =
+  { kind = Str_module; data = Use_str_module { location = loc } }
+
+let use_printf_module ~loc ~module_used =
+  {
+    kind = Printf_module;
+    data = Use_printf_module { location = loc; module_used };
+  }
+
+let deep_nesting ~name ~loc ~depth ~threshold =
+  {
+    kind = Deep_nesting;
+    data = Deep_nesting { name; location = loc; depth; threshold };
+  }
+
+let missing_standard_function ~module_name ~type_name ~missing ~file =
+  {
+    kind = Missing_standard_function;
+    data = Missing_standard_function { module_name; type_name; missing; file };
+  }
+
+let missing_ocamlformat_file ~loc =
+  {
+    kind = Missing_ocamlformat_file;
+    data = Missing_ocamlformat_file { location = loc };
+  }
+
+let missing_mli_file ~ml_file ~expected_mli ~loc =
+  {
+    kind = Missing_mli_file;
+    data = Missing_mli_file { ml_file; expected_mli; location = loc };
+  }
+
+let long_identifier_name ~name ~loc ~underscore_count ~threshold =
+  {
+    kind = Long_identifier;
+    data =
+      Long_identifier_name { name; location = loc; underscore_count; threshold };
+  }
+
+let bad_function_naming ~function_name ~loc ~suggestion =
+  {
+    kind = Function_naming;
+    data = Bad_function_naming { function_name; location = loc; suggestion };
+  }
+
+let redundant_module_name ~item_name ~module_name ~loc ~item_type =
+  {
+    kind = Redundant_module_name;
+    data =
+      Redundant_module_name
+        { item_name; module_name; location = loc; item_type };
+  }
+
+let used_underscore_binding ~binding_name ~loc ~usage_locations =
+  {
+    kind = Used_underscore_binding;
+    data =
+      Used_underscore_binding { binding_name; location = loc; usage_locations };
+  }
+
+let error_pattern ~loc ~error_message ~suggested_function =
+  {
+    kind = Error_pattern;
+    data = Error_pattern { location = loc; error_message; suggested_function };
+  }
+
+let boolean_blindness ~function_name ~loc ~bool_count ~signature =
+  {
+    kind = Boolean_blindness;
+    data =
+      Boolean_blindness { function_name; location = loc; bool_count; signature };
+  }
+
+let mutable_state ~kind ~name ~loc =
+  { kind = Mutable_state; data = Mutable_state { kind; name; location = loc } }
+
+let test_exports_module_name ~filename ~loc ~module_name =
+  {
+    kind = Test_exports_module;
+    data = Test_exports_module_name { filename; location = loc; module_name };
+  }
+
+let silenced_warning ~loc ~warning_number =
+  {
+    kind = Silenced_warning;
+    data = Silenced_warning { location = loc; warning_number };
+  }
+
+let missing_test_file ~module_name ~expected_test_file ~loc =
+  {
+    kind = Missing_test_file;
+    data = Missing_test_file { module_name; expected_test_file; location = loc };
+  }
+
+let test_without_library ~test_file ~expected_module ~loc =
+  {
+    kind = Test_without_library;
+    data = Test_without_library { test_file; expected_module; location = loc };
+  }
+
+let test_suite_not_included ~test_module ~test_runner_file ~loc =
+  {
+    kind = Test_suite_not_included;
+    data =
+      Test_suite_not_included { test_module; test_runner_file; location = loc };
+  }
+
+let missing_log_source ~module_name ~loc =
+  {
+    kind = Missing_log_source;
+    data = Missing_log_source { module_name; location = loc };
+  }
 
 (* Error code mapping *)
 let error_code = function
@@ -316,8 +461,8 @@ let pp_threshold_issue ppf code location name metric_type value threshold =
 
 (* Helper to format issue content *)
 let pp_issue_content ppf issue =
-  let code = error_code (get_type issue) in
-  match issue with
+  let code = error_code issue.kind in
+  match issue.data with
   | Complexity_exceeded { name; location; complexity; threshold } ->
       pp_threshold_issue ppf code location name
         "has@ cyclomatic@ complexity@ of" complexity threshold
@@ -438,7 +583,8 @@ let pp = pp_wrapped
 let format v = Fmt.str "%a" pp v
 
 (* Extract location from an issue *)
-let find_location = function
+let location issue =
+  match issue.data with
   | Complexity_exceeded { location; _ }
   | Function_too_long { location; _ }
   | No_obj_magic { location }
@@ -485,7 +631,8 @@ let find_location = function
   | Missing_standard_function _ -> None
 
 (* Get issue description without location prefix *)
-let get_description = function
+let description issue =
+  match issue.data with
   | Complexity_exceeded { name; complexity; threshold; _ } ->
       Fmt.str "Function '%s' has cyclomatic complexity of %d (threshold: %d)"
         name complexity threshold
@@ -553,7 +700,8 @@ let get_description = function
       Fmt.str "Type '%s' is missing: %s" type_name (String.concat ", " missing)
 
 (* Assign priority to issues - lower number = higher priority *)
-let priority = function
+let priority issue =
+  match issue.data with
   | No_obj_magic _ | Catch_all_exception _ | Silenced_warning _
   | Mutable_state _ ->
       1
@@ -570,13 +718,15 @@ let priority = function
   | Test_suite_not_included _ | Missing_log_source _ ->
       4
 
-let find_file = function
+let find_file issue =
+  match issue.data with
   | Missing_mli_doc { file; _ } | Missing_standard_function { file; _ } ->
       Some file
   | _ -> None
 
 (* Get numeric severity for sorting - higher number = more severe *)
-let numeric_severity = function
+let numeric_severity issue =
+  match issue.data with
   | Function_too_long { length; _ } -> length
   | Complexity_exceeded { complexity; _ } -> complexity
   | Deep_nesting { depth; _ } -> depth
@@ -597,7 +747,7 @@ let compare a b =
       match (find_file a, find_file b) with
       | Some f1, Some f2 -> String.compare f1 f2
       | _ -> (
-          match (find_location a, find_location b) with
+          match (location a, location b) with
           | Some l1, Some l2 -> Location.compare l1 l2
           | _ -> 0)
 

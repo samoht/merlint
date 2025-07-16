@@ -13,8 +13,9 @@ let create_extra_test_issue test_module files =
         Location.create ~file:test_file ~start_line:1 ~start_col:0 ~end_line:1
           ~end_col:0
   in
-  Issue.Test_without_library
-    { test_file; expected_module = Fmt.str "%s.ml" test_module; location }
+  Issue.test_without_library ~test_file
+    ~expected_module:(Fmt.str "%s.ml" test_module)
+    ~loc:location
 
 let check (ctx : Context.project) =
   let files = Context.all_files ctx in

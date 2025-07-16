@@ -9,28 +9,8 @@ let count_bool_params type_sig =
     | [] -> type_sig
     | _return_type :: rest -> String.concat ">" (List.rev rest)
   in
-  (* Count "bool" occurrences in parameter part *)
-  let rec count acc pos str =
-    match String.index_from_opt str pos 'b' with
-    | None -> acc
-    | Some idx ->
-        if idx + 4 <= String.length str && String.sub str idx 4 = "bool" then
-          count (acc + 1) (idx + 4) str
-        else count acc (idx + 1) str
-  in
-  count 0 0 param_part
-
-(** Extract location from outline item *)
-let extract_location filename (item : Outline.item) =
-  match item.range with
-  | Some range ->
-      Location.create ~file:filename ~start_line:range.start.line
-        ~start_col:range.start.col ~end_line:range.start.line
-        ~end_col:range.start.col
-  | None ->
-      (* Fallback location *)
-      Location.create ~file:filename ~start_line:1 ~start_col:0 ~end_line:1
-        ~end_col:0
+  (* Use the traverse helper to count "bool" occurrences *)
+  Traverse.count_parameters param_part "bool"
 
 (** Check for boolean blindness in function signatures *)
 let check_boolean_blindness ~filename ~outline =
@@ -40,17 +20,16 @@ let check_boolean_blindness ~filename ~outline =
       List.filter_map
         (fun (item : Outline.item) ->
           match (item.kind, item.type_sig) with
-          | Outline.Value, Some sig_str when String.contains sig_str '>' ->
+          | Outline.Value, Some sig_str when Traverse.is_function_type sig_str
+            ->
               let bool_count = count_bool_params sig_str in
               if bool_count >= 2 then
-                Some
-                  (Issue.Boolean_blindness
-                     {
-                       function_name = item.name;
-                       location = extract_location filename item;
-                       bool_count;
-                       signature = sig_str;
-                     })
+                match Traverse.extract_outline_location filename item with
+                | Some loc ->
+                    Some
+                      (Issue.boolean_blindness ~function_name:item.name ~loc
+                         ~bool_count ~signature:sig_str)
+                | None -> None
               else None
           | _ -> None)
         items

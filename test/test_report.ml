@@ -3,14 +3,10 @@ open Merlint
 let test_create_report () =
   let issues =
     [
-      Issue.Bad_value_naming
-        {
-          value_name = "badName";
-          expected = "bad_name";
-          location =
-            Location.create ~file:"test.ml" ~start_line:1 ~start_col:4
-              ~end_line:1 ~end_col:4;
-        };
+      Issue.bad_value_naming ~value_name:"badName" ~expected:"bad_name"
+        ~loc:
+          (Location.create ~file:"test.ml" ~start_line:1 ~start_col:4
+             ~end_line:1 ~end_col:4);
     ]
   in
 
@@ -32,25 +28,16 @@ let test_print_status () =
 
 let test_get_all_issues () =
   let issue1 =
-    Issue.Bad_value_naming
-      {
-        value_name = "bad1";
-        expected = "bad_1";
-        location =
-          Location.create ~file:"file1.ml" ~start_line:1 ~start_col:0
-            ~end_line:1 ~end_col:0;
-      }
+    Issue.bad_value_naming ~value_name:"bad1" ~expected:"bad_1"
+      ~loc:
+        (Location.create ~file:"file1.ml" ~start_line:1 ~start_col:0 ~end_line:1
+           ~end_col:0)
   in
   let issue2 =
-    Issue.Function_too_long
-      {
-        name = "long_func";
-        length = 100;
-        threshold = 50;
-        location =
-          Location.create ~file:"file2.ml" ~start_line:10 ~start_col:0
-            ~end_line:10 ~end_col:0;
-      }
+    Issue.function_too_long ~name:"long_func" ~length:100 ~threshold:50
+      ~loc:
+        (Location.create ~file:"file2.ml" ~start_line:10 ~start_col:0
+           ~end_line:10 ~end_col:0)
   in
 
   let categories =
@@ -91,14 +78,10 @@ let test_pp_summary () =
     Report.create ~rule_name:"Test Rule" ~passed:false
       ~issues:
         [
-          Issue.Bad_value_naming
-            {
-              value_name = "test";
-              expected = "test";
-              location =
-                Location.create ~file:"test.ml" ~start_line:1 ~start_col:0
-                  ~end_line:1 ~end_col:0;
-            };
+          Issue.bad_value_naming ~value_name:"test" ~expected:"test"
+            ~loc:
+              (Location.create ~file:"test.ml" ~start_line:1 ~start_col:0
+                 ~end_line:1 ~end_col:0);
         ]
       ~file_count:5
   in

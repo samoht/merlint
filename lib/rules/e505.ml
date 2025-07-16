@@ -14,8 +14,7 @@ let check (ctx : Context.project) =
     is_exe
   in
 
-  let issues = ref [] in
-  List.iter
+  List.filter_map
     (fun ml_file ->
       if String.ends_with ~suffix:".ml" ml_file then
         (* Only check for .mli files for library modules, not executables *)
@@ -23,15 +22,12 @@ let check (ctx : Context.project) =
           let base_name = Filename.remove_extension ml_file in
           let mli_path = base_name ^ ".mli" in
           if not (Sys.file_exists mli_path) then
-            issues :=
-              Issue.Missing_mli_file
-                {
-                  ml_file;
-                  expected_mli = mli_path;
-                  location =
-                    Location.create ~file:ml_file ~start_line:1 ~start_col:1
-                      ~end_line:1 ~end_col:1;
-                }
-              :: !issues)
-    files;
-  !issues
+            Some
+              (Issue.missing_mli_file ~ml_file ~expected_mli:mli_path
+                 ~loc:
+                   (Location.create ~file:ml_file ~start_line:1 ~start_col:1
+                      ~end_line:1 ~end_col:1))
+          else None
+        else None
+      else None)
+    files

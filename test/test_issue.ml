@@ -11,18 +11,18 @@ let test_priority () =
   in
   let issues =
     [
-      Issue.Complexity_exceeded
-        { name = "foo"; location; complexity = 15; threshold = 10 };
-      Issue.Function_too_long
-        { name = "bar"; location; length = 100; threshold = 50 };
-      Issue.No_obj_magic { location };
-      Issue.Missing_mli_doc { module_name = "Test"; file = "test.mli" };
-      Issue.Missing_test_file
-        { module_name = "foo"; expected_test_file = "test_foo.ml"; location };
-      Issue.Test_without_library
-        { test_file = "test_bar.ml"; expected_module = "bar.ml"; location };
-      Issue.Test_suite_not_included
-        { test_module = "Test_baz"; test_runner_file = "test.ml"; location };
+      Issue.complexity_exceeded ~name:"foo" ~loc:location ~complexity:15
+        ~threshold:10;
+      Issue.function_too_long ~name:"bar" ~loc:location ~length:100
+        ~threshold:50;
+      Issue.no_obj_magic ~loc:location;
+      Issue.missing_mli_doc ~module_name:"Test" ~file:"test.mli";
+      Issue.missing_test_file ~module_name:"foo"
+        ~expected_test_file:"test_foo.ml" ~loc:location;
+      Issue.test_without_library ~test_file:"test_bar.ml"
+        ~expected_module:"bar.ml" ~loc:location;
+      Issue.test_suite_not_included ~test_module:"Test_baz"
+        ~test_runner_file:"test.ml" ~loc:location;
     ]
   in
   List.iter
@@ -41,14 +41,14 @@ let test_find_location () =
 
   let test_cases =
     [
-      ( Issue.Complexity_exceeded
-          { name = "foo"; location; complexity = 15; threshold = 10 },
+      ( Issue.complexity_exceeded ~name:"foo" ~loc:location ~complexity:15
+          ~threshold:10,
         Some location );
-      ( Issue.Function_too_long
-          { name = "bar"; location; length = 100; threshold = 50 },
+      ( Issue.function_too_long ~name:"bar" ~loc:location ~length:100
+          ~threshold:50,
         Some location );
-      (Issue.No_obj_magic { location }, Some location);
-      ( Issue.Missing_mli_doc { module_name = "Test"; file = "test.mli" },
+      (Issue.no_obj_magic ~loc:location, Some location);
+      ( Issue.missing_mli_doc ~module_name:"Test" ~file:"test.mli",
         Some
           (Location.create ~file:"test.mli" ~start_line:1 ~start_col:1
              ~end_line:1 ~end_col:1) );
@@ -57,7 +57,7 @@ let test_find_location () =
 
   List.iter
     (fun (issue, expected_location) ->
-      let actual_location = Issue.find_location issue in
+      let actual_location = Issue.location issue in
       match (actual_location, expected_location) with
       | Some actual, Some expected ->
           Alcotest.(check string)
@@ -68,26 +68,26 @@ let test_find_location () =
       | _ -> Alcotest.fail "Location mismatch")
     test_cases
 
-let test_get_type () =
+let test_kind () =
   let location =
     Location.create ~file:"test.ml" ~start_line:1 ~start_col:0 ~end_line:1
       ~end_col:0
   in
   let test_cases =
     [
-      ( Issue.Complexity_exceeded
-          { name = "foo"; location; complexity = 15; threshold = 10 },
+      ( Issue.complexity_exceeded ~name:"foo" ~loc:location ~complexity:15
+          ~threshold:10,
         Issue.Complexity );
-      ( Issue.Function_too_long
-          { name = "bar"; location; length = 100; threshold = 50 },
+      ( Issue.function_too_long ~name:"bar" ~loc:location ~length:100
+          ~threshold:50,
         Issue.Function_length );
-      (Issue.No_obj_magic { location }, Issue.Obj_magic);
+      (Issue.no_obj_magic ~loc:location, Issue.Obj_magic);
     ]
   in
 
   List.iter
     (fun (issue, expected_type) ->
-      let actual_type = Issue.get_type issue in
+      let actual_type = Issue.kind issue in
       Alcotest.(check bool)
         "issue type matches" true
         (actual_type = expected_type))
@@ -104,11 +104,10 @@ let test_compare () =
   in
 
   (* Test that issues are sorted by priority, then location *)
-  let high_priority = Issue.No_obj_magic { location = location1 } in
+  let high_priority = Issue.no_obj_magic ~loc:location1 in
   (* Priority 1 *)
   let medium_priority =
-    Issue.Function_too_long
-      { name = "foo"; location = location2; length = 100; threshold = 50 }
+    Issue.function_too_long ~name:"foo" ~loc:location2 ~length:100 ~threshold:50
   in
   (* Priority 2 *)
 
@@ -126,9 +125,9 @@ let test_equal () =
       ~end_col:0
   in
 
-  let issue1 = Issue.No_obj_magic { location = loc1 } in
-  let issue2 = Issue.No_obj_magic { location = loc1 } in
-  let issue3 = Issue.No_obj_magic { location = loc2 } in
+  let issue1 = Issue.no_obj_magic ~loc:loc1 in
+  let issue2 = Issue.no_obj_magic ~loc:loc1 in
+  let issue3 = Issue.no_obj_magic ~loc:loc2 in
 
   Alcotest.(check issue_testable) "same issues are equal" issue1 issue2;
   Alcotest.(check bool)
@@ -146,13 +145,13 @@ let test_grouped_hints () =
     [
       ( Issue.Complexity,
         [
-          Issue.Complexity_exceeded
-            { name = "foo"; location; complexity = 15; threshold = 10 };
+          Issue.complexity_exceeded ~name:"foo" ~loc:location ~complexity:15
+            ~threshold:10;
         ] );
       ( Issue.Missing_mli_file,
         [
-          Issue.Missing_mli_file
-            { ml_file = "test.ml"; expected_mli = "test.mli"; location };
+          Issue.missing_mli_file ~ml_file:"test.ml" ~expected_mli:"test.mli"
+            ~loc:location;
         ] );
     ]
   in
@@ -171,7 +170,7 @@ let suite =
       [
         Alcotest.test_case "issue priority" `Quick test_priority;
         Alcotest.test_case "find_location" `Quick test_find_location;
-        Alcotest.test_case "get_type" `Quick test_get_type;
+        Alcotest.test_case "kind" `Quick test_kind;
         Alcotest.test_case "compare" `Quick test_compare;
         Alcotest.test_case "equal" `Quick test_equal;
         Alcotest.test_case "grouped hints" `Quick test_grouped_hints;

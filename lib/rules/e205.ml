@@ -10,29 +10,19 @@ let check ctx =
   let issues = ref [] in
 
   (* Check identifiers for Printf/Format module usage *)
-  List.iter
-    (fun (id : Ast.elt) ->
-      match id.location with
-      | Some loc -> (
-          let name = id.name in
-          let prefix = name.prefix in
-          let base = name.base in
+  Traverse.iter_identifiers_with_location (Context.ast ctx) (fun id loc ->
+      let name = id.name in
+      let prefix = name.prefix in
+      let base = name.base in
 
-          (* Check for Printf/Format module usage *)
-          match prefix with
-          | [ "Printf" ] | [ "Stdlib"; "Printf" ] ->
-              issues :=
-                Issue.Use_printf_module
-                  { location = loc; module_used = "Printf" }
-                :: !issues
-          | ([ "Format" ] | [ "Stdlib"; "Format" ]) when is_printf_function base
-            ->
-              issues :=
-                Issue.Use_printf_module
-                  { location = loc; module_used = "Format" }
-                :: !issues
-          | _ -> ())
-      | None -> ())
-    (Context.ast ctx).identifiers;
+      (* Check for Printf/Format module usage *)
+      match prefix with
+      | [ "Stdlib"; "Printf" ] ->
+          issues :=
+            Issue.use_printf_module ~loc ~module_used:"Printf" :: !issues
+      | [ "Stdlib"; "Format" ] when is_printf_function base ->
+          issues :=
+            Issue.use_printf_module ~loc ~module_used:"Format" :: !issues
+      | _ -> ());
 
   !issues

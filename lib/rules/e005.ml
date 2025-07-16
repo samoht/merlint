@@ -34,8 +34,8 @@ let analyze_value_binding config binding =
         in
         if length > adjusted_threshold then
           [
-            Issue.Function_too_long
-              { name; location; length; threshold = adjusted_threshold };
+            Issue.function_too_long ~name ~loc:location ~length
+              ~threshold:adjusted_threshold;
           ]
         else []
   | None -> []
@@ -43,5 +43,6 @@ let analyze_value_binding config binding =
 let check (ctx : Context.file) =
   let config = { max_function_length = ctx.config.max_function_length } in
   let browse_data = Context.browse ctx in
-  let bindings = Browse.get_value_bindings browse_data in
-  List.concat_map (analyze_value_binding config) bindings
+
+  (* Process all bindings - the analyze function handles filtering *)
+  List.concat_map (analyze_value_binding config) browse_data.value_bindings

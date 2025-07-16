@@ -1,100 +1,20 @@
 # TODO
 
-## Recent Progress (2025-07-16)
+## Current Work in Progress
 
-### ✅ Completed: Code Cleanup and Simplification
-- **[x] Removed all legacy modules** that were just delegating to rule modules:
-  - Deleted `complexity.ml`, `style.ml`, `api_design.ml`, `naming.ml`, `doc.ml`, `format.ml`, `test_checks.ml`, `test_coverage.ml`
-  - All rule implementations now live directly in `lib/rules/` directory
-  
-- **[x] Simplified rules.ml** to use `Data.all_rules` as single source of truth:
-  - No more manual rule list maintenance - derives implementations from `Data.all_rules`
-  - Categories are taken directly from `Rule.category` in data definitions
-  - Disabled rules throw `Issue.Disabled` in their implementation, not in `rules.ml`
-  
-- **[x] Fixed E110 (Silenced_warning) categorization**:
-  - Changed from `Security_safety` to `Complexity` category in `data.ml`
-  - Now appears only in "Code Quality" section as expected by tests
+### 🔄 Next High Priority Tasks
+- [ ] **Refactor Issue.t to be a record containing kind and data** - improve Issue type structure
+- [ ] **Create traverse.ml with common helpers found in rules** - reduce code duplication across rules
 
 ### 📋 Missing Unit Tests
 The following modules in `lib/` are missing corresponding unit tests in `test/`:
 - [ ] `ast.ml` - Shared AST functionality
-- [ ] `config_file.ml` - Configuration file loading
 - [ ] `data.ml` - Rule data definitions
 - [ ] `guide.ml` - Style guide generation
-- [ ] `hints.ml` - Error hint generation
-- [ ] `issue_type.ml` - Issue type definitions
 - [ ] `profiling.ml` - Performance profiling
 - [ ] `rule.ml` - Rule type definitions
 
 Note: Individual rule checks (`lib/rules/e*.ml`) are tested via cram tests, not unit tests.
-
-## Recent Progress (2025-07-15)
-
-### ✅ Completed: Major Rule Refactoring
-- **[x] Reorganized all rule checks into individual files** in `lib/rules/` directory
-  - Each rule now has its own `rules/exxx.ml` and `rules/exxx.mli` file
-  - Used `include_subdirs unqualified` to integrate rules into main library
-  - Each rule file exposes only `val check` function for clean interfaces
-
-- **[x] Moved ALL rule implementations to dedicated modules:**
-  - **E001** (Cyclomatic_complexity) - moved from complexity.ml to rules/e001.ml
-  - **E005** (Function_too_long) - moved from complexity.ml to rules/e005.ml
-  - **E010** (Deep_nesting) - moved from complexity.ml to rules/e010.ml
-  - **E100** (Obj_magic) - moved from style.ml to rules/e100.ml  
-  - **E105** (Catch_all_exception) - moved from style.ml to rules/e105.ml
-  - **E110** (Silenced_warning) - moved from warning_checks.ml to rules/e110.ml
-  - **E200** (Str_module) - moved from style.ml to rules/e200.ml
-  - **E205** (Printf_module) - moved from style.ml to rules/e205.ml
-  - **E300** (Variant_naming) - moved from naming.ml to rules/e300.ml
-  - **E305** (Module_naming) - moved from naming.ml to rules/e305.ml
-  - **E310** (Value_naming) - moved from naming.ml to rules/e310.ml
-  - **E315** (Type_naming) - moved from naming.ml to rules/e315.ml
-  - **E320** (Long_identifier) - moved from naming.ml to rules/e320.ml
-  - **E325** (Function_naming) - moved from naming.ml to rules/e325.ml
-  - **E330** (Redundant_module_name) - moved from naming.ml to rules/e330.ml
-  - **E335** (Used_underscore_binding) - moved from naming.ml to rules/e335.ml
-  - **E340** (Error_pattern) - moved from style.ml to rules/e340.ml
-  - **E350** (Boolean_blindness) - moved from api_design.ml to rules/e350.ml
-  - **E351** (Mutable_state) - moved from naming.ml to rules/e351.ml
-  - **E400** (Missing_mli_doc) - moved from doc.ml to rules/e400.ml
-  - **E500** (Missing_ocamlformat_file) - moved from format.ml to rules/e500.ml
-  - **E505** (Missing_mli_file) - moved from format.ml to rules/e505.ml
-  - **E600** (Test_exports_module) - moved from test_checks.ml to rules/e600.ml
-  - **E605** (Missing_test_file) - moved from test_coverage.ml to rules/e605.ml
-  - **E610** (Test_without_library) - moved from test_coverage.ml to rules/e610.ml
-  - **E615** (Test_suite_not_included) - moved from test_coverage.ml to rules/e615.ml
-
-- **[x] Created placeholder rules for unimplemented checks:**
-  - **E405** (Missing_type_doc) - placeholder created, raises Disabled exception
-  - **E410** (Missing_value_doc) - placeholder created, raises Disabled exception
-  - **E415** (Missing_exception_doc) - placeholder created, raises Disabled exception
-  - **E510** (Missing_log_source) - placeholder created, raises Disabled exception
-
-- **[x] Created shared AST module** (`lib/ast.ml`) to eliminate code duplication
-  - Extracted common functionality from parsetree.ml and typedtree.ml
-  - Both modules now use `open Ast` for shared types and functions
-
-- **[x] Removed file I/O from all unit tests**
-  - Tests now use mock data structures instead of temporary files
-  - All tests pass without requiring file system operations
-
-
-- **[x] Fixed critical build issues**
-  - Resolved dependency cycles between modules
-  - Fixed typedtree location parsing (was disabled, preventing rules from working)
-  - Fixed E100 (Obj.magic) detection by enabling location extraction
-  - Added proper exception handling for disabled rules
-  - Fixed E005 to handle anonymous functions gracefully
-
-### 📋 Next Steps
-1. **Add missing unit tests** for lib modules (see list above)
-2. **Show disabled rules in statistics** as requested by user
-3. **Implement proper complexity calculation** for E001 and E010
-4. **Fix E105 to only detect exception handlers** not all underscore patterns
-5. **Implement missing documentation rules** (E405, E410, E415)
-6. **Implement missing log source rule** (E510)
-7. **Fix function name extraction** in Browse module for better E005 output
 
 ## High Priority
 
@@ -113,7 +33,6 @@ Note: Individual rule checks (`lib/rules/e*.ml`) are tested via cram tests, not 
     3. Only flag wildcard patterns within try...with expressions
     4. This avoids false positives for valid underscore uses
   - Implementation would go in lib/style.ml or new lib/ast_checks.ml
-
 
 - [ ] Add code duplication detection
   - Find duplicated code blocks across the codebase
@@ -205,7 +124,6 @@ Note: Individual rule checks (`lib/rules/e*.ml`) are tested via cram tests, not 
 - [ ] Investigate why we have test_style_rules and test_rules_integration that don't correspond to any lib/*.ml files
   - These test files exist but don't follow the 1:1 correspondence rule
   - Decide if they should be renamed or excluded from the check
-
 
 ## Function Naming Convention Rule
 
@@ -327,4 +245,3 @@ As of 2025-07-15, these tests have bad.ml files that don't trigger their rules:
 - Add more comprehensive documentation rules
 - Improve complexity analysis for more OCaml constructs
 - Add configuration file support for customizing thresholds
-

@@ -450,7 +450,7 @@ variant types, or GADTs to represent different cases safely.</p><div class="exam
 <div class="example bad">
   <h4>BAD</h4>
   
-  <pre><code><span class="kw">let</span> coerce x = <span class="cn">Obj</span>.magic x</code></pre>
+  <pre><code><span class="kw">let</span> coerce x = <span class="cn">Stdlib</span>.<span class="cn">Obj</span>.magic x</code></pre>
 </div>
 <div class="example good">
   <h4>GOOD</h4>
@@ -525,7 +525,7 @@ dune dependencies and replace Str functions with Re equivalents.</p><div class="
   <h4>BAD</h4>
   
   <pre><code><span class="kw">let</span> contains_at s = 
-  <span class="cn">Str</span>.string_match (<span class="cn">Str</span>.regexp &quot;.*@.*&quot;) s <span class="nu">0</span></code></pre>
+  <span class="cn">Stdlib</span>.<span class="cn">Str</span>.string_match (<span class="cn">Stdlib</span>.<span class="cn">Str</span>.regexp &quot;.*@.*&quot;) s <span class="nu">0</span></code></pre>
 </div>
 <div class="example good">
   <h4>GOOD</h4>
@@ -549,9 +549,9 @@ for new code, but Printf/Format remain valid choices for many use cases.</p><div
   <h4>BAD</h4>
   
   <pre><code><span class="kw">let</span> make_error msg line = 
-  <span class="cn">Printf</span>.sprintf &quot;<span class="cn">Error</span>: %s at line %d&quot; msg line
+  <span class="cn">Stdlib</span>.<span class="cn">Printf</span>.sprintf &quot;<span class="cn">Error</span>: %s at line %d&quot; msg line
 <span class="kw">let</span> print_count n = 
-  <span class="cn">Printf</span>.printf &quot;<span class="cn">Processing</span> %d items...\n&quot; n</code></pre>
+  <span class="cn">Stdlib</span>.<span class="cn">Printf</span>.printf &quot;<span class="cn">Processing</span> %d items...\n&quot; n</code></pre>
 </div>
 <div class="example good">
   <h4>GOOD</h4>

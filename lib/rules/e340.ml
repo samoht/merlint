@@ -1,10 +1,8 @@
 (** Simple text-based detection for Error patterns *)
 
-let check_error_patterns file_content =
-  let issues = ref [] in
-
-  (* Split content into lines for line number tracking *)
-  let lines = String.split_on_char '\n' file_content in
+let check (ctx : Context.file) =
+  let content = Context.content ctx in
+  let filename = ctx.filename in
 
   (* Pattern to match Error (Fmt.str ...) constructs *)
   let error_fmt_str_pattern =
@@ -24,47 +22,15 @@ let check_error_patterns file_content =
     Re.compile (Re.seq [ Re.str "let"; Re.rep1 Re.space; Re.str "err_" ])
   in
 
-  (* Check each line *)
-  List.iteri
-    (fun line_idx line ->
+  (* Check each line using the traverse helper *)
+  Traverse.process_lines_with_location filename content
+    (fun _line_idx line location ->
       (* Don't flag error helper definitions themselves *)
       if
         Re.execp error_fmt_str_pattern line
         && not (Re.execp err_helper_pattern line)
       then
-        let location =
-          {
-            Location.file = "";
-            (* Will be filled by caller *)
-            start_line = line_idx + 1;
-            start_col = 0;
-            (* We don't have precise column info with this approach *)
-            end_line = line_idx + 1;
-            end_col = 0;
-          }
-        in
-        issues :=
-          Issue.Error_pattern
-            {
-              location;
-              error_message = "Error (Fmt.str ...)";
-              suggested_function = "err_*";
-            }
-          :: !issues)
-    lines;
-
-  List.rev !issues
-
-let check (ctx : Context.file) =
-  let content = Context.content ctx in
-  let filename = ctx.filename in
-  let issues = check_error_patterns content in
-  (* Update location with filename *)
-  List.map
-    (fun issue ->
-      match issue with
-      | Issue.Error_pattern data ->
-          Issue.Error_pattern
-            { data with location = { data.location with file = filename } }
-      | _ -> issue)
-    issues
+        Some
+          (Issue.error_pattern ~loc:location
+             ~error_message:"Error (Fmt.str ...)" ~suggested_function:"err_*")
+      else None)

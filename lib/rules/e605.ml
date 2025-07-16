@@ -18,12 +18,9 @@ let create_missing_test_issue module_name files =
         Location.create ~file:"dune" ~start_line:1 ~start_col:0 ~end_line:1
           ~end_col:0
   in
-  Issue.Missing_test_file
-    {
-      module_name;
-      expected_test_file = Fmt.str "test_%s.ml" module_name;
-      location;
-    }
+  Issue.missing_test_file ~module_name
+    ~expected_test_file:(Fmt.str "test_%s.ml" module_name)
+    ~loc:location
 
 let check (ctx : Context.project) =
   let files = Context.all_files ctx in

@@ -19,25 +19,12 @@ let has_redundant_prefix item_name_lower module_name =
 
 (** Create redundant module name issue *)
 let create_redundant_name_issue item_name module_name location item_type =
-  Issue.Redundant_module_name
-    {
-      item_name;
-      module_name = String.capitalize_ascii module_name;
-      location;
-      item_type;
-    }
+  Issue.redundant_module_name ~item_name
+    ~module_name:(String.capitalize_ascii module_name)
+    ~loc:location ~item_type
 
 (* Helper to check if a type signature is a function type *)
 let is_function_type type_sig = String.contains type_sig '-'
-
-let extract_outline_location filename (item : Outline.item) =
-  match item.range with
-  | Some range ->
-      Some
-        (Location.create ~file:filename ~start_line:range.start.line
-           ~start_col:range.start.col ~end_line:range.start.line
-           ~end_col:range.start.col)
-  | None -> None
 
 let check (ctx : Context.file) =
   let outline_data = Context.outline ctx in
@@ -49,7 +36,7 @@ let check (ctx : Context.file) =
   List.filter_map
     (fun (item : Outline.item) ->
       let name = item.name in
-      let location = extract_outline_location filename item in
+      let location = Traverse.extract_outline_location filename item in
       let item_name_lower = String.lowercase_ascii name in
       if has_redundant_prefix item_name_lower module_name then
         match (kind_to_string item.kind, item.type_sig, location) with

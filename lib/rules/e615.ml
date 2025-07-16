@@ -38,13 +38,10 @@ let check (ctx : Context.project) =
 
         List.map
           (fun test_mod ->
-            Issue.Test_suite_not_included
-              {
-                test_module = test_mod;
-                test_runner_file = test_file;
-                location =
-                  Location.create ~file:test_file ~start_line:1 ~start_col:0
-                    ~end_line:1 ~end_col:0;
-              })
+            Issue.test_suite_not_included ~test_module:test_mod
+              ~test_runner_file:test_file
+              ~loc:
+                (Location.create ~file:test_file ~start_line:1 ~start_col:0
+                   ~end_line:1 ~end_col:0))
           !missing_includes
       with _ -> [])

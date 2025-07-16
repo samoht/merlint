@@ -1,10 +1,11 @@
 (** E110: Silenced Warning *)
 
-let warning_attr_regex =
+(** Create regex for warning attributes with given prefix *)
+let make_warning_regex prefix =
   Re.compile
     (Re.seq
        [
-         Re.str "[@";
+         Re.str prefix;
          Re.rep Re.space;
          Re.opt (Re.seq [ Re.str "ocaml"; Re.str "." ]);
          Re.str "warning";
@@ -14,108 +15,30 @@ let warning_attr_regex =
          Re.str "\"";
        ])
 
-let warning_attr2_regex =
-  Re.compile
-    (Re.seq
-       [
-         Re.str "[@@";
-         Re.rep Re.space;
-         Re.opt (Re.seq [ Re.str "ocaml"; Re.str "." ]);
-         Re.str "warning";
-         Re.rep Re.space;
-         Re.str "\"-";
-         Re.group (Re.rep1 Re.digit);
-         Re.str "\"";
-       ])
+let warning_attr_regex = make_warning_regex "[@"
+let warning_attr2_regex = make_warning_regex "[@@"
+let warning_attr3_regex = make_warning_regex "[@@@"
 
-let warning_attr3_regex =
-  Re.compile
-    (Re.seq
-       [
-         Re.str "[@@@";
-         Re.rep Re.space;
-         Re.opt (Re.seq [ Re.str "ocaml"; Re.str "." ]);
-         Re.str "warning";
-         Re.rep Re.space;
-         Re.str "\"-";
-         Re.group (Re.rep1 Re.digit);
-         Re.str "\"";
-       ])
-
-let check_line_for_warning filename line_num line =
-  let issues = ref [] in
-  (* Check for [@warning] *)
-  (match Re.exec_opt warning_attr_regex line with
-  | Some m ->
-      let warning_num = Re.Group.get m 1 in
-      issues :=
-        Issue.Silenced_warning
-          {
-            location =
-              Location.create ~file:filename ~start_line:line_num ~start_col:0
-                ~end_line:line_num ~end_col:0;
-            warning_number = warning_num;
-          }
-        :: !issues
-  | None -> ());
-
-  (* Check for [@@warning] *)
-  (match Re.exec_opt warning_attr2_regex line with
-  | Some m ->
-      let warning_num = Re.Group.get m 1 in
-      issues :=
-        Issue.Silenced_warning
-          {
-            location =
-              Location.create ~file:filename ~start_line:line_num ~start_col:0
-                ~end_line:line_num ~end_col:0;
-            warning_number = warning_num;
-          }
-        :: !issues
-  | None -> ());
-
-  (* Check for [@@@warning] *)
-  (match Re.exec_opt warning_attr3_regex line with
-  | Some m ->
-      let warning_num = Re.Group.get m 1 in
-      issues :=
-        Issue.Silenced_warning
-          {
-            location =
-              Location.create ~file:filename ~start_line:line_num ~start_col:0
-                ~end_line:line_num ~end_col:0;
-            warning_number = warning_num;
-          }
-        :: !issues
-  | None -> ());
-
-  !issues
-
-(** Check if content contains silenced warnings *)
-let check_silenced_warnings filename content =
-  let lines = String.split_on_char '\n' content in
-  let rec check_lines line_num acc = function
-    | [] -> acc
-    | line :: rest ->
-        let line_issues = check_line_for_warning filename line_num line in
-        check_lines (line_num + 1) (line_issues @ acc) rest
-  in
-  check_lines 1 [] lines
+(** Check if a regex matches and extract warning number *)
+let check_regex regex line =
+  match Re.exec_opt regex line with
+  | Some m -> Some (Re.Group.get m 1)
+  | None -> None
 
 (** Check all files for silenced warnings *)
 let check ctx =
-  let files = Context.all_files ctx in
-  List.concat_map
-    (fun filename ->
-      if
-        String.ends_with ~suffix:".ml" filename
-        || String.ends_with ~suffix:".mli" filename
-      then
-        try
-          let content =
-            In_channel.with_open_text filename In_channel.input_all
-          in
-          check_silenced_warnings filename content
-        with _ -> []
-      else [])
-    files
+  Traverse.process_ocaml_files ctx (fun filename content ->
+      let warning_regexes =
+        [ warning_attr_regex; warning_attr2_regex; warning_attr3_regex ]
+      in
+
+      (* Check each regex separately and collect all matches *)
+      List.concat_map
+        (fun regex ->
+          Traverse.process_lines_with_location filename content
+            (fun _line_idx line loc ->
+              match check_regex regex line with
+              | Some warning_num ->
+                  Some (Issue.silenced_warning ~loc ~warning_number:warning_num)
+              | None -> None))
+        warning_regexes)

@@ -19,32 +19,23 @@ let is_mutable_type type_sig =
 
 (** Check outline for global mutable state *)
 let check_global_mutable_state ~filename outline =
-  let issues = ref [] in
-
-  List.iter
+  List.filter_map
     (fun item ->
       match item.Outline.kind with
       | Outline.Value -> (
-          match (item.type_sig, item.range) with
-          | Some type_sig, Some range when is_mutable_type type_sig ->
-              let location =
-                Location.create ~file:filename ~start_line:range.start.line
-                  ~start_col:range.start.col ~end_line:range.end_.line
-                  ~end_col:range.end_.col
-              in
+          match
+            (item.type_sig, Traverse.extract_outline_location filename item)
+          with
+          | Some type_sig, Some location when is_mutable_type type_sig ->
               let kind =
                 if Re.execp ref_type_re type_sig then "ref"
                 else if Re.execp array_type_re type_sig then "array"
                 else "mutable"
               in
-              issues :=
-                Issue.Mutable_state { kind; name = item.name; location }
-                :: !issues
-          | _ -> ())
-      | _ -> ())
-    outline;
-
-  !issues
+              Some (Issue.mutable_state ~kind ~name:item.name ~loc:location)
+          | _ -> None)
+      | _ -> None)
+    outline
 
 (** Check for local mutable state usage (refs created inside functions) This is
     more complex and would require AST analysis *)

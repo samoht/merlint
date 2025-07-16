@@ -41,8 +41,8 @@ type kind =
   (* Logging Rules *)
   | Missing_log_source
 
-(** Concrete issue instances *)
-type t =
+(** Issue data types - specific data for each issue kind *)
+type data =
   | Complexity_exceeded of {
       name : string;
       location : Location.t;
@@ -165,14 +165,102 @@ type t =
     }
   | Missing_log_source of { module_name : string; location : Location.t }
 
+type t = { kind : kind; data : data }
+(** Concrete issue instances *)
+
 val pp : t Fmt.t
 (** Pretty-printer for issues *)
 
 val format : t -> string
 (** [Deprecated] Use pp instead *)
 
-val get_type : t -> kind
-(** Get the issue type for an issue *)
+val kind : t -> kind
+(** Get the issue kind for an issue *)
+
+val complexity_exceeded :
+  name:string -> loc:Location.t -> complexity:int -> threshold:int -> t
+(** Constructor functions for creating issues *)
+
+val function_too_long :
+  name:string -> loc:Location.t -> length:int -> threshold:int -> t
+
+val no_obj_magic : loc:Location.t -> t
+val missing_mli_doc : module_name:string -> file:string -> t
+val missing_value_doc : value_name:string -> loc:Location.t -> t
+val bad_doc_style : value_name:string -> loc:Location.t -> message:string -> t
+
+val bad_variant_naming :
+  variant:string -> loc:Location.t -> expected:string -> t
+
+val bad_module_naming :
+  module_name:string -> loc:Location.t -> expected:string -> t
+
+val bad_value_naming :
+  value_name:string -> loc:Location.t -> expected:string -> t
+
+val bad_type_naming : type_name:string -> loc:Location.t -> message:string -> t
+val catch_all_exception : loc:Location.t -> t
+val use_str_module : loc:Location.t -> t
+val use_printf_module : loc:Location.t -> module_used:string -> t
+
+val deep_nesting :
+  name:string -> loc:Location.t -> depth:int -> threshold:int -> t
+
+val missing_standard_function :
+  module_name:string ->
+  type_name:string ->
+  missing:string list ->
+  file:string ->
+  t
+
+val missing_ocamlformat_file : loc:Location.t -> t
+
+val missing_mli_file :
+  ml_file:string -> expected_mli:string -> loc:Location.t -> t
+
+val long_identifier_name :
+  name:string -> loc:Location.t -> underscore_count:int -> threshold:int -> t
+
+val bad_function_naming :
+  function_name:string -> loc:Location.t -> suggestion:string -> t
+
+val redundant_module_name :
+  item_name:string ->
+  module_name:string ->
+  loc:Location.t ->
+  item_type:string ->
+  t
+
+val used_underscore_binding :
+  binding_name:string -> loc:Location.t -> usage_locations:Location.t list -> t
+
+val error_pattern :
+  loc:Location.t -> error_message:string -> suggested_function:string -> t
+
+val boolean_blindness :
+  function_name:string ->
+  loc:Location.t ->
+  bool_count:int ->
+  signature:string ->
+  t
+
+val mutable_state : kind:string -> name:string -> loc:Location.t -> t
+
+val test_exports_module_name :
+  filename:string -> loc:Location.t -> module_name:string -> t
+
+val silenced_warning : loc:Location.t -> warning_number:string -> t
+
+val missing_test_file :
+  module_name:string -> expected_test_file:string -> loc:Location.t -> t
+
+val test_without_library :
+  test_file:string -> expected_module:string -> loc:Location.t -> t
+
+val test_suite_not_included :
+  test_module:string -> test_runner_file:string -> loc:Location.t -> t
+
+val missing_log_source : module_name:string -> loc:Location.t -> t
 
 val error_code : kind -> string
 (** Get the error code for an issue type *)
@@ -183,10 +271,10 @@ val kind_of_error_code : string -> kind option
 val all_kinds : kind list
 (** All issue types, sorted by error code *)
 
-val find_location : t -> Location.t option
+val location : t -> Location.t option
 (** Extract location from an issue *)
 
-val get_description : t -> string
+val description : t -> string
 (** Get issue description without location prefix *)
 
 val compare : t -> t -> int

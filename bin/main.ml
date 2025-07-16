@@ -148,7 +148,7 @@ let print_issue_group (error_code, issues) =
   match sorted_issues with
   | [] -> ()
   | first_issue :: _ ->
-      let issue_type = Merlint.Issue.get_type first_issue in
+      let issue_type = Merlint.Issue.kind first_issue in
 
       (* Print error code and title *)
       let title =
@@ -172,9 +172,9 @@ let print_issue_group (error_code, issues) =
       if List.length sorted_issues > 0 then
         List.iter
           (fun issue ->
-            match Merlint.Issue.find_location issue with
+            match Merlint.Issue.location issue with
             | Some loc ->
-                let desc = Merlint.Issue.get_description issue in
+                let desc = Merlint.Issue.description issue in
                 (* Always print location: description on same line *)
                 (* Terminal will wrap naturally if too long *)
                 Fmt.pr "  - %a: %s@."
@@ -187,9 +187,7 @@ let print_issue_group (error_code, issues) =
 let group_issues_by_code issues =
   List.fold_left
     (fun acc issue ->
-      let error_code =
-        Merlint.Issue.error_code (Merlint.Issue.get_type issue)
-      in
+      let error_code = Merlint.Issue.error_code (Merlint.Issue.kind issue) in
       let current =
         match List.assoc_opt error_code acc with
         | Some issues -> issues
