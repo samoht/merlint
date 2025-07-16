@@ -1,2 +1,2 @@
 let contains_at s = 
-  Stdlib.Str.string_match (Stdlib.Str.regexp ".*@.*") s 0
+  Str.string_match (Str.regexp ".*@.*") s 0

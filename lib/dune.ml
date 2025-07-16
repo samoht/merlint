@@ -212,7 +212,7 @@ let get_lib_modules dune_describe =
           (function
             | Sexplib0.Sexp.List (Sexplib0.Sexp.Atom "library" :: rest) -> (
                 match rest with
-                | [ Sexplib0.Sexp.List lib_contents ] ->
+                | [ Sexplib0.Sexp.List [ Sexplib0.Sexp.List lib_contents ] ] ->
                     (* Check if it's a local library *)
                     let is_local =
                       List.exists
@@ -231,24 +231,21 @@ let get_lib_modules dune_describe =
                       List.concat_map
                         (function
                           | Sexplib0.Sexp.List
-                              (Sexplib0.Sexp.Atom "modules" :: modules) ->
+                              (Sexplib0.Sexp.Atom "modules" :: [ Sexplib0.Sexp.List modules ]) ->
                               List.concat_map
                                 (function
-                                  | Sexplib0.Sexp.List
-                                      [
-                                        Sexplib0.Sexp.Atom "impl";
-                                        Sexplib0.Sexp.List fields;
-                                      ] ->
+                                  | Sexplib0.Sexp.List module_fields ->
+                                      (* Look for name field in module *)
                                       List.filter_map
                                         (function
                                           | Sexplib0.Sexp.List
                                               [
-                                                Sexplib0.Sexp.Atom "obj_name";
+                                                Sexplib0.Sexp.Atom "name";
                                                 Sexplib0.Sexp.Atom name;
                                               ] ->
                                               Some name
                                           | _ -> None)
-                                        fields
+                                        module_fields
                                   | _ -> [])
                                 modules
                           | _ -> [])
