@@ -50,7 +50,7 @@ let extract_var_name kind_str =
   match Astring.String.find_sub ~sub:"Tpat_var \"" kind_str with
   | Some idx -> (
       let after_var =
-        Astring.String.with_index_range ~first:(idx + 10) kind_str
+        Astring.String.with_index_range ~first:(idx + 9) kind_str
       in
       match Ast.extract_quoted_string after_var with
       | Some name_str ->

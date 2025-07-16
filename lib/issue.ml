@@ -1,5 +1,38 @@
-open Issue_type
+(** Issue categories/kinds *)
+type kind =
+  | Complexity
+  | Function_length
+  | Deep_nesting
+  | Obj_magic
+  | Catch_all_exception
+  | Str_module
+  | Printf_module
+  | Variant_naming
+  | Module_naming
+  | Value_naming
+  | Type_naming
+  | Long_identifier
+  | Function_naming
+  | Redundant_module_name
+  | Used_underscore_binding
+  | Error_pattern
+  | Boolean_blindness
+  | Mutable_state
+  | Missing_mli_doc
+  | Missing_value_doc
+  | Bad_doc_style
+  | Missing_standard_function
+  | Missing_ocamlformat_file
+  | Missing_mli_file
+  | Test_exports_module
+  | Silenced_warning
+  | Missing_test_file
+  | Test_without_library
+  | Test_suite_not_included
+  (* Logging Rules *)
+  | Missing_log_source
 
+(** Concrete issue instances *)
 type t =
   | Complexity_exceeded of {
       name : string;
@@ -155,8 +188,107 @@ let get_type = function
   | Test_suite_not_included _ -> Test_suite_not_included
   | Missing_log_source _ -> Missing_log_source
 
-(* Get error code from Issue_type module *)
-let error_code = Issue_type.error_code
+(* Error code mapping *)
+let error_code = function
+  | Complexity -> "E001"
+  | Function_length -> "E005"
+  | Deep_nesting -> "E010"
+  | Obj_magic -> "E100"
+  | Catch_all_exception -> "E105"
+  | Silenced_warning -> "E110"
+  | Str_module -> "E200"
+  | Printf_module -> "E205"
+  | Variant_naming -> "E300"
+  | Module_naming -> "E305"
+  | Value_naming -> "E310"
+  | Type_naming -> "E315"
+  | Long_identifier -> "E320"
+  | Function_naming -> "E325"
+  | Redundant_module_name -> "E330"
+  | Used_underscore_binding -> "E335"
+  | Error_pattern -> "E340"
+  | Boolean_blindness -> "E350"
+  | Mutable_state -> "E351"
+  | Missing_mli_doc -> "E400"
+  | Missing_value_doc -> "E405"
+  | Bad_doc_style -> "E410"
+  | Missing_standard_function -> "E415"
+  | Missing_ocamlformat_file -> "E500"
+  | Missing_mli_file -> "E505"
+  | Test_exports_module -> "E600"
+  | Missing_test_file -> "E605"
+  | Test_without_library -> "E610"
+  | Test_suite_not_included -> "E615"
+  | Missing_log_source -> "E510"
+
+(* Build a reverse mapping from error codes to issue types *)
+let error_code_to_kind =
+  let map = Hashtbl.create 50 in
+  let add_mapping issue_kind =
+    let code = error_code issue_kind in
+    Hashtbl.add map code issue_kind
+  in
+  (* Add all issue types - this ensures we don't miss any *)
+  List.iter add_mapping
+    [
+      Complexity;
+      Function_length;
+      Deep_nesting;
+      Obj_magic;
+      Catch_all_exception;
+      Silenced_warning;
+      Str_module;
+      Printf_module;
+      Variant_naming;
+      Module_naming;
+      Value_naming;
+      Type_naming;
+      Long_identifier;
+      Function_naming;
+      Redundant_module_name;
+      Used_underscore_binding;
+      Error_pattern;
+      Boolean_blindness;
+      Mutable_state;
+      Missing_mli_doc;
+      Missing_value_doc;
+      Bad_doc_style;
+      Missing_standard_function;
+      Missing_ocamlformat_file;
+      Missing_mli_file;
+      Test_exports_module;
+      Missing_test_file;
+      Test_without_library;
+      Test_suite_not_included;
+      Missing_log_source;
+    ];
+  map
+
+(* Derive 'all' list from the error code mappings to ensure consistency *)
+let all_kinds =
+  let codes =
+    Hashtbl.fold
+      (fun code issue_kind acc -> (code, issue_kind) :: acc)
+      error_code_to_kind []
+  in
+  (* Sort by error code to ensure consistent ordering *)
+  codes |> List.sort (fun (a, _) (b, _) -> String.compare a b) |> List.map snd
+
+(* Validation: ensure every issue type has a unique error code *)
+let _ =
+  let unique_codes = Hashtbl.length error_code_to_kind in
+  let total_kinds = List.length all_kinds in
+  if unique_codes <> total_kinds then
+    failwith
+      (Fmt.str
+         "Issue type validation failed: %d unique error codes but %d issue \
+          types"
+         unique_codes total_kinds)
+
+(* Helper function to get issue type from error code *)
+let kind_of_error_code code =
+  let upper_code = String.uppercase_ascii code in
+  try Some (Hashtbl.find error_code_to_kind upper_code) with Not_found -> None
 
 (* Helper to style error codes *)
 let pp_error_code ppf code =
@@ -304,9 +436,6 @@ let pp_issue_content ppf issue =
 let pp_wrapped ppf issue = Fmt.box ~indent:7 pp_issue_content ppf issue
 let pp = pp_wrapped
 let format v = Fmt.str "%a" pp v
-
-let get_grouped_hint issue_type _issues =
-  Rule.get_hint Data.all_rules issue_type
 
 (* Extract location from an issue *)
 let find_location = function

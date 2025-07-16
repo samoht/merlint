@@ -24,7 +24,7 @@ type hint = { text : string; examples : code_example list option }
 type scope = File | Project
 
 type t = {
-  issue : Issue_type.t;
+  issue : Issue.kind;
   title : string;
   category : category;
   scope : scope;

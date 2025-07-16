@@ -6,13 +6,13 @@ let test_parse_range () =
   match RF.parse "all-100..199" with
   | Ok filter ->
       check bool "E001 enabled" true
-        (RF.is_enabled filter Merlint.Issue_type.Complexity);
+        (RF.is_enabled filter Merlint.Issue.Complexity);
       check bool "E100 disabled" false
-        (RF.is_enabled filter Merlint.Issue_type.Obj_magic);
+        (RF.is_enabled filter Merlint.Issue.Obj_magic);
       check bool "E105 disabled" false
-        (RF.is_enabled filter Merlint.Issue_type.Catch_all_exception);
+        (RF.is_enabled filter Merlint.Issue.Catch_all_exception);
       check bool "E200 enabled" true
-        (RF.is_enabled filter Merlint.Issue_type.Str_module)
+        (RF.is_enabled filter Merlint.Issue.Str_module)
   | Error msg -> fail msg
 
 let test_parse_exclusions () =
@@ -21,13 +21,13 @@ let test_parse_exclusions () =
   match RF.parse "all-E110-E205" with
   | Ok filter ->
       check bool "E001 enabled" true
-        (RF.is_enabled filter Merlint.Issue_type.Complexity);
+        (RF.is_enabled filter Merlint.Issue.Complexity);
       check bool "E110 disabled" false
-        (RF.is_enabled filter Merlint.Issue_type.Silenced_warning);
+        (RF.is_enabled filter Merlint.Issue.Silenced_warning);
       check bool "E205 disabled" false
-        (RF.is_enabled filter Merlint.Issue_type.Printf_module);
+        (RF.is_enabled filter Merlint.Issue.Printf_module);
       check bool "E200 enabled" true
-        (RF.is_enabled filter Merlint.Issue_type.Str_module)
+        (RF.is_enabled filter Merlint.Issue.Str_module)
   | Error msg -> fail msg
 
 let test_parse_selective () =
@@ -36,13 +36,13 @@ let test_parse_selective () =
   match RF.parse "E300+E305" with
   | Ok filter ->
       check bool "E300 enabled" true
-        (RF.is_enabled filter Merlint.Issue_type.Variant_naming);
+        (RF.is_enabled filter Merlint.Issue.Variant_naming);
       check bool "E305 enabled" true
-        (RF.is_enabled filter Merlint.Issue_type.Module_naming);
+        (RF.is_enabled filter Merlint.Issue.Module_naming);
       check bool "E001 disabled" false
-        (RF.is_enabled filter Merlint.Issue_type.Complexity);
+        (RF.is_enabled filter Merlint.Issue.Complexity);
       check bool "E200 disabled" false
-        (RF.is_enabled filter Merlint.Issue_type.Str_module)
+        (RF.is_enabled filter Merlint.Issue.Str_module)
   | Error msg -> fail msg
 
 let test_parse_single () =
@@ -51,11 +51,11 @@ let test_parse_single () =
   match RF.parse "E300" with
   | Ok filter ->
       check bool "E300 enabled" true
-        (RF.is_enabled filter Merlint.Issue_type.Variant_naming);
+        (RF.is_enabled filter Merlint.Issue.Variant_naming);
       check bool "E001 disabled" false
-        (RF.is_enabled filter Merlint.Issue_type.Complexity);
+        (RF.is_enabled filter Merlint.Issue.Complexity);
       check bool "E200 disabled" false
-        (RF.is_enabled filter Merlint.Issue_type.Str_module)
+        (RF.is_enabled filter Merlint.Issue.Str_module)
   | Error msg -> fail msg
 
 let test_parse_mixed () =
@@ -64,13 +64,13 @@ let test_parse_mixed () =
   match RF.parse "300..399-E320" with
   | Ok filter ->
       check bool "E300 enabled" true
-        (RF.is_enabled filter Merlint.Issue_type.Variant_naming);
+        (RF.is_enabled filter Merlint.Issue.Variant_naming);
       check bool "E305 enabled" true
-        (RF.is_enabled filter Merlint.Issue_type.Module_naming);
+        (RF.is_enabled filter Merlint.Issue.Module_naming);
       check bool "E320 disabled" false
-        (RF.is_enabled filter Merlint.Issue_type.Long_identifier);
+        (RF.is_enabled filter Merlint.Issue.Long_identifier);
       check bool "E001 disabled" false
-        (RF.is_enabled filter Merlint.Issue_type.Complexity)
+        (RF.is_enabled filter Merlint.Issue.Complexity)
   | Error msg -> fail msg
 
 let test_parse_errors () =

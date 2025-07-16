@@ -1,6 +1,5 @@
 (** Single source of truth for all linting rules data *)
 
-open Issue_type
 open Rule
 
 (* All rules data - single source of truth *)
@@ -48,7 +47,7 @@ which can hide unexpected errors and make debugging difficult. Fix it by
 handling specific exceptions explicitly. If you must catch all exceptions,
 at least log them before re-raising or handling.|};
     Rule.v ~issue:Silenced_warning ~title:"Silenced Compiler Warnings"
-      ~category:Complexity ~scope:File
+      ~category:Complexity ~scope:Project
       ~examples:
         [ Rule.bad Examples.E110.bad_ml; Rule.good Examples.E110.good_ml ]
       {|This issue means you're hiding compiler warnings that indicate potential
@@ -161,7 +160,7 @@ in OCaml. Fix by either using local refs within functions, or preferably by
 using functional approaches with explicit state passing.|};
     (* Documentation Rules *)
     Rule.v ~issue:Missing_mli_doc ~title:"Missing Module Documentation"
-      ~category:Documentation ~scope:File
+      ~category:Documentation ~scope:Project
       ~examples:
         [ Rule.bad Examples.E400.bad_ml; Rule.good Examples.E400.good_ml ]
       {|This issue means your modules lack documentation making them hard to
@@ -190,14 +189,14 @@ in collections and debugging. Fix it by implementing equal, compare, pp
 (pretty-printer), and to_string functions for your types.|};
     (* Project Structure Rules *)
     Rule.v ~issue:Missing_ocamlformat_file ~title:"Missing Code Formatter"
-      ~category:Project_structure ~scope:File
+      ~category:Project_structure ~scope:Project
       ~examples:
         [ Rule.bad Examples.E500.bad_ml; Rule.good Examples.E500.good_ml ]
       {|This issue means your project lacks consistent code formatting. Fix it by
 creating a .ocamlformat file in your project root with 'profile = default'
 and a version number to ensure consistent formatting.|};
     Rule.v ~issue:Missing_mli_file ~title:"Missing Interface Files"
-      ~category:Project_structure ~scope:File
+      ~category:Project_structure ~scope:Project
       ~examples:
         [ Rule.bad Examples.E505.bad_ml; Rule.good Examples.E505.good_ml ]
       {|This issue means your modules lack interface files making their public API
@@ -206,28 +205,28 @@ types should be public. Copy public signatures from the .ml file and remove
 private ones.|};
     (* Testing Rules *)
     Rule.v ~issue:Test_exports_module ~title:"Test Module Convention"
-      ~category:Testing ~scope:File
+      ~category:Testing ~scope:Project
       ~examples:
         [ Rule.bad Examples.E600.bad_ml; Rule.good Examples.E600.good_ml ]
       {|This issue means your test files don't follow the expected convention for
 test organization. Fix it by exporting a 'suite' value instead of running
 tests directly, allowing better test composition and organization.|};
     Rule.v ~issue:Missing_test_file ~title:"Missing Test Coverage"
-      ~category:Testing ~scope:File
+      ~category:Testing ~scope:Project
       ~examples:
         [ Rule.bad Examples.E605.bad_ml; Rule.good Examples.E605.good_ml ]
       {|This issue means some of your library modules lack test coverage making
 bugs more likely. Fix it by creating corresponding test files for each
 library module to ensure your code works correctly.|};
     Rule.v ~issue:Test_without_library ~title:"Orphaned Test Files"
-      ~category:Testing ~scope:File
+      ~category:Testing ~scope:Project
       ~examples:
         [ Rule.bad Examples.E610.bad_ml; Rule.good Examples.E610.good_ml ]
       {|This issue means you have test files that don't correspond to any library
 module making your test organization confusing. Fix it by either removing
 orphaned test files or creating the corresponding library modules.|};
     Rule.v ~issue:Test_suite_not_included ~title:"Excluded Test Suites"
-      ~category:Testing ~scope:File
+      ~category:Testing ~scope:Project
       ~examples:
         [ Rule.bad Examples.E615.bad_ml; Rule.good Examples.E615.good_ml ]
       {|This issue means some test suites aren't included in your main test runner

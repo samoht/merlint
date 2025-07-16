@@ -1,7 +1,8 @@
 (** E100: No Obj.magic *)
 
-let check (t : Context.t) =
+let check (ctx : Context.file) =
   let issues = ref [] in
+  let ast_data = Context.ast ctx in
 
   (* Check identifiers for Obj.magic usage *)
   List.iter
@@ -18,6 +19,6 @@ let check (t : Context.t) =
               issues := Issue.No_obj_magic { location = loc } :: !issues
           | _ -> ())
       | None -> ())
-    (Context.ast t).identifiers;
+    ast_data.identifiers;
 
   !issues

@@ -491,10 +491,10 @@ let categories =
   ]
 
 (* Get all issue types from the single source of truth *)
-let all_issue_types = Issue_type.all
+let all_issue_types = Issue.all_kinds
 
 let get_category issue_type =
-  let code = Issue_type.error_code issue_type in
+  let code = Issue.error_code issue_type in
   let code_num = int_of_string (String.sub code 1 (String.length code - 1)) in
   if code_num < 100 then "Complexity"
   else if code_num < 200 then "Security/Safety"
@@ -574,7 +574,7 @@ let generate_toc () =
     |> String.concat "\n")
 
 let generate_error_section issue_type =
-  let code = Issue_type.error_code issue_type in
+  let code = Issue.error_code issue_type in
   let rule = Rule.get Data.all_rules issue_type in
   let title = rule.title in
   let hint = Rule.get_structured_hint Data.all_rules issue_type in

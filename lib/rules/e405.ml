@@ -1,6 +1,6 @@
 (** E405: Missing Type Documentation *)
 
-let check (_ctx : Context.t) =
+let check (_ctx : Context.file) =
   (* TODO: E405 - Implement missing type documentation check
      This rule should check that public types have documentation.
      Currently not implemented. *)

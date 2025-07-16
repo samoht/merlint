@@ -1,5 +1,17 @@
 (** E325: Function Naming Convention *)
 
+(** Convert Outline.kind to string *)
+let kind_to_string = function
+  | Outline.Value -> "Value"
+  | Outline.Type -> "Type"
+  | Outline.Module -> "Module"
+  | Outline.Class -> "Class"
+  | Outline.Exception -> "Exception"
+  | Outline.Constructor -> "Constructor"
+  | Outline.Field -> "Field"
+  | Outline.Method -> "Method"
+  | Outline.Other s -> s
+
 (** Check if a type signature represents a function *)
 let is_function_type type_sig = String.contains type_sig '>'
 
@@ -74,20 +86,13 @@ let check_single_function _filename name kind type_sig location =
       else None
   | _ -> None
 
-let check ctx =
-  match ctx with
-  | Context.File file_ctx ->
-      let filename = file_ctx.Context.filename in
-      let outline = Context.outline ctx in
-      List.filter_map
-        (fun (item : Outline.item) ->
-          let name = Some item.name in
-          let kind =
-            match item.kind with Outline.Value -> Some "Value" | _ -> None
-          in
-          let type_sig = item.type_sig in
-          let location = extract_outline_location filename item in
-          check_single_function filename name kind type_sig location)
-        outline
-  | Context.Project _ ->
-      failwith "E325 is a file-level rule but received project context"
+let check (ctx : Context.file) =
+  let outline_data = Context.outline ctx in
+  let filename = ctx.filename in
+  List.filter_map
+    (fun item ->
+      let location = extract_outline_location filename item in
+      check_single_function filename (Some item.name)
+        (Some (kind_to_string item.kind))
+        item.type_sig location)
+    outline_data

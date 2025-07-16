@@ -283,11 +283,10 @@ let test_extract_modules_typedtree () =
     `String
       "structure_item (test.ml[1,0+0]..test.ml[1,0+20])\n\
       \  Tstr_module\n\
-      \  module_binding (test.ml[1,0+7]..test.ml[1,0+20])\n\
-      \    \"MyModule/999\"\n\
-      \    module_expr (test.ml[1,0+18]..test.ml[1,0+20])\n\
-      \      Tmod_structure\n\
-      \      []\n"
+      \    MyModule/999\n\
+      \      module_expr (test.ml[1,0+18]..test.ml[1,0+20])\n\
+      \        Tmod_structure\n\
+      \        []\n"
   in
   let result = Ast.of_json ~dialect:Typedtree ~filename:"test.ml" json in
   Alcotest.(check int) "has one module" 1 (List.length result.modules);

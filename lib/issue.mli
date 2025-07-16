@@ -1,8 +1,47 @@
 (** Violation types and formatting
 
     This module defines the types for all possible issues that merlint can
-    detect, along with functions to format them for output. *)
+    detect, along with functions to format them for output.
 
+    It also defines all the different categories of code quality issues that
+    merlint checks for, including complexity issues, style violations, naming
+    convention problems, documentation gaps, and test coverage issues. *)
+
+(** Issue categories/kinds *)
+type kind =
+  | Complexity
+  | Function_length
+  | Deep_nesting
+  | Obj_magic
+  | Catch_all_exception
+  | Str_module
+  | Printf_module
+  | Variant_naming
+  | Module_naming
+  | Value_naming
+  | Type_naming
+  | Long_identifier
+  | Function_naming
+  | Redundant_module_name
+  | Used_underscore_binding
+  | Error_pattern
+  | Boolean_blindness
+  | Mutable_state
+  | Missing_mli_doc
+  | Missing_value_doc
+  | Bad_doc_style
+  | Missing_standard_function
+  | Missing_ocamlformat_file
+  | Missing_mli_file
+  | Test_exports_module
+  | Silenced_warning
+  | Missing_test_file
+  | Test_without_library
+  | Test_suite_not_included
+  (* Logging Rules *)
+  | Missing_log_source
+
+(** Concrete issue instances *)
 type t =
   | Complexity_exceeded of {
       name : string;
@@ -132,14 +171,17 @@ val pp : t Fmt.t
 val format : t -> string
 (** [Deprecated] Use pp instead *)
 
-val get_type : t -> Issue_type.t
+val get_type : t -> kind
 (** Get the issue type for an issue *)
 
-val error_code : Issue_type.t -> string
+val error_code : kind -> string
 (** Get the error code for an issue type *)
 
-val get_grouped_hint : Issue_type.t -> t list -> string
-(** Get a helpful hint for a group of issues of the same type *)
+val kind_of_error_code : string -> kind option
+(** Get the issue type from an error code. Returns None if code is invalid *)
+
+val all_kinds : kind list
+(** All issue types, sorted by error code *)
 
 val find_location : t -> Location.t option
 (** Extract location from an issue *)

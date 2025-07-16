@@ -363,15 +363,7 @@ and parse_node ~dialect (blocks_ref : block list ref) (current_indent : int)
 
       (* Map node types based on dialect *)
       let node_type =
-        match dialect with
-        | Parsetree -> node_type
-        | Typedtree -> (
-            (* For typedtree, some nodes use the same names as parsetree *)
-            match node_type with
-            | "expression" | "pattern" | "structure_item" | "module_binding"
-            | "type_declaration" | "extension_constructor" ->
-                node_type
-            | _ -> node_type)
+        match dialect with Parsetree -> node_type | Typedtree -> node_type
       in
 
       let new_acc =
@@ -391,9 +383,32 @@ and parse_node ~dialect (blocks_ref : block list ref) (current_indent : int)
               acc with
               patterns = { name; location = parent_location } :: acc.patterns;
             }
-        | "Pstr_module" | "Tstr_module" ->
+        | "Pstr_module" ->
             process_module ~dialect blocks_ref content block.indent current_loc
               acc
+        | "Tstr_module" ->
+            (* In typedtree, module name appears as next line *)
+            let module_opt =
+              match peek_block blocks_ref with
+              | Some child
+                when child.indent > block.indent
+                     && not (String.contains child.content '(') ->
+                  let _ = consume_block blocks_ref in
+                  let handle_bang_suffix = true in
+                  let name = parse_name ~handle_bang_suffix child.content in
+                  Some { name; location = current_loc }
+              | _ -> None
+            in
+            let child_acc =
+              parse_node ~dialect blocks_ref (block.indent + 2) current_loc
+                empty_acc
+            in
+            let modules =
+              match module_opt with
+              | Some m -> m :: child_acc.modules
+              | None -> child_acc.modules
+            in
+            { acc with modules = List.rev_append modules acc.modules }
         | "Pstr_type" | "Tstr_type" ->
             process_type ~dialect content current_loc acc
         | "Pstr_exception" | "Tstr_exception" ->
@@ -401,7 +416,7 @@ and parse_node ~dialect (blocks_ref : block list ref) (current_indent : int)
         | "Ppat_construct" | "Tpat_construct" ->
             process_variant ~dialect content parent_location acc
         | "module_binding" ->
-            (* Special handling for module_binding in both dialects *)
+            (* module_binding appears in parsetree, process its children *)
             let child_acc =
               parse_node ~dialect blocks_ref (block.indent + 2) current_loc
                 empty_acc
@@ -452,8 +467,7 @@ let of_text ~dialect text =
 (** Parse AST output from JSON *)
 let of_json ~dialect ~filename json =
   match json with
-  | `String _str ->
-      let text = Yojson.Safe.to_string json in
+  | `String str ->
       (* Fix the filename in the text if needed *)
       let fixed_text =
         if dialect = Parsetree && not (String.equal filename "unknown") then
@@ -461,8 +475,8 @@ let of_json ~dialect ~filename json =
             Re.compile
               (Re.seq [ Re.str "(_none_["; Re.rep1 Re.any; Re.str "]" ])
           in
-          Re.replace_string regex ~by:(filename ^ "[") text
-        else text
+          Re.replace_string regex ~by:(filename ^ "[") str
+        else str
       in
       of_text ~dialect fixed_text
   | _ -> empty_acc

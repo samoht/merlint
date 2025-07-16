@@ -141,24 +141,20 @@ let check_test_mli_file filename content =
     else []
 
 (** Check all files for test convention issues *)
-let check ctx =
-  match ctx with
-  | Context.File _ ->
-      failwith "E600 is a project-wide rule but received file context"
-  | Context.Project ctx ->
-      let files = Lazy.force ctx.all_files in
-      List.concat_map
-        (fun filename ->
-          if
-            String.ends_with ~suffix:".ml" filename
-            || String.ends_with ~suffix:".mli" filename
-          then
-            try
-              let content =
-                In_channel.with_open_text filename In_channel.input_all
-              in
-              check_test_file_exports filename content
-              @ check_test_mli_file filename content
-            with _ -> []
-          else [])
-        files
+let check (ctx : Context.project) =
+  let files = Context.all_files ctx in
+  List.concat_map
+    (fun filename ->
+      if
+        String.ends_with ~suffix:".ml" filename
+        || String.ends_with ~suffix:".mli" filename
+      then
+        try
+          let content =
+            In_channel.with_open_text filename In_channel.input_all
+          in
+          check_test_file_exports filename content
+          @ check_test_mli_file filename content
+        with _ -> []
+      else [])
+    files

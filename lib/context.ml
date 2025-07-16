@@ -2,7 +2,7 @@
 
 exception Analysis_error of string
 
-type file_context = {
+type file = {
   filename : string;
   config : Config.t;
   project_root : string;
@@ -12,7 +12,7 @@ type file_context = {
   content : string Lazy.t;
 }
 
-type project_context = {
+type project = {
   config : Config.t;
   project_root : string;
   all_files : string list Lazy.t;
@@ -21,8 +21,6 @@ type project_context = {
   lib_modules : string list Lazy.t;
   test_modules : string list Lazy.t;
 }
-
-type t = File of file_context | Project of project_context
 
 let create_file ~filename ~config ~project_root ~merlin_result =
   {
@@ -72,48 +70,15 @@ let create_project ~config ~project_root ~all_files ~dune_describe =
     test_modules = lazy (Dune.get_test_modules (Lazy.force dune_desc_lazy));
   }
 
-let filename = function
-  | File ctx -> ctx.filename
-  | Project _ -> failwith "No filename in project context"
+(* File context accessors *)
+let browse ctx = Lazy.force ctx.browse
+let ast ctx = Lazy.force ctx.ast
+let outline ctx = Lazy.force ctx.outline
+let content ctx = Lazy.force ctx.content
 
-let config = function File ctx -> ctx.config | Project ctx -> ctx.config
-
-let project_root = function
-  | File ctx -> ctx.project_root
-  | Project ctx -> ctx.project_root
-
-let browse = function
-  | File ctx -> Lazy.force ctx.browse
-  | Project _ -> failwith "No browse in project context"
-
-let ast = function
-  | File ctx -> Lazy.force ctx.ast
-  | Project _ -> failwith "No ast in project context"
-
-let outline = function
-  | File ctx -> Lazy.force ctx.outline
-  | Project _ -> failwith "No outline in project context"
-
-let content = function
-  | File ctx -> Lazy.force ctx.content
-  | Project _ -> failwith "No content in project context"
-
-let all_files = function
-  | File _ -> failwith "No all_files in file context"
-  | Project ctx -> Lazy.force ctx.all_files
-
-let dune_describe = function
-  | File _ -> failwith "No dune_describe in file context"
-  | Project ctx -> Lazy.force ctx.dune_describe
-
-let executable_modules = function
-  | File _ -> failwith "No executable_modules in file context"
-  | Project ctx -> Lazy.force ctx.executable_modules
-
-let lib_modules = function
-  | File _ -> failwith "No lib_modules in file context"
-  | Project ctx -> Lazy.force ctx.lib_modules
-
-let test_modules = function
-  | File _ -> failwith "No test_modules in file context"
-  | Project ctx -> Lazy.force ctx.test_modules
+(* Project context accessors *)
+let all_files ctx = Lazy.force ctx.all_files
+let dune_describe ctx = Lazy.force ctx.dune_describe
+let executable_modules ctx = Lazy.force ctx.executable_modules
+let lib_modules ctx = Lazy.force ctx.lib_modules
+let test_modules ctx = Lazy.force ctx.test_modules

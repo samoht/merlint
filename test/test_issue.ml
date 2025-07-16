@@ -33,7 +33,7 @@ let test_priority () =
         (priority >= 1 && priority <= 5))
     issues
 
-let test_to_string () =
+let test_find_location () =
   let location =
     Location.create ~file:"test.ml" ~start_line:10 ~start_col:5 ~end_line:10
       ~end_col:5
@@ -43,20 +43,29 @@ let test_to_string () =
     [
       ( Issue.Complexity_exceeded
           { name = "foo"; location; complexity = 15; threshold = 10 },
-        "test.ml:10:5: Function 'foo' has complexity 15 (threshold: 10)" );
+        Some location );
       ( Issue.Function_too_long
           { name = "bar"; location; length = 100; threshold = 50 },
-        "test.ml:10:5: Function 'bar' is 100 lines long (threshold: 50)" );
-      (Issue.No_obj_magic { location }, "test.ml:10:5: Avoid using Obj.magic");
+        Some location );
+      (Issue.No_obj_magic { location }, Some location);
       ( Issue.Missing_mli_doc { module_name = "Test"; file = "test.mli" },
-        "test.mli: Missing module documentation" );
+        Some
+          (Location.create ~file:"test.mli" ~start_line:1 ~start_col:1
+             ~end_line:1 ~end_col:1) );
     ]
   in
 
   List.iter
-    (fun (issue, expected) ->
-      let actual = Issue.format issue in
-      Alcotest.(check string) "issue string" expected actual)
+    (fun (issue, expected_location) ->
+      let actual_location = Issue.find_location issue in
+      match (actual_location, expected_location) with
+      | Some actual, Some expected ->
+          Alcotest.(check string)
+            "file" expected.Location.file actual.Location.file;
+          Alcotest.(check int)
+            "start_line" expected.Location.start_line actual.Location.start_line
+      | None, None -> ()
+      | _ -> Alcotest.fail "Location mismatch")
     test_cases
 
 let test_get_type () =
@@ -68,11 +77,11 @@ let test_get_type () =
     [
       ( Issue.Complexity_exceeded
           { name = "foo"; location; complexity = 15; threshold = 10 },
-        Issue_type.Complexity );
+        Issue.Complexity );
       ( Issue.Function_too_long
           { name = "bar"; location; length = 100; threshold = 50 },
-        Issue_type.Function_length );
-      (Issue.No_obj_magic { location }, Issue_type.Obj_magic);
+        Issue.Function_length );
+      (Issue.No_obj_magic { location }, Issue.Obj_magic);
     ]
   in
 
@@ -84,17 +93,28 @@ let test_get_type () =
         (actual_type = expected_type))
     test_cases
 
-let test_pp () =
-  let location =
+let test_compare () =
+  let location1 =
     Location.create ~file:"test.ml" ~start_line:5 ~start_col:10 ~end_line:5
       ~end_col:10
   in
-  let issue = Issue.No_obj_magic { location } in
+  let location2 =
+    Location.create ~file:"test.ml" ~start_line:10 ~start_col:5 ~end_line:10
+      ~end_col:5
+  in
 
-  let output = Fmt.to_to_string Issue.pp issue in
+  (* Test that issues are sorted by priority, then location *)
+  let high_priority = Issue.No_obj_magic { location = location1 } in
+  (* Priority 1 *)
+  let medium_priority =
+    Issue.Function_too_long
+      { name = "foo"; location = location2; length = 100; threshold = 50 }
+  in
+  (* Priority 2 *)
+
   Alcotest.(check bool)
-    "pp output contains location" true
-    (Re.execp (Re.compile (Re.str "test.ml:5:10")) output)
+    "higher priority issue comes first" true
+    (Issue.compare high_priority medium_priority < 0)
 
 let test_equal () =
   let loc1 =
@@ -124,12 +144,12 @@ let test_grouped_hints () =
   (* Test that find_grouped_hint works for different issue types *)
   let test_cases =
     [
-      ( Issue_type.Complexity,
+      ( Issue.Complexity,
         [
           Issue.Complexity_exceeded
             { name = "foo"; location; complexity = 15; threshold = 10 };
         ] );
-      ( Issue_type.Missing_mli_file,
+      ( Issue.Missing_mli_file,
         [
           Issue.Missing_mli_file
             { ml_file = "test.ml"; expected_mli = "test.mli"; location };
@@ -138,8 +158,8 @@ let test_grouped_hints () =
   in
 
   List.iter
-    (fun (issue_type, issues) ->
-      let hint = Issue.get_grouped_hint issue_type issues in
+    (fun (issue_type, _issues) ->
+      let hint = Rule.get_hint Data.all_rules issue_type in
       Alcotest.(check bool)
         "grouped hint is non-empty" true
         (String.length hint > 0))
@@ -150,9 +170,9 @@ let suite =
     ( "issue",
       [
         Alcotest.test_case "issue priority" `Quick test_priority;
-        Alcotest.test_case "to_string" `Quick test_to_string;
+        Alcotest.test_case "find_location" `Quick test_find_location;
         Alcotest.test_case "get_type" `Quick test_get_type;
-        Alcotest.test_case "pp" `Quick test_pp;
+        Alcotest.test_case "compare" `Quick test_compare;
         Alcotest.test_case "equal" `Quick test_equal;
         Alcotest.test_case "grouped hints" `Quick test_grouped_hints;
       ] );

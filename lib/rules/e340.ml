@@ -55,20 +55,16 @@ let check_error_patterns file_content =
 
   List.rev !issues
 
-let check ctx =
-  match ctx with
-  | Context.File file_ctx ->
-      let file_path = file_ctx.Context.filename in
-      let file_content = Context.content ctx in
-      let issues = check_error_patterns file_content in
-      (* Update locations with file path *)
-      List.map
-        (fun issue ->
-          match issue with
-          | Issue.Error_pattern ({ location; _ } as data) ->
-              Issue.Error_pattern
-                { data with location = { location with file = file_path } }
-          | _ -> issue)
-        issues
-  | Context.Project _ ->
-      failwith "E340 is a file-level rule but received project context"
+let check (ctx : Context.file) =
+  let content = Context.content ctx in
+  let filename = ctx.filename in
+  let issues = check_error_patterns content in
+  (* Update location with filename *)
+  List.map
+    (fun issue ->
+      match issue with
+      | Issue.Error_pattern data ->
+          Issue.Error_pattern
+            { data with location = { data.location with file = filename } }
+      | _ -> issue)
+    issues

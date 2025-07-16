@@ -53,11 +53,7 @@ let _check_local_mutable_state ~filename:_ _typedtree =
      For now, we only check global state via outline *)
   []
 
-let check ctx =
-  match ctx with
-  | Context.File file_ctx ->
-      let filename = file_ctx.Context.filename in
-      let outline = Context.outline ctx in
-      check_global_mutable_state ~filename outline
-  | Context.Project _ ->
-      failwith "E351 is a file-level rule but received project context"
+let check (ctx : Context.file) =
+  let outline_data = Context.outline ctx in
+  let filename = ctx.filename in
+  check_global_mutable_state ~filename outline_data

@@ -1,14 +1,14 @@
 (** Rule filter implementation for -r/--rules flag *)
 
 type t = {
-  enabled : Issue_type.t list option; (* None means all enabled *)
-  disabled : Issue_type.t list;
+  enabled : Issue.kind list option; (* None means all enabled *)
+  disabled : Issue.kind list;
 }
 
 let empty = { enabled = None; disabled = [] }
 
 (** Parse error code to issue type *)
-let parse_error_code code = Issue_type.of_error_code code
+let parse_error_code code = Issue.kind_of_error_code code
 
 (** Parse a range of error codes like "100..199" *)
 let parse_range range_str =
@@ -34,7 +34,7 @@ let parse_single_spec spec =
   match spec with
   | "A" | "a" | "all" ->
       (* All warnings *)
-      Ok Issue_type.all
+      Ok Issue.all_kinds
   | s when String.contains s '.' ->
       (* Range specification *)
       parse_range s
@@ -43,8 +43,7 @@ let parse_single_spec spec =
       | Some issue_type -> Ok [ issue_type ]
       | None ->
           let all_codes =
-            Issue_type.all
-            |> List.map Issue_type.error_code
+            Issue.all_kinds |> List.map Issue.error_code
             |> List.sort String.compare |> String.concat ", "
           in
           Error
@@ -95,7 +94,7 @@ let parse spec =
                 { filter with disabled = types @ filter.disabled }
               else
                 match types with
-                | t when t = Issue_type.all ->
+                | t when t = Issue.all_kinds ->
                     (* Special case: "all" enables all *)
                     { filter with enabled = None }
                 | _ -> (

@@ -2,10 +2,10 @@ open Printf
 
 let string_contains s sub = Re.execp (Re.compile (Re.str sub)) s
 
-(* Get all error codes from Issue_type module *)
+(* Get all error codes from Issue module *)
 let get_all_error_codes () =
-  Merlint.Issue_type.all
-  |> List.map Merlint.Issue_type.error_code
+  Merlint.Issue.all_kinds
+  |> List.map Merlint.Issue.error_code
   |> List.map String.lowercase_ascii
 
 (* Extract error code from directory name *)

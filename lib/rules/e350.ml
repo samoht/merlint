@@ -56,10 +56,7 @@ let check_boolean_blindness ~filename ~outline =
         items
 
 (** Main check function *)
-let check ctx =
-  match ctx with
-  | Context.File file_ctx ->
-      check_boolean_blindness ~filename:file_ctx.Context.filename
-        ~outline:(Some (Context.outline ctx))
-  | Context.Project _ ->
-      failwith "E350 is a file-level rule but received project context"
+let check (ctx : Context.file) =
+  let outline_data = Context.outline ctx in
+  let filename = ctx.filename in
+  check_boolean_blindness ~filename ~outline:(Some outline_data)

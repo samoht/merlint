@@ -25,19 +25,13 @@ let create_missing_test_issue module_name files =
       location;
     }
 
-let check ctx =
-  match ctx with
-  | Context.File _ ->
-      failwith "E605 is a project-wide rule but received file context"
-  | Context.Project _ ->
-      let files = Context.all_files ctx in
-      let lib_modules = Context.lib_modules ctx in
-      let test_modules = Context.test_modules ctx in
+let check (ctx : Context.project) =
+  let files = Context.all_files ctx in
+  let lib_modules = Context.lib_modules ctx in
+  let test_modules = Context.test_modules ctx in
 
-      let missing_tests =
-        List.filter
-          (fun lib_mod -> not (List.mem lib_mod test_modules))
-          lib_modules
-      in
+  let missing_tests =
+    List.filter (fun lib_mod -> not (List.mem lib_mod test_modules)) lib_modules
+  in
 
-      List.map (fun m -> create_missing_test_issue m files) missing_tests
+  List.map (fun m -> create_missing_test_issue m files) missing_tests

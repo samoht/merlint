@@ -9,7 +9,7 @@ val parse : string -> (t, string) result
     - "E300+E305" - only E300 and E305
     - "all-100..199" - all except error codes 100-199 *)
 
-val is_enabled : t -> Issue_type.t -> bool
+val is_enabled : t -> Issue.kind -> bool
 (** Check if a specific issue type is enabled in the filter *)
 
 val filter_issues : t -> Issue.t list -> Issue.t list

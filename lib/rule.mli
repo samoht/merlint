@@ -27,7 +27,7 @@ type scope =
   | Project  (** Rule runs once for the entire project *)
 
 type t = {
-  issue : Issue_type.t;  (** The link to the linter's logic *)
+  issue : Issue.kind;  (** The link to the linter's logic *)
   title : string;  (** The official title *)
   category : category;  (** The rule category *)
   scope : scope;  (** Whether rule is per-file or project-wide *)
@@ -37,7 +37,7 @@ type t = {
 (** The canonical definition of a single linting rule *)
 
 val v :
-  issue:Issue_type.t ->
+  issue:Issue.kind ->
   title:string ->
   category:category ->
   ?scope:scope ->
@@ -46,7 +46,7 @@ val v :
   t
 (** Create a new rule, defaults to File scope *)
 
-val get : t list -> Issue_type.t -> t
+val get : t list -> Issue.kind -> t
 (** Get a rule by its issue type *)
 
 val category_name : category -> string
@@ -61,11 +61,11 @@ type code_example = {
 
 type hint = { text : string; examples : code_example list option }
 
-val get_hint_title : t list -> Issue_type.t -> string
+val get_hint_title : t list -> Issue.kind -> string
 (** Get a short title for a specific issue type *)
 
-val get_hint : t list -> Issue_type.t -> string
+val get_hint : t list -> Issue.kind -> string
 (** Get a hint for a specific issue type *)
 
-val get_structured_hint : t list -> Issue_type.t -> hint
+val get_structured_hint : t list -> Issue.kind -> hint
 (** Get a structured hint with text and optional code examples *)

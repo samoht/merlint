@@ -12,7 +12,7 @@ let rec element_to_markdown = function
   | Code s -> Fmt.str "```ocaml\n%s\n```\n" s
   | Rule issue_type ->
       let rule = Rule.get Data.all_rules issue_type in
-      let code = Issue_type.error_code issue_type in
+      let code = Issue.error_code issue_type in
       let examples_md =
         match rule.examples with
         | [] -> ""

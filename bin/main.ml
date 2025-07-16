@@ -161,7 +161,7 @@ let print_issue_group (error_code, issues) =
         title;
 
       (* Print hint if available *)
-      let hint = Merlint.Issue.get_grouped_hint issue_type sorted_issues in
+      let hint = Merlint.Rule.get_hint Merlint.Data.all_rules issue_type in
       let wrapped_hint = wrap_text ~indent:2 hint in
       (* Print each line of the hint in gray *)
       String.split_on_char '\n' wrapped_hint

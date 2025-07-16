@@ -40,14 +40,8 @@ let analyze_value_binding config binding =
         else []
   | None -> []
 
-let check ctx =
-  match ctx with
-  | Context.File file_ctx ->
-      let config =
-        { max_function_length = file_ctx.Context.config.max_function_length }
-      in
-      let browse_data = Context.browse ctx in
-      let bindings = Browse.get_value_bindings browse_data in
-      List.concat_map (analyze_value_binding config) bindings
-  | Context.Project _ ->
-      failwith "E005 is a file-level rule but received project context"
+let check (ctx : Context.file) =
+  let config = { max_function_length = ctx.config.max_function_length } in
+  let browse_data = Context.browse ctx in
+  let bindings = Browse.get_value_bindings browse_data in
+  List.concat_map (analyze_value_binding config) bindings

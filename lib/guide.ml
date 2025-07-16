@@ -1,13 +1,13 @@
 (** Style guide document structure *)
 
-open Issue_type
+(* Guide module - uses Issue.kind for issue types *)
 
 type element =
   | Title of string
   | Section of string * element list
   | Paragraph of string
   | Code of string  (** Code examples *)
-  | Rule of Issue_type.t
+  | Rule of Issue.kind
 
 let content =
   [

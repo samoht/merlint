@@ -5,7 +5,7 @@
     - Should start with an uppercase letter
     - Should use PascalCase (e.g., MyVariant, SomeConstructor) *)
 
-val check : Context.t -> Issue.t list
+val check : Context.file -> Issue.t list
 (** [check AST] analyzes the AST to find variant constructors that don't follow
     naming conventions. Returns a list of issues for variants that violate the
     rule. *)
