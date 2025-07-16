@@ -116,10 +116,28 @@ let extract_source_files sexp =
                 List.concat_map
                   (function
                     | Sexplib0.Sexp.List
+                        (Sexplib0.Sexp.Atom "impl" :: Sexplib0.Sexp.Atom path :: _) ->
+                        (* Convert build path to source path *)
+                        let source_path =
+                          if String.starts_with ~prefix:"_build/default/" path
+                          then String.sub path 15 (String.length path - 15)
+                          else path
+                        in
+                        [ source_path ]
+                    | Sexplib0.Sexp.List
                         [
                           Sexplib0.Sexp.Atom "impl";
                           Sexplib0.Sexp.List [ Sexplib0.Sexp.Atom path ];
                         ] ->
+                        (* Convert build path to source path *)
+                        let source_path =
+                          if String.starts_with ~prefix:"_build/default/" path
+                          then String.sub path 15 (String.length path - 15)
+                          else path
+                        in
+                        [ source_path ]
+                    | Sexplib0.Sexp.List
+                        (Sexplib0.Sexp.Atom "intf" :: Sexplib0.Sexp.Atom path :: _) ->
                         (* Convert build path to source path *)
                         let source_path =
                           if String.starts_with ~prefix:"_build/default/" path
@@ -239,10 +257,9 @@ let get_lib_modules dune_describe =
                                       List.filter_map
                                         (function
                                           | Sexplib0.Sexp.List
-                                              [
-                                                Sexplib0.Sexp.Atom "name";
-                                                Sexplib0.Sexp.Atom name;
-                                              ] ->
+                                              (Sexplib0.Sexp.Atom "name"
+                                              :: Sexplib0.Sexp.Atom name
+                                              :: _) ->
                                               Some name
                                           | _ -> None)
                                         module_fields
