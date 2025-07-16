@@ -506,16 +506,16 @@ let get_category issue_type =
 
 let format_hint_html hint =
   let example_html =
-    match hint.Hints.examples with
+    match hint.Rule.examples with
     | None -> ""
     | Some examples ->
         (* Separate good and bad examples *)
         let bad_examples =
-          List.filter (fun ex -> not ex.Hints.is_good) examples
+          List.filter (fun ex -> not ex.Rule.is_good) examples
         in
-        let good_examples = List.filter (fun ex -> ex.Hints.is_good) examples in
+        let good_examples = List.filter (fun ex -> ex.Rule.is_good) examples in
         let format_example ex =
-          let label = if ex.Hints.is_good then "GOOD" else "BAD" in
+          let label = if ex.Rule.is_good then "GOOD" else "BAD" in
           let desc =
             match ex.description with
             | None -> ""
@@ -577,7 +577,7 @@ let generate_error_section issue_type =
   let code = Issue_type.error_code issue_type in
   let rule = Rule.get Data.all_rules issue_type in
   let title = rule.title in
-  let hint = Hints.get_structured_hint issue_type in
+  let hint = Rule.get_structured_hint Data.all_rules issue_type in
   Fmt.str
     {|<div class="error-card" id="%s">
     <div>

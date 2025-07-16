@@ -5,7 +5,7 @@
     - Should start with an uppercase letter
     - Should use PascalCase (e.g., MyVariant, SomeConstructor) *)
 
-val check : Typedtree.t -> Issue.t list
-(** [check typedtree] analyzes the typedtree to find variant constructors that
-    don't follow naming conventions. Returns a list of issues for variants that
-    violate the rule. *)
+val check : Context.t -> Issue.t list
+(** [check AST] analyzes the AST to find variant constructors that don't follow
+    naming conventions. Returns a list of issues for variants that violate the
+    rule. *)

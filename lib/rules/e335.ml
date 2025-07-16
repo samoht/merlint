@@ -1,10 +1,9 @@
 (** E335: Used Underscore-Prefixed Binding *)
 
-let check (typedtree : Typedtree.t) =
-  let open Typedtree in
+let check ctx =
   (* First, collect all underscore-prefixed pattern bindings *)
   let underscore_bindings =
-    typedtree.patterns
+    (Context.ast ctx).patterns
     |> List.filter_map (fun (elt : Ast.elt) ->
            let name = Ast.name_to_string elt.name in
            if String.length name > 0 && name.[0] = '_' then
@@ -19,7 +18,7 @@ let check (typedtree : Typedtree.t) =
     (fun (binding_name, binding_loc) ->
       (* Find all usages of this binding *)
       let usage_locations =
-        typedtree.identifiers
+        (Context.ast ctx).identifiers
         |> List.filter_map (fun (elt : Ast.elt) ->
                let ident_name = Ast.name_to_string elt.name in
                if ident_name = binding_name then elt.location else None)

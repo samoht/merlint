@@ -6,7 +6,7 @@
 
 type config = { max_complexity : int }
 
-val check : config -> Browse.t -> Issue.t list
+val check : Context.t -> Issue.t list
 (** [check config browse_data] analyzes the browse data to find functions with
     cyclomatic complexity exceeding the configured threshold. The configuration
     record contains max_complexity field (default: 10). Returns a list of issues

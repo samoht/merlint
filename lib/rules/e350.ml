@@ -56,5 +56,10 @@ let check_boolean_blindness ~filename ~outline =
         items
 
 (** Main check function *)
-let check ~filename ~outline (_typedtree : Typedtree.t) =
-  check_boolean_blindness ~filename ~outline
+let check ctx =
+  match ctx with
+  | Context.File file_ctx ->
+      check_boolean_blindness ~filename:file_ctx.Context.filename
+        ~outline:(Some (Context.outline ctx))
+  | Context.Project _ ->
+      failwith "E350 is a file-level rule but received project context"

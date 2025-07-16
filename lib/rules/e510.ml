@@ -1,6 +1,6 @@
 (** E510: Missing Log Source *)
 
-let check (_files : string list) =
+let check (_ctx : Context.t) =
   (* TODO: E510 - Implement missing log source check
      This rule should check that logging calls include a source parameter.
      Currently not implemented. *)

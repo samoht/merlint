@@ -103,7 +103,8 @@ let check_silenced_warnings filename content =
   check_lines 1 [] lines
 
 (** Check all files for silenced warnings *)
-let check files =
+let check ctx =
+  let files = Context.all_files ctx in
   List.concat_map
     (fun filename ->
       if

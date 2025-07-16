@@ -151,7 +151,9 @@ let print_issue_group (error_code, issues) =
       let issue_type = Merlint.Issue.get_type first_issue in
 
       (* Print error code and title *)
-      let title = Merlint.Hints.get_hint_title issue_type in
+      let title =
+        Merlint.Rule.get_hint_title Merlint.Data.all_rules issue_type
+      in
       Fmt.pr "  %a %a@."
         (Fmt.styled `Yellow Fmt.string)
         (Fmt.str "[%s]" error_code)
@@ -236,7 +238,7 @@ let run_analysis project_root filtered_files rule_filter show_profile =
   (* Reset profiling if enabled *)
   if show_profile then Merlint.Profiling.reset ();
 
-  let config = Merlint.Config_file.load_from_path project_root in
+  let config = Merlint.Config.load_from_path project_root in
   let rules_config = { Merlint.Rules.merlint_config = config; project_root } in
   Log.info (fun m ->
       m "Starting visual analysis on %d files" (List.length filtered_files));
@@ -290,7 +292,8 @@ let analyze_files ?(exclude_patterns = []) ?rule_filter ?(show_profile = false)
   let all_files =
     if files = [] then
       (* Use dune describe to get project files *)
-      Merlint.Dune.get_project_files project_root
+      let dune_describe = Merlint.Dune.describe project_root in
+      Merlint.Dune.get_project_files dune_describe
     else expand_paths ~suffix:".ml" files @ expand_paths ~suffix:".mli" files
   in
 

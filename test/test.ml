@@ -7,9 +7,9 @@ let () = setup_log (Some Debug)
 
 let () =
   let suites =
-    Test_config.suite @ Test_browse.suite @ Test_outline.suite
-    @ Test_typedtree.suite @ Test_parsetree.suite @ Test_dune.suite
-    @ Test_issue.suite @ Test_location.suite @ Test_merlin.suite
-    @ Test_report.suite @ Test_rules.suite @ [ Test_rule_filter.suite ]
+    Test_config.suite @ Test_browse.suite @ Test_outline.suite @ Test_ast.suite
+    @ Test_dune.suite @ Test_issue.suite @ Test_location.suite
+    @ Test_merlin.suite @ Test_report.suite @ Test_rules.suite
+    @ [ Test_rule_filter.suite ]
   in
   Alcotest.run "merlint" suites

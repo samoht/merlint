@@ -9,6 +9,33 @@ type elt = { name : name; location : Location.t option }
 type block = { indent : int; content : string; loc : Location.t option }
 (** A block is the fundamental unit, not a line *)
 
+type dialect =
+  | Parsetree
+  | Typedtree
+      (** AST dialect to distinguish between parsetree and typedtree formats *)
+
+type expr_node =
+  | Construct of { name : string; args : expr_node list }
+      (** Constructor application like Error(...) *)
+  | Apply of { func : expr_node; args : expr_node list }
+      (** Function application like Fmt.str "..." 42 *)
+  | Ident of string  (** Identifier like Fmt.str *)
+  | Constant of string  (** Constants like strings or integers *)
+  | Other  (** Other expression nodes we don't care about *)
+
+type t = {
+  identifiers : elt list;
+      (** References to existing values/functions in expressions *)
+  patterns : elt list;  (** New value bindings being defined *)
+  modules : elt list;  (** Module definitions *)
+  types : elt list;  (** Type definitions *)
+  exceptions : elt list;  (** Exception definitions *)
+  variants : elt list;  (** Variant constructors *)
+  expressions : (expr_node * Location.t option) list;
+      (** Expression trees for pattern detection (typedtree only) *)
+}
+(** Unified AST representation for both parsetree and typedtree *)
+
 val extract_quoted_string : string -> string option
 (** Extract quoted string from line *)
 
@@ -43,9 +70,11 @@ val extract_location_from_parsetree : string -> (int * int) option
 val extract_filename_from_parsetree : string -> string
 (** Extract filename from parsetree text, returns "unknown" if not found *)
 
-type 'acc merge_fn = 'acc -> 'acc -> 'acc
-(** Generic merge accumulator function type *)
+val of_text : dialect:dialect -> string -> t
+(** Parse AST output from raw text based on the specified dialect *)
 
-type 'acc parse_node_fn =
-  block list ref -> int -> Location.t option -> 'acc -> 'acc
-(** Generic parse node function type *)
+val of_json : dialect:dialect -> filename:string -> Yojson.Safe.t -> t
+(** Parse AST output from JSON with the specified dialect and filename *)
+
+val pp : t Fmt.t
+(** Pretty print the AST *)

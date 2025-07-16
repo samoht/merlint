@@ -4,54 +4,19 @@ let src = Logs.Src.create "merlint.dune" ~doc:"Dune interface"
 
 module Log = (val Logs.src_log src : Logs.LOG)
 
-(* Cache for dune describe output *)
-let dune_describe_cache : (string, string) Hashtbl.t = Hashtbl.create 1
-
 type describe = Sexplib0.Sexp.t
 (** Parsed dune describe output *)
 
 let run_dune_describe project_root =
-  (* Check cache first *)
-  match Hashtbl.find_opt dune_describe_cache project_root with
-  | Some cached ->
+  let cmd = Fmt.str "dune describe --root %s" (Filename.quote project_root) in
+  match Command.run cmd with
+  | Ok output ->
       Log.debug (fun m ->
-          m "Using cached dune describe output for %s" project_root);
-      Ok cached
-  | None -> (
-      let cmd =
-        Fmt.str "cd %s && dune describe" (Filename.quote project_root)
-      in
-      Log.debug (fun m -> m "Running dune describe command: %s" cmd);
-      let ic = Unix.open_process_in cmd in
-      let rec read_all acc =
-        try
-          let line = input_line ic in
-          read_all (line :: acc)
-        with End_of_file -> List.rev acc
-      in
-      let output = read_all [] in
-      let status = Unix.close_process_in ic in
-      match status with
-      | Unix.WEXITED 0 ->
-          let sexp_str = String.concat "\n" output in
-          Log.debug (fun m ->
-              m "Dune describe successful, output length: %d"
-                (String.length sexp_str));
-          (* Cache the result *)
-          Hashtbl.add dune_describe_cache project_root sexp_str;
-          Ok sexp_str
-      | Unix.WEXITED 127 ->
-          Log.err (fun m -> m "dune not found");
-          Error "dune not found. Please ensure dune is installed"
-      | Unix.WEXITED code ->
-          Log.err (fun m -> m "Dune describe failed with exit code %d" code);
-          Error (Fmt.str "Dune describe failed with exit code %d" code)
-      | Unix.WSIGNALED n ->
-          Log.err (fun m -> m "Dune describe killed by signal %d" n);
-          Error (Fmt.str "Dune describe was killed by signal %d" n)
-      | Unix.WSTOPPED n ->
-          Log.err (fun m -> m "Dune describe stopped by signal %d" n);
-          Error (Fmt.str "Dune describe was stopped by signal %d" n))
+          m "Dune describe successful, output length: %d" (String.length output));
+      Ok output
+  | Error msg ->
+      Log.err (fun m -> m "Dune describe failed: %s" msg);
+      Error msg
 
 let parse_dune_describe sexp_str =
   try Parsexp.Single.parse_string_exn sexp_str
@@ -90,30 +55,6 @@ let ensure_project_built project_root =
     Log.debug (fun m -> m "_build directory already exists");
     Ok ())
 
-let is_executable project_root ml_file =
-  (* Only use dune describe to get actual stanza information *)
-  match run_dune_describe project_root with
-  | Error err ->
-      Log.warn (fun m -> m "Could not run dune describe: %s" err);
-      (* If dune describe fails, we can't determine if it's an executable *)
-      false
-  | Ok sexp_str ->
-      (* Parse the s-expression and check if file belongs to executable stanza *)
-      let module_name = Filename.basename (Filename.remove_extension ml_file) in
-      let module_name_capitalized = String.capitalize_ascii module_name in
-      (* Use Re to find executable or test stanzas *)
-      let executables_regex = Re.compile (Re.str "executables") in
-      let tests_regex = Re.compile (Re.str "tests") in
-      let module_regex = Re.compile (Re.str module_name_capitalized) in
-      let has_executable_stanza =
-        (Re.execp executables_regex sexp_str || Re.execp tests_regex sexp_str)
-        && Re.execp module_regex sexp_str
-      in
-      has_executable_stanza
-
-(** Clear the dune describe cache *)
-let clear_cache () = Hashtbl.clear dune_describe_cache
-
 (** Extract executable names (not their modules) from dune describe output *)
 let extract_executables_from_sexp sexp =
   (* The structure is (root ...) (build_context ...) (executables ...) ... *)
@@ -149,25 +90,18 @@ let extract_executables_from_sexp sexp =
   | _ -> []
 
 (** Get executable information for all files at once *)
-let get_executable_info project_root =
-  match run_dune_describe project_root with
-  | Error err ->
-      Log.warn (fun m -> m "Could not run dune describe: %s" err);
-      (* Return empty set if dune describe fails *)
-      []
-  | Ok sexp_str -> (
-      try
-        let sexp = Parsexp.Single.parse_string_exn sexp_str in
-        let executable_modules = extract_executables_from_sexp sexp in
-        Log.debug (fun m ->
-            m "Found executable modules: %s"
-              (String.concat ", " executable_modules));
-        executable_modules
-      with exn ->
-        Log.err (fun m ->
-            m "Failed to parse dune describe output: %s"
-              (Printexc.to_string exn));
-        [])
+let get_executable_info dune_describe =
+  let executable_modules = extract_executables_from_sexp dune_describe in
+  Log.debug (fun m ->
+      m "Found executable modules: %s" (String.concat ", " executable_modules));
+  executable_modules
+
+let is_executable dune_describe ml_file =
+  (* Get executable modules and check if this file is one of them *)
+  let executable_modules = get_executable_info dune_describe in
+  let module_name = Filename.basename (Filename.remove_extension ml_file) in
+  let module_name_capitalized = String.capitalize_ascii module_name in
+  List.mem module_name_capitalized executable_modules
 
 (** Extract all source files from dune describe output *)
 let extract_source_files sexp =
@@ -258,24 +192,97 @@ let extract_source_files sexp =
   extract_from_stanzas sexp
 
 (** Get all project source files using dune describe *)
-let get_project_files project_root =
-  match run_dune_describe project_root with
-  | Error err ->
-      Log.warn (fun m -> m "Could not run dune describe: %s" err);
-      (* Return empty list if dune describe fails *)
-      []
-  | Ok sexp_str -> (
-      try
-        let sexp = Parsexp.Single.parse_string_exn sexp_str in
-        let files = extract_source_files sexp in
-        (* Remove duplicates and sort *)
-        let unique_files = List.sort_uniq String.compare files in
-        Log.debug (fun m ->
-            m "Found %d source files from dune describe"
-              (List.length unique_files));
-        unique_files
-      with exn ->
-        Log.err (fun m ->
-            m "Failed to parse dune describe output: %s"
-              (Printexc.to_string exn));
-        [])
+let get_project_files dune_describe =
+  try
+    let files = extract_source_files dune_describe in
+    (* Remove duplicates and sort *)
+    let unique_files = List.sort_uniq String.compare files in
+    Log.debug (fun m ->
+        m "Found %d source files from dune describe" (List.length unique_files));
+    unique_files
+  with exn ->
+    Log.err (fun m ->
+        m "Failed to extract source files: %s" (Printexc.to_string exn));
+    []
+
+let get_lib_modules dune_describe =
+  let rec extract = function
+    | Sexplib0.Sexp.List items ->
+        List.concat_map
+          (function
+            | Sexplib0.Sexp.List (Sexplib0.Sexp.Atom "library" :: rest) -> (
+                match rest with
+                | [ Sexplib0.Sexp.List lib_contents ] ->
+                    (* Check if it's a local library *)
+                    let is_local =
+                      List.exists
+                        (function
+                          | Sexplib0.Sexp.List
+                              [
+                                Sexplib0.Sexp.Atom "local";
+                                Sexplib0.Sexp.Atom "true";
+                              ] ->
+                              true
+                          | _ -> false)
+                        lib_contents
+                    in
+                    if is_local then
+                      (* Extract modules from library *)
+                      List.concat_map
+                        (function
+                          | Sexplib0.Sexp.List
+                              (Sexplib0.Sexp.Atom "modules" :: modules) ->
+                              List.concat_map
+                                (function
+                                  | Sexplib0.Sexp.List
+                                      [
+                                        Sexplib0.Sexp.Atom "impl";
+                                        Sexplib0.Sexp.List fields;
+                                      ] ->
+                                      List.filter_map
+                                        (function
+                                          | Sexplib0.Sexp.List
+                                              [
+                                                Sexplib0.Sexp.Atom "obj_name";
+                                                Sexplib0.Sexp.Atom name;
+                                              ] ->
+                                              Some name
+                                          | _ -> None)
+                                        fields
+                                  | _ -> [])
+                                modules
+                          | _ -> [])
+                        lib_contents
+                    else []
+                | _ -> [])
+            | sexp -> extract sexp)
+          items
+    | _ -> []
+  in
+  extract dune_describe
+
+let get_test_modules dune_describe =
+  let rec extract = function
+    | Sexplib0.Sexp.List items ->
+        List.concat_map
+          (function
+            | Sexplib0.Sexp.List
+                (Sexplib0.Sexp.Atom kind :: Sexplib0.Sexp.List contents :: _)
+              when kind = "test" || kind = "tests" || kind = "executable"
+                   || kind = "executables" ->
+                (* Extract test module names *)
+                List.filter_map
+                  (function
+                    | Sexplib0.Sexp.List
+                        (Sexplib0.Sexp.Atom "name"
+                        :: Sexplib0.Sexp.Atom name
+                        :: _)
+                      when String.starts_with ~prefix:"test_" name ->
+                        Some name
+                    | _ -> None)
+                  contents
+            | sexp -> extract sexp)
+          items
+    | _ -> []
+  in
+  extract dune_describe

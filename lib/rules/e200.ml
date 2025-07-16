@@ -1,6 +1,6 @@
 (** E200: Outdated Str Module *)
 
-let check typedtree =
+let check ctx =
   let issues = ref [] in
 
   (* Check identifiers for Str module usage *)
@@ -17,6 +17,6 @@ let check typedtree =
               issues := Issue.Use_str_module { location = loc } :: !issues
           | _ -> ())
       | None -> ())
-    typedtree.Typedtree.identifiers;
+    (Context.ast ctx).identifiers;
 
   !issues

@@ -23,6 +23,8 @@ type item = {
 
 type t = item list
 
+let empty () = []
+
 (** Parse kind from string *)
 let parse_kind = function
   | "Value" -> Value

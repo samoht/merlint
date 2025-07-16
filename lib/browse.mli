@@ -15,6 +15,9 @@ type value_binding = {
 type t = { value_bindings : value_binding list }
 (** Browse analysis result *)
 
+val empty : unit -> t
+(** Create an empty browse result *)
+
 val of_json : Yojson.Safe.t -> t
 (** Parse browse output *)
 

@@ -4,6 +4,6 @@
     Orphaned test files should be removed or their library modules should be
     created. *)
 
-val check : Dune.describe -> string list -> Issue.t list
+val check : Context.t -> Issue.t list
 (** [check dune_data files] checks if test files have corresponding library
     modules. Returns a list of issues for orphaned test files. *)

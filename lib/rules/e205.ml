@@ -6,7 +6,7 @@ let is_printf_function base =
   || String.ends_with ~suffix:"sprintf" base
   || String.ends_with ~suffix:"asprintf" base
 
-let check typedtree =
+let check ctx =
   let issues = ref [] in
 
   (* Check identifiers for Printf/Format module usage *)
@@ -33,6 +33,6 @@ let check typedtree =
                 :: !issues
           | _ -> ())
       | None -> ())
-    typedtree.Typedtree.identifiers;
+    (Context.ast ctx).identifiers;
 
   !issues

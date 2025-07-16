@@ -304,7 +304,9 @@ let pp_issue_content ppf issue =
 let pp_wrapped ppf issue = Fmt.box ~indent:7 pp_issue_content ppf issue
 let pp = pp_wrapped
 let format v = Fmt.str "%a" pp v
-let get_grouped_hint issue_type _issues = Hints.get_hint issue_type
+
+let get_grouped_hint issue_type _issues =
+  Rule.get_hint Data.all_rules issue_type
 
 (* Extract location from an issue *)
 let find_location = function

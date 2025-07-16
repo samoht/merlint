@@ -28,7 +28,7 @@ let is_snake_case_module name =
     (fun ch -> Char.lowercase_ascii ch = ch || ch = '_')
     (String.sub name 1 (String.length name - 1))
 
-let check typedtree =
+let check ctx =
   List.filter_map
     (fun (module_elt : Ast.elt) ->
       let module_name = Ast.name_to_string module_elt.name in
@@ -43,4 +43,4 @@ let check typedtree =
         in
         Some (Issue.Bad_module_naming { module_name; location; expected })
       else None)
-    typedtree.Typedtree.modules
+    (Context.ast ctx).modules

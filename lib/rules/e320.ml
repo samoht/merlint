@@ -1,11 +1,11 @@
 (** E320: Long Identifier Names *)
 
-let check (typedtree : Typedtree.t) =
+let check ctx =
   let max_underscores = 4 in
   let all_elts =
-    typedtree.Typedtree.identifiers @ typedtree.Typedtree.patterns
-    @ typedtree.Typedtree.modules @ typedtree.Typedtree.types
-    @ typedtree.Typedtree.exceptions @ typedtree.Typedtree.variants
+    (Context.ast ctx).identifiers @ (Context.ast ctx).patterns
+    @ (Context.ast ctx).modules @ (Context.ast ctx).types
+    @ (Context.ast ctx).exceptions @ (Context.ast ctx).variants
   in
   all_elts
   |> List.filter_map (fun (elt : Ast.elt) ->

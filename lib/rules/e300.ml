@@ -11,7 +11,7 @@ let is_pascal_case name =
     let no_underscores = not (String.contains name '_') in
     first_ok && no_underscores
 
-let check typedtree =
+let check ctx =
   List.filter_map
     (fun (variant : Ast.elt) ->
       let variant_name = Ast.name_to_string variant.name in
@@ -31,4 +31,4 @@ let check typedtree =
                expected = String.capitalize_ascii variant_name;
              })
       else None)
-    typedtree.Typedtree.variants
+    (Context.ast ctx).variants

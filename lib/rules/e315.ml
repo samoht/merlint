@@ -24,9 +24,9 @@ let check_elements elements check_fn create_issue_fn =
       | _ -> None)
     elements
 
-let check (typedtree : Typedtree.t) =
+let check ctx =
   (* Check type names *)
-  check_elements typedtree.Typedtree.types
+  check_elements (Context.ast ctx).types
     (fun name_str ->
       if
         name_str <> "t" && name_str <> "id"

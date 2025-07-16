@@ -39,14 +39,20 @@ let check_catch_all_exceptions file_content =
 
   List.rev !issues
 
-let check file_path file_content =
-  let issues = check_catch_all_exceptions file_content in
-  (* Update locations with file path *)
-  List.map
-    (fun issue ->
-      match issue with
-      | Issue.Catch_all_exception { location } ->
-          Issue.Catch_all_exception
-            { location = { location with file = file_path } }
-      | _ -> issue)
-    issues
+let check ctx =
+  match ctx with
+  | Context.File file_ctx ->
+      let file_path = file_ctx.Context.filename in
+      let file_content = Context.content ctx in
+      let issues = check_catch_all_exceptions file_content in
+      (* Update locations with file path *)
+      List.map
+        (fun issue ->
+          match issue with
+          | Issue.Catch_all_exception { location } ->
+              Issue.Catch_all_exception
+                { location = { location with file = file_path } }
+          | _ -> issue)
+        issues
+  | Context.Project _ ->
+      failwith "E105 is a file-level rule but received project context"

@@ -11,6 +11,8 @@ type value_binding = {
 
 type t = { value_bindings : value_binding list }
 
+let empty () = { value_bindings = [] }
+
 (** Extract location from JSON node *)
 let extract_location (json : Yojson.Safe.t) =
   match json with
@@ -40,8 +42,7 @@ let extract_location (json : Yojson.Safe.t) =
                  ~end_col)
           else None
       | _ -> None)
-  | `Bool _ | `Float _ | `Int _ | `Intlit _ | `List _ | `Null | `String _ ->
-      None
+  | _ -> None
 
 (** Extract variable name from pattern kind string like: "pattern
     (file.ml[1,2+3]..file.ml[1,2+4])\n Tpat_var \"name/123\"" *)
@@ -115,7 +116,7 @@ let is_field_kind kind =
 (** Check if an expression is a simple data structure (list or record) *)
 let is_data_structure_expr json =
   (* A data structure is characterized by:
-     - List: having only expression children 
+     - List: having only expression children
      - Record: having field children or being a record expression *)
   match json with
   | `Assoc items -> (

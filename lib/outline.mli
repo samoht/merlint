@@ -29,6 +29,9 @@ type item = {
 type t = item list
 (** Outline result *)
 
+val empty : unit -> t
+(** Create an empty outline *)
+
 val of_json : Yojson.Safe.t -> t
 (** Parse outline from JSON *)
 

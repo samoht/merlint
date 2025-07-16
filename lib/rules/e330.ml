@@ -27,21 +27,20 @@ let extract_outline_location filename (item : Outline.item) =
            ~end_col:range.start.col)
   | None -> None
 
-let check ~filename ~outline =
-  (* Extract module name from filename *)
-  let module_name =
-    filename |> Filename.basename |> Filename.chop_extension
-    |> String.lowercase_ascii
-  in
-  Logs.debug (fun m ->
-      m "Checking redundant module name for %s (module: %s)" filename
-        module_name);
-  match outline with
-  | None ->
-      Logs.debug (fun m -> m "No outline for %s" filename);
-      []
-  | Some items ->
-      Logs.debug (fun m -> m "Found %d outline items" (List.length items));
+let check ctx =
+  match ctx with
+  | Context.File file_ctx ->
+      let filename = file_ctx.Context.filename in
+      let outline = Context.outline ctx in
+      (* Extract module name from filename *)
+      let module_name =
+        filename |> Filename.basename |> Filename.chop_extension
+        |> String.lowercase_ascii
+      in
+      Logs.debug (fun m ->
+          m "Checking redundant module name for %s (module: %s)" filename
+            module_name);
+      Logs.debug (fun m -> m "Found %d outline items" (List.length outline));
       List.filter_map
         (fun (item : Outline.item) ->
           let item_name_lower = String.lowercase_ascii item.name in
@@ -55,4 +54,6 @@ let check ~filename ~outline =
             when has_redundant_prefix item_name_lower module_name ->
               Some (create_redundant_name_issue item module_name loc "type")
           | _ -> None)
-        items
+        outline
+  | Context.Project _ ->
+      failwith "E330 is a file-level rule but received project context"

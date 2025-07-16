@@ -20,3 +20,17 @@ type t = {
 
 val default : t
 (** Default configuration with recommended settings *)
+
+(** Configuration file loading *)
+
+val find_config_file : string -> string option
+(** [find_config_file path] looks for a .merlintrc file in the project root
+    directory. Returns the path to the config file if found. *)
+
+val load : string -> t
+(** [load path] loads configuration from the file at [path]. Returns default
+    config if file cannot be read or parsed. *)
+
+val load_from_path : string -> t
+(** [load_from_path path] finds and loads the nearest .merlintrc file starting
+    from [path]. Returns default config if no config file is found. *)

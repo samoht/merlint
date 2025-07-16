@@ -74,10 +74,11 @@ let check_single_function _filename name kind type_sig location =
       else None
   | _ -> None
 
-let check ~filename ~outline =
-  match outline with
-  | None -> []
-  | Some items ->
+let check ctx =
+  match ctx with
+  | Context.File file_ctx ->
+      let filename = file_ctx.Context.filename in
+      let outline = Context.outline ctx in
       List.filter_map
         (fun (item : Outline.item) ->
           let name = Some item.name in
@@ -87,4 +88,6 @@ let check ~filename ~outline =
           let type_sig = item.type_sig in
           let location = extract_outline_location filename item in
           check_single_function filename name kind type_sig location)
-        items
+        outline
+  | Context.Project _ ->
+      failwith "E325 is a file-level rule but received project context"

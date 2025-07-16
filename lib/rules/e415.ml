@@ -1,6 +1,6 @@
 (** E415: Missing Exception Documentation *)
 
-let check (_files : string list) =
+let check (_ctx : Context.t) =
   (* TODO: E415 - Implement missing exception documentation check
      This rule should check that public exceptions have documentation.
      Currently not implemented. *)

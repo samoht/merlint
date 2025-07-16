@@ -1,6 +1,6 @@
 (** E410: Missing Value Documentation *)
 
-let check (_files : string list) =
+let check (_ctx : Context.t) =
   (* TODO: E410 - Implement missing value documentation check
      This rule should check that public values have documentation.
      Currently not implemented. *)

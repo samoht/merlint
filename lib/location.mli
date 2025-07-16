@@ -23,11 +23,3 @@ val pp : t Fmt.t
 
 val compare : t -> t -> int
 (** Compare two locations *)
-
-type range = {
-  start_line : int;
-  start_col : int;
-  end_line : int;
-  end_col : int;
-}
-(** Range in a file *)

@@ -38,6 +38,12 @@ let analyze_value_binding config binding =
         else []
   | None -> []
 
-let check config browse_data =
-  let bindings = Browse.get_value_bindings browse_data in
-  List.concat_map (analyze_value_binding config) bindings
+let check ctx =
+  match ctx with
+  | Context.File file_ctx ->
+      let config = { max_nesting = file_ctx.Context.config.max_nesting } in
+      let browse_data = Context.browse ctx in
+      let bindings = Browse.get_value_bindings browse_data in
+      List.concat_map (analyze_value_binding config) bindings
+  | Context.Project _ ->
+      failwith "E010 is a file-level rule but received project context"

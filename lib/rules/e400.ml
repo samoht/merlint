@@ -24,7 +24,8 @@ let check_mli_documentation filename =
     check_mli_documentation_content ~module_name ~filename content
   with Sys_error _ -> None
 
-let check files =
+let check ctx =
+  let files = Context.all_files ctx in
   List.filter_map
     (fun file ->
       if Filename.check_suffix file ".mli" then check_mli_documentation file

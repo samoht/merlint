@@ -51,14 +51,6 @@ let test_create_extended () =
   Alcotest.(check int) "end_line" 15 ext.end_line;
   Alcotest.(check int) "end_col" 20 ext.end_col
 
-let test_range_type () =
-  (* Just test that the range type exists and can be created *)
-  let range : Location.range =
-    { start_line = 1; start_col = 0; end_line = 5; end_col = 10 }
-  in
-  Alcotest.(check int) "start_line" 1 range.start_line;
-  Alcotest.(check int) "end_col" 10 range.end_col
-
 let suite =
   [
     ( "location",
@@ -67,6 +59,5 @@ let suite =
         Alcotest.test_case "pp" `Quick test_pp;
         Alcotest.test_case "compare" `Quick test_compare;
         Alcotest.test_case "create_extended" `Quick test_create_extended;
-        Alcotest.test_case "range type" `Quick test_range_type;
       ] );
   ]

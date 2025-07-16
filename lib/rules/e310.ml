@@ -29,8 +29,8 @@ let check_elements elements check_fn create_issue_fn =
       | _ -> None)
     elements
 
-let check ~filename:_ ~outline:_ (typedtree : Typedtree.t) =
+let check ctx =
   (* Check value names *)
-  check_elements typedtree.Typedtree.patterns check_value_name
+  check_elements (Context.ast ctx).patterns check_value_name
     (fun name_str loc expected ->
       Issue.Bad_value_naming { value_name = name_str; location = loc; expected })

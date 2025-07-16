@@ -1,6 +1,6 @@
 (** E100: No Obj.magic *)
 
-let check typedtree =
+let check (t : Context.t) =
   let issues = ref [] in
 
   (* Check identifiers for Obj.magic usage *)
@@ -18,6 +18,6 @@ let check typedtree =
               issues := Issue.No_obj_magic { location = loc } :: !issues
           | _ -> ())
       | None -> ())
-    typedtree.Typedtree.identifiers;
+    (Context.ast t).identifiers;
 
   !issues

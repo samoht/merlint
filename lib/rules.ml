@@ -1,90 +1,48 @@
-(** Centralized rules coordinator - table-driven approach *)
+(** Centralized rules coordinator - context-based approach *)
 
 exception Disabled of string
 
 type config = { merlint_config : Config.t; project_root : string }
 
-(* Rule types based on their data requirements *)
-type rule_spec =
-  | Browse of (config -> Browse.t -> Issue.t list)
-  | Typedtree of (Typedtree.t -> Issue.t list)
-  | TypedtreeContext of
-      (filename:string ->
-      outline:Outline.t option ->
-      Typedtree.t ->
-      Issue.t list)
-  | Outline of (filename:string -> outline:Outline.t option -> Issue.t list)
-  | Pattern of (string -> string -> Issue.t list)
-    (* filename -> content -> issues *)
-  | Files of (string list -> Issue.t list)
-  | Project of (config -> string list -> Issue.t list)
-  | Dune of (Dune.describe -> string list -> Issue.t list)
-
 (* Map from issue type to its implementation *)
-let get_implementation issue_type =
-  match issue_type with
+let get_implementation = function
   (* Complexity Rules (E0xx) *)
-  | Issue_type.Complexity ->
-      Browse
-        (fun config browse ->
-          E001.check
-            { E001.max_complexity = config.merlint_config.max_complexity }
-            browse)
-  | Issue_type.Function_length ->
-      Browse
-        (fun config browse ->
-          E005.check
-            {
-              E005.max_function_length =
-                config.merlint_config.max_function_length;
-            }
-            browse)
-  | Issue_type.Deep_nesting ->
-      Browse
-        (fun config browse ->
-          E010.check
-            { E010.max_nesting = config.merlint_config.max_nesting }
-            browse)
+  | Issue_type.Complexity -> E001.check
+  | Issue_type.Function_length -> E005.check
+  | Issue_type.Deep_nesting -> E010.check
   (* Style Rules (E1xx) *)
-  | Issue_type.Obj_magic -> Typedtree E100.check
-  | Issue_type.Catch_all_exception -> Pattern E105.check
-  | Issue_type.Silenced_warning -> Files E110.check
+  | Issue_type.Obj_magic -> E100.check
+  | Issue_type.Catch_all_exception -> E105.check
+  | Issue_type.Silenced_warning -> E110.check
   (* Modern OCaml Rules (E2xx) *)
-  | Issue_type.Str_module -> Typedtree E200.check
-  | Issue_type.Printf_module -> Typedtree E205.check
+  | Issue_type.Str_module -> E200.check
+  | Issue_type.Printf_module -> E205.check
   (* Naming Convention Rules (E3xx) *)
-  | Issue_type.Variant_naming -> Typedtree E300.check
-  | Issue_type.Module_naming -> Typedtree E305.check
-  | Issue_type.Value_naming -> TypedtreeContext E310.check
-  | Issue_type.Type_naming -> Typedtree E315.check
-  | Issue_type.Long_identifier -> Typedtree E320.check
-  | Issue_type.Function_naming -> Outline E325.check
-  | Issue_type.Redundant_module_name -> Outline E330.check
-  | Issue_type.Used_underscore_binding -> Typedtree E335.check
-  | Issue_type.Error_pattern -> Pattern E340.check
-  | Issue_type.Boolean_blindness -> TypedtreeContext E350.check
-  | Issue_type.Mutable_state ->
-      Outline
-        (fun ~filename ~outline ->
-          match outline with
-          | Some o -> E351.check_global_mutable_state ~filename o
-          | None -> [])
+  | Issue_type.Variant_naming -> E300.check
+  | Issue_type.Module_naming -> E305.check
+  | Issue_type.Value_naming -> E310.check
+  | Issue_type.Type_naming -> E315.check
+  | Issue_type.Long_identifier -> E320.check
+  | Issue_type.Function_naming -> E325.check
+  | Issue_type.Redundant_module_name -> E330.check
+  | Issue_type.Used_underscore_binding -> E335.check
+  | Issue_type.Error_pattern -> E340.check
+  | Issue_type.Boolean_blindness -> E350.check
+  | Issue_type.Mutable_state -> E351.check
   (* Documentation Rules (E4xx) *)
-  | Issue_type.Missing_mli_doc -> Files E400.check
-  | Issue_type.Missing_value_doc -> Files E405.check
-  | Issue_type.Bad_doc_style -> Files E410.check
-  | Issue_type.Missing_standard_function -> Files E415.check
+  | Issue_type.Missing_mli_doc -> E400.check
+  | Issue_type.Missing_value_doc -> E405.check
+  | Issue_type.Bad_doc_style -> E410.check
+  | Issue_type.Missing_standard_function -> E415.check
   (* Project Structure Rules (E5xx) *)
-  | Issue_type.Missing_ocamlformat_file ->
-      Project (fun config _files -> E500.check config.project_root)
-  | Issue_type.Missing_mli_file ->
-      Project (fun config files -> E505.check config.project_root files)
-  | Issue_type.Missing_log_source -> Files E510.check
+  | Issue_type.Missing_ocamlformat_file -> E500.check
+  | Issue_type.Missing_mli_file -> E505.check
+  | Issue_type.Missing_log_source -> E510.check
   (* Testing Rules (E6xx) *)
-  | Issue_type.Test_exports_module -> Files E600.check
-  | Issue_type.Missing_test_file -> Dune E605.check
-  | Issue_type.Test_without_library -> Dune E610.check
-  | Issue_type.Test_suite_not_included -> Dune E615.check
+  | Issue_type.Test_exports_module -> E600.check
+  | Issue_type.Missing_test_file -> E605.check
+  | Issue_type.Test_without_library -> E610.check
+  | Issue_type.Test_suite_not_included -> E615.check
 
 (* Helper functions *)
 let get_project_root file =
@@ -117,71 +75,51 @@ let analyze_project config files rule_filter =
 
   (* Prepare shared data *)
   let dune_describe = Dune.describe config.project_root in
-  let file_analyses =
-    List.map (fun file -> (file, Merlin.analyze_file file)) ml_files
-  in
 
-  (* Run all rules from Data.all_rules *)
+  (* Analyze each file and run rules *)
   let all_issues =
     List.concat_map
+      (fun file ->
+        let merlin_result = Merlin.analyze_file file in
+
+        (* Create file context for this file *)
+        let ctx =
+          Context.File
+            (Context.create_file ~filename:file ~config:config.merlint_config
+               ~project_root:config.project_root ~merlin_result)
+        in
+
+        (* Run all rules on this file *)
+        List.concat_map
+          (fun rule ->
+            match rule.Rule.scope with
+            | Rule.Project -> [] (* Skip project rules in file iteration *)
+            | Rule.File ->
+                let impl = get_implementation rule.Rule.issue in
+                safe_run (fun () -> impl ctx))
+          Data.all_rules)
+      ml_files
+  in
+
+  (* Run project-wide rules once *)
+  let project_ctx =
+    Context.Project
+      (Context.create_project ~config:config.merlint_config
+         ~project_root:config.project_root ~all_files:files ~dune_describe)
+  in
+
+  let project_issues =
+    List.concat_map
       (fun rule ->
-        let spec = get_implementation rule.Rule.issue in
-        safe_run (fun () ->
-            match spec with
-            | Browse check_fn ->
-                List.concat_map
-                  (fun (_file, analysis) ->
-                    match analysis.Merlin.browse with
-                    | Ok browse -> check_fn config browse
-                    | Error _ -> [])
-                  file_analyses
-            | Typedtree check_fn ->
-                List.concat_map
-                  (fun (_file, analysis) ->
-                    match analysis.Merlin.typedtree with
-                    | Ok typedtree -> check_fn typedtree
-                    | Error _ -> [])
-                  file_analyses
-            | TypedtreeContext check_fn ->
-                List.concat_map
-                  (fun (file, analysis) ->
-                    match analysis.Merlin.typedtree with
-                    | Ok typedtree ->
-                        let outline =
-                          match analysis.Merlin.outline with
-                          | Ok o -> Some o
-                          | Error _ -> None
-                        in
-                        check_fn ~filename:file ~outline typedtree
-                    | Error _ -> [])
-                  file_analyses
-            | Outline check_fn ->
-                List.concat_map
-                  (fun (file, analysis) ->
-                    let outline =
-                      match analysis.Merlin.outline with
-                      | Ok o -> Some o
-                      | Error _ -> None
-                    in
-                    check_fn ~filename:file ~outline)
-                  file_analyses
-            | Pattern check_fn ->
-                List.concat_map
-                  (fun (file, _) ->
-                    if String.ends_with ~suffix:".ml" file then
-                      try
-                        let content =
-                          In_channel.with_open_text file In_channel.input_all
-                        in
-                        check_fn file content
-                      with _ -> []
-                    else [])
-                  file_analyses
-            | Files check_fn -> check_fn files
-            | Project check_fn -> check_fn config files
-            | Dune check_fn -> check_fn dune_describe files))
+        match rule.Rule.scope with
+        | Rule.File -> [] (* Skip file rules in project iteration *)
+        | Rule.Project ->
+            let impl = get_implementation rule.Rule.issue in
+            safe_run (fun () -> impl project_ctx))
       Data.all_rules
   in
+
+  let all_issues = all_issues @ project_issues in
 
   (* Filter and categorize issues *)
   let filtered_issues = filter_issues rule_filter all_issues in
