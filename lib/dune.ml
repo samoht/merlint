@@ -125,31 +125,7 @@ let extract_source_files sexp =
                         in
                         [ source_path ]
                     | Sexplib0.Sexp.List
-                        [
-                          Sexplib0.Sexp.Atom "impl";
-                          Sexplib0.Sexp.List [ Sexplib0.Sexp.Atom path ];
-                        ] ->
-                        (* Convert build path to source path *)
-                        let source_path =
-                          if String.starts_with ~prefix:"_build/default/" path
-                          then String.sub path 15 (String.length path - 15)
-                          else path
-                        in
-                        [ source_path ]
-                    | Sexplib0.Sexp.List
                         (Sexplib0.Sexp.Atom "intf" :: Sexplib0.Sexp.Atom path :: _) ->
-                        (* Convert build path to source path *)
-                        let source_path =
-                          if String.starts_with ~prefix:"_build/default/" path
-                          then String.sub path 15 (String.length path - 15)
-                          else path
-                        in
-                        [ source_path ]
-                    | Sexplib0.Sexp.List
-                        [
-                          Sexplib0.Sexp.Atom "intf";
-                          Sexplib0.Sexp.List [ Sexplib0.Sexp.Atom path ];
-                        ] ->
                         (* Convert build path to source path *)
                         let source_path =
                           if String.starts_with ~prefix:"_build/default/" path
@@ -228,47 +204,46 @@ let get_lib_modules dune_describe =
     | Sexplib0.Sexp.List items ->
         List.concat_map
           (function
-            | Sexplib0.Sexp.List (Sexplib0.Sexp.Atom "library" :: rest) -> (
-                match rest with
-                | [ Sexplib0.Sexp.List [ Sexplib0.Sexp.List lib_contents ] ] ->
-                    (* Check if it's a local library *)
-                    let is_local =
-                      List.exists
-                        (function
-                          | Sexplib0.Sexp.List
-                              [
-                                Sexplib0.Sexp.Atom "local";
-                                Sexplib0.Sexp.Atom "true";
-                              ] ->
-                              true
-                          | _ -> false)
-                        lib_contents
-                    in
-                    if is_local then
-                      (* Extract modules from library *)
-                      List.concat_map
-                        (function
-                          | Sexplib0.Sexp.List
-                              (Sexplib0.Sexp.Atom "modules" :: [ Sexplib0.Sexp.List modules ]) ->
-                              List.concat_map
-                                (function
-                                  | Sexplib0.Sexp.List module_fields ->
-                                      (* Look for name field in module *)
-                                      List.filter_map
-                                        (function
-                                          | Sexplib0.Sexp.List
-                                              (Sexplib0.Sexp.Atom "name"
-                                              :: Sexplib0.Sexp.Atom name
-                                              :: _) ->
-                                              Some name
-                                          | _ -> None)
-                                        module_fields
-                                  | _ -> [])
-                                modules
-                          | _ -> [])
-                        lib_contents
-                    else []
-                | _ -> [])
+            | Sexplib0.Sexp.List
+                [ Sexplib0.Sexp.Atom "library"; Sexplib0.Sexp.List lib_contents ]
+            ->
+                (* Check if it's a local library *)
+                let is_local =
+                  List.exists
+                    (function
+                      | Sexplib0.Sexp.List
+                          [
+                            Sexplib0.Sexp.Atom "local";
+                            Sexplib0.Sexp.Atom "true";
+                          ] ->
+                          true
+                      | _ -> false)
+                    lib_contents
+                in
+                if is_local then
+                  (* Extract modules from library *)
+                  List.concat_map
+                    (function
+                      | Sexplib0.Sexp.List
+                          (Sexplib0.Sexp.Atom "modules" :: [ Sexplib0.Sexp.List modules ]) ->
+                          List.concat_map
+                            (function
+                              | Sexplib0.Sexp.List module_fields ->
+                                  (* Look for name field in module *)
+                                  List.filter_map
+                                    (function
+                                      | Sexplib0.Sexp.List
+                                          (Sexplib0.Sexp.Atom "name"
+                                          :: Sexplib0.Sexp.Atom name
+                                          :: _) ->
+                                          Some name
+                                      | _ -> None)
+                                    module_fields
+                              | _ -> [])
+                            modules
+                      | _ -> [])
+                    lib_contents
+                else []
             | sexp -> extract sexp)
           items
     | _ -> []

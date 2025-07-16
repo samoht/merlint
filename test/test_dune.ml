@@ -32,7 +32,7 @@ let sample_dune_describe =
    (source_dir /Users/samoht/git/cyclomatic/_opam/lib/astring)
    (modules ())
    (include_dirs (/Users/samoht/git/cyclomatic/_opam/lib/astring))))
-  (library
+ (library
   ((name merlint)
    (uid a5712c0fe1b0538db58231978dea3328)
    (local true)
