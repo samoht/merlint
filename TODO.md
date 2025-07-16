@@ -1,5 +1,34 @@
 # TODO
 
+## Recent Progress (2025-07-16)
+
+### ✅ Completed: Code Cleanup and Simplification
+- **[x] Removed all legacy modules** that were just delegating to rule modules:
+  - Deleted `complexity.ml`, `style.ml`, `api_design.ml`, `naming.ml`, `doc.ml`, `format.ml`, `test_checks.ml`, `test_coverage.ml`
+  - All rule implementations now live directly in `lib/rules/` directory
+  
+- **[x] Simplified rules.ml** to use `Data.all_rules` as single source of truth:
+  - No more manual rule list maintenance - derives implementations from `Data.all_rules`
+  - Categories are taken directly from `Rule.category` in data definitions
+  - Disabled rules throw `Issue.Disabled` in their implementation, not in `rules.ml`
+  
+- **[x] Fixed E110 (Silenced_warning) categorization**:
+  - Changed from `Security_safety` to `Complexity` category in `data.ml`
+  - Now appears only in "Code Quality" section as expected by tests
+
+### 📋 Missing Unit Tests
+The following modules in `lib/` are missing corresponding unit tests in `test/`:
+- [ ] `ast.ml` - Shared AST functionality
+- [ ] `config_file.ml` - Configuration file loading
+- [ ] `data.ml` - Rule data definitions
+- [ ] `guide.ml` - Style guide generation
+- [ ] `hints.ml` - Error hint generation
+- [ ] `issue_type.ml` - Issue type definitions
+- [ ] `profiling.ml` - Performance profiling
+- [ ] `rule.ml` - Rule type definitions
+
+Note: Individual rule checks (`lib/rules/e*.ml`) are tested via cram tests, not unit tests.
+
 ## Recent Progress (2025-07-15)
 
 ### ✅ Completed: Major Rule Refactoring
@@ -50,18 +79,6 @@
   - Tests now use mock data structures instead of temporary files
   - All tests pass without requiring file system operations
 
-- **[x] Cleaned up ALL legacy modules in lib/**
-  - Converted all legacy modules to minimal stubs that delegate to rule modules:
-    - `complexity.ml` - delegates to E001, E005, E010
-    - `style.ml` - empty stub (all checks moved)
-    - `api_design.ml` - empty stub (all checks moved)
-    - `naming.ml` - delegates to E300, E305, E310, E315, E320, E325, E330, E335
-    - `doc.ml` - delegates to E400
-    - `format.ml` - delegates to E500, E505
-    - `test_checks.ml` - delegates to E600
-    - `test_coverage.ml` - delegates to E605, E610, E615
-  - Removed warning_checks.ml entirely as requested
-  - Updated rules.ml to use new rule modules directly
 
 - **[x] Fixed critical build issues**
   - Resolved dependency cycles between modules
@@ -71,28 +88,21 @@
   - Fixed E005 to handle anonymous functions gracefully
 
 ### 📋 Next Steps
-1. **Show disabled rules in statistics** as requested by user
-2. **Implement proper complexity calculation** for E001 and E010
-3. **Fix E105 to only detect exception handlers** not all underscore patterns
-4. **Implement missing documentation rules** (E405, E410, E415)
-5. **Implement missing log source rule** (E510)
-6. **Fix function name extraction** in Browse module for better E005 output
+1. **Add missing unit tests** for lib modules (see list above)
+2. **Show disabled rules in statistics** as requested by user
+3. **Implement proper complexity calculation** for E001 and E010
+4. **Fix E105 to only detect exception handlers** not all underscore patterns
+5. **Implement missing documentation rules** (E405, E410, E415)
+6. **Implement missing log source rule** (E510)
+7. **Fix function name extraction** in Browse module for better E005 output
 
 ## High Priority
 
-- [x] Implement E350 Boolean Blindness rule
-  - Flag functions with 2+ boolean parameters
-  - Suggest using variant types instead
-  - Example: `create_widget bool -> bool -> t` → use visibility and border types
-  - High impact for API clarity
-
-- [x] Implement E351 Mutable State Detection (partial, needs refinement)
-  - ✓ Flag use of `ref` and `:=` operator
-  - ✓ Updated documentation to clarify only global mutable state is problematic
+- [ ] Improve E351 Mutable State Detection
+  - Currently flags all refs, but should only flag module-level refs
   - TODO: Distinguish between global and local refs (requires scope analysis)
   - TODO: Detect `mutable` record fields (requires deeper AST analysis)
   - TODO: Detect array creation/mutation at global scope
-  - Currently flags all refs, but should only flag module-level refs
 
 - [ ] Fix E105 Catch_all_exception to only detect exception handlers
   - Currently the typedtree patterns don't provide enough context
@@ -104,25 +114,6 @@
     4. This avoids false positives for valid underscore uses
   - Implementation would go in lib/style.ml or new lib/ast_checks.ml
 
-- [x] Make E205 Printf_module less strict
-  - ✓ Changed title from "Outdated" to "Consider Using Fmt Module"
-  - ✓ Description already acknowledges Printf/Format are valid choices
-  - ✓ Priority is already medium (3), not highest
-  - Rule is now properly framed as a style suggestion
-
-- [x] Enforce 1:1 mapping between test files and library modules
-  - ✓ Already implemented as E605 (Missing_test_file) and E610 (Test_without_library)
-  - ✓ Checks that each lib/*.ml file has a corresponding test/test_*.ml file
-  - ✓ Checks that test files have corresponding library modules
-  - ✓ Uses dune describe to find modules accurately
-  - Note: May not be showing in output due to dune describe parsing
-
-- [x] Store configuration in .merlintrc or similar config file
-  - ✓ Implemented config_file.ml to load .merlintrc files
-  - ✓ Searches up directory tree for config file
-  - ✓ Supports all existing configuration options
-  - ✓ Created .merlintrc.example as documentation
-  - ✓ Integrated with main.ml to load config automatically
 
 - [ ] Add code duplication detection
   - Find duplicated code blocks across the codebase
@@ -177,10 +168,8 @@
   - Use regex to check docstrings in .mli files start with `[<name> ...] is`
   - Ensures consistent documentation style across codebase
 
-- [x] Add rule E340 to catch Error patterns and suggest using err_* helper functions (partial)
-  - ✓ Added issue types and documentation  
-  - ✓ Created infrastructure for detecting `Error (Fmt.str ...)` patterns
-  - TODO: Current implementation needs deeper AST analysis to properly detect the pattern
+- [ ] Fix E340 Error pattern detection
+  - Infrastructure exists but needs deeper AST analysis to properly detect the pattern
   - Would need to analyze constructor applications with function calls as arguments
   - Typedtree doesn't provide enough context for this pattern
 

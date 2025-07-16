@@ -46,7 +46,7 @@ which can hide unexpected errors and make debugging difficult. Fix it by
 handling specific exceptions explicitly. If you must catch all exceptions,
 at least log them before re-raising or handling.|};
     Rule.v ~issue:Silenced_warning ~title:"Silenced Compiler Warnings"
-      ~category:Security_safety
+      ~category:Complexity
       ~examples:
         [ Rule.bad Examples.E110.bad_ml; Rule.good Examples.E110.good_ml ]
       {|This issue means you're hiding compiler warnings that indicate potential
