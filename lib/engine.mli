@@ -14,6 +14,6 @@ val default_config : string -> config
 (** [default_config project_root] creates default configuration *)
 
 val analyze_project :
-  config -> string list -> Rule_filter.t option -> (string * Report.t list) list
+  config -> string list -> Filter.t option -> (string * Report.t list) list
 (** [analyze_project config files rule_filter] analyzes all files in a project
     and returns categorized reports, optionally filtered by rule *)

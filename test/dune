@@ -1,5 +1,4 @@
-(executable
- (public_name test)
+(test
  (name test)
  (libraries merlint alcotest logs.fmt fmt fmt.tty))
 

@@ -1,86 +1,77 @@
 open Alcotest
+open Merlint
 
 let test_parse_range () =
-  let module RF = Merlint.Rule_filter in
   (* Test simple range *)
-  match RF.parse "all-100..199" with
+  match Filter.parse "all-100..199" with
   | Ok filter ->
-      check bool "E001 enabled" true
-        (RF.is_enabled filter Merlint.Issue.Complexity);
+      check bool "E001 enabled" true (Filter.is_enabled filter Issue.Complexity);
       check bool "E100 disabled" false
-        (RF.is_enabled filter Merlint.Issue.Obj_magic);
+        (Filter.is_enabled filter Issue.Obj_magic);
       check bool "E105 disabled" false
-        (RF.is_enabled filter Merlint.Issue.Catch_all_exception);
-      check bool "E200 enabled" true
-        (RF.is_enabled filter Merlint.Issue.Str_module)
+        (Filter.is_enabled filter Issue.Catch_all_exception);
+      check bool "E200 enabled" true (Filter.is_enabled filter Issue.Str_module)
   | Error msg -> fail msg
 
 let test_parse_exclusions () =
-  let module RF = Merlint.Rule_filter in
   (* Test exclusion syntax *)
-  match RF.parse "all-E110-E205" with
+  match Filter.parse "all-E110-E205" with
   | Ok filter ->
-      check bool "E001 enabled" true
-        (RF.is_enabled filter Merlint.Issue.Complexity);
+      check bool "E001 enabled" true (Filter.is_enabled filter Issue.Complexity);
       check bool "E110 disabled" false
-        (RF.is_enabled filter Merlint.Issue.Silenced_warning);
+        (Filter.is_enabled filter Issue.Silenced_warning);
       check bool "E205 disabled" false
-        (RF.is_enabled filter Merlint.Issue.Printf_module);
-      check bool "E200 enabled" true
-        (RF.is_enabled filter Merlint.Issue.Str_module)
+        (Filter.is_enabled filter Issue.Printf_module);
+      check bool "E200 enabled" true (Filter.is_enabled filter Issue.Str_module)
   | Error msg -> fail msg
 
 let test_parse_selective () =
-  let module RF = Merlint.Rule_filter in
   (* Test selective enabling *)
-  match RF.parse "E300+E305" with
+  match Filter.parse "E300+E305" with
   | Ok filter ->
       check bool "E300 enabled" true
-        (RF.is_enabled filter Merlint.Issue.Variant_naming);
+        (Filter.is_enabled filter Issue.Variant_naming);
       check bool "E305 enabled" true
-        (RF.is_enabled filter Merlint.Issue.Module_naming);
+        (Filter.is_enabled filter Issue.Module_naming);
       check bool "E001 disabled" false
-        (RF.is_enabled filter Merlint.Issue.Complexity);
+        (Filter.is_enabled filter Issue.Complexity);
       check bool "E200 disabled" false
-        (RF.is_enabled filter Merlint.Issue.Str_module)
+        (Filter.is_enabled filter Issue.Str_module)
   | Error msg -> fail msg
 
 let test_parse_single () =
-  let module RF = Merlint.Rule_filter in
   (* Test single rule *)
-  match RF.parse "E300" with
+  match Filter.parse "E300" with
   | Ok filter ->
       check bool "E300 enabled" true
-        (RF.is_enabled filter Merlint.Issue.Variant_naming);
+        (Filter.is_enabled filter Issue.Variant_naming);
       check bool "E001 disabled" false
-        (RF.is_enabled filter Merlint.Issue.Complexity);
+        (Filter.is_enabled filter Issue.Complexity);
       check bool "E200 disabled" false
-        (RF.is_enabled filter Merlint.Issue.Str_module)
+        (Filter.is_enabled filter Issue.Str_module)
   | Error msg -> fail msg
 
 let test_parse_mixed () =
-  let module RF = Merlint.Rule_filter in
   (* Test mixed format *)
-  match RF.parse "300..399-E320" with
+  match Filter.parse "300..399-E320" with
   | Ok filter ->
       check bool "E300 enabled" true
-        (RF.is_enabled filter Merlint.Issue.Variant_naming);
+        (Filter.is_enabled filter Issue.Variant_naming);
       check bool "E305 enabled" true
-        (RF.is_enabled filter Merlint.Issue.Module_naming);
+        (Filter.is_enabled filter Issue.Module_naming);
       check bool "E320 disabled" false
-        (RF.is_enabled filter Merlint.Issue.Long_identifier);
+        (Filter.is_enabled filter Issue.Long_identifier);
       check bool "E001 disabled" false
-        (RF.is_enabled filter Merlint.Issue.Complexity)
+        (Filter.is_enabled filter Issue.Complexity)
   | Error msg -> fail msg
 
 let test_parse_errors () =
-  let module RF = Merlint.Rule_filter in
   (* Test error cases *)
-  (match RF.parse "invalid" with
+  (match Filter.parse "invalid" with
   | Ok _ -> fail "Should have failed for invalid spec"
   | Error _ -> ());
 
-  match RF.parse "E999" with
+  match Filter.parse "E999" with
   | Ok _ -> fail "Should have failed for unknown error code"
   | Error msg ->
       check bool "error mentions unknown code" true

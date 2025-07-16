@@ -239,11 +239,11 @@ let run_analysis project_root filtered_files rule_filter show_profile =
   if show_profile then Merlint.Profiling.reset ();
 
   let config = Merlint.Config.load_from_path project_root in
-  let rules_config = { Merlint.Rules.merlint_config = config; project_root } in
+  let rules_config = { Merlint.Engine.merlint_config = config; project_root } in
   Log.info (fun m ->
       m "Starting visual analysis on %d files" (List.length filtered_files));
   let category_reports =
-    Merlint.Rules.analyze_project rules_config filtered_files rule_filter
+    Merlint.Engine.analyze_project rules_config filtered_files rule_filter
   in
 
   Fmt.pr "Running merlint analysis...@.@.";
@@ -280,7 +280,7 @@ let analyze_files ?(exclude_patterns = []) ?rule_filter ?(show_profile = false)
   (* Find project root and all files *)
   let project_root =
     match files with
-    | file :: _ -> Merlint.Rules.get_project_root file
+    | file :: _ -> Merlint.Engine.get_project_root file
     | [] -> "."
   in
 
@@ -394,7 +394,7 @@ let cmd =
               match rules_spec with
               | None -> None
               | Some spec -> (
-                  match Merlint.Rule_filter.parse spec with
+                  match Merlint.Filter.parse spec with
                   | Ok filter -> Some filter
                   | Error msg ->
                       Log.err (fun m -> m "Invalid rules specification: %s" msg);

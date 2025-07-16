@@ -76,7 +76,7 @@ let default_config project_root =
 let filter_issues rule_filter issues =
   match rule_filter with
   | None -> issues
-  | Some filter -> Rule_filter.filter_issues filter issues
+  | Some filter -> Filter.filter_issues filter issues
 
 let safe_run fn = try fn () with Issue.Disabled _ -> []
 
