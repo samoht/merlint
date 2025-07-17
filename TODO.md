@@ -3,8 +3,9 @@
 ## Current Work in Progress
 
 ### 🔄 Next High Priority Tasks
-- [ ] **Refactor Issue.t to be a record containing kind and data** - improve Issue type structure
-- [ ] **Create traverse.ml with common helpers found in rules** - reduce code duplication across rules
+- [ ] **GADT Refactoring of Issue.t and Rule.t**
+  - Step 1: Parameterize Issue.t by payload directly (remove Issue.data variant)
+  - Steps 2&3 (merged): Introduce GADT in Rule.t with type-safe payload matching and rename format_issue to pp
 
 ### 📋 Missing Unit Tests
 The following modules in `lib/` are missing corresponding unit tests in `test/`:

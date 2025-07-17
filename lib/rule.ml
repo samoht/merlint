@@ -14,62 +14,78 @@ type example = { is_good : bool; code : string }
 let good code = { is_good = true; code }
 let bad code = { is_good = false; code }
 
-type code_example = {
-  is_good : bool;
-  description : string option;
+type 'a scope =
+  | File of (Context.file -> 'a Issue.t list)
+  | Project of (Context.project -> 'a Issue.t list)
+
+type 'a rule = {
   code : string;
-}
-
-type hint = { text : string; examples : code_example list option }
-type scope = File | Project
-
-type t = {
-  issue : Issue.kind;
   title : string;
   category : category;
-  scope : scope;
   hint : string;
   examples : example list;
+  check : 'a scope;
+  pp : 'a Fmt.t;
 }
 
-let v ~issue ~title ~category ?(scope = File) ?(examples = []) hint =
-  { issue; title; category; scope; hint; examples }
+type t = T : _ rule -> t
 
-let get rules issue_type =
-  match List.find_opt (fun rule -> rule.issue = issue_type) rules with
-  | Some rule -> rule
-  | None -> failwith (Fmt.str "No rule found for issue type")
+let v ~code ~title ~category ~hint ?(examples = []) ~pp check =
+  T { code; title; category; hint; examples; check; pp }
+
+(* Accessors *)
+let code (T r) = r.code
+let title (T r) = r.title
+let category (T r) = r.category
+let hint (T r) = r.hint
+let examples (T r) = r.examples
 
 let category_name = function
   | Complexity -> "Code Quality"
-  | Security_safety -> "Code Style"
+  | Security_safety -> "Code Quality"
   | Style_modernization -> "Code Style"
   | Naming_conventions -> "Naming Conventions"
   | Documentation -> "Documentation"
   | Project_structure -> "Project Structure"
   | Testing -> "Test Quality"
 
-(** Get a short title for a specific issue type *)
-let get_hint_title rules issue_type =
-  let rule = get rules issue_type in
-  rule.title
+let is_file_scoped (T rule) =
+  match rule.check with File _ -> true | Project _ -> false
 
-(** Get a structured hint with text and optional code examples *)
-let get_structured_hint rules issue_type =
-  let rule = get rules issue_type in
-  let examples =
-    match rule.examples with
-    | [] -> None
-    | exs ->
-        Some
-          (List.map
-             (fun (ex : example) ->
-               { is_good = ex.is_good; description = None; code = ex.code })
-             exs)
-  in
-  { text = rule.hint; examples }
+let is_project_scoped (T rule) =
+  match rule.check with Project _ -> true | File _ -> false
 
-(** Get a hint for a specific issue type *)
-let get_hint rules issue_type =
-  let hint = get_structured_hint rules issue_type in
-  hint.text
+(* Module for handling rule execution results *)
+module Run = struct
+  type result = Result : string * string * 'a Fmt.t * 'a Issue.t -> result
+
+  let file (T rule) ctx =
+    match rule.check with
+    | File check_fn ->
+        let issues = check_fn ctx in
+        List.map
+          (fun issue -> Result (rule.code, rule.title, rule.pp, issue))
+          issues
+    | Project _ -> []
+
+  let project (T rule) ctx =
+    match rule.check with
+    | Project check_fn ->
+        let issues = check_fn ctx in
+        List.map
+          (fun issue -> Result (rule.code, rule.title, rule.pp, issue))
+          issues
+    | File _ -> []
+
+  let code (Result (c, _, _, _)) = c
+  let title (Result (_, t, _, _)) = t
+  let pp ppf (Result (_, _, fmt, issue)) = Issue.pp fmt ppf issue
+  let location (Result (_, _, _, issue)) = Issue.location issue
+
+  let compare (Result (_, _, _, a)) (Result (_, _, _, b)) =
+    match (Issue.location a, Issue.location b) with
+    | None, None -> 0
+    | None, Some _ -> -1
+    | Some _, None -> 1
+    | Some a_loc, Some b_loc -> Location.compare a_loc b_loc
+end

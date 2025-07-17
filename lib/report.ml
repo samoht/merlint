@@ -1,7 +1,7 @@
 type t = {
   rule_name : string;
   passed : bool;
-  issues : Issue.t list;
+  issues : Rule.Run.result list;
   file_count : int;
 }
 
@@ -22,8 +22,8 @@ let pp ppf report =
     report.rule_name
     (List.length report.issues);
   (* Show detailed issues sorted by priority *)
-  let sorted_issues = List.sort Issue.compare report.issues in
-  List.iter (fun issue -> Fmt.pf ppf "    %a@." Issue.pp issue) sorted_issues
+  let sorted_issues = List.sort Rule.Run.compare report.issues in
+  List.iter (fun issue -> Fmt.pf ppf "    %a@." Rule.Run.pp issue) sorted_issues
 
 let pp_summary ppf reports =
   let total_issues =

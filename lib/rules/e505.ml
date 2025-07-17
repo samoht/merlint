@@ -1,5 +1,7 @@
 (** E505: Missing MLI File *)
 
+type payload = { ml_file : string; expected_mli : string }
+
 let check (ctx : Context.project) =
   let files = Context.all_files ctx in
   (* Get executable info once for all files *)
@@ -22,12 +24,24 @@ let check (ctx : Context.project) =
           let base_name = Filename.remove_extension ml_file in
           let mli_path = base_name ^ ".mli" in
           if not (Sys.file_exists mli_path) then
-            Some
-              (Issue.missing_mli_file ~ml_file ~expected_mli:mli_path
-                 ~loc:
-                   (Location.create ~file:ml_file ~start_line:1 ~start_col:1
-                      ~end_line:1 ~end_col:1))
+            let loc =
+              Location.create ~file:ml_file ~start_line:1 ~start_col:0
+                ~end_line:1 ~end_col:0
+            in
+            Some (Issue.v ~loc { ml_file; expected_mli = mli_path })
           else None
         else None
       else None)
     files
+
+let pp ppf { ml_file; expected_mli } =
+  Fmt.pf ppf "Library module %s is missing interface file %s" ml_file
+    expected_mli
+
+let rule =
+  Rule.v ~code:"E505" ~title:"Missing MLI File" ~category:Project_structure
+    ~hint:
+      "Library modules should have corresponding .mli files for proper \
+       encapsulation and API documentation. Create interface files to hide \
+       implementation details and provide a clean API."
+    ~examples:[] ~pp (Project check)

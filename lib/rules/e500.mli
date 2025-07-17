@@ -4,6 +4,5 @@
     formatting. All OCaml projects should have a .ocamlformat file in the root
     directory. *)
 
-val check : Context.project -> Issue.t list
-(** [check project_root] checks if the project root has a .ocamlformat file.
-    Returns a list of issues if the file is missing. *)
+val rule : Rule.t
+(** The E500 rule definition *)

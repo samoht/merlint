@@ -69,8 +69,7 @@ let test_get_test_modules () =
   let modules = Dune.get_test_modules sample_dune_describe in
   (* Note: Based on the implementation, it looks for test_ prefix in names *)
   Alcotest.(check (list string))
-    "test modules"
-    []
+    "test modules" []
     (List.sort String.compare modules)
 
 let test_get_executable_info () =
@@ -84,13 +83,13 @@ let test_get_project_files () =
   let files_sexp =
     Parsexp.Single.parse_string_exn
       {|
-((library
+(library
   ((name mylib)
    (local true)
    (modules
     ((impl (_build/default/lib/parser.ml))
      (intf (_build/default/lib/parser.mli))
-     (impl (_build/default/lib/lexer.ml)))))))|}
+     (impl (_build/default/lib/lexer.ml))))))|}
   in
   let files = Dune.get_project_files files_sexp in
   Alcotest.(check (list string))

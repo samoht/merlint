@@ -5,6 +5,5 @@
     - Should use Snake_case with capital first letter (e.g., My_module,
       Another_module) *)
 
-val check : Context.file -> Issue.t list
-(** [check AST] analyzes the AST to find modules that don't follow naming
-    conventions. Returns a list of issues for modules that violate the rule. *)
+val rule : Rule.t
+(** The E305 rule definition *)

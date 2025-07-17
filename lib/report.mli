@@ -6,12 +6,16 @@
 type t = {
   rule_name : string;
   passed : bool;
-  issues : Issue.t list;
+  issues : Rule.Run.result list;
   file_count : int;
 }
 
 val create :
-  rule_name:string -> passed:bool -> issues:Issue.t list -> file_count:int -> t
+  rule_name:string ->
+  passed:bool ->
+  issues:Rule.Run.result list ->
+  file_count:int ->
+  t
 
 val pp : t Fmt.t
 (** Pretty-printer for a report *)
@@ -22,4 +26,4 @@ val pp_summary : t list Fmt.t
 val print_status : bool -> string
 val print_color : bool -> string -> string
 val print_summary : t list -> unit
-val get_all_issues : t list -> Issue.t list
+val get_all_issues : t list -> Rule.Run.result list

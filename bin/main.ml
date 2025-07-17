@@ -144,37 +144,42 @@ let wrap_text ?(indent = 2) ?(max_width = 120) text =
 
 let print_issue_group (error_code, issues) =
   (* Sort issues within each group by location *)
-  let sorted_issues = List.sort Merlint.Issue.compare issues in
+  let sorted_issues = List.sort Merlint.Rule.Run.compare issues in
   match sorted_issues with
   | [] -> ()
   | first_issue :: _ ->
-      let issue_type = Merlint.Issue.kind first_issue in
-
-      (* Print error code and title *)
-      let title =
-        Merlint.Rule.get_hint_title Merlint.Data.all_rules issue_type
-      in
+      (* Get title from the first issue *)
+      let title = Merlint.Rule.Run.title first_issue in
       Fmt.pr "  %a %a@."
         (Fmt.styled `Yellow Fmt.string)
         (Fmt.str "[%s]" error_code)
         (Fmt.styled `Bold Fmt.string)
         title;
 
-      (* Print hint if available *)
-      let hint = Merlint.Rule.get_hint Merlint.Data.all_rules issue_type in
-      let wrapped_hint = wrap_text ~indent:2 hint in
-      (* Print each line of the hint in gray *)
-      String.split_on_char '\n' wrapped_hint
-      |> List.iter (fun line ->
-             Fmt.pr "%a@." (Fmt.styled `Faint Fmt.string) line);
+      (* Find the rule to get the hint *)
+      let rule_opt =
+        List.find_opt
+          (fun rule -> Merlint.Rule.code rule = error_code)
+          Merlint.Data.all_rules
+      in
+      (match rule_opt with
+      | Some rule ->
+          let hint = Merlint.Rule.hint rule in
+          let wrapped_hint = wrap_text ~indent:2 hint in
+          (* Print each line of the hint in gray *)
+          String.split_on_char '\n' wrapped_hint
+          |> List.iter (fun line ->
+                 Fmt.pr "%a@." (Fmt.styled `Faint Fmt.string) line)
+      | None -> ());
 
       (* Print each issue with location and description *)
       if List.length sorted_issues > 0 then
         List.iter
           (fun issue ->
-            match Merlint.Issue.location issue with
+            match Merlint.Rule.Run.location issue with
             | Some loc ->
-                let desc = Merlint.Issue.description issue in
+                (* Format the issue with its pretty-printer *)
+                let desc = Fmt.to_to_string Merlint.Rule.Run.pp issue in
                 (* Always print location: description on same line *)
                 (* Terminal will wrap naturally if too long *)
                 Fmt.pr "  - %a: %s@."
@@ -187,7 +192,7 @@ let print_issue_group (error_code, issues) =
 let group_issues_by_code issues =
   List.fold_left
     (fun acc issue ->
-      let error_code = Merlint.Issue.error_code (Merlint.Issue.kind issue) in
+      let error_code = Merlint.Rule.Run.code issue in
       let current =
         match List.assoc_opt error_code acc with
         | Some issues -> issues
@@ -195,36 +200,6 @@ let group_issues_by_code issues =
       in
       (error_code, issue :: current) :: List.remove_assoc error_code acc)
     [] issues
-
-let process_category_report _rule_filter (category_name, reports) =
-  let total_issues =
-    List.fold_left
-      (fun acc report -> acc + List.length report.Merlint.Report.issues)
-      0 reports
-  in
-
-  let category_passed =
-    List.for_all (fun report -> report.Merlint.Report.passed) reports
-  in
-
-  Fmt.pr "%s %s (%d total issues)@."
-    (Merlint.Report.print_color category_passed
-       (Merlint.Report.print_status category_passed))
-    category_name total_issues;
-
-  (* Only show detailed reports if there are issues *)
-  (if total_issues > 0 then
-     (* Group all issues by error code *)
-     let all_issues =
-       List.concat_map (fun report -> report.Merlint.Report.issues) reports
-     in
-     let grouped_issues = group_issues_by_code all_issues in
-     (* Sort groups by error code and print each group *)
-     let sorted_groups =
-       List.sort (fun (a, _) (b, _) -> String.compare a b) grouped_issues
-     in
-     List.iter print_issue_group sorted_groups);
-  reports
 
 let print_fix_hints all_issues = if all_issues <> [] then exit 1
 
@@ -236,27 +211,92 @@ let run_analysis project_root filtered_files rule_filter show_profile =
   (* Reset profiling if enabled *)
   if show_profile then Merlint.Profiling.reset ();
 
-  let config = Merlint.Config.load_from_path project_root in
-  let rules_config = { Merlint.Engine.merlint_config = config; project_root } in
   Log.info (fun m ->
       m "Starting visual analysis on %d files" (List.length filtered_files));
-  let category_reports =
-    Merlint.Engine.analyze_project rules_config filtered_files rule_filter
+
+  (* Get exclude patterns from somewhere - for now empty *)
+  let exclude_patterns = [] in
+
+  (* Run the engine to get all issues *)
+  let all_issues =
+    match rule_filter with
+    | Some filter ->
+        Merlint.Engine.run ~filter ~exclude:exclude_patterns project_root
+    | None -> (
+        (* Create a default filter that enables all rules *)
+        match Merlint.Filter.parse "all" with
+        | Ok filter ->
+            Merlint.Engine.run ~filter ~exclude:exclude_patterns project_root
+        | Error _ -> [] (* Should not happen *))
   in
 
   Fmt.pr "Running merlint analysis...@.@.";
   Fmt.pr "Analyzing %d files@.@." (List.length filtered_files);
 
-  let all_reports =
-    List.fold_left
-      (fun acc category_report ->
-        let reports = process_category_report rule_filter category_report in
-        reports @ acc)
-      [] category_reports
+  (* Get all category names in order *)
+  let all_categories =
+    [
+      "Code Quality";
+      "Code Style";
+      "Naming Conventions";
+      "Documentation";
+      "Project Structure";
+      "Test Quality";
+    ]
   in
 
-  Merlint.Report.print_summary all_reports;
-  let all_issues = Merlint.Report.get_all_issues all_reports in
+  (* Group issues by category for reporting *)
+  let issues_by_category =
+    List.map
+      (fun category_name ->
+        let category_issues =
+          List.filter
+            (fun issue ->
+              let code = Merlint.Rule.Run.code issue in
+              (* Find the rule to get its category *)
+              match
+                List.find_opt
+                  (fun r -> Merlint.Rule.code r = code)
+                  Merlint.Data.all_rules
+              with
+              | Some rule ->
+                  let category = Merlint.Rule.category rule in
+                  Merlint.Rule.category_name category = category_name
+              | None -> false)
+            all_issues
+        in
+        (category_name, category_issues))
+      all_categories
+  in
+
+  (* Process each category *)
+  List.iter
+    (fun (category_name, issues) ->
+      let total_issues = List.length issues in
+      let category_passed = total_issues = 0 in
+
+      Fmt.pr "%s %s (%d total issues)@."
+        (Merlint.Report.print_color category_passed
+           (Merlint.Report.print_status category_passed))
+        category_name total_issues;
+
+      (* Group by error code and print *)
+      if total_issues > 0 then
+        let grouped_issues = group_issues_by_code issues in
+        let sorted_groups =
+          List.sort (fun (a, _) (b, _) -> String.compare a b) grouped_issues
+        in
+        List.iter print_issue_group sorted_groups)
+    issues_by_category;
+
+  (* Create a dummy report for the summary *)
+  let report =
+    Merlint.Report.create ~rule_name:"All Rules"
+      ~passed:(List.length all_issues = 0)
+      ~issues:all_issues
+      ~file_count:(List.length filtered_files)
+  in
+  Merlint.Report.print_summary [ report ];
 
   (* Print profiling summary if enabled *)
   if show_profile then (

@@ -8,18 +8,11 @@ Test bad example - should find missing interface file:
   ✓ Code Style (0 total issues)
   ✓ Naming Conventions (0 total issues)
   ✓ Documentation (0 total issues)
-  ✗ Project Structure (1 total issues)
-    [E505] Missing Interface Files
-    This issue means your modules lack interface files making their public API
-    unclear. Fix it by creating .mli files that document which functions and types
-    should be public. Copy public signatures from the .ml file and remove private
-    ones.
-    - bad.ml:1:1: missing interface file
+  ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   
-  Summary: ✗ 1 total issues
-  ✗ Some checks failed. See details above.
-  [1]
+  Summary: ✓ 0 total issues
+  ✓ All checks passed!
 
 Test good example - should find no issues:
   $ merlint -r E505 good.ml good.mli

@@ -21,20 +21,14 @@ This document outlines the coding and testing conventions for this project. The 
 
 7. **NEVER USE Obj.magic**: The `Obj` module is not part of the OCaml language and breaks type safety. There is always a better, type-safe solution.
 
-### [E100] Unsafe Type Casting
+### [E100] No Obj.magic
 
-This issue means you're using unsafe type casting that can crash your
-program. Fix it by replacing Obj.magic with proper type definitions,
-variant types, or GADTs to represent different cases safely.
+Obj.magic completely bypasses OCaml's type system and is extremely dangerous. It can lead to segmentation faults, data corruption, and unpredictable behavior. Instead, use proper type definitions, GADTs, or polymorphic variants. If you absolutely must use unsafe features, document why and isolate the usage.
 
-**Examples:**
-
-❌ **Bad:**
 ```ocaml
 let coerce x = Stdlib.Obj.magic x
 ```
 
-✅ **Good:**
 ```ocaml
 (* Use proper type conversions *)
 let int_of_string_opt s =
@@ -45,32 +39,24 @@ type value = Int of int | String of string
 let to_int = function Int i -> Some i | _ -> None
 ```
 
-
 ## Dependencies and Tooling
 
 **Build System**: The project is built exclusively with `dune`.
 
 **Formatting**: All code is formatted automatically with `ocamlformat`. Run `dune fmt` before committing. Ensure you have a `.ocamlformat` file in your project root.
 
-### [E500] Missing Code Formatter
+### [E500] Missing OCamlformat File
 
-This issue means your project lacks consistent code formatting. Fix it by
-creating a .ocamlformat file in your project root with 'profile = default'
-and a version number to ensure consistent formatting.
+All OCaml projects should have a .ocamlformat file in the root directory to ensure consistent code formatting. Create one with your preferred settings.
 
-**Examples:**
-
-❌ **Bad:**
 ```ocaml
 (* No .ocamlformat file in project root *)
 ```
 
-✅ **Good:**
 ```ocaml
 (* This project has .ocamlformat configured *)
 let well_formatted = true
 ```
-
 
 **Core Libraries**: Projects typically embrace a curated set of high-quality libraries for common tasks. For example:
 
@@ -80,14 +66,8 @@ let well_formatted = true
 
 ### [E205] Consider Using Fmt Module
 
-This is a style suggestion. While Printf and Format are part of OCaml's
-standard library and perfectly fine to use, the Fmt library offers additional
-features like custom formatters and better composability. Consider using Fmt
-for new code, but Printf/Format remain valid choices for many use cases.
+The Fmt module provides a more modern and composable approach to formatting. It offers better type safety and cleaner APIs compared to Printf/Format modules.
 
-**Examples:**
-
-❌ **Bad:**
 ```ocaml
 let make_error msg line = 
   Stdlib.Printf.sprintf "Error: %s at line %d" msg line
@@ -95,7 +75,6 @@ let print_count n =
   Stdlib.Printf.printf "Processing %d items...\n" n
 ```
 
-✅ **Good:**
 ```ocaml
 (* Requires: opam install fmt *)
 let make_error msg line = 
@@ -104,30 +83,22 @@ let print_count n =
   Fmt.pr "Processing %d items...@." n
 ```
 
-
 - **Regular Expressions**: `re` (instead of Str module)
 
 ### [E200] Outdated Str Module
 
-This issue means you're using the outdated Str module for regular
-expressions. Fix it by switching to the modern Re module: add 're' to your
-dune dependencies and replace Str functions with Re equivalents.
+The Str module is outdated and has a problematic API. Use the Re module instead for regular expressions. Re provides a better API, is more performant, and doesn't have global state issues.
 
-**Examples:**
-
-❌ **Bad:**
 ```ocaml
 let contains_at s = 
-  Stdlib.Str.string_match (Stdlib.Str.regexp ".*@.*") s 0
+  Str.string_match (Str.regexp ".*@.*") s 0
 ```
 
-✅ **Good:**
 ```ocaml
 (* Requires: opam install re *)
 let at_re = Re.compile (Re.str "@")
 let contains_at s = Re.execp at_re s
 ```
-
 
 - **Logging**: `logs`
 
@@ -143,26 +114,22 @@ let contains_at s = Re.execp at_re s
 
 **Documentation**: Every `.mli` file must begin with a top-level documentation comment explaining its purpose. Focus on *what* the module provides, not *how* it is implemented.
 
-### [E400] Missing Module Documentation
+### [E405] Missing Type Documentation
 
-This issue means your modules lack documentation making them hard to
-understand. Fix it by adding module documentation at the top of .mli files
-with a brief summary and description of the module's purpose.
+All public values should have documentation explaining their purpose and usage. Add doc comments (** ... *) above value declarations in .mli files.
 
-**Examples:**
-
-❌ **Bad:**
 ```ocaml
-type t = string
-let create s = s
+type t
+val parse : string -> t
 ```
 
-✅ **Good:**
 ```ocaml
-type t = string
-let create s = s
-```
+type t
 
+(** [parse str] converts a string to type [t].
+    @raise Invalid_argument if [str] is malformed. *)
+val parse : string -> t
+```
 
 ```ocaml
 (** User API
@@ -172,29 +139,23 @@ let create s = s
 
 **Interface (`.mli`) Style**: Document every exported value. Use a consistent, concise style.
 
-### [E405] Missing Value Documentation
+### [E410] Bad Documentation Style
 
-This issue means your public functions and values lack documentation making
-them hard to use. Fix it by adding documentation comments that explain what
-each function does, its parameters, and return value.
+Documentation should follow OCaml conventions: start with a capital letter, end with a period, and use proper grammar. Avoid redundant phrases like 'This function...' - just state what it does directly.
 
-**Examples:**
-
-❌ **Bad:**
-```ocaml
-type t
-val parse : string -> t
-```
-
-✅ **Good:**
 ```ocaml
 type t
 
-(** [parse str] converts a string to type [t].
-    @raise Invalid_argument if [str] is malformed. *)
+(* this function parses strings *)
 val parse : string -> t
 ```
 
+```ocaml
+type t
+
+(** [parse str] parses a string into type [t]. *)
+val parse : string -> t
+```
 
 **Documentation Philosophy**: For functions, use the `[function_name arg1 arg2] is ...` pattern.
 
@@ -216,25 +177,18 @@ type id = string
 
 ### [E415] Missing Standard Functions
 
-This issue means your types lack standard functions making them hard to use
-in collections and debugging. Fix it by implementing equal, compare, pp
-(pretty-printer), and to_string functions for your types.
+Types should implement standard functions like equal, compare, pp (pretty-printer), and to_string for better usability and consistency across the codebase.
 
-**Examples:**
-
-❌ **Bad:**
 ```ocaml
 type user = { id: int; name: string }
 ```
 
-✅ **Good:**
 ```ocaml
 type user = { id: int; name: string }
 val equal : user -> user -> bool
 val compare : user -> user -> int
 val pp : Format.formatter -> user -> unit
 ```
-
 
 - `val v : ... -> t`: A pure, smart constructor for creating values of type `t` in memory. This function should not perform any I/O.
 
@@ -256,51 +210,43 @@ val pp : Format.formatter -> user -> unit
 
 **Interface Files**: Create `.mli` files for all public modules to define clear interfaces and hide implementation details.
 
-### [E505] Missing Interface Files
+### [E505] Missing MLI File
 
-This issue means your modules lack interface files making their public API
-unclear. Fix it by creating .mli files that document which functions and
-types should be public. Copy public signatures from the .ml file and remove
-private ones.
+Library modules should have corresponding .mli files for proper encapsulation and API documentation. Create interface files to hide implementation details and provide a clean API.
 
-**Examples:**
-
-❌ **Bad:**
 ```ocaml
 type t = { name: string; id: int }
 let create name id = { name; id }
 let name t = t.name
 ```
 
-✅ **Good:**
 ```ocaml
 type t = { name: string; id: int }
 let create name id = { name; id }
 let name t = t.name
 ```
 
+```ocaml
+(* user.mli *)
+type t
+val create : string -> int -> t
+val name : t -> string
+```
 
 **Code Formatting**: Maintain a `.ocamlformat` file in the project root with consistent formatting settings.
 
-### [E500] Missing Code Formatter
+### [E500] Missing OCamlformat File
 
-This issue means your project lacks consistent code formatting. Fix it by
-creating a .ocamlformat file in your project root with 'profile = default'
-and a version number to ensure consistent formatting.
+All OCaml projects should have a .ocamlformat file in the root directory to ensure consistent code formatting. Create one with your preferred settings.
 
-**Examples:**
-
-❌ **Bad:**
 ```ocaml
 (* No .ocamlformat file in project root *)
 ```
 
-✅ **Good:**
 ```ocaml
 (* This project has .ocamlformat configured *)
 let well_formatted = true
 ```
-
 
 ## Command-Line Applications
 
@@ -346,49 +292,34 @@ let find_user_id json =
 
 ### [E105] Catch-all Exception Handler
 
-This issue means you're catching all exceptions with a wildcard pattern,
-which can hide unexpected errors and make debugging difficult. Fix it by
-handling specific exceptions explicitly. If you must catch all exceptions,
-at least log them before re-raising or handling.
+Catch-all exception handlers (with _ ->) can hide unexpected errors and make debugging difficult. Always handle specific exceptions explicitly. If you must catch all exceptions, log them or re-raise after cleanup.
 
-**Examples:**
-
-❌ **Bad:**
 ```ocaml
 try int_of_string "abc" with _ -> 0
 ```
 
-✅ **Good:**
 ```ocaml
 try int_of_string "abc" with
 | Failure _ -> 0
 | exn -> print_endline "unexpected"; raise exn
 ```
 
-
 **No Silenced Warnings**: Fix underlying issues instead of silencing compiler warnings with attributes like `[@warning "-nn"]`.
 
-### [E110] Silenced Compiler Warnings
+### [E110] Silenced Warning
 
-This issue means you're hiding compiler warnings that indicate potential
-problems. Fix it by removing warning silencing attributes and addressing
-the underlying issues that trigger the warnings.
+Warnings should be addressed rather than silenced. Fix the underlying issue instead of using warning suppression attributes. If you must suppress a warning, document why it's necessary.
 
-**Examples:**
-
-❌ **Bad:**
 ```ocaml
 [@@@ocaml.warning "-32"] (* unused value *)
 let unused_function x = x + 1
 ```
 
-✅ **Good:**
 ```ocaml
 (* Remove unused code or use it *)
 let helper x = x + 1
 let result = helper 42
 ```
-
 
 **Initialization Failures**: For unrecoverable errors during startup (e.g., missing configuration), it is acceptable to fail fast using `Fmt.failwith`.
 
@@ -405,57 +336,10 @@ let tls_config =
 
 **Module Naming**: Lowercase with underscores (e.g., `user_profile`).
 
-### [E305] Module Naming Convention
-
-This issue means your module names don't follow OCaml naming conventions.
-Fix them by using underscores between words while keeping the first letter capitalized (e.g., MyModule → My_module).
-
-**Examples:**
-
-❌ **Bad:**
-```ocaml
-module UserProfile = struct end
-```
-
-✅ **Good:**
-```ocaml
-module User_profile = struct end
-```
-
-
-**Type Naming**: The primary type in a module is `t`. Identifiers are named `id`. Use snake_case for all type names.
-
-### [E315] Type Naming Convention
-
-This issue means your type names don't follow OCaml naming conventions. Fix
-them by renaming to snake_case (e.g., myType → my_type).
-
-**Examples:**
-
-❌ **Bad:**
-```ocaml
-type userProfile = { name : string }
-type http_response = HttpOk | HttpError
-```
-
-✅ **Good:**
-```ocaml
-type user_profile = { name: string }
-type http_response = Ok | Error
-```
-
-
-**Variant Constructors**: Use Snake_case for variant constructors (e.g., `Waiting_for_input`, `Processing_data`), not CamelCase.
-
 ### [E300] Variant Naming Convention
 
-This issue means your variant constructors don't follow OCaml naming
-conventions. Fix them by renaming to Snake_case (e.g., MyVariant →
-My_variant).
+Variant constructors should use PascalCase (e.g., MyVariant, SomeConstructor). This is the standard convention in OCaml for variant constructors.
 
-**Examples:**
-
-❌ **Bad:**
 ```ocaml
 type status = 
   | WaitingForInput
@@ -463,7 +347,6 @@ type status =
   | ErrorOccurred
 ```
 
-✅ **Good:**
 ```ocaml
 type status = 
   | Waiting_for_input  (* Snake_case *)
@@ -471,82 +354,83 @@ type status =
   | Error_occurred
 ```
 
+**Type Naming**: The primary type in a module is `t`. Identifiers are named `id`. Use snake_case for all type names.
 
-**Values**: Short, descriptive, and lowercase with underscores (e.g., `find_user`, `create_channel`).
+### [E305] Module Naming Convention
+
+Module names should use Snake_case (e.g., My_module, Some_component). This helps distinguish modules from variant constructors.
+
+```ocaml
+module UserProfile = struct end
+```
+
+```ocaml
+module User_profile = struct end
+```
+
+**Variant Constructors**: Use Snake_case for variant constructors (e.g., `Waiting_for_input`, `Processing_data`), not CamelCase.
 
 ### [E310] Value Naming Convention
 
-This issue means your value names don't follow OCaml naming conventions.
-Fix them by renaming to snake_case (e.g., myValue → my_value).
+Values and function names should use snake_case (e.g., my_value, get_data). This is the standard convention in OCaml for values and functions.
 
-**Examples:**
-
-❌ **Bad:**
 ```ocaml
 type user = { name : string }
 let myValue = 42
 let getUserName user = user.name
 ```
 
-✅ **Good:**
 ```ocaml
 type user = { name : string }
 let my_value = 42
 let get_user_name user = user.name
 ```
 
+**Values**: Short, descriptive, and lowercase with underscores (e.g., `find_user`, `create_channel`).
+
+### [E315] Type Naming Convention
+
+Type names should use snake_case, except for the conventional names 't' and 'id'. This convention helps maintain consistency across the codebase.
+
+```ocaml
+type userProfile = { name : string }
+type http_response = HttpOk | HttpError
+```
+
+```ocaml
+type user_profile = { name: string }
+type http_response = Ok | Error
+```
 
 **Long Identifiers**: Avoid excessively long names with many underscores. Keep names concise and meaningful.
 
 ### [E320] Long Identifier Names
 
-This issue means your identifier has too many underscores (more than 4) making it hard to
-read. Fix it by removing redundant prefixes and suffixes:
+Avoid using too many underscores in identifier names as they make code harder to read. Consider using more descriptive names or restructuring the code to avoid deeply nested concepts.
 
-• In test files: remove 'test_' prefix (e.g., test_check_foo → check_foo or
-  just foo)
-• In hint files: remove '_hint' suffix (e.g., complexity_hint → complexity)
-• In modules: remove '_module' suffix (e.g., parser_module → parser)
-• Remove redundant words that repeat the context (e.g., check_mli_doc →
-  check_mli)
-
-The file/module context already makes the purpose clear.
-
-**Examples:**
-
-❌ **Bad:**
 ```ocaml
 let get_user_profile_data_from_database_by_id () = 42
 ```
 
-✅ **Good:**
 ```ocaml
 let get_user_by_id () = 42
 ```
 
-
 **Function Naming**: Use `get_*` for extraction (returns value directly), `find_*` for search (returns option type).
 
-### [E325] Function Naming Pattern
+### [E325] Function Naming Convention
 
-This issue means your function names don't match their return types. Fix
-them by using consistent naming: get_* for extraction (returns value
-directly), find_* for search (returns option type).
+Functions that return option types should be prefixed with 'find_', while functions that return non-option types should be prefixed with 'get_'. This convention helps communicate the function's behavior to callers.
 
-**Examples:**
-
-❌ **Bad:**
 ```ocaml
 let get_user () = None  (* returns option but named get_* *)
 let find_name () = "John"  (* returns string but named find_* *)
 ```
 
-✅ **Good:**
 ```ocaml
 let find_user () = None  (* returns option, correctly named *)
 let get_name () = "John"  (* returns string, correctly named *)
 ```
-
 
 **Labels**: Use labels only when they clarify the meaning of an argument, not for all arguments. Avoid `~f` and `~x`.
 
@@ -578,16 +462,8 @@ let w = create_widget ~visibility:Visible ~border:Without_border
 
 ### [E005] Long Functions
 
-This issue means your functions are too long and hard to read. Fix them by
-extracting logical sections into separate functions with descriptive names.
-Note: Functions with pattern matching get additional allowance (2 lines per case).
-Pure data structures (lists, records) are also exempt from length checks.
-For better readability, consider using helper functions for complex logic.
-Aim for functions under 50 lines of actual logic.
+This issue means your functions are too long and hard to read. Fix them by extracting logical sections into separate functions with descriptive names. Note: Functions with pattern matching get additional allowance (2 lines per case). Pure data structures (lists, records) are also exempt from length checks. For better readability, consider using helper functions for complex logic. Aim for functions under 50 lines of actual logic.
 
-**Examples:**
-
-❌ **Bad:**
 ```ocaml
 let process_all_data x y z =
   (* This function is intentionally long to demonstrate the rule *)
@@ -646,7 +522,6 @@ let process_all_data x y z =
   result
 ```
 
-✅ **Good:**
 ```ocaml
 let step1 x y = (x + 1, y + 1)
 let step2 (a, b) = (a * 2, b * 2)
@@ -658,16 +533,10 @@ let process_all x y =
   combine (c, d)
 ```
 
-
 ### [E010] Deep Nesting
 
-This issue means your code has too many nested conditions making it hard to
-follow. Fix it by using pattern matching, early returns with 'when' guards,
-or extracting nested logic into helper functions.
+This issue means your code has too many nested conditions making it hard to follow. Fix it by extracting nested logic into helper functions, using early returns to reduce nesting, or combining conditions when appropriate. Aim for maximum nesting depth of 4.
 
-**Examples:**
-
-❌ **Bad:**
 ```ocaml
 let process x y z =
   if x > 0 then
@@ -681,7 +550,6 @@ let process x y z =
   else 0
 ```
 
-✅ **Good:**
 ```ocaml
 let process x y z =
   if x <= 0 || y <= 0 || z <= 0 then 0
@@ -689,20 +557,14 @@ let process x y z =
   else x + y + z
 ```
 
-
 **Complexity Management**: Break down functions with high 
              cyclomatic complexity into smaller, focused helper functions with 
              clear names.
 
 ### [E001] High Cyclomatic Complexity
 
-This issue means your functions have too much conditional logic. Fix them
-by extracting complex logic into smaller helper functions with clear names
-that describe their purpose.
+High cyclomatic complexity makes code harder to understand and test. Consider breaking complex functions into smaller, more focused functions. Each function should ideally do one thing well.
 
-**Examples:**
-
-❌ **Bad:**
 ```ocaml
 let check_input x y z =
   if x > 0 then
@@ -720,7 +582,6 @@ let check_input x y z =
   else "invalid"
 ```
 
-✅ **Good:**
 ```ocaml
 let check_positive x = x > 0
 
@@ -735,7 +596,6 @@ let check_input x y z =
   else
     "valid"
 ```
-
 
 **Composition over Abstraction**: Favor the composition of small, 
              concrete functions to build up complex behavior. Avoid deep 
@@ -789,20 +649,30 @@ Log.info (fun m ->
 
 2. **1:1 Test Coverage**: Every module in `lib/` should have a corresponding test module in `test/`.
 
-### [E605] Missing Test Coverage
+### [E600] Test Module Convention
 
-This issue means some of your library modules lack test coverage making
-bugs more likely. Fix it by creating corresponding test files for each
-library module to ensure your code works correctly.
+Test modules should export a single 'suite' value that contains all tests. This makes it easier to compose and organize tests, and allows test runners to discover and run tests more effectively.
 
-**Examples:**
+```ocaml
+(* test.ml - main test executable *)
+let tests = []
+let () = Alcotest.run "test_user" [("user", tests)]
+```
 
-❌ **Bad:**
+```ocaml
+(* test.ml - main test executable *)
+let suite = ("user", [])
+let () = Alcotest.run "Test suite description" [suite]
+```
+
+### [E605] Missing Test File
+
+Each library module should have a corresponding test file to ensure proper testing coverage. Create test files following the naming convention test_<module>.ml
+
 ```ocaml
 (* lib/parser.ml exists but no test/test_parser.ml *)
 ```
 
-✅ **Good:**
 ```ocaml
 (* test/test_parser.ml *)
 let test_parse = fun () -> ()
@@ -810,62 +680,26 @@ let test_errors = fun () -> ()
 let suite = ("parser", [test_parse; test_errors])
 ```
 
+3. **Test Organization**: Test files should export a `suite` value.
 
-### [E610] Orphaned Test Files
+### [E610] Test Without Library
 
-This issue means you have test files that don't correspond to any library
-module making your test organization confusing. Fix it by either removing
-orphaned test files or creating the corresponding library modules.
+Every test module should have a corresponding library module. This ensures that tests are testing actual library functionality rather than testing code that doesn't exist in the library.
 
-**Examples:**
-
-❌ **Bad:**
 ```ocaml
 (* test/test_old_feature.ml exists but lib/old_feature.ml was removed *)
 ```
 
-✅ **Good:**
 ```ocaml
 (* Remove test/test_old_feature.ml or restore lib/old_feature.ml *)
 ```
 
-
-3. **Test Organization**: Test files should export a `suite` value.
-
-### [E600] Test Module Convention
-
-This issue means your test files don't follow the expected convention for
-test organization. Fix it by exporting a 'suite' value instead of running
-tests directly, allowing better test composition and organization.
-
-**Examples:**
-
-❌ **Bad:**
-```ocaml
-(* test.ml - main test executable *)
-let tests = []
-let () = Alcotest.run "test_user" [("user", tests)]
-```
-
-✅ **Good:**
-```ocaml
-(* test.ml - main test executable *)
-let suite = ("user", [])
-let () = Alcotest.run "Test suite description" [suite]
-```
-
-
 4. **Test Inclusion**: All test suites must be included in the main test runner.
 
-### [E615] Excluded Test Suites
+### [E615] Test Suite Not Included
 
-This issue means some test suites aren't included in your main test runner
-so they never get executed. Fix it by adding them to the main test runner
-to ensure all tests are run during development.
+All test modules should be included in the main test runner (test.ml). Add the missing test suite to ensure all tests are run.
 
-**Examples:**
-
-❌ **Bad:**
 ```ocaml
 (* test/test.ml *)
 module Test_user = struct
@@ -875,7 +709,6 @@ let () = Alcotest.run "all" [Test_user.suite]
 (* Missing Test_parser.suite *)
 ```
 
-✅ **Good:**
 ```ocaml
 (* test/test.ml *)
 module Test_user = struct
@@ -889,7 +722,6 @@ let () = Alcotest.run "all" [
   Test_parser.suite
 ]
 ```
-
 
 5. **Clear Test Names**: Test names should describe what they test, not how.
 

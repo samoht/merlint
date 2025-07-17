@@ -7,7 +7,7 @@ type element =
   | Section of string * element list
   | Paragraph of string
   | Code of string  (** Code examples *)
-  | Rule of Issue.kind
+  | Rule of string
 
 let content =
   [
@@ -45,7 +45,9 @@ let content =
              high-quality, well-maintained libraries.";
           Paragraph
             {|7. **NEVER USE Obj.magic**: The `Obj` module is not part of the OCaml language and breaks type safety. There is always a better, type-safe solution.|};
-          Rule Obj_magic;
+          Rule "E100";
+          Code Examples.E100.bad_ml;
+          Code Examples.E100.good_ml;
         ] );
     Section
       ( "Dependencies and Tooling",
@@ -56,15 +58,21 @@ let content =
             "**Formatting**: All code is formatted automatically with \
              `ocamlformat`. Run `dune fmt` before committing. Ensure you have \
              a `.ocamlformat` file in your project root.";
-          Rule Missing_ocamlformat_file;
+          Rule "E500";
+          Code Examples.E500.bad_ml;
+          Code Examples.E500.good_ml;
           Paragraph
             "**Core Libraries**: Projects typically embrace a curated set of \
              high-quality libraries for common tasks. For example:";
           Paragraph "- **Concurrency**: `eio`";
           Paragraph "- **Structured Output**: `fmt` (instead of Printf/Format)";
-          Rule Printf_module;
+          Rule "E205";
+          Code Examples.E205.bad_ml;
+          Code Examples.E205.good_ml;
           Paragraph "- **Regular Expressions**: `re` (instead of Str module)";
-          Rule Str_module;
+          Rule "E200";
+          Code Examples.E200.bad_ml;
+          Code Examples.E200.good_ml;
           Paragraph "- **Logging**: `logs`";
           Paragraph "- **CLI Parsing**: `cmdliner`";
           Paragraph "- **JSON Handling**: `yojson`";
@@ -78,7 +86,9 @@ let content =
             "**Documentation**: Every `.mli` file must begin with a top-level \
              documentation comment explaining its purpose. Focus on *what* the \
              module provides, not *how* it is implemented.";
-          Rule Missing_mli_doc;
+          Rule "E405";
+          Code Examples.E405.bad_mli;
+          Code Examples.E405.good_mli;
           Code
             {|(** User API
 
@@ -86,7 +96,9 @@ let content =
           Paragraph
             "**Interface (`.mli`) Style**: Document every exported value. Use \
              a consistent, concise style.";
-          Rule Missing_value_doc;
+          Rule "E410";
+          Code Examples.E410.bad_mli;
+          Code Examples.E410.good_mli;
           Paragraph
             "**Documentation Philosophy**: For functions, use the \
              `[function_name arg1 arg2] is ...` pattern.";
@@ -104,7 +116,9 @@ let content =
             "**Standard Interfaces for Data Types**: For modules defining a \
              central data type `t`, consistently provide these functions where \
              applicable:";
-          Rule Missing_standard_function;
+          Rule "E415";
+          Code Examples.E415.bad_mli;
+          Code Examples.E415.good_mli;
           Paragraph
             "- `val v : ... -> t`: A pure, smart constructor for creating \
              values of type `t` in memory. This function should not perform \
@@ -134,11 +148,16 @@ let content =
           Paragraph
             "**Interface Files**: Create `.mli` files for all public modules \
              to define clear interfaces and hide implementation details.";
-          Rule Missing_mli_file;
+          Rule "E505";
+          Code Examples.E505.bad_ml;
+          Code Examples.E505.good_ml;
+          Code Examples.E505.good_mli;
           Paragraph
             "**Code Formatting**: Maintain a `.ocamlformat` file in the \
              project root with consistent formatting settings.";
-          Rule Missing_ocamlformat_file;
+          Rule "E500";
+          Code Examples.E500.bad_ml;
+          Code Examples.E500.good_ml;
         ] );
     Section
       ( "Command-Line Applications",
@@ -191,12 +210,16 @@ let find_user_id json =
           Paragraph
             "**No Broad Exceptions**: Never use `try ... with _ -> ...`. \
              Always match on specific exceptions.";
-          Rule Catch_all_exception;
+          Rule "E105";
+          Code Examples.E105.bad_ml;
+          Code Examples.E105.good_ml;
           Paragraph
             "**No Silenced Warnings**: Fix underlying issues instead of \
              silencing compiler warnings with attributes like `[@warning \
              \"-nn\"]`.";
-          Rule Silenced_warning;
+          Rule "E110";
+          Code Examples.E110.bad_ml;
+          Code Examples.E110.good_ml;
           Paragraph
             "**Initialization Failures**: For unrecoverable errors during \
              startup (e.g., missing configuration), it is acceptable to fail \
@@ -216,27 +239,39 @@ let find_user_id json =
           Paragraph
             "**Module Naming**: Lowercase with underscores (e.g., \
              `user_profile`).";
-          Rule Module_naming;
+          Rule "E300";
+          Code Examples.E300.bad_ml;
+          Code Examples.E300.good_ml;
           Paragraph
             "**Type Naming**: The primary type in a module is `t`. Identifiers \
              are named `id`. Use snake_case for all type names.";
-          Rule Type_naming;
+          Rule "E305";
+          Code Examples.E305.bad_ml;
+          Code Examples.E305.good_ml;
           Paragraph
             "**Variant Constructors**: Use Snake_case for variant constructors \
              (e.g., `Waiting_for_input`, `Processing_data`), not CamelCase.";
-          Rule Variant_naming;
+          Rule "E310";
+          Code Examples.E310.bad_ml;
+          Code Examples.E310.good_ml;
           Paragraph
             "**Values**: Short, descriptive, and lowercase with underscores \
              (e.g., `find_user`, `create_channel`).";
-          Rule Value_naming;
+          Rule "E315";
+          Code Examples.E315.bad_ml;
+          Code Examples.E315.good_ml;
           Paragraph
             "**Long Identifiers**: Avoid excessively long names with many \
              underscores. Keep names concise and meaningful.";
-          Rule Long_identifier;
+          Rule "E320";
+          Code Examples.E320.bad_ml;
+          Code Examples.E320.good_ml;
           Paragraph
             "**Function Naming**: Use `get_*` for extraction (returns value \
              directly), `find_*` for search (returns option type).";
-          Rule Function_naming;
+          Rule "E325";
+          Code Examples.E325.bad_ml;
+          Code Examples.E325.good_ml;
           Paragraph
             "**Labels**: Use labels only when they clarify the meaning of an \
              argument, not for all arguments. Avoid `~f` and `~x`.";
@@ -279,14 +314,20 @@ let w = create_widget ~visibility:Visible ~border:Without_border|};
              thumb, avoid deep nesting of `match` or `if` statements; more \
              than two or three levels is a strong signal that the function \
              should be refactored.";
-          Rule Function_length;
-          Rule Deep_nesting;
+          Rule "E005";
+          Code Examples.E005.bad_ml;
+          Code Examples.E005.good_ml;
+          Rule "E010";
+          Code Examples.E010.bad_ml;
+          Code Examples.E010.good_ml;
           Paragraph
             "**Complexity Management**: Break down functions with high \n\
             \             cyclomatic complexity into smaller, focused helper \
              functions with \n\
             \             clear names.";
-          Rule Complexity;
+          Rule "E001";
+          Code Examples.E001.bad_ml;
+          Code Examples.E001.good_ml;
           Paragraph
             "**Composition over Abstraction**: Favor the composition of small, \n\
             \             concrete functions to build up complex behavior. \
@@ -353,16 +394,24 @@ module Log = (val Logs.src_log log_src : Logs.LOG)|};
                 Paragraph
                   "2. **1:1 Test Coverage**: Every module in `lib/` should \
                    have a corresponding test module in `test/`.";
-                Rule Missing_test_file;
-                Rule Test_without_library;
+                Rule "E600";
+                Code Examples.E600.bad_ml;
+                Code Examples.E600.good_ml;
+                Rule "E605";
+                Code Examples.E605.bad_ml;
+                Code Examples.E605.good_ml;
                 Paragraph
                   "3. **Test Organization**: Test files should export a \
                    `suite` value.";
-                Rule Test_exports_module;
+                Rule "E610";
+                Code Examples.E610.bad_ml;
+                Code Examples.E610.good_ml;
                 Paragraph
                   "4. **Test Inclusion**: All test suites must be included in \
                    the main test runner.";
-                Rule Test_suite_not_included;
+                Rule "E615";
+                Code Examples.E615.bad_ml;
+                Code Examples.E615.good_ml;
                 Paragraph
                   "5. **Clear Test Names**: Test names should describe what \
                    they test, not how.";

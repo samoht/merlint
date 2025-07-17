@@ -109,14 +109,42 @@ let extract_source_files sexp =
     | Sexplib0.Sexp.List
         (Sexplib0.Sexp.Atom "modules" :: [ Sexplib0.Sexp.List modules ]) ->
         (* Found modules section *)
+        Log.debug (fun m ->
+            m "Found modules section with %d entries" (List.length modules));
         List.concat_map
           (function
+            | Sexplib0.Sexp.List
+                [
+                  Sexplib0.Sexp.Atom "impl";
+                  Sexplib0.Sexp.List [ Sexplib0.Sexp.Atom path ];
+                ] ->
+                (* impl entry with path in a list *)
+                let source_path =
+                  if String.starts_with ~prefix:"_build/default/" path then
+                    String.sub path 15 (String.length path - 15)
+                  else path
+                in
+                [ source_path ]
+            | Sexplib0.Sexp.List
+                [
+                  Sexplib0.Sexp.Atom "intf";
+                  Sexplib0.Sexp.List [ Sexplib0.Sexp.Atom path ];
+                ] ->
+                (* intf entry with path in a list *)
+                let source_path =
+                  if String.starts_with ~prefix:"_build/default/" path then
+                    String.sub path 15 (String.length path - 15)
+                  else path
+                in
+                [ source_path ]
             | Sexplib0.Sexp.List items ->
-                (* Extract impl and intf fields *)
+                (* Module with nested fields *)
                 List.concat_map
                   (function
                     | Sexplib0.Sexp.List
-                        (Sexplib0.Sexp.Atom "impl" :: Sexplib0.Sexp.Atom path :: _) ->
+                        (Sexplib0.Sexp.Atom "impl"
+                        :: Sexplib0.Sexp.Atom path
+                        :: _) ->
                         (* Convert build path to source path *)
                         let source_path =
                           if String.starts_with ~prefix:"_build/default/" path
@@ -125,7 +153,9 @@ let extract_source_files sexp =
                         in
                         [ source_path ]
                     | Sexplib0.Sexp.List
-                        (Sexplib0.Sexp.Atom "intf" :: Sexplib0.Sexp.Atom path :: _) ->
+                        (Sexplib0.Sexp.Atom "intf"
+                        :: Sexplib0.Sexp.Atom path
+                        :: _) ->
                         (* Convert build path to source path *)
                         let source_path =
                           if String.starts_with ~prefix:"_build/default/" path
@@ -143,47 +173,53 @@ let extract_source_files sexp =
     | _ -> []
   in
 
-  let extract_from_stanzas = function
+  let rec extract_from_stanzas sexp =
+    match sexp with
+    | Sexplib0.Sexp.List (Sexplib0.Sexp.Atom "library" :: rest) -> (
+        (* Direct library stanza *)
+        match rest with
+        | [ Sexplib0.Sexp.List lib_contents ] ->
+            (* Library stanza has nested list structure *)
+            let is_local =
+              List.exists
+                (function
+                  | Sexplib0.Sexp.List
+                      [ Sexplib0.Sexp.Atom "local"; Sexplib0.Sexp.Atom "true" ]
+                    ->
+                      true
+                  | _ -> false)
+                lib_contents
+            in
+            if is_local then (
+              Log.debug (fun m -> m "Found local library, extracting modules");
+              let modules = List.concat_map extract_modules lib_contents in
+              Log.debug (fun m ->
+                  m "Extracted %d files from library" (List.length modules));
+              modules)
+            else (
+              Log.debug (fun m -> m "Library is not local, skipping");
+              [])
+        | _ -> [])
+    | Sexplib0.Sexp.List (Sexplib0.Sexp.Atom "executables" :: exec_contents) ->
+        List.concat_map extract_modules exec_contents
+    | Sexplib0.Sexp.List (Sexplib0.Sexp.Atom "executable" :: exec_contents) ->
+        List.concat_map extract_modules exec_contents
+    | Sexplib0.Sexp.List (Sexplib0.Sexp.Atom "test" :: test_contents) ->
+        List.concat_map extract_modules test_contents
+    | Sexplib0.Sexp.List (Sexplib0.Sexp.Atom "tests" :: test_contents) ->
+        List.concat_map extract_modules test_contents
     | Sexplib0.Sexp.List items ->
-        List.concat_map
-          (function
-            | Sexplib0.Sexp.List (Sexplib0.Sexp.Atom "library" :: rest) -> (
-                match rest with
-                | [ Sexplib0.Sexp.List lib_contents ] ->
-                    (* Library stanza has nested list structure *)
-                    let is_local =
-                      List.exists
-                        (function
-                          | Sexplib0.Sexp.List
-                              [
-                                Sexplib0.Sexp.Atom "local";
-                                Sexplib0.Sexp.Atom "true";
-                              ] ->
-                              true
-                          | _ -> false)
-                        lib_contents
-                    in
-                    if is_local then
-                      List.concat_map extract_modules lib_contents
-                    else []
-                | _ -> [])
-            | Sexplib0.Sexp.List
-                (Sexplib0.Sexp.Atom "executables" :: exec_contents) ->
-                List.concat_map extract_modules exec_contents
-            | Sexplib0.Sexp.List
-                (Sexplib0.Sexp.Atom "executable" :: exec_contents) ->
-                List.concat_map extract_modules exec_contents
-            | Sexplib0.Sexp.List (Sexplib0.Sexp.Atom "test" :: test_contents) ->
-                List.concat_map extract_modules test_contents
-            | Sexplib0.Sexp.List (Sexplib0.Sexp.Atom "tests" :: test_contents)
-              ->
-                List.concat_map extract_modules test_contents
-            | _ -> [])
-          items
+        (* List of stanzas *)
+        List.concat_map extract_from_stanzas items
     | _ -> []
   in
 
-  extract_from_stanzas sexp
+  Log.debug (fun m ->
+      m "extract_source_files input: %s" (Sexplib0.Sexp.to_string_hum sexp));
+  let result = extract_from_stanzas sexp in
+  Log.debug (fun m ->
+      m "extract_source_files result: [%s]" (String.concat "; " result));
+  result
 
 (** Get all project source files using dune describe *)
 let get_project_files dune_describe =
@@ -205,8 +241,9 @@ let get_lib_modules dune_describe =
         List.concat_map
           (function
             | Sexplib0.Sexp.List
-                [ Sexplib0.Sexp.Atom "library"; Sexplib0.Sexp.List lib_contents ]
-            ->
+                [
+                  Sexplib0.Sexp.Atom "library"; Sexplib0.Sexp.List lib_contents;
+                ] ->
                 (* Check if it's a local library *)
                 let is_local =
                   List.exists
@@ -225,7 +262,8 @@ let get_lib_modules dune_describe =
                   List.concat_map
                     (function
                       | Sexplib0.Sexp.List
-                          (Sexplib0.Sexp.Atom "modules" :: [ Sexplib0.Sexp.List modules ]) ->
+                          (Sexplib0.Sexp.Atom "modules"
+                          :: [ Sexplib0.Sexp.List modules ]) ->
                           List.concat_map
                             (function
                               | Sexplib0.Sexp.List module_fields ->

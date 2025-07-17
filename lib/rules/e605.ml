@@ -1,10 +1,12 @@
 (** E605: Missing Test File *)
 
+type payload = { module_name : string; expected_test_file : string }
+
 (** Creates a missing test file issue for a library module without corresponding
     test *)
 let create_missing_test_issue module_name files =
   (* Find the source file to generate a location *)
-  let location =
+  let loc =
     match
       List.find_opt
         (fun f ->
@@ -18,9 +20,8 @@ let create_missing_test_issue module_name files =
         Location.create ~file:"dune" ~start_line:1 ~start_col:0 ~end_line:1
           ~end_col:0
   in
-  Issue.missing_test_file ~module_name
-    ~expected_test_file:(Fmt.str "test_%s.ml" module_name)
-    ~loc:location
+  Issue.v ~loc
+    { module_name; expected_test_file = Fmt.str "test_%s.ml" module_name }
 
 let check (ctx : Context.project) =
   let files = Context.all_files ctx in
@@ -32,3 +33,15 @@ let check (ctx : Context.project) =
   in
 
   List.map (fun m -> create_missing_test_issue m files) missing_tests
+
+let pp ppf { module_name; expected_test_file } =
+  Fmt.pf ppf "Library module %s is missing test file %s" module_name
+    expected_test_file
+
+let rule =
+  Rule.v ~code:"E605" ~title:"Missing Test File" ~category:Testing
+    ~hint:
+      "Each library module should have a corresponding test file to ensure \
+       proper testing coverage. Create test files following the naming \
+       convention test_<module>.ml"
+    ~examples:[] ~pp (Project check)

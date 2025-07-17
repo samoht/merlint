@@ -6,7 +6,7 @@ type element =
   | Section of string * element list
   | Paragraph of string
   | Code of string  (** Code examples *)
-  | Rule of Issue.kind  (** Reference to a linting rule *)
+  | Rule of string  (** Reference to a linting rule by error code *)
 
 val content : element list
 (** The complete definition of the style guide's structure *)

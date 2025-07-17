@@ -1,5 +1,7 @@
 (** E600: Test Module Convention *)
 
+type payload = { filename : string; module_name : string }
+
 let is_test_file filename =
   (* Only test executables named test.ml should follow this convention *)
   (* TODO: This doesn't work with cram test infrastructure which expects
@@ -76,11 +78,11 @@ let check_test_file_exports filename content =
     if exports_module_name content module_base && not (exports_suite content)
     then
       [
-        Issue.test_exports_module_name ~filename
+        Issue.v
           ~loc:
             (Location.create ~file:filename ~start_line:1 ~start_col:0
                ~end_line:1 ~end_col:0)
-          ~module_name:module_base;
+          { filename; module_name = module_base };
       ]
     else []
 
@@ -126,16 +128,16 @@ let check_test_mli_file filename content =
     in
     if (not has_correct_suite) || val_lines <> [] then
       [
-        Issue.test_exports_module_name ~filename
+        Issue.v
           ~loc:
             (Location.create ~file:filename ~start_line:1 ~start_col:0
                ~end_line:1 ~end_col:0)
-          ~module_name:(get_module_name filename);
+          { filename; module_name = get_module_name filename };
       ]
     else []
 
 (** Check all files for test convention issues *)
-let check (ctx : Context.project) =
+let check ctx =
   let files = Context.all_files ctx in
   List.concat_map
     (fun filename ->
@@ -152,3 +154,17 @@ let check (ctx : Context.project) =
         with _ -> []
       else [])
     files
+
+let pp ppf { filename; module_name } =
+  Fmt.pf ppf
+    "Test file '%s' should export 'suite' instead of using module name '%s' \
+     directly"
+    filename module_name
+
+let rule =
+  Rule.v ~code:"E600" ~title:"Test Module Convention" ~category:Testing
+    ~hint:
+      "Test modules should export a single 'suite' value that contains all \
+       tests. This makes it easier to compose and organize tests, and allows \
+       test runners to discover and run tests more effectively."
+    ~examples:[] ~pp (Project check)

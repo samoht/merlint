@@ -1,12 +1,14 @@
 (** E205: Consider Using Fmt Module *)
 
+type payload = { module_used : string }
+
 (** Check if this is a printf-like function *)
 let is_printf_function base =
   String.ends_with ~suffix:"printf" base
   || String.ends_with ~suffix:"sprintf" base
   || String.ends_with ~suffix:"asprintf" base
 
-let check ctx =
+let check (ctx : Context.file) =
   let issues = ref [] in
 
   (* Check identifiers for Printf/Format module usage *)
@@ -18,11 +20,22 @@ let check ctx =
       (* Check for Printf/Format module usage *)
       match prefix with
       | [ "Stdlib"; "Printf" ] ->
-          issues :=
-            Issue.use_printf_module ~loc ~module_used:"Printf" :: !issues
+          issues := Issue.v ~loc { module_used = "Printf" } :: !issues
       | [ "Stdlib"; "Format" ] when is_printf_function base ->
-          issues :=
-            Issue.use_printf_module ~loc ~module_used:"Format" :: !issues
+          issues := Issue.v ~loc { module_used = "Format" } :: !issues
       | _ -> ());
 
   !issues
+
+let pp ppf { module_used } =
+  Fmt.pf ppf "Consider using Fmt module instead of %s for better formatting"
+    module_used
+
+let rule =
+  Rule.v ~code:"E205" ~title:"Consider Using Fmt Module"
+    ~category:Style_modernization
+    ~hint:
+      "The Fmt module provides a more modern and composable approach to \
+       formatting. It offers better type safety and cleaner APIs compared to \
+       Printf/Format modules."
+    ~examples:[] ~pp (File check)

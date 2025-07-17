@@ -1,4 +1,10 @@
-(** Single source of truth for all linting rules data *)
+(** Central registry of all linting rules *)
 
 val all_rules : Rule.t list
-(** Master list of all rules - THE single source of truth *)
+(** All available linting rules *)
+
+val file_rules : Rule.t list
+(** Rules that operate on individual files *)
+
+val project_rules : Rule.t list
+(** Rules that operate on the entire project *)

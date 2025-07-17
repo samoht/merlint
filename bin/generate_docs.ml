@@ -1,5 +1,3 @@
-open Merlint
-
 let get_body_styles () =
   {|body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -490,11 +488,10 @@ let categories =
     ("Testing", "E600-E699", "Test coverage and test quality issues");
   ]
 
-(* Get all issue types from the single source of truth *)
-let all_issue_types = Issue.all_kinds
+(* Get all rules from the single source of truth *)
+let all_rules = Merlint.Data.all_rules
 
-let get_category issue_type =
-  let code = Issue.error_code issue_type in
+let get_category code =
   let code_num = int_of_string (String.sub code 1 (String.length code - 1)) in
   if code_num < 100 then "Complexity"
   else if code_num < 200 then "Security/Safety"
@@ -504,50 +501,46 @@ let get_category issue_type =
   else if code_num < 600 then "Project Structure"
   else "Testing"
 
-let format_hint_html hint =
+let format_hint_html rule =
+  let hint_text = Merlint.Rule.hint rule in
+  let examples = Merlint.Rule.examples rule in
   let example_html =
-    match hint.Rule.examples with
-    | None -> ""
-    | Some examples ->
-        (* Separate good and bad examples *)
-        let bad_examples =
-          List.filter (fun ex -> not ex.Rule.is_good) examples
-        in
-        let good_examples = List.filter (fun ex -> ex.Rule.is_good) examples in
-        let format_example ex =
-          let label = if ex.Rule.is_good then "GOOD" else "BAD" in
-          let desc =
-            match ex.description with
-            | None -> ""
-            | Some d -> Fmt.str "<div class=\"example-description\">%s</div>" d
-          in
-          Fmt.str
-            {|<div class="example %s">
+    if examples = [] then ""
+    else
+      (* Separate good and bad examples *)
+      let bad_examples =
+        List.filter (fun ex -> not ex.Merlint.Rule.is_good) examples
+      in
+      let good_examples =
+        List.filter (fun ex -> ex.Merlint.Rule.is_good) examples
+      in
+      let format_example ex =
+        let label = if ex.Merlint.Rule.is_good then "GOOD" else "BAD" in
+        Fmt.str
+          {|<div class="example %s">
   <h4>%s</h4>
-  %s
   <pre><code>%s</code></pre>
 </div>|}
-            (if ex.is_good then "good" else "bad")
-            label desc
-            (highlight_ocaml_code ex.code)
+          (if ex.Merlint.Rule.is_good then "good" else "bad")
+          label
+          (highlight_ocaml_code ex.Merlint.Rule.code)
+      in
+      (* Create grid if we have both good and bad examples *)
+      if bad_examples <> [] && good_examples <> [] then
+        let bad_html =
+          String.concat "\n" (List.map format_example bad_examples)
         in
-        (* Create grid if we have both good and bad examples *)
-        if bad_examples <> [] && good_examples <> [] then
-          let bad_html =
-            String.concat "\n" (List.map format_example bad_examples)
-          in
-          let good_html =
-            String.concat "\n" (List.map format_example good_examples)
-          in
-          Fmt.str {|<div class="examples-grid">
+        let good_html =
+          String.concat "\n" (List.map format_example good_examples)
+        in
+        Fmt.str {|<div class="examples-grid">
 %s
 %s
-</div>|} bad_html
-            good_html
-        else
-          (* Otherwise just show examples in sequence *)
-          let all_formatted = List.map format_example examples in
-          "\n" ^ String.concat "\n" all_formatted
+</div>|} bad_html good_html
+      else
+        (* Otherwise just show examples in sequence *)
+        let all_formatted = List.map format_example examples in
+        "\n" ^ String.concat "\n" all_formatted
   in
   (* Escape HTML in hint text *)
   let html_escape_text s =
@@ -555,7 +548,7 @@ let format_hint_html hint =
     |> String.split_on_char '<' |> String.concat "&lt;"
     |> String.split_on_char '>' |> String.concat "&gt;"
   in
-  Fmt.str "<p>%s</p>%s" (html_escape_text hint.text) example_html
+  Fmt.str "<p>%s</p>%s" (html_escape_text hint_text) example_html
 
 let generate_toc () =
   Fmt.str
@@ -573,11 +566,9 @@ let generate_toc () =
              name range)
     |> String.concat "\n")
 
-let generate_error_section issue_type =
-  let code = Issue.error_code issue_type in
-  let rule = Rule.get Data.all_rules issue_type in
-  let title = rule.title in
-  let hint = Rule.get_structured_hint Data.all_rules issue_type in
+let generate_error_section rule =
+  let code = Merlint.Rule.code rule in
+  let title = Merlint.Rule.title rule in
   Fmt.str
     {|<div class="error-card" id="%s">
     <div>
@@ -586,7 +577,7 @@ let generate_error_section issue_type =
     </div>
     <div class="error-hint">%s</div>
 </div>|}
-    code code title (format_hint_html hint)
+    code code title (format_hint_html rule)
 
 let generate_category_section (name, range, description) =
   let category_id =
@@ -594,8 +585,8 @@ let generate_category_section (name, range, description) =
     |> String.map (fun c -> if c = '/' then '-' else c)
   in
   let errors =
-    all_issue_types
-    |> List.filter (fun it -> get_category it = name)
+    all_rules
+    |> List.filter (fun rule -> get_category (Merlint.Rule.code rule) = name)
     |> List.map generate_error_section
     |> String.concat "\n"
   in
@@ -631,4 +622,4 @@ let () =
   close_out oc;
 
   Fmt.pr "Generated %s with %d error codes@." output_path
-    (List.length all_issue_types)
+    (List.length all_rules)

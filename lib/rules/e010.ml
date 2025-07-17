@@ -1,11 +1,12 @@
 (** E010: Deep Nesting *)
 
 type config = { max_nesting : int }
+type payload = { name : string; depth : int; threshold : int }
 
 (** Analyze a single value binding for nesting depth *)
 let analyze_value_binding config binding =
   match binding.Browse.ast_elt.location with
-  | Some location ->
+  | Some loc ->
       let name = Ast.name_to_string binding.ast_elt.name in
 
       (* Only check functions, not simple values *)
@@ -18,7 +19,7 @@ let analyze_value_binding config binding =
            - let-in expressions
            - while/for loops
            - try-with blocks
-           
+
            Currently, Browse data doesn't provide enough information
            to calculate nesting depth. This means E010 will never
            detect deep nesting issues! *)
@@ -27,8 +28,8 @@ let analyze_value_binding config binding =
 
         if nesting > config.max_nesting then
           [
-            Issue.deep_nesting ~name ~loc:location ~depth:nesting
-              ~threshold:config.max_nesting;
+            Issue.v ~loc
+              { name; depth = nesting; threshold = config.max_nesting };
           ]
         else []
   | None -> []
@@ -42,3 +43,16 @@ let check (ctx : Context.file) =
     Traverse.filter_functions browse_data.value_bindings
   in
   List.concat_map (analyze_value_binding config) function_bindings
+
+let pp ppf { name; depth; threshold } =
+  Fmt.pf ppf "Function '%s' has nesting depth of %d (threshold: %d)" name depth
+    threshold
+
+let rule =
+  Rule.v ~code:"E010" ~title:"Deep Nesting" ~category:Complexity
+    ~hint:
+      "This issue means your code has too many nested conditions making it \
+       hard to follow. Fix it by extracting nested logic into helper \
+       functions, using early returns to reduce nesting, or combining \
+       conditions when appropriate. Aim for maximum nesting depth of 4."
+    ~examples:[] ~pp (File check)

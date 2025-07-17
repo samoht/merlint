@@ -3,6 +3,5 @@
     This rule ensures that library modules have corresponding test files. Each
     library module should have a test file to ensure proper testing coverage. *)
 
-val check : Context.project -> Issue.t list
-(** [check ctx] checks if library modules have corresponding test files. Returns
-    a list of issues for missing test files. *)
+val rule : Rule.t
+(** The E605 rule definition *)

@@ -1,4 +1,7 @@
-(** Detection of global mutable state patterns *)
+(** E351: Detection of global mutable state patterns *)
+
+type payload = { kind : string; name : string }
+(** Payload for mutable state issues *)
 
 (* Precompiled regexes for efficiency *)
 let ref_type_re = Re.compile (Re.alt [ Re.str " ref"; Re.str "= ref" ])
@@ -32,7 +35,7 @@ let check_global_mutable_state ~filename outline =
                 else if Re.execp array_type_re type_sig then "array"
                 else "mutable"
               in
-              Some (Issue.mutable_state ~kind ~name:item.name ~loc:location)
+              Some (Issue.v ~loc:location { kind; name = item.name })
           | _ -> None)
       | _ -> None)
     outline
@@ -44,7 +47,22 @@ let _check_local_mutable_state ~filename:_ _typedtree =
      For now, we only check global state via outline *)
   []
 
-let check (ctx : Context.file) =
+let check ctx =
   let outline_data = Context.outline ctx in
   let filename = ctx.filename in
   check_global_mutable_state ~filename outline_data
+
+let pp ppf { kind; name } =
+  Fmt.pf ppf
+    "Global mutable state '%s' of type '%s' detected - consider using \
+     functional patterns instead"
+    name kind
+
+let rule =
+  Rule.v ~code:"E351" ~title:"Global Mutable State" ~category:Security_safety
+    ~hint:
+      "Global mutable state makes programs harder to reason about and test. \
+       Consider using immutable data structures and passing state explicitly \
+       through function parameters. If mutation is necessary, consider using \
+       local state within functions or monadic patterns."
+    ~examples:[] ~pp (File check)

@@ -3,6 +3,5 @@
     This rule checks that public exceptions have proper documentation.
     Exceptions exposed in .mli files should be documented for API clarity. *)
 
-val check : Context.file -> Issue.t list
-(** [check files] checks if public exceptions have documentation. Returns a list
-    of issues for undocumented exceptions. *)
+val rule : Rule.t
+(** The E415 rule definition *)

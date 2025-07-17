@@ -22,50 +22,70 @@ val good : string -> example
 val bad : string -> example
 (** Create a bad example *)
 
-type scope =
-  | File  (** Rule runs on each file independently *)
-  | Project  (** Rule runs once for the entire project *)
+type 'a scope =
+  | File of (Context.file -> 'a Issue.t list)
+  | Project of (Context.project -> 'a Issue.t list)
 
-type t = {
-  issue : Issue.kind;  (** The link to the linter's logic *)
-  title : string;  (** The official title *)
-  category : category;  (** The rule category *)
-  scope : scope;  (** Whether rule is per-file or project-wide *)
-  hint : string;  (** Explanation of the issue and how to fix it *)
-  examples : example list;  (** Optional code examples to illustrate the rule *)
-}
-(** The canonical definition of a single linting rule *)
+type t
+(** Type for rules *)
 
 val v :
-  issue:Issue.kind ->
+  code:string ->
   title:string ->
   category:category ->
-  ?scope:scope ->
+  hint:string ->
   ?examples:example list ->
-  string ->
+  pp:'a Fmt.t ->
+  'a scope ->
   t
-(** Create a new rule, defaults to File scope *)
 
-val get : t list -> Issue.kind -> t
-(** Get a rule by its issue type *)
+val code : t -> string
+(** Get the code of a rule *)
+
+val title : t -> string
+(** Get the title of a rule *)
+
+val category : t -> category
+(** Get the category of a rule *)
+
+val hint : t -> string
+(** Get the hint of a rule *)
+
+val examples : t -> example list
+(** Get the examples of a rule *)
 
 val category_name : category -> string
 (** Get the display name for a category *)
 
-type code_example = {
-  is_good : bool;
-  description : string option;
-  code : string;
-}
-(** Types for hints *)
+val is_file_scoped : t -> bool
+(** Check if a rule operates on individual files *)
 
-type hint = { text : string; examples : code_example list option }
+val is_project_scoped : t -> bool
+(** Check if a rule operates on the entire project *)
 
-val get_hint_title : t list -> Issue.kind -> string
-(** Get a short title for a specific issue type *)
+(** Module for handling rule execution results *)
+module Run : sig
+  type result
+  (** Result of running a rule, containing the issue and metadata *)
 
-val get_hint : t list -> Issue.kind -> string
-(** Get a hint for a specific issue type *)
+  val file : t -> Context.file -> result list
+  (** Run a file-scoped rule on a file context *)
 
-val get_structured_hint : t list -> Issue.kind -> hint
-(** Get a structured hint with text and optional code examples *)
+  val project : t -> Context.project -> result list
+  (** Run a project-scoped rule on a project context *)
+
+  val code : result -> string
+  (** Get the rule code from a result *)
+
+  val title : result -> string
+  (** Get the rule title from a result *)
+
+  val pp : result Fmt.t
+  (** Pretty-print a result *)
+
+  val location : result -> Location.t option
+  (** Get the location from a result *)
+
+  val compare : result -> result -> int
+  (** Compare results for sorting *)
+end

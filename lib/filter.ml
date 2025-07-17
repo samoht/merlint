@@ -1,14 +1,11 @@
 (** Rule filter implementation for -r/--rules flag *)
 
 type t = {
-  enabled : Issue.kind list option; (* None means all enabled *)
-  disabled : Issue.kind list;
+  enabled : string list option; (* None means all enabled *)
+  disabled : string list;
 }
 
 let empty = { enabled = None; disabled = [] }
-
-(** Parse error code to issue type *)
-let parse_error_code code = Issue.kind_of_error_code code
 
 (** Parse a range of error codes like "100..199" *)
 let parse_range range_str =
@@ -20,106 +17,125 @@ let parse_range range_str =
         let codes =
           List.init
             (stop_num - start_num + 1)
-            (fun i -> Fmt.str "E%03d" (start_num + i))
+            (fun i -> Printf.sprintf "E%03d" (start_num + i))
         in
-        let issue_types = List.filter_map parse_error_code codes in
-        Ok issue_types
-      with _ -> Error (Fmt.str "Invalid range: %s" range_str))
-  | _ ->
-      Error
-        (Fmt.str "Invalid range format: %s (expected: start..stop)" range_str)
+        Ok codes
+      with Failure _ ->
+        Error (Printf.sprintf "Invalid range format: %s" range_str))
+  | _ -> Error (Printf.sprintf "Invalid range format: %s" range_str)
 
-(** Parse a single warning specifier like "E110" or "A" or "100..199" *)
-let parse_single_spec spec =
-  match spec with
-  | "A" | "a" | "all" ->
-      (* All warnings *)
-      Ok Issue.all_kinds
-  | s when String.contains s '.' ->
-      (* Range specification *)
-      parse_range s
-  | code -> (
-      match parse_error_code code with
-      | Some issue_type -> Ok [ issue_type ]
-      | None ->
-          let all_codes =
-            Issue.all_kinds |> List.map Issue.error_code
-            |> List.sort String.compare |> String.concat ", "
-          in
-          Error
-            (Fmt.str "Unknown error code: %s. Available codes: %s" code
-               all_codes))
+(** Parse a single rule specification *)
+let parse_rule_spec spec =
+  if String.contains spec '.' && String.contains spec '.' then
+    (* It's a range *)
+    parse_range spec
+  else if String.starts_with ~prefix:"E" spec then
+    (* Single error code *)
+    Ok [ spec ]
+  else Error (Printf.sprintf "Invalid rule specification: %s" spec)
 
-(** Parse warning specification using simple format without quotes:
-    - "all-E110-E205" - all rules except E110 and E205
-    - "E300+E305" - only E300 and E305
-    - "all-100..199" - all except error codes 100-199 *)
-let parse spec =
-  (* First extract positive selections (if any) *)
-  let parts = String.split_on_char '+' spec in
-  let base_spec, additions =
-    match parts with [] -> ("", []) | base :: rest -> (base, rest)
-  in
-
-  (* Parse base spec and exclusions *)
-  let tokens =
-    if base_spec = "" && additions <> [] then
-      (* Only additions, no base *)
-      List.map (fun s -> s) additions
-    else if String.starts_with ~prefix:"all" base_spec then
-      (* all-E110-E205 format *)
-      let exclusions = String.split_on_char '-' base_spec |> List.tl in
-      ("all" :: List.map (fun s -> "-" ^ s) exclusions) @ additions
-    else if base_spec <> "" then
-      (* Single spec or range *)
-      base_spec :: additions
-    else []
-  in
-
-  let tokens = List.map String.trim tokens |> List.filter (fun s -> s <> "") in
-
-  let rec process tokens filter =
-    match tokens with
-    | [] -> Ok filter
-    | token :: rest when String.length token > 0 -> (
-        let is_disable = String.length token > 0 && String.get token 0 = '-' in
-        let code =
-          if is_disable then String.sub token 1 (String.length token - 1)
-          else token
+(** Parse rules using the format: all-E110-E205 or E300+E305 or none *)
+let parse rules_str =
+  let rules_str = String.trim rules_str in
+  if rules_str = "" then Ok empty
+  else if rules_str = "none" then
+    (* Special keyword to disable all rules *)
+    Ok { enabled = Some []; disabled = [] }
+  else if String.starts_with ~prefix:"all-" rules_str then
+    (* Format: all-E110-E205 - all rules except these *)
+    let excluded = String.sub rules_str 4 (String.length rules_str - 4) in
+    let parts = String.split_on_char '-' excluded in
+    let rec parse_parts acc = function
+      | [] -> Ok acc
+      | part :: rest -> (
+          match parse_rule_spec part with
+          | Ok codes -> parse_parts (codes @ acc) rest
+          | Error _ as err -> err)
+    in
+    match parse_parts [] parts with
+    | Ok disabled -> Ok { enabled = None; disabled }
+    | Error _ as err -> err
+  else if
+    String.contains rules_str '-'
+    && not (String.starts_with ~prefix:"all-" rules_str)
+  then
+    (* Mixed format with exclusions: 300..399-E320 or E300+E305-E320 *)
+    (* Split by operators while keeping track of the operators *)
+    let rec tokenize str acc =
+      if String.length str = 0 then List.rev acc
+      else if String.starts_with ~prefix:"E" str then
+        (* Find the end of this error code *)
+        let rec find_end i =
+          if i >= String.length str then i
+          else match str.[i] with '+' | '-' -> i | _ -> find_end (i + 1)
         in
-        match parse_single_spec code with
-        | Ok types ->
-            let filter =
-              if is_disable then
-                { filter with disabled = types @ filter.disabled }
-              else
-                match types with
-                | t when t = Issue.all_kinds ->
-                    (* Special case: "all" enables all *)
-                    { filter with enabled = None }
-                | _ -> (
-                    match filter.enabled with
-                    | None -> { filter with enabled = Some types }
-                    | Some existing ->
-                        { filter with enabled = Some (types @ existing) })
-            in
-            process rest filter
-        | Error e -> Error e)
-    | "" :: rest -> process rest filter (* Skip empty tokens *)
-    | _ -> Error "Invalid rule specification"
-  in
-
-  process tokens empty
-
-(** Check if an issue type is enabled *)
-let is_enabled filter issue_type =
-  let is_disabled = List.mem issue_type filter.disabled in
-  if is_disabled then false
+        let end_idx = find_end 1 in
+        let token = String.sub str 0 end_idx in
+        let rest = String.sub str end_idx (String.length str - end_idx) in
+        tokenize rest (token :: acc)
+      else if str.[0] = '+' || str.[0] = '-' then
+        let op = String.make 1 str.[0] in
+        let rest = String.sub str 1 (String.length str - 1) in
+        tokenize rest (op :: acc)
+      else
+        (* Must be a range like 300..399 *)
+        let rec find_end i =
+          if i >= String.length str then i
+          else match str.[i] with '+' | '-' -> i | _ -> find_end (i + 1)
+        in
+        let end_idx = find_end 0 in
+        let token = String.sub str 0 end_idx in
+        let rest = String.sub str end_idx (String.length str - end_idx) in
+        tokenize rest (token :: acc)
+    in
+    let tokens = tokenize rules_str [] in
+    let rec process_tokens enabled disabled = function
+      | [] -> Ok { enabled = Some enabled; disabled }
+      | [ spec ] -> (
+          (* Last token, add to enabled by default *)
+          match parse_rule_spec spec with
+          | Ok codes -> Ok { enabled = Some (codes @ enabled); disabled }
+          | Error _ as err -> err)
+      | spec :: "+" :: rest -> (
+          match parse_rule_spec spec with
+          | Ok codes -> process_tokens (codes @ enabled) disabled rest
+          | Error _ as err -> err)
+      | spec :: "-" :: rest -> (
+          match parse_rule_spec spec with
+          | Ok codes ->
+              (* First spec is added to enabled, rest goes to processing *)
+              process_tokens (codes @ enabled) disabled ("-" :: rest)
+          | Error _ as err -> err)
+      | "-" :: spec :: rest -> (
+          (* This spec should be disabled *)
+          match parse_rule_spec spec with
+          | Ok codes -> process_tokens enabled (codes @ disabled) rest
+          | Error _ as err -> err)
+      | _ :: rest -> process_tokens enabled disabled rest
+    in
+    process_tokens [] [] tokens
+  else if String.contains rules_str '+' then
+    (* Format: E300+E305 - only these rules *)
+    let parts = String.split_on_char '+' rules_str in
+    let rec parse_parts acc = function
+      | [] -> Ok acc
+      | part :: rest -> (
+          match parse_rule_spec part with
+          | Ok codes -> parse_parts (codes @ acc) rest
+          | Error _ as err -> err)
+    in
+    match parse_parts [] parts with
+    | Ok enabled -> Ok { enabled = Some enabled; disabled = [] }
+    | Error _ as err -> err
   else
-    match filter.enabled with
-    | None -> true (* All enabled by default *)
-    | Some enabled -> List.mem issue_type enabled
+    (* Single rule or range *)
+    match parse_rule_spec rules_str with
+    | Ok codes -> Ok { enabled = Some codes; disabled = [] }
+    | Error _ as err -> err
 
-(** Filter a list of issues *)
-let filter_issues filter issues =
-  List.filter (fun issue -> is_enabled filter (Issue.kind issue)) issues
+let is_enabled_by_code filter code =
+  match filter.enabled with
+  | None -> not (List.mem code filter.disabled)
+  | Some enabled ->
+      (* Check if code is in enabled list AND not in disabled list *)
+      List.mem code enabled && not (List.mem code filter.disabled)

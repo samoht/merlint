@@ -1,5 +1,8 @@
 (** E310: Value Naming Convention *)
 
+type payload = { value_name : string; expected : string }
+(** Payload for bad value naming *)
+
 let check_value_name name =
   let expected = Traverse.to_snake_case name in
   if name <> expected && name <> String.lowercase_ascii name then Some expected
@@ -9,4 +12,16 @@ let check ctx =
   (* Check value names *)
   Traverse.check_elements (Context.ast ctx).patterns check_value_name
     (fun name_str loc expected ->
-      Issue.bad_value_naming ~value_name:name_str ~loc ~expected)
+      Issue.v ~loc { value_name = name_str; expected })
+
+let pp ppf { value_name; expected } =
+  Fmt.pf ppf "Value '%s' should use snake_case: '%s'" value_name expected
+
+let rule =
+  Rule.v ~code:"E310" ~title:"Value Naming Convention"
+    ~category:Naming_conventions
+    ~hint:
+      "Values and function names should use snake_case (e.g., my_value, \
+       get_data). This is the standard convention in OCaml for values and \
+       functions."
+    ~examples:[] ~pp (File check)

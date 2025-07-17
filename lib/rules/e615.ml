@@ -1,5 +1,7 @@
 (** E615: Test Suite Not Included *)
 
+type payload = { test_module : string; test_runner_file : string }
+
 (** Check if test.ml includes all test suites *)
 let check (ctx : Context.project) =
   let files = Context.all_files ctx in
@@ -38,10 +40,21 @@ let check (ctx : Context.project) =
 
         List.map
           (fun test_mod ->
-            Issue.test_suite_not_included ~test_module:test_mod
-              ~test_runner_file:test_file
-              ~loc:
-                (Location.create ~file:test_file ~start_line:1 ~start_col:0
-                   ~end_line:1 ~end_col:0))
+            let loc =
+              Location.create ~file:test_file ~start_line:1 ~start_col:0
+                ~end_line:1 ~end_col:0
+            in
+            Issue.v ~loc
+              { test_module = test_mod; test_runner_file = test_file })
           !missing_includes
       with _ -> [])
+
+let pp ppf { test_module; test_runner_file } =
+  Fmt.pf ppf "Test module %s is not included in %s" test_module test_runner_file
+
+let rule =
+  Rule.v ~code:"E615" ~title:"Test Suite Not Included" ~category:Testing
+    ~hint:
+      "All test modules should be included in the main test runner (test.ml). \
+       Add the missing test suite to ensure all tests are run."
+    ~examples:[] ~pp (Project check)
