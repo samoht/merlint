@@ -16,12 +16,6 @@ type example = {
 }
 (** A code example with label *)
 
-val good : string -> example
-(** Create a good example *)
-
-val bad : string -> example
-(** Create a bad example *)
-
 type 'a scope =
   | File of (Context.file -> 'a Issue.t list)
   | Project of (Context.project -> 'a Issue.t list)

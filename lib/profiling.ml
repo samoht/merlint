@@ -4,19 +4,6 @@ type timing = { name : string; duration : float }
 
 (* Global state is intentional here - profiling needs to accumulate timings across calls *)
 let timings = ref []
-
-let time name f =
-  let start = Unix.gettimeofday () in
-  try
-    let result = f () in
-    let duration = Unix.gettimeofday () -. start in
-    timings := { name; duration } :: !timings;
-    result
-  with e ->
-    let duration = Unix.gettimeofday () -. start in
-    timings := { name; duration } :: !timings;
-    raise e
-
 let reset () = timings := []
 let get_timings () = List.rev !timings
 

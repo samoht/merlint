@@ -60,9 +60,6 @@ val content : file -> string
 val all_files : project -> string list
 (** Force evaluation of the all_files field *)
 
-val dune_describe : project -> Dune.describe
-(** Force evaluation of the dune_describe field *)
-
 val executable_modules : project -> string list
 (** Get the list of executable module names *)
 

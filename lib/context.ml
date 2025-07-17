@@ -78,7 +78,6 @@ let content ctx = Lazy.force ctx.content
 
 (* Project context accessors *)
 let all_files ctx = Lazy.force ctx.all_files
-let dune_describe ctx = Lazy.force ctx.dune_describe
 let executable_modules ctx = Lazy.force ctx.executable_modules
 let lib_modules ctx = Lazy.force ctx.lib_modules
 let test_modules ctx = Lazy.force ctx.test_modules

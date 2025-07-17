@@ -20,9 +20,6 @@ val create :
 val pp : t Fmt.t
 (** Pretty-printer for a report *)
 
-val pp_summary : t list Fmt.t
-(** Pretty-printer for a summary of reports *)
-
 val print_status : bool -> string
 val print_color : bool -> string -> string
 val print_summary : t list -> unit

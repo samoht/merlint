@@ -65,7 +65,3 @@ let all_rules =
   Rule.Pack E615.rule;
   *)
   ]
-
-(* Separate rules by scope for engine optimization *)
-let file_rules = List.filter Rule.is_file_scoped all_rules
-let project_rules = List.filter Rule.is_project_scoped all_rules

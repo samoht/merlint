@@ -2,11 +2,6 @@
 
 (** {2 AST element iteration and filtering} *)
 
-val iter_elements :
-  ?filter:(Ast.elt -> bool) -> Ast.elt list -> (Ast.elt -> unit) -> unit
-(** [iter_elements ?filter elements f] applies [f] to each element in [elements]
-    that passes the optional [filter] *)
-
 val filter_map_elements : Ast.elt list -> (Ast.elt -> 'a option) -> 'a list
 (** [filter_map_elements elements f] applies [f] to each element and collects
     the results *)
@@ -36,22 +31,7 @@ val to_pascal_case : string -> string
 val is_pascal_case : string -> bool
 (** [is_pascal_case name] checks if name follows PascalCase convention *)
 
-val is_snake_case : string -> bool
-(** [is_snake_case name] checks if name follows snake_case convention *)
-
 (** {2 AST name matching} *)
-
-val match_stdlib_module : Ast.name -> (string * string) option
-(** [match_stdlib_module name] matches Stdlib module usage, returns (module,
-    base) *)
-
-val is_module_path : string list -> string -> Ast.name -> bool
-(** [is_module_path prefix base name] checks if name matches the given module
-    path *)
-
-val is_stdlib_module : string -> Ast.name -> bool
-(** [is_stdlib_module module_name name] checks if name refers to specific Stdlib
-    module *)
 
 (** {2 File processing helpers} *)
 
@@ -59,10 +39,6 @@ val process_ocaml_files :
   Context.project -> (string -> string -> 'a list) -> 'a list
 (** [process_ocaml_files ctx f] processes all OCaml files in project with
     function [f] *)
-
-val process_lines : string -> (int -> string -> 'a option) -> 'a list
-(** [process_lines content f] processes each line of content with function [f]
-*)
 
 val process_lines_with_location :
   string -> string -> (int -> string -> Location.t -> 'a option) -> 'a list
@@ -85,22 +61,10 @@ val count_parameters : string -> string -> int
 
 (** {2 Browse data helpers} *)
 
-val iter_value_bindings : Browse.t -> (Browse.value_binding -> unit) -> unit
-(** [iter_value_bindings browse_data f] applies [f] to each value binding *)
-
 val filter_functions : Browse.value_binding list -> Browse.value_binding list
 (** [filter_functions bindings] filters only function bindings *)
 
-val iter_function_bindings : Browse.t -> (Browse.value_binding -> unit) -> unit
-(** [iter_function_bindings browse_data f] applies [f] to each function binding
-*)
-
 (** {2 Common validation patterns} *)
-
-val check_identifier_pattern :
-  Ast.elt list -> (Ast.name -> bool) -> (loc:Location.t -> 'a) -> 'a list
-(** [check_identifier_pattern identifiers pattern_match issue_constructor]
-    checks identifiers against pattern *)
 
 val check_module_usage :
   Ast.elt list -> string -> (loc:Location.t -> 'a) -> 'a list
@@ -121,18 +85,3 @@ val check_elements :
     pattern *)
 
 (** {2 Helper for extracting specific AST element types} *)
-
-val extract_by_kind : Ast.t -> string -> Ast.elt list
-(** [extract_by_kind ast_data kind] extracts elements of specific kind *)
-
-val extract_values : Ast.t -> Ast.elt list
-(** [extract_values ast_data] extracts value elements *)
-
-val extract_types : Ast.t -> Ast.elt list
-(** [extract_types ast_data] extracts type elements *)
-
-val extract_modules : Ast.t -> Ast.elt list
-(** [extract_modules ast_data] extracts module elements *)
-
-val extract_constructors : Ast.t -> Ast.elt list
-(** [extract_constructors ast_data] extracts constructor elements *)

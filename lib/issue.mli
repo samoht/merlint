@@ -6,8 +6,6 @@ type 'a t
 val v : ?loc:Location.t -> 'a -> 'a t
 (** Create a new issue *)
 
-val disabled : unit -> 'a t
-
 val pp : 'a Fmt.t -> 'a t Fmt.t
 (** Pretty-printer for issues *)
 

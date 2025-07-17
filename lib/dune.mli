@@ -3,9 +3,6 @@
 type describe = Sexplib0.Sexp.t
 (** Parsed dune describe output *)
 
-val run_dune_describe : string -> (string, string) result
-(** Run 'dune describe' and return the raw output *)
-
 val describe : string -> describe
 (** Get parsed dune describe output for a project, using cache when possible *)
 

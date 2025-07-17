@@ -11,9 +11,6 @@ type category =
 
 type example = { is_good : bool; code : string }
 
-let good code = { is_good = true; code }
-let bad code = { is_good = false; code }
-
 type 'a scope =
   | File of (Context.file -> 'a Issue.t list)
   | Project of (Context.project -> 'a Issue.t list)
