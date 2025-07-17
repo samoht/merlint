@@ -13,7 +13,7 @@ let count_bool_params type_sig =
     | _return_type :: rest -> String.concat ">" (List.rev rest)
   in
   (* Use the traverse helper to count "bool" occurrences *)
-  Traverse.count_parameters param_part "bool"
+  Helpers.count_parameters param_part "bool"
 
 (** Check for boolean blindness in function signatures *)
 let check_boolean_blindness ~filename ~outline =
@@ -23,11 +23,10 @@ let check_boolean_blindness ~filename ~outline =
       List.filter_map
         (fun (item : Outline.item) ->
           match (item.kind, item.type_sig) with
-          | Outline.Value, Some sig_str when Traverse.is_function_type sig_str
-            ->
+          | Outline.Value, Some sig_str when Helpers.is_function_type sig_str ->
               let bool_count = count_bool_params sig_str in
               if bool_count >= 2 then
-                match Traverse.extract_outline_location filename item with
+                match Helpers.extract_outline_location filename item with
                 | Some loc ->
                     Some
                       (Issue.v ~loc

@@ -12,7 +12,7 @@ let check (ctx : Context.file) =
   let issues = ref [] in
 
   (* Check identifiers for Printf/Format module usage *)
-  Traverse.iter_identifiers_with_location (Context.ast ctx) (fun id loc ->
+  Helpers.iter_identifiers_with_location (Context.ast ctx) (fun id loc ->
       let name = id.name in
       let prefix = name.prefix in
       let base = name.base in

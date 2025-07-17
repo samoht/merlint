@@ -4,7 +4,7 @@ let check ctx =
   let ast_data = Context.ast ctx in
 
   (* Check identifiers for Obj.magic usage *)
-  Traverse.check_function_usage ast_data.identifiers "Obj" "magic" (fun ~loc ->
+  Helpers.check_function_usage ast_data.identifiers "Obj" "magic" (fun ~loc ->
       Issue.v ~loc ())
 
 let pp ppf () =

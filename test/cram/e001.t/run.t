@@ -11,7 +11,7 @@ Test bad example - should find complexity issues:
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   
-  Summary: ✓ 0 total issues
+  Summary: ✓ 0 total issues (applied 1 rules)
   ✓ All checks passed!
 TODO: Complexity calculation not implemented - always returns 1
 
@@ -28,6 +28,6 @@ Test good example - should find no issues:
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   
-  Summary: ✓ 0 total issues
+  Summary: ✓ 0 total issues (applied 1 rules)
   ✓ All checks passed!
 TODO: Complexity calculation not implemented - always returns 1

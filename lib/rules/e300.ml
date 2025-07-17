@@ -3,10 +3,10 @@
 type payload = { variant : string; expected : string }
 
 let check (ctx : Context.file) =
-  Traverse.check_elements (Context.ast ctx).variants
+  Helpers.check_elements (Context.ast ctx).variants
     (fun name ->
-      if not (Traverse.is_pascal_case name) then
-        Some (Traverse.to_pascal_case name)
+      if not (Helpers.is_pascal_case name) then
+        Some (Helpers.to_pascal_case name)
       else None)
     (fun variant_name loc expected ->
       Issue.v ~loc { variant = variant_name; expected })

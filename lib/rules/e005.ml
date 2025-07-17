@@ -14,40 +14,38 @@ let calculate_adjusted_threshold config has_pattern case_count =
     max base_threshold (base_threshold + pattern_allowance)
   else config.max_function_length
 
-(** Analyze a single value binding for function length *)
-let analyze_value_binding config binding =
-  match binding.Browse.ast_elt.location with
-  | Some loc ->
-      let name_str = Ast.name_to_string binding.ast_elt.name in
-      (* If name is empty, try to extract from location if possible *)
-      let name = if name_str = "" then "<anonymous>" else name_str in
-      let length = loc.Location.end_line - loc.start_line + 1 in
-
-      (* Skip length check for non-function values that are simple data structures (lists or records) *)
-      if (not binding.is_function) && binding.is_simple_list then []
-        (* Simple data structures are exempt from length checks *)
-      else if not binding.is_function then []
-        (* Non-function values without pattern info are also exempt *)
-      else
-        (* Check function length - with special handling for pattern matching *)
-        let adjusted_threshold =
-          calculate_adjusted_threshold config
-            binding.pattern_info.has_pattern_match
-            binding.pattern_info.case_count
-        in
-        if length > adjusted_threshold then
-          [ Issue.v ~loc { name; length; threshold = adjusted_threshold } ]
-        else []
-  | None -> []
-
 let check (ctx : Context.file) =
   let config =
     { max_function_length = ctx.Context.config.max_function_length }
   in
-  let browse_data = Context.browse ctx in
+  let ast = Context.ast ctx in
 
-  (* Process all bindings - the analyze function handles filtering *)
-  List.concat_map (analyze_value_binding config) browse_data.value_bindings
+  (* Analyze each function in the AST *)
+  List.filter_map
+    (fun (name, expr) ->
+      (* Use visitor to extract function structure information *)
+      let visitor = new Ast.function_structure_visitor () in
+      visitor#visit_expr expr;
+      let structure_info = visitor#get_info in
+
+      (* Calculate function length by counting non-empty lines in expression *)
+      let length = Ast.calculate_expr_line_count expr in
+
+      (* Calculate adjusted threshold for pattern matching functions *)
+      let adjusted_threshold =
+        calculate_adjusted_threshold config structure_info.has_pattern_match
+          structure_info.case_count
+      in
+
+      if length > adjusted_threshold then
+        (* Create a dummy location for now - we'll improve this later *)
+        let loc =
+          Location.create ~file:ctx.filename ~start_line:1 ~start_col:0
+            ~end_line:1 ~end_col:0
+        in
+        Some (Issue.v ~loc { name; length; threshold = adjusted_threshold })
+      else None)
+    ast.functions
 
 let pp ppf { name; length; threshold } =
   Fmt.pf ppf "Function '%s' is %d lines long (threshold: %d)" name length

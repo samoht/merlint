@@ -3,46 +3,25 @@
 type config = { max_nesting : int }
 type payload = { name : string; depth : int; threshold : int }
 
-(** Analyze a single value binding for nesting depth *)
-let analyze_value_binding config binding =
-  match binding.Browse.ast_elt.location with
-  | Some loc ->
-      let name = Ast.name_to_string binding.ast_elt.name in
-
-      (* Only check functions, not simple values *)
-      if not binding.is_function then []
-      else
-        (* TODO: E010 - Implement nesting depth calculation
-           This requires analyzing the AST to track nesting levels of:
-           - if-then-else statements
-           - match expressions
-           - let-in expressions
-           - while/for loops
-           - try-with blocks
-
-           Currently, Browse data doesn't provide enough information
-           to calculate nesting depth. This means E010 will never
-           detect deep nesting issues! *)
-        let nesting = 0 in
-        (* Always 0 - not implemented *)
-
-        if nesting > config.max_nesting then
-          [
-            Issue.v ~loc
-              { name; depth = nesting; threshold = config.max_nesting };
-          ]
-        else []
-  | None -> []
-
 let check (ctx : Context.file) =
   let config = { max_nesting = ctx.config.max_nesting } in
-  let browse_data = Context.browse ctx in
+  let ast = Context.ast ctx in
 
-  (* Use traverse helper to process only function bindings *)
-  let function_bindings =
-    Traverse.filter_functions browse_data.value_bindings
-  in
-  List.concat_map (analyze_value_binding config) function_bindings
+  (* Analyze each function in the AST *)
+  List.filter_map
+    (fun (name, expr) ->
+      (* Calculate nesting depth using visitor pattern *)
+      let depth = Ast.Nesting.calculate_depth expr in
+
+      if depth > config.max_nesting then
+        (* Create a dummy location for now - we'll improve this later *)
+        let loc =
+          Location.create ~file:ctx.filename ~start_line:1 ~start_col:0
+            ~end_line:1 ~end_col:0
+        in
+        Some (Issue.v ~loc { name; depth; threshold = config.max_nesting })
+      else None)
+    ast.functions
 
 let pp ppf { name; depth; threshold } =
   Fmt.pf ppf "Function '%s' has nesting depth of %d (threshold: %d)" name depth

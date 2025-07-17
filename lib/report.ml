@@ -30,9 +30,10 @@ let pp_summary ppf reports =
     List.fold_left (fun acc report -> acc + List.length report.issues) 0 reports
   in
   let all_passed = List.for_all (fun report -> report.passed) reports in
+  let rule_count = List.length reports in
 
-  Fmt.pf ppf "@.Summary: %a %d total issues@." (pp_color all_passed)
-    (print_status all_passed) total_issues;
+  Fmt.pf ppf "@.Summary: %a %d total issues (applied %d rules)@."
+    (pp_color all_passed) (print_status all_passed) total_issues rule_count;
 
   if all_passed then Fmt.pf ppf "%a All checks passed!@." (pp_color true) "✓"
   else

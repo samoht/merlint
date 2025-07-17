@@ -59,11 +59,6 @@ val count_parameters : string -> string -> int
 (** [count_parameters signature param_type] counts occurrences of param_type in
     signature *)
 
-(** {2 Browse data helpers} *)
-
-val filter_functions : Browse.value_binding list -> Browse.value_binding list
-(** [filter_functions bindings] filters only function bindings *)
-
 (** {2 Common validation patterns} *)
 
 val check_module_usage :

@@ -221,12 +221,14 @@ let run_analysis project_root filtered_files rule_filter show_profile =
   let all_issues =
     match rule_filter with
     | Some filter ->
-        Merlint.Engine.run ~filter ~exclude:exclude_patterns project_root
+        Merlint.Engine.run ~filter ~exclude:exclude_patterns
+          ~files:filtered_files project_root
     | None -> (
         (* Create a default filter that enables all rules *)
         match Merlint.Filter.parse "all" with
         | Ok filter ->
-            Merlint.Engine.run ~filter ~exclude:exclude_patterns project_root
+            Merlint.Engine.run ~filter ~exclude:exclude_patterns
+              ~files:filtered_files project_root
         | Error _ -> [] (* Should not happen *))
   in
 

@@ -11,7 +11,7 @@ Test bad example - should find bad variant naming:
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   
-  Summary: ✓ 0 total issues
+  Summary: ✓ 0 total issues (applied 1 rules)
   ✓ All checks passed!
 TODO: Variant naming detection not working - Merlin may not provide variant info from type definitions
  
@@ -28,6 +28,6 @@ TODO: Variant naming detection not working - Merlin may not provide variant info
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   
-  Summary: ✓ 0 total issues
+  Summary: ✓ 0 total issues (applied 1 rules)
   ✓ All checks passed!
 

@@ -4,7 +4,7 @@ let check (ctx : Context.file) =
   let ast_data = Context.ast ctx in
 
   (* Check identifiers for Str module usage *)
-  Traverse.check_module_usage ast_data.identifiers "Str" (fun ~loc ->
+  Helpers.check_module_usage ast_data.identifiers "Str" (fun ~loc ->
       Issue.v ~loc ())
 
 let pp ppf () =

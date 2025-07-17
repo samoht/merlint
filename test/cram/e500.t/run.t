@@ -14,7 +14,7 @@ Test bad example - should find missing ocamlformat file:
     ensure consistent code formatting. Create one with your preferred settings.
   ✓ Test Quality (0 total issues)
   
-  Summary: ✗ 1 total issues
+  Summary: ✗ 1 total issues (applied 1 rules)
   ✗ Some checks failed. See details above.
   [1]
 
@@ -34,6 +34,6 @@ Test good example - should find no issues:
     ensure consistent code formatting. Create one with your preferred settings.
   ✓ Test Quality (0 total issues)
   
-  Summary: ✗ 1 total issues
+  Summary: ✗ 1 total issues (applied 1 rules)
   ✗ Some checks failed. See details above.
   [1]

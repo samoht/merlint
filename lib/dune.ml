@@ -3,6 +3,7 @@
 let src = Logs.Src.create "merlint.dune" ~doc:"Dune interface"
 
 module Log = (val Logs.src_log src : Logs.LOG)
+open Sexplib0
 
 type describe = Sexplib0.Sexp.t
 (** Parsed dune describe output *)
@@ -102,6 +103,94 @@ let is_executable dune_describe ml_file =
   let module_name = Filename.basename (Filename.remove_extension ml_file) in
   let module_name_capitalized = String.capitalize_ascii module_name in
   List.mem module_name_capitalized executable_modules
+
+(** Find all dune files in a directory tree *)
+let rec find_dune_files dir =
+  let entries = try Sys.readdir dir with Sys_error _ -> [||] in
+  Array.to_list entries
+  |> List.concat_map (fun entry ->
+         let path = Filename.concat dir entry in
+         if
+           entry = "dune" && Sys.file_exists path && not (Sys.is_directory path)
+         then [ path ]
+         else if Sys.is_directory path && entry <> "_build" && entry <> ".git"
+         then find_dune_files path
+         else [])
+
+(** Parse a dune file and extract module information *)
+let parse_dune_file filename =
+  try
+    let ic = open_in filename in
+    let content = really_input_string ic (in_channel_length ic) in
+    close_in ic;
+
+    (* Parse all S-expressions in the file *)
+    Parsexp.Many.parse_string content |> Result.value ~default:[]
+  with _ -> []
+
+(** Extract modules from a modules field *)
+let extract_modules_field = function
+  | Sexp.List (Sexp.Atom "modules" :: modules) ->
+      List.filter_map
+        (function Sexp.Atom name -> Some name | _ -> None)
+        modules
+  | _ -> []
+
+(** Extract library modules from a stanza *)
+let _extract_library_info = function
+  | Sexp.List (Sexp.Atom "library" :: fields) ->
+      let modules = List.concat_map extract_modules_field fields in
+      let name =
+        List.find_map
+          (function
+            | Sexp.List [ Sexp.Atom "name"; Sexp.Atom n ] -> Some n | _ -> None)
+          fields
+      in
+      (name, modules)
+  | _ -> (None, [])
+
+(** Extract test info from a stanza *)
+let extract_test_info = function
+  | Sexp.List (Sexp.Atom "test" :: fields) ->
+      let name =
+        List.find_map
+          (function
+            | Sexp.List [ Sexp.Atom "name"; Sexp.Atom n ] -> Some n | _ -> None)
+          fields
+      in
+      let modules =
+        match List.concat_map extract_modules_field fields with
+        | [] -> ( match name with Some n -> [ n ] | None -> [])
+        | mods -> mods
+      in
+      Some modules
+  | Sexp.List (Sexp.Atom "tests" :: fields) ->
+      let names =
+        List.find_map
+          (function
+            | Sexp.List (Sexp.Atom "names" :: names) ->
+                Some
+                  (List.filter_map
+                     (function Sexp.Atom n -> Some n | _ -> None)
+                     names)
+            | _ -> None)
+          fields
+      in
+      names
+  | _ -> None
+
+(** Get test modules from all dune files in project *)
+let _get_test_modules project_root =
+  find_dune_files project_root
+  |> List.concat_map (fun dune_file ->
+         let dir = Filename.dirname dune_file in
+         let sexps = parse_dune_file dune_file in
+         sexps
+         |> List.concat_map (fun sexp ->
+                match extract_test_info sexp with
+                | Some modules ->
+                    List.map (fun m -> Filename.concat dir m) modules
+                | None -> []))
 
 (** Extract all source files from dune describe output *)
 let extract_source_files sexp =

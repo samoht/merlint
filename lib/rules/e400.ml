@@ -19,7 +19,7 @@ let check_mli_documentation_content ~module_name ~filename content =
   check_first_non_empty lines
 
 let check (ctx : Context.project) =
-  Traverse.process_ocaml_files ctx (fun filename content ->
+  Helpers.process_ocaml_files ctx (fun filename content ->
       if Filename.check_suffix filename ".mli" then
         let module_name =
           Filename.basename filename |> Filename.remove_extension

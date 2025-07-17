@@ -27,7 +27,7 @@ let check_global_mutable_state ~filename outline =
       match item.Outline.kind with
       | Outline.Value -> (
           match
-            (item.type_sig, Traverse.extract_outline_location filename item)
+            (item.type_sig, Helpers.extract_outline_location filename item)
           with
           | Some type_sig, Some location when is_mutable_type type_sig ->
               let kind =

@@ -6,7 +6,6 @@ type file = {
   filename : string;
   config : Config.t;
   project_root : string;
-  browse : Browse.t Lazy.t;
   ast : Ast.t Lazy.t;
   outline : Outline.t Lazy.t;
   content : string Lazy.t;
@@ -27,21 +26,11 @@ let create_file ~filename ~config ~project_root ~merlin_result =
     filename;
     config;
     project_root;
-    browse =
-      lazy
-        (match merlin_result.Merlin.browse with
-        | Ok b -> b
-        | Error msg -> raise (Analysis_error msg));
     ast =
       lazy
-        (match merlin_result.Merlin.typedtree with
-        | Ok t -> t
-        | Error _msg -> (
-            (* Fall back to parsetree if typedtree fails *)
-            let parsetree_json = Merlin.dump_value "parsetree" filename in
-            match parsetree_json with
-            | Ok json -> Ast.of_json ~dialect:Parsetree ~filename json
-            | Error msg -> raise (Analysis_error msg)));
+        (match merlin_result.Merlin.dump with
+        | Ok ast -> ast
+        | Error msg -> raise (Analysis_error msg));
     outline =
       lazy
         (match merlin_result.Merlin.outline with
@@ -71,7 +60,6 @@ let create_project ~config ~project_root ~all_files ~dune_describe =
   }
 
 (* File context accessors *)
-let browse ctx = Lazy.force ctx.browse
 let ast ctx = Lazy.force ctx.ast
 let outline ctx = Lazy.force ctx.outline
 let content ctx = Lazy.force ctx.content

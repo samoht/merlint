@@ -4,13 +4,13 @@ type payload = { value_name : string; expected : string }
 (** Payload for bad value naming *)
 
 let check_value_name name =
-  let expected = Traverse.to_snake_case name in
+  let expected = Helpers.to_snake_case name in
   if name <> expected && name <> String.lowercase_ascii name then Some expected
   else None
 
 let check ctx =
   (* Check value names *)
-  Traverse.check_elements (Context.ast ctx).patterns check_value_name
+  Helpers.check_elements (Context.ast ctx).patterns check_value_name
     (fun name_str loc expected ->
       Issue.v ~loc { value_name = name_str; expected })
 

@@ -2,338 +2,6 @@
 
 open Merlint
 
-(** Test parsing empty parsetree *)
-let test_parse_empty_parsetree () =
-  let json = `String "" in
-  let result = Ast.of_json ~dialect:Parsetree ~filename:"test.ml" json in
-  Alcotest.(check int) "no identifiers" 0 (List.length result.identifiers);
-  Alcotest.(check int) "no patterns" 0 (List.length result.patterns)
-
-(** Test parsing empty typedtree *)
-let test_parse_empty_typedtree () =
-  let json = `String "" in
-  let result = Ast.of_json ~dialect:Typedtree ~filename:"test.ml" json in
-  Alcotest.(check int) "no identifiers" 0 (List.length result.identifiers);
-  Alcotest.(check int) "no patterns" 0 (List.length result.patterns)
-
-(** Test parsing Str.regexp usage in parsetree *)
-let test_parse_str_usage_parsetree () =
-  let json =
-    `String
-      {|[
-  structure_item (test.ml[1,0+0]..test.ml[1,0+31])
-    Pstr_value Nonrec
-    [
-      <def>
-        pattern (test.ml[1,0+4]..test.ml[1,0+11])
-          Ppat_var "pattern" (test.ml[1,0+4]..test.ml[1,0+11])
-        expression (test.ml[1,0+14]..test.ml[1,0+31])
-          Pexp_apply
-          expression (test.ml[1,0+14]..test.ml[1,0+24])
-            Pexp_ident "Str.regexp" (test.ml[1,0+14]..test.ml[1,0+24])
-          [
-            <arg>
-            Nolabel
-              expression (test.ml[1,0+25]..test.ml[1,0+31])
-                Pexp_constant
-                constant (test.ml[1,0+25]..test.ml[1,0+31])
-                  PConst_string("test",(test.ml[1,0+26]..test.ml[1,0+30]),None)
-          ]
-    ]
-]|}
-  in
-  let result = Ast.of_json ~dialect:Parsetree ~filename:"test.ml" json in
-  Alcotest.(check int) "has identifiers" 1 (List.length result.identifiers);
-  Alcotest.(check int) "has patterns" 1 (List.length result.patterns);
-
-  (* Check the Str.regexp identifier *)
-  match result.identifiers with
-  | [ id ] ->
-      Alcotest.(check string)
-        "str identifier" "Str.regexp"
-        (Ast.name_to_string id.name);
-      Alcotest.(check bool) "has location" true (Option.is_some id.location)
-  | _ -> Alcotest.fail "Expected exactly one identifier"
-
-(** Test parsing catch-all pattern in parsetree *)
-let test_parse_catch_all_parsetree () =
-  let json =
-    `String
-      {|[
-  structure_item (test.ml[1,0+0]..test.ml[1,0+29])
-    Pstr_eval
-    expression (test.ml[1,0+0]..test.ml[1,0+29])
-      Pexp_try
-      expression (test.ml[1,0+4]..test.ml[1,0+14])
-        Pexp_apply
-        expression (test.ml[1,0+4]..test.ml[1,0+11])
-          Pexp_ident "List.hd" (test.ml[1,0+4]..test.ml[1,0+11])
-        [
-          <arg>
-          Nolabel
-            expression (test.ml[1,0+12]..test.ml[1,0+14])
-              Pexp_construct "[]" (test.ml[1,0+12]..test.ml[1,0+14])
-              None
-        ]
-      [
-        <case>
-          pattern (test.ml[1,0+20]..test.ml[1,0+21])
-            Ppat_any
-          expression (test.ml[1,0+25]..test.ml[1,0+29])
-            attribute "merlin.loc"
-              []
-            Pexp_construct "None" (test.ml[1,0+25]..test.ml[1,0+29])
-            None
-      ]
-]|}
-  in
-  let result = Ast.of_json ~dialect:Parsetree ~filename:"test.ml" json in
-  Alcotest.(check int) "has identifiers" 1 (List.length result.identifiers);
-  Alcotest.(check int) "has patterns" 1 (List.length result.patterns);
-
-  (* Check the catch-all pattern *)
-  match result.patterns with
-  | [ pattern ] ->
-      Alcotest.(check string)
-        "catch-all pattern" "_"
-        (Ast.name_to_string pattern.name);
-      Alcotest.(check bool)
-        "has location" true
-        (Option.is_some pattern.location)
-  | _ -> Alcotest.fail "Expected exactly one pattern"
-
-(** Test parsing Obj.magic usage in parsetree *)
-let test_parse_obj_magic_parsetree () =
-  let json =
-    `String
-      {|[
-  structure_item (test.ml[1,0+0]..test.ml[1,0+25])
-    Pstr_value Nonrec
-    [
-      <def>
-        pattern (test.ml[1,0+4]..test.ml[1,0+13])
-          Ppat_var "dangerous" (test.ml[1,0+4]..test.ml[1,0+13])
-        expression (test.ml[1,0+16]..test.ml[1,0+25])
-          Pexp_apply
-          expression (test.ml[1,0+16]..test.ml[1,0+25])
-            Pexp_ident "Obj.magic" (test.ml[1,0+16]..test.ml[1,0+25])
-          [
-            <arg>
-            Nolabel
-              expression (test.ml[1,0+26]..test.ml[1,0+28])
-                Pexp_constant
-                constant (test.ml[1,0+26]..test.ml[1,0+28])
-                  PConst_int(42,None)
-          ]
-    ]
-]|}
-  in
-  let result = Ast.of_json ~dialect:Parsetree ~filename:"test.ml" json in
-  Alcotest.(check int) "has identifiers" 1 (List.length result.identifiers);
-  Alcotest.(check int) "has patterns" 1 (List.length result.patterns);
-
-  (* Check the Obj.magic identifier *)
-  match result.identifiers with
-  | [ id ] ->
-      Alcotest.(check string)
-        "obj magic identifier" "Obj.magic"
-        (Ast.name_to_string id.name)
-  | _ -> Alcotest.fail "Expected exactly one identifier"
-
-(** Test parsing function with patterns in typedtree *)
-let test_parse_with_function_typedtree () =
-  let json =
-    `String
-      "structure_item (test.ml[1,0+0]..[3,50+1])\n\
-      \  Tstr_value Nonrec\n\
-      \    <def>\n\
-      \      Tpat_var \"foo/123\" (test.ml[1,8+4]..[1,8+7])\n\
-      \      Texp_function"
-  in
-  let result = Ast.of_json ~dialect:Typedtree ~filename:"test.ml" json in
-  Alcotest.(check int) "has pattern" 1 (List.length result.patterns);
-  match result.patterns with
-  | [ elt ] ->
-      Alcotest.(check string) "pattern name" "foo" (Ast.name_to_string elt.name)
-  | _ -> Alcotest.fail "Expected exactly one pattern"
-
-(** Test parsing match expression in typedtree *)
-let test_parse_with_match_typedtree () =
-  let json =
-    `String
-      "structure_item (test.ml[1,0+0]..test.ml[1,0+46])\n\
-      \  Tstr_value Nonrec\n\
-      \  [\n\
-      \    <def>\n\
-      \      pattern (test.ml[1,0+4]..test.ml[1,0+5])\n\
-      \        Tpat_var \"x/276\"\n\
-      \      expression (test.ml[1,0+8]..test.ml[1,0+46])\n\
-      \        Texp_match\n\
-      \        expression (test.ml[1,0+14]..test.ml[1,0+15])\n\
-      \          Texp_ident \"y/277\"\n\
-      \        [\n\
-      \          <case>\n\
-      \            pattern (test.ml[1,0+23]..test.ml[1,0+29])\n\
-      \              Tpat_construct \"Some\"\n\
-      \          <case>\n\
-      \            pattern (test.ml[1,0+37]..test.ml[1,0+41])\n\
-      \              Tpat_construct \"None\"\n\
-      \        ]\n\
-      \  ]"
-  in
-  let result = Ast.of_json ~dialect:Typedtree ~filename:"test.ml" json in
-  Alcotest.(check int) "has identifiers" 1 (List.length result.identifiers);
-  Alcotest.(check int) "has value bindings" 1 (List.length result.patterns);
-  match result.identifiers with
-  | [ id ] ->
-      Alcotest.(check string) "identifier name" "y" (Ast.name_to_string id.name)
-  | _ -> Alcotest.fail "Expected exactly one identifier"
-
-(** Test parsing Obj.magic usage in typedtree *)
-let test_extract_obj_magic_typedtree () =
-  let json =
-    `String
-      "structure_item (test.ml[1,0+0]..test.ml[1,0+30])\n\
-      \  Tstr_value Nonrec\n\
-      \  [\n\
-      \    <def>\n\
-      \      pattern (test.ml[1,0+4]..test.ml[1,0+13])\n\
-      \        Tpat_var \"dangerous/123\"\n\
-      \      expression (test.ml[1,0+16]..test.ml[1,0+30])\n\
-      \        Texp_apply\n\
-      \        expression (test.ml[1,0+16]..test.ml[1,0+25])\n\
-      \          Texp_ident \"Stdlib!.Obj.magic\"\n\
-      \        [\n\
-      \          <arg>\n\
-      \            Nolabel\n\
-      \            expression (test.ml[1,0+26]..test.ml[1,0+30])\n\
-      \              Texp_constant Const_int(42,None)\n\
-      \        ]\n\
-      \  ]"
-  in
-  let result = Ast.of_json ~dialect:Typedtree ~filename:"test.ml" json in
-  Alcotest.(check int) "has one identifier" 1 (List.length result.identifiers);
-  Alcotest.(check int) "has one value binding" 1 (List.length result.patterns);
-  (match result.identifiers with
-  | [ id ] ->
-      Alcotest.(check string)
-        "obj magic identifier" "Stdlib.Obj.magic"
-        (Ast.name_to_string id.name)
-  | _ -> Alcotest.fail "Expected exactly one identifier");
-  match result.patterns with
-  | [ elt ] ->
-      Alcotest.(check string)
-        "pattern name" "dangerous"
-        (Ast.name_to_string elt.name)
-  | _ -> Alcotest.fail "Expected exactly one pattern"
-
-(** Test extracting multiple identifiers in typedtree *)
-let test_extract_multiple_identifiers_typedtree () =
-  let json =
-    `String
-      "structure_item (test.ml[1,0+0]..test.ml[3,0+50])\n\
-      \  Tstr_value Nonrec\n\
-      \  [\n\
-      \    <def>\n\
-      \      pattern (test.ml[1,0+4]..test.ml[1,0+12])\n\
-      \        Tpat_var \"bad_code/456\"\n\
-      \      expression (test.ml[2,0+2]..test.ml[3,0+40])\n\
-      \        Texp_sequence\n\
-      \        expression (test.ml[2,0+2]..test.ml[2,0+30])\n\
-      \          Texp_apply\n\
-      \          expression (test.ml[2,0+2]..test.ml[2,0+15])\n\
-      \            Texp_ident \"Stdlib!.Printf.printf\"\n\
-      \          [\n\
-      \            <arg>\n\
-      \              Nolabel\n\
-      \              expression (test.ml[2,0+16]..test.ml[2,0+30])\n\
-      \                Texp_constant Const_string(\"Hello %s\",None)\n\
-      \          ]\n\
-      \        expression (test.ml[3,0+2]..test.ml[3,0+20])\n\
-      \          Texp_apply\n\
-      \          expression (test.ml[3,0+2]..test.ml[3,0+15])\n\
-      \            Texp_ident \"Stdlib!.Str.split\"\n\
-      \          [\n\
-      \            <arg>\n\
-      \              Nolabel\n\
-      \              expression (test.ml[3,0+16]..test.ml[3,0+20])\n\
-      \                Texp_ident \"data/789\"\n\
-      \          ]\n\
-      \  ]"
-  in
-  let result = Ast.of_json ~dialect:Typedtree ~filename:"test.ml" json in
-  Alcotest.(check int)
-    "has three identifiers" 3
-    (List.length result.identifiers);
-  Alcotest.(check int) "has one value binding" 1 (List.length result.patterns);
-  let identifier_names =
-    List.map (fun id -> Ast.name_to_string id.Ast.name) result.identifiers
-  in
-  Alcotest.(check bool)
-    "has printf" true
-    (List.mem "Stdlib.Printf.printf" identifier_names);
-  Alcotest.(check bool)
-    "has str" true
-    (List.mem "Stdlib.Str.split" identifier_names);
-  Alcotest.(check bool) "has data" true (List.mem "data" identifier_names)
-
-(** Test extracting modules in typedtree *)
-let test_extract_modules_typedtree () =
-  let json =
-    `String
-      "structure_item (test.ml[1,0+0]..test.ml[1,0+20])\n\
-      \  Tstr_module\n\
-      \    MyModule/999\n\
-      \      module_expr (test.ml[1,0+18]..test.ml[1,0+20])\n\
-      \        Tmod_structure\n\
-      \        []\n"
-  in
-  let result = Ast.of_json ~dialect:Typedtree ~filename:"test.ml" json in
-  Alcotest.(check int) "has one module" 1 (List.length result.modules);
-  match result.modules with
-  | [ elt ] ->
-      Alcotest.(check string)
-        "module name" "MyModule"
-        (Ast.name_to_string elt.name)
-  | _ -> Alcotest.fail "Expected exactly one module"
-
-(** Test identifier with location in typedtree *)
-let test_identifier_with_location_typedtree () =
-  let json =
-    `String
-      "expression (test.ml[1,0+11]..test.ml[1,0+31])\n\
-      \  Texp_ident \"Stdlib!.Printf.printf\""
-  in
-  let result = Ast.of_json ~dialect:Typedtree ~filename:"test.ml" json in
-  Alcotest.(check int) "has one identifier" 1 (List.length result.identifiers);
-  match result.identifiers with
-  | [ id ] -> (
-      Alcotest.(check bool)
-        "identifier has location" true
-        (Option.is_some id.location);
-      match id.location with
-      | Some loc ->
-          let pp_loc = Fmt.to_to_string Location.pp loc in
-          Alcotest.(check bool)
-            "location contains test.ml" true
-            (String.contains pp_loc 'e')
-      | None -> Alcotest.fail "Expected location")
-  | _ -> Alcotest.fail "Expected exactly one identifier"
-
-(** Test pattern with location in typedtree *)
-let test_pattern_with_location_typedtree () =
-  let json =
-    `String "pattern (test.ml[1,0+4]..test.ml[1,0+8])\n  Tpat_var \"test/276\""
-  in
-  let result = Ast.of_json ~dialect:Typedtree ~filename:"test.ml" json in
-  Alcotest.(check int) "has one pattern" 1 (List.length result.patterns);
-  match result.patterns with
-  | [ pat ] ->
-      Alcotest.(check bool)
-        "pattern has location" true
-        (Option.is_some pat.location)
-  | _ -> Alcotest.fail "Expected exactly one pattern"
-
 (** Test that mock AST structure works correctly *)
 let test_mock_ast_structure () =
   (* Test with mock AST data *)
@@ -362,38 +30,462 @@ let test_mock_ast_structure () =
         exceptions = [];
         variants = [];
         expressions = [];
+        functions = [];
       }
   in
   ()
 
-let tests =
+let complexity_tests =
   [
-    (* Parsetree tests *)
-    Alcotest.test_case "parse_empty_parsetree" `Quick test_parse_empty_parsetree;
-    Alcotest.test_case "parse_str_usage_parsetree" `Quick
-      test_parse_str_usage_parsetree;
-    Alcotest.test_case "parse_catch_all_parsetree" `Quick
-      test_parse_catch_all_parsetree;
-    Alcotest.test_case "parse_obj_magic_parsetree" `Quick
-      test_parse_obj_magic_parsetree;
-    (* Typedtree tests *)
-    Alcotest.test_case "parse_empty_typedtree" `Quick test_parse_empty_typedtree;
-    Alcotest.test_case "parse_with_function_typedtree" `Quick
-      test_parse_with_function_typedtree;
-    Alcotest.test_case "parse_with_match_typedtree" `Quick
-      test_parse_with_match_typedtree;
-    Alcotest.test_case "extract_obj_magic_typedtree" `Quick
-      test_extract_obj_magic_typedtree;
-    Alcotest.test_case "extract_multiple_identifiers_typedtree" `Quick
-      test_extract_multiple_identifiers_typedtree;
-    Alcotest.test_case "extract_modules_typedtree" `Quick
-      test_extract_modules_typedtree;
-    Alcotest.test_case "identifier_with_location_typedtree" `Quick
-      test_identifier_with_location_typedtree;
-    Alcotest.test_case "pattern_with_location_typedtree" `Quick
-      test_pattern_with_location_typedtree;
-    (* Mock structure test *)
-    Alcotest.test_case "mock_ast_structure" `Quick test_mock_ast_structure;
+    Alcotest.test_case "empty complexity" `Quick (fun () ->
+        let c = Ast.Complexity.empty in
+        Alcotest.(check int) "total" 0 c.total;
+        Alcotest.(check int) "if_then_else" 0 c.if_then_else;
+        Alcotest.(check int) "match_cases" 0 c.match_cases;
+        Alcotest.(check int) "try_handlers" 0 c.try_handlers;
+        Alcotest.(check int) "boolean_operators" 0 c.boolean_operators);
+    Alcotest.test_case "if-then-else" `Quick (fun () ->
+        let expr =
+          Ast.If_then_else
+            {
+              cond = Ast.Constant "true";
+              then_expr = Ast.Constant "1";
+              else_expr = Some (Ast.Constant "2");
+            }
+        in
+        let c = Ast.Complexity.analyze_expr expr in
+        Alcotest.(check int) "if_then_else count" 1 c.if_then_else;
+        Alcotest.(check int) "total" 1 c.total;
+        Alcotest.(check int)
+          "cyclomatic complexity" 2
+          (Ast.Complexity.calculate c));
+    Alcotest.test_case "nested if" `Quick (fun () ->
+        let inner_if =
+          Ast.If_then_else
+            {
+              cond = Ast.Constant "true";
+              then_expr = Ast.Constant "1";
+              else_expr = Some (Ast.Constant "2");
+            }
+        in
+        let expr =
+          Ast.If_then_else
+            {
+              cond = Ast.Constant "true";
+              then_expr = inner_if;
+              else_expr = Some (Ast.Constant "3");
+            }
+        in
+        let c = Ast.Complexity.analyze_expr expr in
+        Alcotest.(check int) "if_then_else count" 2 c.if_then_else;
+        Alcotest.(check int) "total" 2 c.total;
+        Alcotest.(check int)
+          "cyclomatic complexity" 3
+          (Ast.Complexity.calculate c));
+    Alcotest.test_case "match expression" `Quick (fun () ->
+        let expr = Ast.Match { expr = Ast.Ident "x"; cases = 3 } in
+        let c = Ast.Complexity.analyze_expr expr in
+        Alcotest.(check int) "match_cases count" 2 c.match_cases;
+        Alcotest.(check int) "total" 2 c.total;
+        Alcotest.(check int)
+          "cyclomatic complexity" 3
+          (Ast.Complexity.calculate c));
+    Alcotest.test_case "try expression" `Quick (fun () ->
+        let expr = Ast.Try { expr = Ast.Constant "risky"; handlers = 2 } in
+        let c = Ast.Complexity.analyze_expr expr in
+        Alcotest.(check int) "try_handlers count" 2 c.try_handlers;
+        Alcotest.(check int) "total" 2 c.total;
+        Alcotest.(check int)
+          "cyclomatic complexity" 3
+          (Ast.Complexity.calculate c));
+    Alcotest.test_case "boolean operators" `Quick (fun () ->
+        let expr =
+          Ast.Apply
+            {
+              func = Ast.Ident "Stdlib.&&";
+              args = [ Ast.Constant "true"; Ast.Constant "false" ];
+            }
+        in
+        let c = Ast.Complexity.analyze_expr expr in
+        Alcotest.(check int) "boolean_operators count" 1 c.boolean_operators;
+        Alcotest.(check int) "total" 1 c.total;
+        Alcotest.(check int)
+          "cyclomatic complexity" 2
+          (Ast.Complexity.calculate c));
   ]
 
-let suite = [ ("ast", tests) ]
+(** Tests for visitor pattern *)
+let visitor_tests =
+  [
+    Alcotest.test_case "visitor pattern basic traversal" `Quick (fun () ->
+        let visited_nodes = ref [] in
+        let test_visitor =
+          object
+            inherit Ast.visitor
+            method! visit_ident name = visited_nodes := name :: !visited_nodes
+
+            method! visit_constant value =
+              visited_nodes := ("const:" ^ value) :: !visited_nodes
+          end
+        in
+
+        let expr =
+          Ast.Apply
+            {
+              func = Ast.Ident "print_endline";
+              args = [ Ast.Constant "hello" ];
+            }
+        in
+        test_visitor#visit_expr expr;
+
+        let expected = [ "print_endline"; "const:hello" ] in
+        Alcotest.(check (list string))
+          "visited nodes" expected (List.rev !visited_nodes));
+    Alcotest.test_case "visitor pattern nested traversal" `Quick (fun () ->
+        let depth = ref 0 in
+        let max_depth = ref 0 in
+        let test_visitor =
+          object
+            inherit Ast.visitor as super
+
+            method! visit_if_then_else ~cond ~then_expr ~else_expr =
+              incr depth;
+              max_depth := max !max_depth !depth;
+              super#visit_if_then_else ~cond ~then_expr ~else_expr;
+              decr depth
+          end
+        in
+
+        let nested_if =
+          Ast.If_then_else
+            {
+              cond = Ast.Ident "x";
+              then_expr =
+                Ast.If_then_else
+                  {
+                    cond = Ast.Ident "y";
+                    then_expr = Ast.Constant "1";
+                    else_expr = None;
+                  };
+              else_expr = Some (Ast.Constant "0");
+            }
+        in
+
+        test_visitor#visit_expr nested_if;
+        Alcotest.(check int) "max nesting depth" 2 !max_depth);
+    Alcotest.test_case "visitor pattern sequence traversal" `Quick (fun () ->
+        let node_count = ref 0 in
+        let test_visitor =
+          object
+            inherit Ast.visitor as super
+
+            method! visit_expr expr =
+              incr node_count;
+              super#visit_expr expr
+          end
+        in
+
+        let seq_expr =
+          Ast.Sequence
+            [
+              Ast.Constant "1";
+              Ast.Constant "2";
+              Ast.Apply { func = Ast.Ident "f"; args = [ Ast.Constant "3" ] };
+            ]
+        in
+
+        test_visitor#visit_expr seq_expr;
+        (* Should visit: Sequence + 3 Constants + Apply + Ident = 6 nodes *)
+        Alcotest.(check int) "node count" 6 !node_count);
+  ]
+
+(** Tests for function finder visitor *)
+let function_finder_tests =
+  [
+    Alcotest.test_case "function finder finds target function" `Quick (fun () ->
+        let finder = new Ast.function_finder_visitor "target_func" in
+
+        let let_expr =
+          Ast.Let
+            {
+              bindings =
+                [
+                  ("other_func", Ast.Constant "1");
+                  ("target_func", Ast.Ident "found_it");
+                  ("another_func", Ast.Constant "2");
+                ];
+              body = Ast.Constant "body";
+            }
+        in
+
+        finder#visit_expr let_expr;
+
+        match finder#get_result with
+        | Some (Ast.Ident "found_it") -> ()
+        | _ -> Alcotest.fail "Should have found target_func");
+    Alcotest.test_case "function finder returns None when not found" `Quick
+      (fun () ->
+        let finder = new Ast.function_finder_visitor "missing_func" in
+
+        let let_expr =
+          Ast.Let
+            {
+              bindings = [ ("other_func", Ast.Constant "1") ];
+              body = Ast.Constant "body";
+            }
+        in
+
+        finder#visit_expr let_expr;
+
+        match finder#get_result with
+        | None -> ()
+        | Some _ -> Alcotest.fail "Should not have found missing_func");
+    Alcotest.test_case "function finder works with nested let" `Quick (fun () ->
+        let finder = new Ast.function_finder_visitor "inner_func" in
+
+        let nested_let =
+          Ast.Let
+            {
+              bindings = [ ("outer", Ast.Constant "1") ];
+              body =
+                Ast.Let
+                  {
+                    bindings = [ ("inner_func", Ast.Constant "found") ];
+                    body = Ast.Constant "result";
+                  };
+            }
+        in
+
+        finder#visit_expr nested_let;
+
+        match finder#get_result with
+        | Some (Ast.Constant "found") -> ()
+        | _ -> Alcotest.fail "Should have found inner_func");
+    Alcotest.test_case "function finder with complex expression" `Quick
+      (fun () ->
+        let finder = new Ast.function_finder_visitor "complex_func" in
+
+        let complex_expr =
+          Ast.If_then_else
+            {
+              cond = Ast.Constant "true";
+              then_expr =
+                Ast.Let
+                  {
+                    bindings =
+                      [
+                        ( "complex_func",
+                          Ast.Match { expr = Ast.Ident "x"; cases = 2 } );
+                      ];
+                    body = Ast.Constant "done";
+                  };
+              else_expr = None;
+            }
+        in
+
+        finder#visit_expr complex_expr;
+
+        match finder#get_result with
+        | Some (Ast.Match { cases = 2; _ }) -> ()
+        | _ ->
+            Alcotest.fail "Should have found complex_func with Match expression");
+  ]
+
+(** Tests for nesting depth calculation using visitor *)
+let nesting_visitor_tests =
+  [
+    Alcotest.test_case "nesting depth simple if" `Quick (fun () ->
+        let simple_if =
+          Ast.If_then_else
+            {
+              cond = Ast.Ident "x";
+              then_expr = Ast.Constant "1";
+              else_expr = None;
+            }
+        in
+        let depth = Ast.Nesting.calculate_depth simple_if in
+        Alcotest.(check int) "simple if depth" 1 depth);
+    Alcotest.test_case "nesting depth nested if" `Quick (fun () ->
+        let nested_if =
+          Ast.If_then_else
+            {
+              cond = Ast.Ident "x";
+              then_expr =
+                Ast.If_then_else
+                  {
+                    cond = Ast.Ident "y";
+                    then_expr =
+                      Ast.If_then_else
+                        {
+                          cond = Ast.Ident "z";
+                          then_expr = Ast.Constant "deep";
+                          else_expr = None;
+                        };
+                    else_expr = None;
+                  };
+              else_expr = None;
+            }
+        in
+        let depth = Ast.Nesting.calculate_depth nested_if in
+        Alcotest.(check int) "nested if depth" 3 depth);
+    Alcotest.test_case "nesting depth match expression" `Quick (fun () ->
+        let match_expr =
+          Ast.Match
+            {
+              expr =
+                Ast.If_then_else
+                  {
+                    cond = Ast.Ident "x";
+                    then_expr = Ast.Constant "1";
+                    else_expr = None;
+                  };
+              cases = 3;
+            }
+        in
+        let depth = Ast.Nesting.calculate_depth match_expr in
+        Alcotest.(check int) "match with nested if depth" 2 depth);
+    Alcotest.test_case "nesting depth function expression" `Quick (fun () ->
+        let func_expr =
+          Ast.Function
+            {
+              params = 1;
+              body =
+                Ast.If_then_else
+                  {
+                    cond = Ast.Ident "x";
+                    then_expr = Ast.Constant "1";
+                    else_expr = None;
+                  };
+            }
+        in
+        let depth = Ast.Nesting.calculate_depth func_expr in
+        Alcotest.(check int) "function with if depth" 2 depth);
+    Alcotest.test_case "nesting depth complex nested structure" `Quick
+      (fun () ->
+        let complex_expr =
+          Ast.If_then_else
+            {
+              cond = Ast.Ident "a";
+              then_expr = Ast.Match { expr = Ast.Ident "b"; cases = 2 };
+              else_expr =
+                Some
+                  (Ast.Try
+                     {
+                       expr =
+                         Ast.Function
+                           {
+                             params = 1;
+                             body =
+                               Ast.If_then_else
+                                 {
+                                   cond = Ast.Ident "c";
+                                   then_expr = Ast.Constant "deep";
+                                   else_expr = None;
+                                 };
+                           };
+                       handlers = 1;
+                     });
+            }
+        in
+        let depth = Ast.Nesting.calculate_depth complex_expr in
+        (* if(1) + try(1) + function(1) + inner if(1) = 4 levels deep *)
+        Alcotest.(check int) "complex nested depth" 4 depth);
+  ]
+
+(** Tests for complexity visitor *)
+let complexity_visitor_tests =
+  [
+    Alcotest.test_case "complexity visitor if-then-else" `Quick (fun () ->
+        let if_expr =
+          Ast.If_then_else
+            {
+              cond = Ast.Ident "x";
+              then_expr = Ast.Constant "1";
+              else_expr = Some (Ast.Constant "0");
+            }
+        in
+        let info = Ast.Complexity.analyze_expr if_expr in
+        Alcotest.(check int) "if-then-else count" 1 info.if_then_else;
+        Alcotest.(check int) "total complexity" 1 info.total);
+    Alcotest.test_case "complexity visitor match cases" `Quick (fun () ->
+        let match_expr =
+          Ast.Match
+            {
+              expr = Ast.Ident "x";
+              cases = 4 (* 4 cases = 3 decision points *);
+            }
+        in
+        let info = Ast.Complexity.analyze_expr match_expr in
+        Alcotest.(check int) "match cases" 3 info.match_cases;
+        Alcotest.(check int) "total complexity" 3 info.total);
+    Alcotest.test_case "complexity visitor boolean operators" `Quick (fun () ->
+        let bool_expr =
+          Ast.Apply
+            { func = Ast.Ident "&&"; args = [ Ast.Ident "x"; Ast.Ident "y" ] }
+        in
+        let info = Ast.Complexity.analyze_expr bool_expr in
+        Alcotest.(check int) "boolean operators" 1 info.boolean_operators;
+        Alcotest.(check int) "total complexity" 1 info.total);
+    Alcotest.test_case "complexity visitor try handlers" `Quick (fun () ->
+        let try_expr = Ast.Try { expr = Ast.Constant "risky"; handlers = 3 } in
+        let info = Ast.Complexity.analyze_expr try_expr in
+        Alcotest.(check int) "try handlers" 3 info.try_handlers;
+        Alcotest.(check int) "total complexity" 3 info.total);
+    Alcotest.test_case "complexity visitor complex expression" `Quick (fun () ->
+        let complex_expr =
+          Ast.If_then_else
+            {
+              cond =
+                Ast.Apply
+                  {
+                    func = Ast.Ident "||";
+                    args = [ Ast.Ident "a"; Ast.Ident "b" ];
+                  };
+              then_expr =
+                Ast.Match
+                  { expr = Ast.Ident "x"; cases = 3 (* 2 decision points *) };
+              else_expr =
+                Some (Ast.Try { expr = Ast.Constant "1"; handlers = 2 });
+            }
+        in
+        let info = Ast.Complexity.analyze_expr complex_expr in
+        (* 1 if + 1 boolean + 2 match + 2 try = 6 total *)
+        Alcotest.(check int) "total complexity" 6 info.total;
+        Alcotest.(check int) "if-then-else count" 1 info.if_then_else;
+        Alcotest.(check int) "boolean operators" 1 info.boolean_operators;
+        Alcotest.(check int) "match cases" 2 info.match_cases;
+        Alcotest.(check int) "try handlers" 2 info.try_handlers);
+    Alcotest.test_case "complexity visitor nested expressions" `Quick (fun () ->
+        let nested_expr =
+          Ast.If_then_else
+            {
+              cond = Ast.Ident "x";
+              then_expr =
+                Ast.If_then_else
+                  {
+                    cond =
+                      Ast.Apply
+                        {
+                          func = Ast.Ident "&&";
+                          args = [ Ast.Ident "y"; Ast.Ident "z" ];
+                        };
+                    then_expr = Ast.Constant "1";
+                    else_expr = None;
+                  };
+              else_expr = None;
+            }
+        in
+        let info = Ast.Complexity.analyze_expr nested_expr in
+        (* 2 if + 1 boolean = 3 total *)
+        Alcotest.(check int) "total complexity" 3 info.total;
+        Alcotest.(check int) "if-then-else count" 2 info.if_then_else;
+        Alcotest.(check int) "boolean operators" 1 info.boolean_operators);
+  ]
+
+let suite =
+  [
+    ( "ast",
+      [ Alcotest.test_case "mock_ast_structure" `Quick test_mock_ast_structure ]
+      @ complexity_tests @ visitor_tests @ function_finder_tests
+      @ nesting_visitor_tests @ complexity_visitor_tests );
+  ]

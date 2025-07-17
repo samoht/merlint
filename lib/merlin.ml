@@ -4,11 +4,7 @@ let src = Logs.Src.create "merlint.merlin" ~doc:"Merlin interface"
 
 module Log = (val Logs.src_log src : Logs.LOG)
 
-type t = {
-  browse : (Browse.t, string) result;
-  typedtree : (Ast.t, string) result;
-  outline : (Outline.t, string) result;
-}
+type t = { outline : (Outline.t, string) result; dump : (Ast.t, string) result }
 
 let get_outline file =
   (* Ensure file exists before trying to analyze it *)
@@ -78,21 +74,15 @@ let dump_value format file =
       | _ -> Error "Invalid Merlin JSON format")
   | Error msg -> Error msg
 
-let get_browse file =
-  match dump_value "browse" file with
-  | Ok json -> Ok (Browse.of_json json)
-  | Error msg -> Error msg
-
-let get_typedtree file =
+let get_dump file =
   match dump_value "typedtree" file with
-  | Ok json -> Ok (Ast.of_json ~dialect:Typedtree ~filename:file json)
+  | Ok json -> (
+      match json with
+      | `String text -> Ok (Ast.of_typedtree_text text)
+      | _ -> Error "Invalid typedtree format")
   | Error msg -> Error msg
 
 let analyze_file file =
-  (* Run all three merlin commands for the file *)
+  (* Run merlin commands for the file *)
   Log.info (fun m -> m "Analyzing file %s with merlin" file);
-  {
-    browse = get_browse file;
-    typedtree = get_typedtree file;
-    outline = get_outline file;
-  }
+  { outline = get_outline file; dump = get_dump file }

@@ -10,7 +10,7 @@ let check ctx =
     ast.identifiers @ ast.patterns @ ast.modules @ ast.types @ ast.exceptions
     @ ast.variants
   in
-  Traverse.filter_map_elements all_elts (fun (elt : Ast.elt) ->
+  Helpers.filter_map_elements all_elts (fun (elt : Ast.elt) ->
       (* Only check the base name, not the full qualified name *)
       let base_name = elt.name.base in
       let underscore_count =
@@ -19,7 +19,7 @@ let check ctx =
           0 base_name
       in
       if underscore_count > max_underscores && String.length base_name > 5 then
-        match Traverse.extract_location elt with
+        match Helpers.extract_location elt with
         | Some loc ->
             (* Use full name for display but count underscores only in base *)
             let full_name = Ast.name_to_string elt.name in

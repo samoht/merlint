@@ -11,7 +11,7 @@ Test bad example - should find Obj.magic usage:
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   
-  Summary: ✓ 0 total issues
+  Summary: ✓ 0 total issues (applied 1 rules)
   ✓ All checks passed!
 
 Test good example - should find no issues:
@@ -27,5 +27,5 @@ Test good example - should find no issues:
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   
-  Summary: ✓ 0 total issues
+  Summary: ✓ 0 total issues (applied 1 rules)
   ✓ All checks passed!

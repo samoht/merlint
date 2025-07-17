@@ -11,15 +11,15 @@ let check ctx =
       let name_str = type_elt.name.base in
       if
         name_str <> "t" && name_str <> "id"
-        && name_str <> Traverse.to_snake_case name_str
+        && name_str <> Helpers.to_snake_case name_str
       then
-        match Traverse.extract_location type_elt with
+        match Helpers.extract_location type_elt with
         | Some loc ->
             Some
               (Issue.v ~loc
                  {
                    type_name = name_str;
-                   expected = Traverse.to_snake_case name_str;
+                   expected = Helpers.to_snake_case name_str;
                  })
         | None -> None
       else None)

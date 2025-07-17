@@ -7,12 +7,16 @@ Test bad example - should find missing value documentation:
   ✓ Code Quality (0 total issues)
   ✓ Code Style (0 total issues)
   ✓ Naming Conventions (0 total issues)
-  ✓ Documentation (0 total issues)
+  ✗ Documentation (1 total issues)
+    [E405] Missing Type Documentation
+    All public values should have documentation explaining their purpose and
+    usage. Add doc comments (** ... *) above value declarations in .mli files.
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   
-  Summary: ✓ 0 total issues
-  ✓ All checks passed!
+  Summary: ✗ 1 total issues (applied 1 rules)
+  ✗ Some checks failed. See details above.
+  [1]
 
 Test good example - should find no issues:
   $ merlint -r E405 good.mli
@@ -23,9 +27,13 @@ Test good example - should find no issues:
   ✓ Code Quality (0 total issues)
   ✓ Code Style (0 total issues)
   ✓ Naming Conventions (0 total issues)
-  ✓ Documentation (0 total issues)
+  ✗ Documentation (1 total issues)
+    [E405] Missing Type Documentation
+    All public values should have documentation explaining their purpose and
+    usage. Add doc comments (** ... *) above value declarations in .mli files.
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   
-  Summary: ✓ 0 total issues
-  ✓ All checks passed!
+  Summary: ✗ 1 total issues (applied 1 rules)
+  ✗ Some checks failed. See details above.
+  [1]

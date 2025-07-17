@@ -21,8 +21,8 @@ let check (ctx : Context.file) =
     (fun (module_elt : Ast.elt) ->
       let module_name = Ast.name_to_string module_elt.name in
       if not (is_snake_case_module module_name) then
-        let expected = Traverse.to_snake_case module_name in
-        match Traverse.extract_location module_elt with
+        let expected = Helpers.to_snake_case module_name in
+        match Helpers.extract_location module_elt with
         | Some loc -> Some (Issue.v ~loc { module_name; expected })
         | None -> None
       else None)

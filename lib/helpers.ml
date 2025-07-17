@@ -124,11 +124,6 @@ let count_parameters signature param_type =
   in
   count_matches signature param_type 0 0
 
-(** Browse data helpers *)
-
-let filter_functions value_bindings =
-  List.filter (fun binding -> binding.Browse.is_function) value_bindings
-
 (** Common validation patterns *)
 
 let check_identifier_pattern identifiers pattern_match issue_constructor =

@@ -7,9 +7,7 @@ type file = {
   filename : string;  (** The current file being analyzed *)
   config : Config.t;  (** The merlint configuration *)
   project_root : string;  (** The project root directory *)
-  browse : Browse.t Lazy.t;  (** Browse tree from Merlin (lazy) *)
-  ast : Ast.t Lazy.t;
-      (** AST from Merlin (lazy) - falls back to parsetree if typedtree fails *)
+  ast : Ast.t Lazy.t;  (** AST from Merlin typedtree dump (lazy) *)
   outline : Outline.t Lazy.t;  (** Outline from Merlin (lazy) *)
   content : string Lazy.t;  (** File content (lazy) *)
 }
@@ -42,10 +40,6 @@ val create_project :
 (** Create a project context from the given parameters *)
 
 (* File context accessors *)
-val browse : file -> Browse.t
-(** Force evaluation of the browse field, raising an exception if it's an error
-*)
-
 val ast : file -> Ast.t
 (** Force evaluation of the ast field, raising an exception if it's an error *)
 
