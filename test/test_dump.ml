@@ -894,10 +894,61 @@ let attribute_tests =
           (List.length ast.functions));
   ]
 
+let nested_if_tests =
+  [
+    Alcotest.test_case "parse deeply nested if-then-else" `Quick (fun () ->
+        let ast_dump =
+          "[\n\
+          \  structure_item\n\
+          \    Tstr_value Nonrec\n\
+          \    [\n\
+          \      <def>\n\
+          \        pattern\n\
+          \          Tpat_var \"check_input/276\"\n\
+          \        expression ghost\n\
+          \          Texp_function\n\
+          \          [\n\
+          \            Nolabel\n\
+          \            Param_pat\n\
+          \              pattern\n\
+          \                Tpat_var \"x/278\"\n\
+          \          ]\n\
+          \          Tfunction_body\n\
+          \            expression\n\
+          \              Texp_ifthenelse\n\
+          \              expression\n\
+          \                Texp_constant Const_int 1\n\
+          \              expression\n\
+          \                Texp_ifthenelse\n\
+          \                expression\n\
+          \                  Texp_constant Const_int 2\n\
+          \                expression\n\
+          \                  Texp_constant Const_string(\"yes\",None)\n\
+          \                Some\n\
+          \                  expression\n\
+          \                    Texp_constant Const_string(\"no\",None)\n\
+          \              Some\n\
+          \                expression\n\
+          \                  Texp_constant Const_string(\"maybe\",None)\n\
+          \    ]\n\
+           \\]\n"
+        in
+        let ast = Dump.typedtree ast_dump in
+        Alcotest.(check int) "function count" 1 (List.length ast.functions);
+        match ast.functions with
+        | [ (name, Ast.Function { body; _ }) ] ->
+            Alcotest.(check string) "function name" "check_input" name;
+            (* Verify we extracted nested if-then-else *)
+            let complexity_info = Ast.Complexity.analyze_expr body in
+            Alcotest.(check int)
+              "nested if count" 2 complexity_info.if_then_else
+        | _ -> Alcotest.fail "Expected function with nested if-then-else");
+  ]
+
 let suite =
   [
     ( "parser",
       parsing_tests @ parsetree_parsing_tests @ constructor_tests @ let_in_tests
       @ type_error_tests @ constant_parsing_tests @ polymorphic_variant_tests
-      @ attribute_tests );
+      @ attribute_tests @ nested_if_tests );
   ]

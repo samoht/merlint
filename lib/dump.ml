@@ -350,7 +350,7 @@ let text what input =
     let rec find_pattern_and_expr nodes pattern_name expr_node =
       match nodes with
       | [] -> (pattern_name, expr_node)
-      | Node (token, children) :: rest -> (
+      | (Node (token, children) as node) :: rest -> (
           let raw_node_type = get_node_type token.content in
           let node_type = normalize_node_type what raw_node_type in
           match node_type with
@@ -360,7 +360,7 @@ let text what input =
               find_pattern_and_expr rest name expr_node
           | "expression" ->
               (* Check if this expression is a function *)
-              let expr = extract_expr_if_function what children in
+              let expr = extract_expr_if_function what [ node ] in
               find_pattern_and_expr rest pattern_name expr
           | _ -> find_pattern_and_expr rest pattern_name expr_node)
     in
@@ -387,7 +387,7 @@ let text what input =
     let rec find_function_in_nodes nodes =
       match nodes with
       | [] -> None
-      | Node (token, _) :: rest ->
+      | Node (token, children) :: rest ->
           let raw_node_type = get_node_type token.content in
           let node_type = normalize_node_type what raw_node_type in
           Log.debug (fun m ->
@@ -395,6 +395,9 @@ let text what input =
           if node_type = "exp_function" || node_type = "exp_fun" then
             (* Found function marker, now extract body from siblings *)
             Some (extract_function_expr what rest)
+          else if node_type = "expression" then
+            (* For expression nodes, check their children *)
+            find_function_in_nodes children
           else find_function_in_nodes rest
     in
     find_function_in_nodes nodes
@@ -482,21 +485,30 @@ let text what input =
     | "exp_let" ->
         (* Siblings contain bindings and body *)
         extract_let_expr_from_siblings what children
-    | "expression" -> (
-        (* Generic expression node - check first child for actual type *)
-        match children with
-        | [] -> Other
-        | Node (child_token, _) :: siblings -> (
-            let child_raw = get_node_type child_token.content in
-            let child_type = normalize_node_type what child_raw in
-            match child_type with
-            | "exp_ifthenelse" | "exp_if" ->
-                extract_if_expr_from_siblings what siblings
-            | "exp_match" -> extract_match_expr_from_siblings what siblings
-            | "exp_try" -> extract_try_expr_from_siblings what siblings
-            | "exp_let" -> extract_let_expr_from_siblings what siblings
-            | _ -> extract_expr_from_tree what (List.hd children)))
+    | "expression" ->
+        (* For expression nodes, recursively process children *)
+        extract_expr_from_children what children
     | _ -> Other
+  and extract_expr_from_children what children =
+    (* Extract expression from children, skipping attributes *)
+    let rec find_expr nodes =
+      match nodes with
+      | [] -> Other
+      | Node (token, _) :: siblings -> (
+          let raw_node_type = get_node_type token.content in
+          let node_type = normalize_node_type what raw_node_type in
+          match node_type with
+          | "attribute" -> find_expr siblings (* Skip attributes *)
+          | "exp_ifthenelse" | "exp_if" ->
+              extract_if_expr_from_siblings what siblings
+          | "exp_match" -> extract_match_expr_from_siblings what siblings
+          | "exp_try" -> extract_try_expr_from_siblings what siblings
+          | "exp_let" -> extract_let_expr_from_siblings what siblings
+          | "exp_constant" -> extract_expr_from_tree what (List.hd nodes)
+          | "exp_ident" -> extract_expr_from_tree what (List.hd nodes)
+          | _ -> Other)
+    in
+    find_expr children
   and extract_constant_value token children =
     (* Extract constant value from token or children *)
     if List.length children > 0 then
@@ -535,6 +547,8 @@ let text what input =
     | [] -> Match { expr = Other; cases = 0 }
   and extract_if_expr_from_siblings what siblings =
     (* Extract if-then-else expression from sibling nodes *)
+    Log.debug (fun m ->
+        m "extract_if_expr_from_siblings: %d siblings" (List.length siblings));
     match siblings with
     | cond_node :: then_node :: rest ->
         let cond = extract_expr_from_tree what cond_node in
