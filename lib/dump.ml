@@ -226,6 +226,48 @@ let pp_what ppf = function
 
 (* All the parsing functions continue here... I'll add them systematically *)
 
+(** Merge two AST structures *)
+let merge acc ast =
+  {
+    expressions = acc.expressions @ ast.expressions;
+    functions = acc.functions @ ast.functions;
+    modules = acc.modules @ ast.modules;
+    types = acc.types @ ast.types;
+    exceptions = acc.exceptions @ ast.exceptions;
+    variants = acc.variants @ ast.variants;
+    identifiers = acc.identifiers @ ast.identifiers;
+    patterns = acc.patterns @ ast.patterns;
+  }
+
+(** Extract constant value from token or children *)
+let constant token children =
+  if List.length children > 0 then
+    (* Parsetree format *)
+    match children with
+    | Node (const_token, _) :: _ ->
+        let const_content = const_token.content in
+        if String.contains const_content '(' then
+          (* Extract from PConst_int (42,None) format *)
+          let parts = String.split_on_char '(' const_content in
+          match parts with
+          | _ :: value_part :: _ -> (
+              let comma_parts = String.split_on_char ',' value_part in
+              match comma_parts with v :: _ -> v | _ -> "constant")
+          | _ -> "constant"
+        else "constant"
+    | _ -> "constant"
+  else
+    (* Typedtree format *)
+    let parts = String.split_on_char ' ' token.content in
+    match parts with
+    | _ :: "Const_int" :: v :: _ -> v
+    | _ :: "Const_string" :: rest -> String.concat " " rest
+    | _ :: "Const_float" :: v :: _ -> v
+    | _ -> (
+        match quoted_string token.content with
+        | Some v -> v
+        | None -> "constant")
+
 (** All co-recursive parsing functions *)
 let rec function_from_def what nodes =
   match def_expr what nodes with
@@ -262,8 +304,6 @@ and def_expr what nodes =
   match (pattern_name_opt, expr_node) with
   | Some name, Some expr -> Some (name, expr)
   | _ -> None
-
-and binding_from_def what nodes = def_expr what nodes
 
 and pattern_name what nodes =
   List.find_map
@@ -404,34 +444,6 @@ and expr_of_nodes what children =
   in
   find_expr children
 
-and constant token children =
-  if List.length children > 0 then
-    (* Parsetree format *)
-    match children with
-    | Node (const_token, _) :: _ ->
-        let const_content = const_token.content in
-        if String.contains const_content '(' then
-          (* Extract from PConst_int (42,None) format *)
-          let parts = String.split_on_char '(' const_content in
-          match parts with
-          | _ :: value_part :: _ -> (
-              let comma_parts = String.split_on_char ',' value_part in
-              match comma_parts with v :: _ -> v | _ -> "constant")
-          | _ -> "constant"
-        else "constant"
-    | _ -> "constant"
-  else
-    (* Typedtree format *)
-    let parts = String.split_on_char ' ' token.content in
-    match parts with
-    | _ :: "Const_int" :: v :: _ -> v
-    | _ :: "Const_string" :: rest -> String.concat " " rest
-    | _ :: "Const_float" :: v :: _ -> v
-    | _ -> (
-        match quoted_string token.content with
-        | Some v -> v
-        | None -> "constant")
-
 and match_expr what siblings =
   match siblings with
   | expr_node :: rest ->
@@ -492,7 +504,7 @@ and let_bindings what nodes =
           let node_type = get_node_type token.content in
           if node_type = "<def>" then
             (* Found a binding definition *)
-            match binding_from_def what children with
+            match def_expr what children with
             | Some binding -> binding :: acc
             | None -> acc
           else acc)
@@ -553,7 +565,7 @@ and ast_of_tree what (Node (token, children)) =
       (* Value binding or bracket node - look for function definitions *)
       let child_ast = ast_of_trees child_what children in
       let functions = functions child_what children in
-      merge_ast child_ast { empty_acc with functions }
+      merge child_ast { empty_acc with functions }
   | "str_eval" | "str_attribute" ->
       (* Structure item evaluation/attribute - just process children *)
       ast_of_trees child_what children
@@ -579,20 +591,8 @@ and ast_of_tree what (Node (token, children)) =
 
 and ast_of_trees what trees =
   List.fold_left
-    (fun acc tree -> merge_ast acc (ast_of_tree what tree))
+    (fun acc tree -> merge acc (ast_of_tree what tree))
     empty_acc trees
-
-and merge_ast acc ast =
-  {
-    expressions = acc.expressions @ ast.expressions;
-    functions = acc.functions @ ast.functions;
-    modules = acc.modules @ ast.modules;
-    types = acc.types @ ast.types;
-    exceptions = acc.exceptions @ ast.exceptions;
-    variants = acc.variants @ ast.variants;
-    identifiers = acc.identifiers @ ast.identifiers;
-    patterns = acc.patterns @ ast.patterns;
-  }
 
 (** Parse AST text with specific what (for testing) *)
 let text what input =
