@@ -168,9 +168,13 @@ let parse_name str =
     | None -> str
   in
   (* Remove ! markers from stdlib names *)
-  let str = String.map (fun c -> if c = '!' then '.' else c) str in
-  (* Split by . to get components *)
-  let parts = String.split_on_char '.' str in
+  let str = String.map (fun c -> if c = '!' then ' ' else c) str in
+  (* Split by . to get components, filtering out empty parts *)
+  let parts = 
+    String.split_on_char '.' str 
+    |> List.map String.trim
+    |> List.filter (fun s -> s <> "") 
+  in
   match List.rev parts with
   | [] -> { prefix = []; base = "" }
   | base :: rev_modules -> { prefix = List.rev rev_modules; base }
@@ -410,6 +414,9 @@ and expr_of_tree what (Node (token, children)) =
   | "exp_let" ->
       (* Siblings contain bindings and body *)
       let_expr what children
+  | "exp_apply" ->
+      (* Application expression - extract function and arguments *)
+      Apply { func = expr_of_nodes what children; args = [] }
   | "expression" -> (
       (* For expression nodes, check if there's a single child we can process directly *)
       match children with
@@ -585,6 +592,9 @@ and ast_of_tree what (Node (token, children)) =
       (* Extract type name from content *)
       let name = parsed_name token in
       { empty_acc with types = [ { name; location = token.loc } ] }
+  | "exp_apply" ->
+      (* Process apply expression - extract identifiers from function and args *)
+      ast_of_trees child_what children
   | "structure_item" | _ ->
       (* Process children for structure items and unhandled node types *)
       ast_of_trees child_what children

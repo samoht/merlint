@@ -267,6 +267,46 @@ class function_structure_visitor () =
   end
 
 (** Calculate expression line count for function length analysis *)
-let calculate_expr_line_count _expr =
-  (* For now, return a simple default - we'll implement proper line counting later *)
-  10
+let calculate_expr_line_count expr =
+  (* Count the number of nodes in the expression tree as a proxy for lines *)
+  let count = ref 0 in
+  let rec count_nodes = function
+    | Construct { args; _ } ->
+        incr count;
+        List.iter count_nodes args
+    | Apply { func; args } ->
+        incr count;
+        count_nodes func;
+        List.iter count_nodes args
+    | Ident _ | Constant _ ->
+        incr count
+    | If_then_else { cond; then_expr; else_expr } ->
+        incr count;
+        count_nodes cond;
+        count_nodes then_expr;
+        Option.iter count_nodes else_expr
+    | Match { expr; cases } ->
+        incr count;
+        count_nodes expr;
+        (* Add extra count for each case *)
+        count := !count + cases
+    | Try { expr; handlers } ->
+        incr count;
+        count_nodes expr;
+        (* Add extra count for each handler *)
+        count := !count + handlers
+    | Function { body; _ } ->
+        incr count;
+        count_nodes body
+    | Let { bindings; body } ->
+        incr count;
+        List.iter (fun (_, expr) -> count_nodes expr) bindings;
+        count_nodes body
+    | Sequence exprs ->
+        incr count;
+        List.iter count_nodes exprs
+    | Other ->
+        incr count
+  in
+  count_nodes expr;
+  !count

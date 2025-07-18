@@ -62,23 +62,11 @@ opam install . --deps-only
 The codebase follows a clean separation between library and executable:
 
 1. **`lib/` - Core Library**
-   - `cyclomatic_complexity.ml/mli`: Analyzes complexity, function length, and nesting depth
-   - `naming_rules.ml/mli`: Checks naming conventions for modules, values, variants, types
-   - `style_rules.ml/mli`: Detects style issues like Obj.magic, catch-all handlers, Str usage
-   - `doc_rules.ml/mli`: Validates documentation requirements for modules and values
-   - `format_rules.ml/mli`: Checks for .ocamlformat files and missing .mli files
-   - `merlin_interface.ml/mli`: Interface layer that invokes Merlin to get AST for OCaml files
-   - `issue.ml/mli`: Defines issue types and priority-based sorting
-   - `report.ml/mli`: Handles output formatting for visual and quiet modes
 
-2. **`bin/` - CLI Application**
+2. **`lib/rules` - Rules**
+
+3. **`bin/` - CLI Application**
    - `main.ml`: Command-line interface using Cmdliner, handles file arguments and configuration
-
-3. **Key Data Flow**:
-   ```
-   OCaml files → Merlin (via ocamlmerlin) → JSON AST →
-   Various rule modules → Issues → Priority sorting → Report → Exit code
-   ```
 
 ## Testing Approach
 
@@ -99,3 +87,12 @@ The codebase follows a clean separation between library and executable:
 - Never run `dune`, `ocamlmerlin`, or `prune` commands in `*.t` (cram) directories
 - The tool exits with code 1 when issues are found (useful for CI/CD)
 - Git hooks enforce formatting and passing tests (use `test!:` or `wip:` prefixes to bypass)
+
+## Debugging Tips
+
+To debug cram test failures with verbose output:
+```bash
+MERLINT_VERBOSE=debug dune build @test/cram/e100
+```
+
+This will show detailed AST parsing and processing information in the test output.
