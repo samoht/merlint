@@ -9,6 +9,17 @@
   - Parser now correctly handles AST structure for complexity analysis
 
 ### 🔄 Next High Priority Tasks
+- [ ] **Refactor lib/dump.ml to Remove Code Duplication**
+  1. [ ] Merge duplicate function extraction functions (`functions_from_value_binding` and `functions_from_bracket_node`)
+  2. [ ] Consolidate expression extraction functions into a single unified function
+  3. [ ] Create helper for extracting parsed names from quoted strings
+  4. [ ] Create generic sibling extraction helper for expression patterns
+  5. [ ] Add debug logging helper for what-to-string conversion
+  9. [ ] Remove extract_ prefix from functions - use shorter, meaningful names that reflect what they read or build
+  6. [ ] Simplify `process_tree` by grouping similar cases
+  7. [ ] Remove `find_function_body` and use unified expression extraction
+  8. [ ] Fix non-existent function call (`from_bracket_node` on line 309)
+  10. [ ] Rename `what_to_string` to `pp_what`
 - [ ] **Fix Complexity Calculation in E001**
   - Parser now works correctly but complexity calculation needs adjustment
   - 14 cram tests expecting exit code [1] but getting [0]

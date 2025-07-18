@@ -947,7 +947,7 @@ let nested_if_tests =
 
 let suite =
   [
-    ( "parser",
+    ( "dump",
       parsing_tests @ parsetree_parsing_tests @ constructor_tests @ let_in_tests
       @ type_error_tests @ constant_parsing_tests @ polymorphic_variant_tests
       @ attribute_tests @ nested_if_tests );

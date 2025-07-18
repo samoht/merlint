@@ -144,7 +144,7 @@ let rec build_tree_from_tokens tokens : token tree list =
       current_tree :: build_tree_from_tokens siblings
 
 (** Extract content between quotes (useful for parsing AST dumps) *)
-let extract_quoted_string line =
+let quoted_string line =
   let quote_regex =
     Re.compile
       (Re.seq
@@ -212,6 +212,19 @@ let normalize_node_type (what : what) (node_type : string) : string =
             (* Not a P or T node, so return it as is *)
             node_type)
 
+(* Helper functions *)
+
+(** Parse a name from token content *)
+let parsed_name token =
+  match quoted_string token.content with
+  | Some n -> parse_name n
+  | None -> { prefix = []; base = token.content }
+
+(** Pretty-print what for debugging *)
+let pp_what ppf = function
+  | Parsetree -> Fmt.string ppf "Parsetree"
+  | Typedtree -> Fmt.string ppf "Typedtree"
+
 (* All the parsing functions continue here... I'll add them systematically *)
 
 (** Parse AST text with specific what (for testing) *)
@@ -233,48 +246,28 @@ let text what input =
     in
     let node_type = normalize_node_type what raw_node_type in
     Log.debug (fun m ->
-        m "process_tree: raw=%s normalized=%s what=%s child_what=%s children=%d"
-          raw_node_type node_type
-          (match what with
-          | Parsetree -> "Parsetree"
-          | Typedtree -> "Typedtree")
-          (match child_what with
-          | Parsetree -> "Parsetree"
-          | Typedtree -> "Typedtree")
+        m "process_tree: raw=%s normalized=%s what=%a child_what=%a children=%d"
+          raw_node_type node_type pp_what what pp_what child_what
           (List.length children));
 
     (* Comprehensive parsing logic *)
     match node_type with
     | "exp_ident" ->
         (* Extract identifier name from content *)
-        let name =
-          match extract_quoted_string token.content with
-          | Some n ->
-              let parsed = parse_name n in
-              if parsed.base = "*type-error*" then raise Type_error else parsed
-          | None -> { prefix = []; base = token.content }
-        in
+        let name = parsed_name token in
+        if name.base = "*type-error*" then raise Type_error;
         { empty_acc with identifiers = [ { name; location = token.loc } ] }
     | "pat_var" ->
         (* Extract pattern variable name *)
-        let name =
-          match extract_quoted_string token.content with
-          | Some n -> parse_name n
-          | None -> { prefix = []; base = token.content }
-        in
+        let name = parsed_name token in
         { empty_acc with patterns = [ { name; location = token.loc } ] }
-    | "str_value" ->
-        (* Value binding - look for function definitions *)
+    | "str_value" | "[" ->
+        (* Value binding or bracket node - look for function definitions *)
         let child_ast = transform_tree_to_ast child_what children in
-        let functions =
-          extract_functions_from_value_binding child_what children
-        in
+        let functions = functions_of_nodes child_what children in
         merge_ast child_ast { empty_acc with functions }
-    | "str_eval" ->
-        (* Structure item evaluation (e.g., attributes) - just process children *)
-        transform_tree_to_ast child_what children
-    | "str_attribute" ->
-        (* Structure item attribute - just process children *)
+    | "str_eval" | "str_attribute" ->
+        (* Structure item evaluation/attribute - just process children *)
         transform_tree_to_ast child_what children
     | "str_module" ->
         (* Extract module name *)
@@ -290,63 +283,27 @@ let text what input =
         { empty_acc with types = child_ast.types }
     | "type_declaration" ->
         (* Extract type name from content *)
-        let name =
-          match extract_quoted_string token.content with
-          | Some n -> parse_name n
-          | None -> { prefix = []; base = token.content }
-        in
+        let name = parsed_name token in
         { empty_acc with types = [ { name; location = token.loc } ] }
-    | "[" ->
-        (* Array/list node - often contains value bindings *)
-        Log.debug (fun m ->
-            m
-              "Processing [ node with what=%s, passing child_what=%s to \
-               children"
-              (match what with
-              | Parsetree -> "Parsetree"
-              | Typedtree -> "Typedtree")
-              (match child_what with
-              | Parsetree -> "Parsetree"
-              | Typedtree -> "Typedtree"));
-        let functions = extract_functions_from_bracket_node what children in
-        let child_ast = transform_tree_to_ast child_what children in
-        merge_ast child_ast { empty_acc with functions }
-    | "structure_item" ->
-        (* Process structure items *)
+    | "structure_item" | _ ->
+        (* Process children for structure items and unhandled node types *)
         transform_tree_to_ast child_what children
-    | _ ->
-        (* Process children for unhandled node types *)
-        transform_tree_to_ast child_what children
-  and extract_functions_from_value_binding what nodes =
-    (* Look for function definitions in value bindings *)
+  and functions_of_nodes what nodes =
+    (* Look for function definitions in nodes *)
     List.fold_left
       (fun acc node ->
         match node with
         | Node (token, children) ->
             let node_type = get_node_type token.content in
             if node_type = "<def>" then
-              match extract_function_from_def what children with
+              match function_from_def what children with
               | Some func -> func :: acc
               | None -> acc
             else acc)
       [] nodes
     |> List.rev
-  and extract_functions_from_bracket_node what nodes =
-    (* Extract functions from bracket nodes *)
-    List.fold_left
-      (fun acc node ->
-        match node with
-        | Node (token, children) ->
-            let node_type = get_node_type token.content in
-            if node_type = "<def>" then
-              match extract_function_from_def what children with
-              | Some func -> func :: acc
-              | None -> acc
-            else acc)
-      [] nodes
-    |> List.rev
-  and extract_function_from_def what nodes =
-    (* Extract function from <def> node *)
+  and def_pattern_and_expr what nodes =
+    (* Extract pattern name and expression from <def> node *)
     let rec find_pattern_and_expr nodes pattern_name expr_node =
       match nodes with
       | [] -> (pattern_name, expr_node)
@@ -356,11 +313,15 @@ let text what input =
           match node_type with
           | "pattern" ->
               (* Extract the name from the pattern *)
-              let name = extract_name_from_pattern what children in
+              let name = name_from_pattern what children in
               find_pattern_and_expr rest name expr_node
           | "expression" ->
-              (* Check if this expression is a function *)
-              let expr = extract_expr_if_function what [ node ] in
+              (* Extract the expression - check if it's a function first *)
+              let expr =
+                match as_function what [ node ] with
+                | Some func_expr -> Some func_expr
+                | None -> Some (expr_of_tree what node)
+              in
               find_pattern_and_expr rest pattern_name expr
           | _ -> find_pattern_and_expr rest pattern_name expr_node)
     in
@@ -368,7 +329,19 @@ let text what input =
     match (pattern_name, expr_node) with
     | Some name, Some expr -> Some (name, expr)
     | _ -> None
-  and extract_name_from_pattern what nodes =
+  and function_from_def what nodes =
+    (* Extract function from <def> node *)
+    match def_pattern_and_expr what nodes with
+    | Some (name, expr) -> (
+        (* Check if the expression is a function *)
+        match expr with
+        | Function _ -> Some (name, expr)
+        | _ -> None)
+    | None -> None
+  and binding_from_def what nodes =
+    (* Extract binding (name, expr) from a <def> node *)
+    def_pattern_and_expr what nodes
+  and name_from_pattern what nodes =
     (* Extract name from pattern nodes *)
     List.find_map
       (fun node ->
@@ -377,12 +350,12 @@ let text what input =
             let raw_node_type = get_node_type token.content in
             let node_type = normalize_node_type what raw_node_type in
             if node_type = "pat_var" then
-              match extract_quoted_string token.content with
+              match quoted_string token.content with
               | Some n -> Some (parse_name n).base
               | None -> None
             else None)
       nodes
-  and extract_expr_if_function what nodes =
+  and as_function what nodes =
     (* Check if expression is a function *)
     let rec find_function_in_nodes nodes =
       match nodes with
@@ -390,22 +363,58 @@ let text what input =
       | Node (token, children) :: rest ->
           let raw_node_type = get_node_type token.content in
           let node_type = normalize_node_type what raw_node_type in
-          Log.debug (fun m ->
-              m "extract_expr_if_function: checking node_type=%s" node_type);
+          Log.debug (fun m -> m "as_function: checking node_type=%s" node_type);
           if node_type = "exp_function" || node_type = "exp_fun" then
             (* Found function marker, now extract body from siblings *)
-            Some (extract_function_expr what rest)
+            Some (function_expr what rest)
           else if node_type = "expression" then
             (* For expression nodes, check their children *)
             find_function_in_nodes children
           else find_function_in_nodes rest
     in
     find_function_in_nodes nodes
-  and extract_function_expr what children =
+  and function_expr what children =
     (* Extract function expression body *)
-    let body = find_function_body what children in
     Log.debug (fun m ->
-        m "extract_function_expr: body=%s"
+        m "function_expr: called with %d children" (List.length children));
+    let body =
+      (* Look for function_body node or process children directly *)
+      let rec find_body nodes =
+        match nodes with
+        | [] -> Other
+        | Node (token, children) :: rest ->
+            let raw_node_type = get_node_type token.content in
+            let node_type = normalize_node_type what raw_node_type in
+            Log.debug (fun m ->
+                m "function_expr.find_body: node_type=%s" node_type);
+            if node_type = "function_body" then (
+              (* Found function body, extract expression from its children *)
+              Log.debug (fun m ->
+                  m
+                    "function_expr.find_body: found function_body with %d \
+                     children"
+                    (List.length children));
+              (* Debug: print what's in the children *)
+              List.iteri
+                (fun i child ->
+                  match child with
+                  | Node (tok, _) ->
+                      Log.debug (fun m ->
+                          m "function_expr.find_body: child[%d] = %s" i
+                            tok.content))
+                children;
+              expr_of_children what children)
+            else if node_type = "expression" then
+              (* Direct expression *)
+              expr_of_tree what (Node (token, children))
+            else
+              (* Try siblings *)
+              find_body rest
+      in
+      find_body children
+    in
+    Log.debug (fun m ->
+        m "function_expr: body=%s"
           (match body with
           | If_then_else _ -> "If_then_else"
           | Match _ -> "Match"
@@ -413,103 +422,69 @@ let text what input =
           | Other -> "Other"
           | _ -> "unknown"));
     Function { params = 1; body }
-  and find_function_body what nodes =
-    (* Find the function body in children *)
-    Log.debug (fun m ->
-        m "find_function_body: searching in %d nodes" (List.length nodes));
-    match nodes with
-    | [] -> Other
-    | Node (token, children) :: rest -> (
-        let raw_node_type = get_node_type token.content in
-        let node_type = normalize_node_type what raw_node_type in
-        Log.debug (fun m ->
-            m "find_function_body: checking node_type=%s" node_type);
-        match node_type with
-        | "function_body" -> (
-            (* Found the function body *)
-            Log.debug (fun m ->
-                m "find_function_body: found function_body with %d children"
-                  (List.length children));
-            match children with
-            | [] -> Other
-            | expr_node :: _ -> extract_expr_from_tree what expr_node)
-        | "exp_match" ->
-            (* Match expression - siblings are the matched expr and cases *)
-            extract_match_expr_from_siblings what rest
-        | "exp_ifthenelse" | "exp_if" ->
-            (* If-then-else expression - siblings are condition, then, else *)
-            extract_if_expr_from_siblings what rest
-        | "exp_try" ->
-            (* Try expression - siblings are expr and handlers *)
-            extract_try_expr_from_siblings what rest
-        | "exp_let" ->
-            (* Let expression - siblings are bindings and body *)
-            extract_let_expr_from_siblings what rest
-        | "expression" ->
-            (* Generic expression *)
-            extract_expr_from_tree what (Node (token, children))
-        | "exp_fun" -> (
-            (* Parsetree function - last child is the body *)
-            match List.rev rest with
-            | body_node :: _ -> extract_expr_from_tree what body_node
-            | [] -> Other)
-        | _ ->
-            (* Try children, then siblings *)
-            let child_result = find_function_body what children in
-            if child_result = Other then find_function_body what rest
-            else child_result)
-  and extract_expr_from_tree what (Node (token, children)) =
+  and expr_of_tree what (Node (token, children)) =
     (* Extract expression from tree node *)
     let raw_node_type = get_node_type token.content in
     let node_type = normalize_node_type what raw_node_type in
     match node_type with
     | "exp_ident" ->
         let name =
-          match extract_quoted_string token.content with
+          match quoted_string token.content with
           | Some n -> n
           | None -> token.content
         in
         Ident name
     | "exp_constant" ->
-        let value = extract_constant_value token children in
+        let value = constant_value token children in
         Constant value
     | "exp_match" ->
         (* Siblings contain the matched expr and cases *)
-        extract_match_expr_from_siblings what children
+        match_expr what children
     | "exp_ifthenelse" | "exp_if" ->
         (* Siblings contain condition, then, and else branches *)
-        extract_if_expr_from_siblings what children
+        if_expr what children
     | "exp_try" ->
         (* Siblings contain the try expr and exception handlers *)
-        extract_try_expr_from_siblings what children
+        try_expr what children
     | "exp_let" ->
         (* Siblings contain bindings and body *)
-        extract_let_expr_from_siblings what children
-    | "expression" ->
-        (* For expression nodes, recursively process children *)
-        extract_expr_from_children what children
+        let_expr what children
+    | "expression" -> (
+        (* For expression nodes, check if there's a single child we can process directly *)
+        match children with
+        | [ child ] -> expr_of_tree what child
+        | _ -> expr_of_children what children)
     | _ -> Other
-  and extract_expr_from_children what children =
+  and expr_of_children what children =
     (* Extract expression from children, skipping attributes *)
     let rec find_expr nodes =
       match nodes with
       | [] -> Other
-      | Node (token, _) :: siblings -> (
+      | (Node (token, node_children) as node) :: siblings -> (
           let raw_node_type = get_node_type token.content in
           let node_type = normalize_node_type what raw_node_type in
+          Log.debug (fun m ->
+              m "expr_of_children: checking node_type=%s with %d children"
+                node_type
+                (List.length node_children));
           match node_type with
           | "attribute" -> find_expr siblings (* Skip attributes *)
           | "exp_ifthenelse" | "exp_if" ->
-              extract_if_expr_from_siblings what siblings
-          | "exp_match" -> extract_match_expr_from_siblings what siblings
-          | "exp_try" -> extract_try_expr_from_siblings what siblings
-          | "exp_let" -> extract_let_expr_from_siblings what siblings
-          | "exp_constant" -> extract_expr_from_tree what (List.hd nodes)
-          | "exp_ident" -> extract_expr_from_tree what (List.hd nodes)
-          | _ -> Other)
+              (* For if expressions, children are the condition, then, else *)
+              if_expr what siblings
+          | "exp_match" -> match_expr what siblings
+          | "exp_try" -> try_expr what siblings
+          | "exp_let" -> let_expr what siblings
+          | "exp_constant" -> expr_of_tree what node
+          | "exp_ident" -> expr_of_tree what node
+          | "expression" ->
+              expr_of_tree what node (* Process expression nodes *)
+          | _ ->
+              find_expr
+                siblings (* Try siblings if current node doesn't match *))
     in
     find_expr children
-  and extract_constant_value token children =
+  and constant_value token children =
     (* Extract constant value from token or children *)
     if List.length children > 0 then
       (* Parsetree format *)
@@ -534,41 +509,40 @@ let text what input =
       | _ :: "Const_string" :: rest -> String.concat " " rest
       | _ :: "Const_float" :: v :: _ -> v
       | _ -> (
-          match extract_quoted_string token.content with
+          match quoted_string token.content with
           | Some v -> v
           | None -> "constant")
-  and extract_match_expr_from_siblings what siblings =
+  and match_expr what siblings =
     (* Extract match expression from sibling nodes *)
     match siblings with
     | expr_node :: rest ->
-        let expr = extract_expr_from_tree what expr_node in
+        let expr = expr_of_tree what expr_node in
         let case_count = count_cases rest in
         Match { expr; cases = max 1 case_count }
     | [] -> Match { expr = Other; cases = 0 }
-  and extract_if_expr_from_siblings what siblings =
+  and if_expr what siblings =
     (* Extract if-then-else expression from sibling nodes *)
-    Log.debug (fun m ->
-        m "extract_if_expr_from_siblings: %d siblings" (List.length siblings));
+    Log.debug (fun m -> m "if_expr: %d siblings" (List.length siblings));
     match siblings with
     | cond_node :: then_node :: rest ->
-        let cond = extract_expr_from_tree what cond_node in
-        let then_expr = extract_expr_from_tree what then_node in
+        let cond = expr_of_tree what cond_node in
+        let then_expr = expr_of_tree what then_node in
         let else_expr =
           match rest with
-          | else_node :: _ -> Some (extract_expr_from_tree what else_node)
+          | else_node :: _ -> Some (expr_of_tree what else_node)
           | [] -> None
         in
         If_then_else { cond; then_expr; else_expr }
     | _ -> If_then_else { cond = Other; then_expr = Other; else_expr = None }
-  and extract_try_expr_from_siblings what siblings =
+  and try_expr what siblings =
     (* Extract try expression from sibling nodes *)
     match siblings with
     | expr_node :: rest ->
-        let expr = extract_expr_from_tree what expr_node in
+        let expr = expr_of_tree what expr_node in
         let handler_count = count_cases rest in
         Try { expr; handlers = max 0 handler_count }
     | [] -> Try { expr = Other; handlers = 0 }
-  and extract_let_expr_from_siblings what siblings =
+  and let_expr what siblings =
     (* Extract let expression from sibling nodes *)
     match siblings with
     | _ :: rest ->
@@ -580,20 +554,31 @@ let text what input =
               let node_type = get_node_type token.content in
               if node_type = "[" then
                 (* This contains the bindings *)
-                let bindings = extract_let_bindings children in
+                let bindings = let_bindings what children in
                 find_bindings_and_body rest (bindings_acc @ bindings)
               else if node_type = "expression" then
                 (* This is the body *)
-                ( bindings_acc,
-                  extract_expr_from_tree what (Node (token, children)) )
+                (bindings_acc, expr_of_tree what (Node (token, children)))
               else find_bindings_and_body rest bindings_acc
         in
         let bindings, body = find_bindings_and_body rest [] in
         Let { bindings; body }
     | [] -> Let { bindings = []; body = Other }
-  and extract_let_bindings _nodes =
-    (* Extract bindings from let expression - for now return empty list *)
-    []
+  and let_bindings what nodes =
+    (* Extract bindings from let expression *)
+    List.fold_left
+      (fun acc node ->
+        match node with
+        | Node (token, children) ->
+            let node_type = get_node_type token.content in
+            if node_type = "<def>" then
+              (* Found a binding definition *)
+              match binding_from_def what children with
+              | Some binding -> binding :: acc
+              | None -> acc
+            else acc)
+      [] nodes
+    |> List.rev
   and count_cases children =
     (* Count case nodes - may be inside a [ node *)
     List.fold_left
