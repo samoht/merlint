@@ -9,6 +9,19 @@
   - Parser now correctly handles AST structure for complexity analysis
 
 ### 🔄 Next High Priority Tasks
+
+- [ ] **Refactor AST Analysis Architecture**
+  1. [ ] Use Merlin outline for:
+     - Function locations and boundaries (for E005 - function length)
+     - Getting accurate line counts
+  2. [ ] Use ppxlib on parsetree for:
+     - Cyclomatic complexity analysis
+     - Control flow detection
+     - Name extraction (for naming convention rules)
+  3. [ ] Use simple regex on typedtree text for:
+     - Module usage detection (E100, E200, E205)
+  4. [ ] Remove complex three-phase parser in lib/dump.ml
+  5. [ ] Update rules to use appropriate analysis method
 - [ ] **Refactor lib/dump.ml to Remove Code Duplication**
   1. [ ] Merge duplicate function extraction functions (`functions_from_value_binding` and `functions_from_bracket_node`)
   2. [ ] Consolidate expression extraction functions into a single unified function

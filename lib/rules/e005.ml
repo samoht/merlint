@@ -5,47 +5,39 @@ type payload = { name : string; length : int; threshold : int }
 
 type config = { max_function_length : int }
 
-(** Calculate adjusted threshold for pattern matching functions *)
-let calculate_adjusted_threshold config has_pattern case_count =
-  if has_pattern then
-    (* For pattern matching heavy functions, allow 2-3 lines per case *)
-    let base_threshold = config.max_function_length in
-    let pattern_allowance = case_count * 2 in
-    max base_threshold (base_threshold + pattern_allowance)
-  else config.max_function_length
-
 let check (ctx : Context.file) =
   let config =
     { max_function_length = ctx.Context.config.max_function_length }
   in
-  let ast = Context.ast ctx in
+  let outline = Context.outline ctx in
 
-  (* Analyze each function in the AST *)
+  (* Analyze each function from the outline *)
   List.filter_map
-    (fun (name, expr) ->
-      (* Use visitor to extract function structure information *)
-      let visitor = new Ast.function_structure_visitor () in
-      visitor#visit_expr expr;
-      let structure_info = visitor#get_info in
+    (fun (item : Outline.item) ->
+      match item.kind with
+      | Value -> (
+          (* Calculate function length from outline location *)
+          match item.range with
+          | Some range ->
+              let length = range.end_.line - range.start.line + 1 in
 
-      (* Calculate function length by counting non-empty lines in expression *)
-      let length = Ast.calculate_expr_line_count expr in
+              (* For now, we can't detect pattern matching from outline alone,
+                 so we use the base threshold *)
+              let threshold = config.max_function_length in
 
-      (* Calculate adjusted threshold for pattern matching functions *)
-      let adjusted_threshold =
-        calculate_adjusted_threshold config structure_info.has_pattern_match
-          structure_info.case_count
-      in
-
-      if length > adjusted_threshold then
-        (* Create a dummy location for now - we'll improve this later *)
-        let loc =
-          Location.create ~file:ctx.filename ~start_line:1 ~start_col:0
-            ~end_line:1 ~end_col:0
-        in
-        Some (Issue.v ~loc { name; length; threshold = adjusted_threshold })
-      else None)
-    ast.functions
+              if length > threshold then
+                let loc =
+                  Location.create ~file:ctx.filename
+                    ~start_line:range.start.line ~start_col:range.start.col
+                    ~end_line:range.end_.line ~end_col:range.end_.col
+                in
+                Some (Issue.v ~loc { name = item.name; length; threshold })
+              else None
+          | None -> None)
+      | Type | Module | Class | Exception | Constructor | Field | Method
+      | Other _ ->
+          None)
+    outline
 
 let pp ppf { name; length; threshold } =
   Fmt.pf ppf "Function '%s' is %d lines long (threshold: %d)" name length

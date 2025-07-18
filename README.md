@@ -185,6 +185,24 @@ dune fmt
 merlint lib/ bin/
 ```
 
+### Architecture
+
+Merlint uses a multi-strategy approach to analyze OCaml code:
+
+1. **Merlin outline** for:
+   - Function locations and boundaries (for E005 - function length)
+   - Getting accurate line counts
+
+2. **ppxlib on parsetree** for:
+   - Cyclomatic complexity analysis
+   - Control flow detection
+   - Name extraction (for naming convention rules)
+
+3. **Simple regex on typedtree text** for:
+   - Module usage detection (E100, E200, E205)
+
+This hybrid approach ensures accurate analysis while maintaining simplicity and performance.
+
 ## Requirements
 
 - OCaml ≥ 4.14 with dune

@@ -5,9 +5,6 @@ open Ast
 type token = { indent : int; content : string; loc : Location.t option }
 (** Phase 1: Token type for lexing *)
 
-(** Phase 2: Generic tree structure for indentation-based parsing *)
-type 'a tree = Node of 'a * 'a tree list
-
 val normalize_node_type : what -> string -> string
 (** Normalize node type based on what *)
 

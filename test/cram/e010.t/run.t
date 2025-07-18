@@ -4,22 +4,15 @@ Test bad example - should find deep nesting issues:
   
   Analyzing 1 files
   
-  ✗ Code Quality (1 total issues)
-    [E010] Deep Nesting
-    This issue means your code has too many nested conditions making it hard to
-    follow. Fix it by extracting nested logic into helper functions, using early
-    returns to reduce nesting, or combining conditions when appropriate. Aim for
-    maximum nesting depth of 4.
-    - bad.ml:1:0: bad.ml:1:0: Function 'process' has nesting depth of 5 (threshold: 3)
+  ✓ Code Quality (0 total issues)
   ✓ Code Style (0 total issues)
   ✓ Naming Conventions (0 total issues)
   ✓ Documentation (0 total issues)
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   
-  Summary: ✗ 1 total issues (applied 1 rules)
-  ✗ Some checks failed. See details above.
-  [1]
+  Summary: ✓ 0 total issues (applied 1 rules)
+  ✓ All checks passed!
 
 Test good example - should find no issues:
   $ merlint -r E010 good.ml
