@@ -24,7 +24,8 @@ let check_function_with_if_else ?(expected_name = "f") ast =
   | Ast.Function { body = Ast.If_then_else { else_expr = Some _; _ }; _ } -> ()
   | _ -> Alcotest.fail "Expected function with if-then-else body"
 
-let check_function_with_try ?(expected_name = "f") ?(expected_handlers = 2) ast =
+let check_function_with_try ?(expected_name = "f") ?(expected_handlers = 2) ast
+    =
   match check_single_function ~expected_name ast with
   | Ast.Function { body = Ast.Try { handlers; _ }; _ } ->
       Alcotest.(check int) "exception handlers" expected_handlers handlers
@@ -384,7 +385,8 @@ let constructor_applications_typedtree =
   \                expression (test.ml[3,0+12]..test.ml[3,0+23])\n\
   \                  Texp_construct \"Error\"\n\
   \                  expression (test.ml[3,0+18]..test.ml[3,0+23])\n\
-  \                    Texp_constant Const_string(\"no value\",test.ml[3,0+18]..test.ml[3,0+23],None)\n\
+  \                    Texp_constant Const_string(\"no \
+   value\",test.ml[3,0+18]..test.ml[3,0+23],None)\n\
   \    ]\n\
    ]\n"
 
@@ -428,7 +430,8 @@ let constructor_applications_parsetree =
   \                    expression (test.ml[3,0+18]..test.ml[3,0+23])\n\
   \                      Pexp_constant\n\
   \                      constant (test.ml[3,0+18]..test.ml[3,0+23])\n\
-  \                        PConst_string(\"no value\",test.ml[3,0+18]..test.ml[3,0+23],None)\n\
+  \                        PConst_string(\"no \
+   value\",test.ml[3,0+18]..test.ml[3,0+23],None)\n\
   \            ]\n\
   \    ]\n\
    ]\n"

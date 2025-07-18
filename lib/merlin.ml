@@ -82,13 +82,16 @@ let get_dump file =
       | _ -> Error "Invalid typedtree format")
   | Error msg -> (
       (* Typedtree failed, try parsetree instead *)
-      Log.info (fun m -> m "Typedtree failed for %s, trying parsetree: %s" file msg);
+      Log.info (fun m ->
+          m "Typedtree failed for %s, trying parsetree: %s" file msg);
       match dump_value "parsetree" file with
       | Ok json -> (
           match json with
           | `String text -> Ok (Dump.parsetree text)
           | _ -> Error "Invalid parsetree format")
-      | Error msg2 -> Error (Fmt.str "Both typedtree and parsetree failed: %s, %s" msg msg2))
+      | Error msg2 ->
+          Error (Fmt.str "Both typedtree and parsetree failed: %s, %s" msg msg2)
+      )
 
 let analyze_file file =
   (* Run merlin commands for the file *)

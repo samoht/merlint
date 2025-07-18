@@ -170,10 +170,10 @@ let parse_name str =
   (* Remove ! markers from stdlib names *)
   let str = String.map (fun c -> if c = '!' then ' ' else c) str in
   (* Split by . to get components, filtering out empty parts *)
-  let parts = 
-    String.split_on_char '.' str 
+  let parts =
+    String.split_on_char '.' str
     |> List.map String.trim
-    |> List.filter (fun s -> s <> "") 
+    |> List.filter (fun s -> s <> "")
   in
   match List.rev parts with
   | [] -> { prefix = []; base = "" }
@@ -417,6 +417,29 @@ and expr_of_tree what (Node (token, children)) =
   | "exp_apply" ->
       (* Application expression - extract function and arguments *)
       Apply { func = expr_of_nodes what children; args = [] }
+  | "exp_construct" ->
+      (* Constructor application *)
+      let name =
+        match quoted_string token.content with
+        | Some n -> n
+        | None -> get_node_type token.content
+      in
+      Construct { name; args = List.map (expr_of_tree what) children }
+  | "exp_sequence" ->
+      (* Sequence of expressions *)
+      Sequence (List.map (expr_of_tree what) children)
+  | "exp_tuple" ->
+      (* Tuple - treat as Other for now *)
+      Other
+  | "exp_record" | "exp_field" | "exp_setfield" ->
+      (* Records - treat as Other for now *)
+      Other
+  | "exp_array" | "exp_while" | "exp_for" ->
+      (* Arrays and loops - treat as Other for now *)
+      Other
+  | "exp_assert" | "exp_lazy" | "exp_object" | "exp_pack" ->
+      (* Other expressions - treat as Other for now *)
+      Other
   | "expression" -> (
       (* For expression nodes, check if there's a single child we can process directly *)
       match children with
@@ -445,6 +468,8 @@ and expr_of_nodes what children =
         | "exp_let" -> let_expr what siblings
         | "exp_constant" -> expr_of_tree what node
         | "exp_ident" -> expr_of_tree what node
+        | "exp_apply" -> expr_of_tree what node
+        | "exp_construct" -> expr_of_tree what node
         | "expression" -> expr_of_tree what node (* Process expression nodes *)
         | _ ->
             find_expr siblings (* Try siblings if current node doesn't match *))
@@ -568,6 +593,12 @@ and ast_of_tree what (Node (token, children)) =
       (* Extract pattern variable name *)
       let name = parsed_name token in
       { empty_acc with patterns = [ { name; location = token.loc } ] }
+  | "pat_construct" ->
+      (* Pattern constructor - process children *)
+      ast_of_trees child_what children
+  | "pat_variant" ->
+      (* Polymorphic variant pattern - process children *)
+      ast_of_trees child_what children
   | "str_value" | "[" ->
       (* Value binding or bracket node - look for function definitions *)
       let child_ast = ast_of_trees child_what children in
@@ -594,6 +625,21 @@ and ast_of_tree what (Node (token, children)) =
       { empty_acc with types = [ { name; location = token.loc } ] }
   | "exp_apply" ->
       (* Process apply expression - extract identifiers from function and args *)
+      ast_of_trees child_what children
+  | "exp_construct" ->
+      (* Constructor - process children to extract any identifiers *)
+      ast_of_trees child_what children
+  | "exp_sequence" ->
+      (* Sequence - process all expressions *)
+      ast_of_trees child_what children
+  | "<arg>" | "arg" ->
+      (* Function argument - process children *)
+      ast_of_trees child_what children
+  | "expression" ->
+      (* Generic expression node - process children *)
+      ast_of_trees child_what children
+  | "pattern" ->
+      (* Generic pattern node - process children *)
       ast_of_trees child_what children
   | "structure_item" | _ ->
       (* Process children for structure items and unhandled node types *)

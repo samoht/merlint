@@ -278,8 +278,7 @@ let calculate_expr_line_count expr =
         incr count;
         count_nodes func;
         List.iter count_nodes args
-    | Ident _ | Constant _ ->
-        incr count
+    | Ident _ | Constant _ -> incr count
     | If_then_else { cond; then_expr; else_expr } ->
         incr count;
         count_nodes cond;
@@ -305,8 +304,7 @@ let calculate_expr_line_count expr =
     | Sequence exprs ->
         incr count;
         List.iter count_nodes exprs
-    | Other ->
-        incr count
+    | Other -> incr count
   in
   count_nodes expr;
   !count
