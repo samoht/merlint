@@ -28,7 +28,7 @@ let parsing_tests =
           \    ]\n\
            ]\n"
         in
-        let ast = Parser.typedtree ast_dump in
+        let ast = Dump.typedtree ast_dump in
         Alcotest.(check int) "function count" 1 (List.length ast.functions);
         match ast.functions with
         | [ (name, _expr) ] -> Alcotest.(check string) "function name" "f" name
@@ -61,7 +61,7 @@ let parsing_tests =
           \    ]\n\
            ]\n"
         in
-        let ast = Parser.typedtree ast_dump in
+        let ast = Dump.typedtree ast_dump in
         (* Should only extract the function, not the value binding *)
         Alcotest.(check int) "function count" 1 (List.length ast.functions);
         match ast.functions with
@@ -83,7 +83,7 @@ let parsing_tests =
         in
         (* This should detect type error and fall back, but fail because it's still Typedtree nodes *)
         try
-          let _ = Parser.typedtree ast_dump in
+          let _ = Dump.typedtree ast_dump in
           Alcotest.fail "Should have raised an exception due to type error"
         with
         | Ast.Parse_error msg when String.contains msg 'T' ->
@@ -130,18 +130,16 @@ let parsing_tests =
         | _ -> Alcotest.fail "Expected exactly one function");
     Alcotest.test_case "normalize node types correctly" `Quick (fun () ->
         (* Test that Texp_ident normalizes to exp_ident *)
-        let normalized =
-          Parser.normalize_node_type Ast.Typedtree "Texp_ident"
-        in
+        let normalized = Dump.normalize_node_type Ast.Typedtree "Texp_ident" in
         Alcotest.(check string) "normalized Texp_ident" "exp_ident" normalized;
 
         (* Test that special nodes remain unchanged *)
-        let special = Parser.normalize_node_type Ast.Typedtree "Param_pat" in
+        let special = Dump.normalize_node_type Ast.Typedtree "Param_pat" in
         Alcotest.(check string) "special node unchanged" "Param_pat" special;
 
         (* Test that wrong dialect raises Parse_error *)
         try
-          let _ = Parser.normalize_node_type Ast.Typedtree "Pexp_ident" in
+          let _ = Dump.normalize_node_type Ast.Typedtree "Pexp_ident" in
           Alcotest.fail "Should raise Parse_error for wrong dialect"
         with Ast.Parse_error _ -> ());
     Alcotest.test_case "parse function with if-then-else" `Quick (fun () ->
@@ -173,7 +171,7 @@ let parsing_tests =
           \    ]\n\
            ]\n"
         in
-        let ast = Parser.typedtree ast_dump in
+        let ast = Dump.typedtree ast_dump in
         Alcotest.(check int) "function count" 1 (List.length ast.functions);
         match ast.functions with
         | [ (name, expr) ] -> (
@@ -238,7 +236,7 @@ let parsing_tests =
           \    ]\n\
            ]\n"
         in
-        let ast = Parser.typedtree ast_dump in
+        let ast = Dump.typedtree ast_dump in
         Alcotest.(check int) "function count" 1 (List.length ast.functions);
         match ast.functions with
         | [ (name, expr) ] -> (
@@ -289,7 +287,7 @@ let parsing_tests =
           \    ]\n\
            ]\n"
         in
-        let ast = Parser.typedtree ast_dump in
+        let ast = Dump.typedtree ast_dump in
         Alcotest.(check int) "function count" 1 (List.length ast.functions);
         match ast.functions with
         | [ (name, expr) ] -> (
@@ -332,7 +330,7 @@ let parsetree_parsing_tests =
           \    ]\n\
            ]\n"
         in
-        let ast = Parser.parsetree ast_dump in
+        let ast = Dump.parsetree ast_dump in
         Alcotest.(check int) "function count" 1 (List.length ast.functions);
         match ast.functions with
         | [ (name, _expr) ] -> Alcotest.(check string) "function name" "f" name
@@ -365,7 +363,7 @@ let parsetree_parsing_tests =
           \    ]\n\
            ]\n"
         in
-        let ast = Parser.parsetree ast_dump in
+        let ast = Dump.parsetree ast_dump in
         Alcotest.(check int) "function count" 1 (List.length ast.functions);
         match ast.functions with
         | [ (name, expr) ] -> (
@@ -411,7 +409,7 @@ let parsetree_parsing_tests =
           \    ]\n\
            ]\n"
         in
-        let ast = Parser.parsetree ast_dump in
+        let ast = Dump.parsetree ast_dump in
         Alcotest.(check int) "function count" 1 (List.length ast.functions);
         match ast.functions with
         | [ (name, expr) ] -> (
@@ -464,7 +462,7 @@ let parsetree_parsing_tests =
           \    ]\n\
            ]\n"
         in
-        let ast = Parser.parsetree ast_dump in
+        let ast = Dump.parsetree ast_dump in
         Alcotest.(check int) "function count" 1 (List.length ast.functions);
         match ast.functions with
         | [ (name, expr) ] -> (
@@ -478,14 +476,12 @@ let parsetree_parsing_tests =
         | _ -> Alcotest.fail "Expected exactly one function");
     Alcotest.test_case "verify Parsetree node normalization" `Quick (fun () ->
         (* Test that Pexp_ident normalizes to exp_ident *)
-        let normalized =
-          Parser.normalize_node_type Ast.Parsetree "Pexp_ident"
-        in
+        let normalized = Dump.normalize_node_type Ast.Parsetree "Pexp_ident" in
         Alcotest.(check string) "normalized Pexp_ident" "exp_ident" normalized;
 
         (* Test that wrong dialect raises Parse_error *)
         try
-          let _ = Parser.normalize_node_type Ast.Parsetree "Texp_ident" in
+          let _ = Dump.normalize_node_type Ast.Parsetree "Texp_ident" in
           Alcotest.fail "Should raise Parse_error for wrong dialect"
         with Ast.Parse_error _ -> ());
   ]
@@ -535,7 +531,7 @@ let constructor_tests =
           \    ]\n\
            ]\n"
         in
-        let ast = Parser.typedtree ast_dump in
+        let ast = Dump.typedtree ast_dump in
         Alcotest.(check int) "function count" 1 (List.length ast.functions);
         match ast.functions with
         | [ (name, Ast.Function { body = Ast.Match { cases; _ }; _ }) ] ->
@@ -592,7 +588,7 @@ let constructor_tests =
           \    ]\n\
            ]\n"
         in
-        let ast = Parser.parsetree ast_dump in
+        let ast = Dump.parsetree ast_dump in
         Alcotest.(check int) "function count" 1 (List.length ast.functions);
         match ast.functions with
         | [ (name, Ast.Function { body = Ast.Match { cases; _ }; _ }) ] ->
@@ -689,7 +685,7 @@ let let_in_tests =
           \    ]\n\
            ]\n"
         in
-        let ast = Parser.typedtree ast_dump in
+        let ast = Dump.typedtree ast_dump in
         (* This test should extract the main function 'f' plus nested function 'square' *)
         Alcotest.(check int) "function count" 2 (List.length ast.functions);
         (* Check that 'f' is the main function *)
@@ -726,7 +722,7 @@ let type_error_tests =
         (* This should raise Type_error and try to fall back to Parsetree *)
         (* But since the nodes are still Typedtree format, it should fail with Parse_error *)
         try
-          let _ = Parser.typedtree ast_dump_with_type_error in
+          let _ = Dump.typedtree ast_dump_with_type_error in
           Alcotest.fail "Should have raised an exception due to type error"
         with
         | Ast.Parse_error msg when String.contains msg 'T' ->
@@ -736,23 +732,23 @@ let type_error_tests =
     Alcotest.test_case "test dialect normalization" `Quick (fun () ->
         (* Test Typedtree normalization *)
         let normalized_t =
-          Parser.normalize_node_type Ast.Typedtree "Texp_ident"
+          Dump.normalize_node_type Ast.Typedtree "Texp_ident"
         in
         Alcotest.(check string) "normalized Texp_ident" "exp_ident" normalized_t;
 
         (* Test Parsetree normalization *)
         let normalized_p =
-          Parser.normalize_node_type Ast.Parsetree "Pexp_ident"
+          Dump.normalize_node_type Ast.Parsetree "Pexp_ident"
         in
         Alcotest.(check string) "normalized Pexp_ident" "exp_ident" normalized_p;
 
         (* Test special nodes remain unchanged *)
-        let special = Parser.normalize_node_type Ast.Typedtree "Param_pat" in
+        let special = Dump.normalize_node_type Ast.Typedtree "Param_pat" in
         Alcotest.(check string) "special node unchanged" "Param_pat" special;
 
         (* Test wrong dialect raises Parse_error *)
         try
-          let _ = Parser.normalize_node_type Ast.Typedtree "Pexp_ident" in
+          let _ = Dump.normalize_node_type Ast.Typedtree "Pexp_ident" in
           Alcotest.fail "Should raise Parse_error for wrong dialect"
         with Ast.Parse_error _ -> ());
   ]
@@ -773,7 +769,7 @@ let constant_parsing_tests =
           \    ]\n\
            ]\n"
         in
-        let ast = Parser.typedtree ast_dump in
+        let ast = Dump.typedtree ast_dump in
         (* The constant parsing logic should extract the actual value *)
         Alcotest.(check int) "identifiers found" 0 (List.length ast.identifiers));
     Alcotest.test_case "parse constants from parsetree format" `Quick (fun () ->
@@ -792,7 +788,7 @@ let constant_parsing_tests =
           \    ]\n\
            ]\n"
         in
-        let ast = Parser.parsetree ast_dump in
+        let ast = Dump.parsetree ast_dump in
         (* The constant parsing logic should extract the actual value *)
         Alcotest.(check int) "identifiers found" 0 (List.length ast.identifiers));
   ]
@@ -855,7 +851,7 @@ let polymorphic_variant_tests =
           \    ]\n\
            ]\n"
         in
-        let ast = Parser.typedtree ast_dump in
+        let ast = Dump.typedtree ast_dump in
         Alcotest.(check int) "function count" 1 (List.length ast.functions);
         match ast.functions with
         | [ (name, Ast.Function { body = Ast.Match { cases; _ }; _ }) ] ->
@@ -864,9 +860,44 @@ let polymorphic_variant_tests =
         | _ -> Alcotest.fail "Expected function with match expression");
   ]
 
+let attribute_tests =
+  [
+    Alcotest.test_case "parse Tstr_attribute with Parsetree payload" `Quick
+      (fun () ->
+        let ast_dump =
+          "[\n\
+          \  structure_item (test.ml[1,0+0]..test.ml[1,0+24])\n\
+          \    Tstr_attribute \"ocaml.warning\"\n\
+          \    [\n\
+          \      structure_item (test.ml[1,0+18]..[1,0+23])\n\
+          \        Pstr_eval\n\
+          \        expression (test.ml[1,0+18]..[1,0+23])\n\
+          \          Pexp_constant\n\
+          \          constant (test.ml[1,0+18]..[1,0+23])\n\
+          \            PConst_string(\"-32\",(test.ml[1,0+19]..[1,0+22]),None)\n\
+          \    ]\n\
+          \  structure_item (test.ml[2,0+0]..test.ml[2,0+10])\n\
+          \    Tstr_value Nonrec\n\
+          \    [\n\
+          \      <def>\n\
+          \        pattern (test.ml[2,0+4]..test.ml[2,0+5])\n\
+          \          Tpat_var \"x/276\"\n\
+          \        expression (test.ml[2,0+8]..test.ml[2,0+9])\n\
+          \          Texp_constant Const_int 1\n\
+          \    ]\n\
+           \\]\n"
+        in
+        (* This should work: attributes can contain Parsetree nodes *)
+        let ast = Dump.typedtree ast_dump in
+        Alcotest.(check int)
+          "should parse without error" 0
+          (List.length ast.functions));
+  ]
+
 let suite =
   [
     ( "parser",
       parsing_tests @ parsetree_parsing_tests @ constructor_tests @ let_in_tests
-      @ type_error_tests @ constant_parsing_tests @ polymorphic_variant_tests );
+      @ type_error_tests @ constant_parsing_tests @ polymorphic_variant_tests
+      @ attribute_tests );
   ]

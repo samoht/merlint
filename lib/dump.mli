@@ -1,4 +1,4 @@
-(** Parser module - handles all AST text parsing functionality *)
+(** Dump module - handles all AST text dump parsing functionality *)
 
 open Ast
 
@@ -8,11 +8,11 @@ type token = { indent : int; content : string; loc : Location.t option }
 (** Phase 2: Generic tree structure for indentation-based parsing *)
 type 'a tree = Node of 'a * 'a tree list
 
-val normalize_node_type : dialect -> string -> string
-(** Normalize node type based on dialect *)
+val normalize_node_type : what -> string -> string
+(** Normalize node type based on what *)
 
-val text : dialect -> string -> t
-(** Parse AST text with specific dialect *)
+val text : what -> string -> t
+(** Parse AST text with specific what *)
 
 val parsetree : string -> t
 (** Parse parsetree text dump into AST structure *)

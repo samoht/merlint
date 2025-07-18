@@ -1,7 +1,7 @@
 (** Core AST types for expression analysis *)
 
-(** Dialect for AST parsing *)
-type dialect = Parsetree | Typedtree
+(** What kind of AST dump we're parsing *)
+type what = Parsetree | Typedtree
 
 exception Parse_error of string
 (** Parse error exception *)
