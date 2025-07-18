@@ -107,61 +107,41 @@ let rec build_tree_from_tokens tokens : token tree list =
   | [] -> []
   | head :: tail ->
       let current_indent = head.indent in
-      (* Check if this is an attribute node that needs special handling *)
-      if is_attribute_node head.content then
-        (* Look for a [ at the same indentation level as the attribute's payload *)
-        match tail with
-        | next :: rest
-          when next.indent = current_indent && String.trim next.content = "[" ->
-            (* Include the [ and its children as part of the attribute *)
-            let rec collect_bracket_content acc remaining =
-              match remaining with
-              | [] -> (List.rev acc, [])
-              | t :: rest ->
-                  if t.indent >= next.indent then
-                    collect_bracket_content (t :: acc) rest
-                  else if
-                    (* Found something at lower indentation, check if it's the closing ] *)
-                    t.indent = next.indent && String.trim t.content = "]"
-                  then (List.rev (t :: acc), rest)
-                  else (List.rev acc, remaining)
-            in
-            let bracket_tokens, rest_tokens =
-              collect_bracket_content [ next ] rest
-            in
-            (* Build the attribute node with the bracket content as children *)
-            let child_trees = build_tree_from_tokens bracket_tokens in
-            let current_tree = Node (head, child_trees) in
-            current_tree :: build_tree_from_tokens rest_tokens
-        | _ ->
-            (* No bracket payload, process normally *)
-            let rec collect_children acc remaining =
-              match remaining with
-              | [] -> (List.rev acc, [])
-              | t :: rest ->
-                  if t.indent > current_indent then
-                    collect_children (t :: acc) rest
-                  else (List.rev acc, remaining)
-            in
-            let child_tokens, rest_tokens = collect_children [] tail in
-            let child_trees = build_tree_from_tokens child_tokens in
-            let current_tree = Node (head, child_trees) in
-            current_tree :: build_tree_from_tokens rest_tokens
-      else
-        (* Normal processing for non-attribute nodes *)
-        let rec collect_children acc remaining =
+
+      (* Helper function to collect all direct children of a node *)
+      let collect_children parent_indent tokens =
+        let rec aux acc remaining =
           match remaining with
           | [] -> (List.rev acc, [])
           | t :: rest ->
-              if t.indent > current_indent then collect_children (t :: acc) rest
+              if t.indent > parent_indent then aux (t :: acc) rest
               else (List.rev acc, remaining)
         in
-        let child_tokens, rest_tokens = collect_children [] tail in
-        (* Recursively build subtrees for children *)
-        let child_trees = build_tree_from_tokens child_tokens in
-        let current_tree = Node (head, child_trees) in
-        (* Continue with siblings *)
-        current_tree :: build_tree_from_tokens rest_tokens
+        let child_tokens, sibling_tokens = aux [] tokens in
+        (build_tree_from_tokens child_tokens, sibling_tokens)
+      in
+
+      let children, siblings =
+        if is_attribute_node head.content then
+          match tail with
+          | bracket :: rest
+            when bracket.indent = current_indent
+                 && String.trim bracket.content = "[" ->
+              (* The bracket is the child, and its children must be parsed recursively *)
+              let bracket_children, remaining_siblings =
+                collect_children bracket.indent rest
+              in
+              ([ Node (bracket, bracket_children) ], remaining_siblings)
+          | _ ->
+              (* No bracket payload, normal child collection *)
+              collect_children current_indent tail
+        else
+          (* Normal node processing *)
+          collect_children current_indent tail
+      in
+
+      let current_tree = Node (head, children) in
+      current_tree :: build_tree_from_tokens siblings
 
 (** Extract content between quotes (useful for parsing AST dumps) *)
 let extract_quoted_string line =
@@ -318,6 +298,16 @@ let text what input =
         { empty_acc with types = [ { name; location = token.loc } ] }
     | "[" ->
         (* Array/list node - often contains value bindings *)
+        Log.debug (fun m ->
+            m
+              "Processing [ node with what=%s, passing child_what=%s to \
+               children"
+              (match what with
+              | Parsetree -> "Parsetree"
+              | Typedtree -> "Typedtree")
+              (match child_what with
+              | Parsetree -> "Parsetree"
+              | Typedtree -> "Typedtree"));
         let functions = extract_functions_from_bracket_node what children in
         let child_ast = transform_tree_to_ast child_what children in
         merge_ast child_ast { empty_acc with functions }
