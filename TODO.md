@@ -2,7 +2,17 @@
 
 ## Current Work in Progress
 
+### ✅ Recent Fixes
+- [x] **Fixed Parser AST Analysis**
+  - Fixed sibling-based AST structure parsing for if-then-else, match, try expressions
+  - Implemented dialect switching for mixed Typedtree/Parsetree nodes (Tstr_attribute)
+  - Parser now correctly handles AST structure for complexity analysis
+
 ### 🔄 Next High Priority Tasks
+- [ ] **Fix Complexity Calculation in E001**
+  - Parser now works correctly but complexity calculation needs adjustment
+  - 14 cram tests expecting exit code [1] but getting [0]
+  - Need to investigate why functions aren't being detected as complex
 - [ ] **GADT Refactoring of Issue.t and Rule.t**
   - Step 1: Parameterize Issue.t by payload directly (remove Issue.data variant)
   - Steps 2&3 (merged): Introduce GADT in Rule.t with type-safe payload matching and rename format_issue to pp
@@ -215,8 +225,8 @@ This would fit well with the existing `merlin_interface.ml` module:
 
 As of 2025-07-15, these tests have bad.ml files that don't trigger their rules:
 
-### Complexity Rules (not implemented)
-- **E001** - High Cyclomatic Complexity: Always returns complexity of 1
+### Complexity Rules (partially fixed)
+- **E001** - High Cyclomatic Complexity: Parser fixed but still needs function detection
 - **E005** - Long Functions: May work but test functions might be too short
 - **E010** - Deep Nesting: Always returns nesting depth of 0
 

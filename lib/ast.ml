@@ -1,28 +1,28 @@
 (** Core AST types for expression analysis *)
 
+let src = Logs.Src.create "merlint.ast" ~doc:"AST parsing"
+
+module Log = (val Logs.src_log src : Logs.LOG)
+
 type name = { prefix : string list; base : string }
 type elt = { name : name; location : Location.t option }
 
-type expr_node =
-  | Construct of { name : string; args : expr_node list }
-  | Apply of { func : expr_node; args : expr_node list }
+type expr =
+  | Construct of { name : string; args : expr list }
+  | Apply of { func : expr; args : expr list }
   | Ident of string
   | Constant of string
-  | If_then_else of {
-      cond : expr_node;
-      then_expr : expr_node;
-      else_expr : expr_node option;
-    }
-  | Match of { expr : expr_node; cases : int }
-  | Try of { expr : expr_node; handlers : int }
-  | Function of { params : int; body : expr_node }
-  | Let of { bindings : (string * expr_node) list; body : expr_node }
-  | Sequence of expr_node list
+  | If_then_else of { cond : expr; then_expr : expr; else_expr : expr option }
+  | Match of { expr : expr; cases : int }
+  | Try of { expr : expr; handlers : int }
+  | Function of { params : int; body : expr }
+  | Let of { bindings : (string * expr) list; body : expr }
+  | Sequence of expr list
   | Other
 
 type t = {
-  expressions : expr_node list;
-  functions : (string * expr_node) list;
+  expressions : expr list;
+  functions : (string * expr) list;
   modules : elt list;
   types : elt list;
   exceptions : elt list;
@@ -31,7 +31,7 @@ type t = {
   patterns : elt list;
 }
 
-(** Generic visitor pattern for expr_node AST traversal *)
+(** Generic visitor pattern for expr AST traversal *)
 class visitor =
   object (self)
     method visit_if_then_else ~cond ~then_expr ~else_expr =
@@ -233,215 +233,20 @@ module Nesting = struct
     visitor#get_max_depth
 end
 
-(** Extract content between quotes (useful for parsing AST dumps) *)
-let extract_quoted_string line =
-  let quote_regex =
-    Re.compile
-      (Re.seq
-         [
-           Re.str "\"";
-           Re.group (Re.rep (Re.compl [ Re.char '"' ]));
-           Re.str "\"";
-         ])
-  in
-  try
-    let m = Re.exec quote_regex line in
-    Some (Re.Group.get m 1)
-  with Not_found -> None
-
-(** Parse line indentation - counts leading spaces *)
-let parse_indent line =
-  let len = String.length line in
-  let rec count_spaces i =
-    if i < len && line.[i] = ' ' then count_spaces (i + 1) else i
-  in
-  count_spaces 0
-
 (** Convert a structured name to a string *)
 let name_to_string (n : name) =
   match n.prefix with
   | [] -> n.base
   | prefix -> String.concat "." prefix ^ "." ^ n.base
 
-type token = { indent : int; content : string; loc : Location.t option }
-(** Phase 1: Token type for lexing *)
+(** Dialect for AST parsing *)
+type dialect = Parsetree | Typedtree
 
-(** Phase 2: Generic tree structure for indentation-based parsing *)
-type 'a tree = Node of 'a * 'a tree list
+exception Parse_error of string
+(** Parse error exception *)
 
-(** Helper regex components for location parsing *)
-let filename = Re.rep1 (Re.compl [ Re.char '[' ])
-
-let number = Re.rep1 Re.digit
-
-let location_part =
-  Re.seq
-    [
-      Re.str "[";
-      Re.group number;
-      Re.str ",";
-      number;
-      Re.str "+";
-      Re.group number;
-      Re.str "]";
-    ]
-
-let loc_regex =
-  Re.compile
-    (Re.seq
-       [
-         Re.str "(";
-         Re.group filename;
-         location_part;
-         Re.str "..";
-         filename;
-         location_part;
-         Re.str ")";
-       ])
-
-let parse_location str =
-  try
-    let m = Re.exec loc_regex str in
-    let file = Re.Group.get m 1 in
-    let start_line = int_of_string (Re.Group.get m 2) in
-    let start_col = int_of_string (Re.Group.get m 3) in
-    let end_line = int_of_string (Re.Group.get m 4) in
-    let end_col = int_of_string (Re.Group.get m 5) in
-    Some (Location.create ~file ~start_line ~start_col ~end_line ~end_col)
-  with Not_found -> None
-
-(** Phase 1: Lexer - Convert raw text to tokens *)
-let lex_text ?(parse_loc_from_line = true) text : token list =
-  String.split_on_char '\n' text
-  |> List.filter_map (fun line ->
-         let len = String.length line in
-         if len = 0 then None
-         else
-           let indent = parse_indent line in
-           let trimmed = String.trim line in
-           if trimmed = "" then None
-           else
-             let loc =
-               if parse_loc_from_line then parse_location line else None
-             in
-             Some { indent; content = trimmed; loc })
-
-(** Phase 2: Build indentation-based tree from tokens *)
-let rec build_tree_from_tokens tokens : token tree list =
-  match tokens with
-  | [] -> []
-  | head :: tail ->
-      let current_indent = head.indent in
-      (* Find all direct children (tokens with indent > current_indent but before any sibling) *)
-      let rec collect_children acc remaining =
-        match remaining with
-        | [] -> (List.rev acc, [])
-        | t :: rest ->
-            if t.indent > current_indent then collect_children (t :: acc) rest
-            else (List.rev acc, remaining)
-      in
-      let child_tokens, rest_tokens = collect_children [] tail in
-      (* Recursively build subtrees for children *)
-      let child_trees = build_tree_from_tokens child_tokens in
-      let current_tree = Node (head, child_trees) in
-      (* Continue with siblings *)
-      current_tree :: build_tree_from_tokens rest_tokens
-
-let empty_acc =
-  {
-    expressions = [];
-    functions = [];
-    modules = [];
-    types = [];
-    exceptions = [];
-    variants = [];
-    identifiers = [];
-    patterns = [];
-  }
-
-(** Extract node type from token content *)
-let get_node_type content =
-  match String.index_opt content ' ' with
-  | Some idx -> String.sub content 0 idx
-  | None -> content
-
-(** Parse structured name from string like "Str.regexp" or "Stdlib!.Obj.magic"
-*)
-let parse_name str =
-  (* Remove unique suffix like /123 if present *)
-  let str =
-    match String.index_opt str '/' with
-    | Some i -> String.sub str 0 i
-    | None -> str
-  in
-  (* Remove ! markers from stdlib names *)
-  let str = String.map (fun c -> if c = '!' then '.' else c) str in
-  (* Split by . to get components *)
-  let parts = String.split_on_char '.' str in
-  match List.rev parts with
-  | [] -> { prefix = []; base = "" }
-  | base :: rev_modules -> { prefix = List.rev rev_modules; base }
-
-(** Phase 3: Transform token tree to AST *)
-let rec transform_tree_to_ast trees : t =
-  List.fold_left
-    (fun acc tree -> merge_ast acc (process_tree tree))
-    empty_acc trees
-
-and process_tree (Node (token, children)) : t =
-  let node_type = get_node_type token.content in
-  match node_type with
-  | "Texp_ident" | "Pexp_ident" ->
-      (* Extract identifier name from content *)
-      let name =
-        match extract_quoted_string token.content with
-        | Some n -> parse_name n
-        | None -> { prefix = []; base = token.content }
-      in
-      { empty_acc with identifiers = [ { name; location = token.loc } ] }
-  | "Tpat_var" | "Ppat_var" ->
-      (* Extract pattern variable name *)
-      let name =
-        match extract_quoted_string token.content with
-        | Some n -> parse_name n
-        | None -> { prefix = []; base = token.content }
-      in
-      { empty_acc with patterns = [ { name; location = token.loc } ] }
-  | "Tstr_module" | "Pstr_module" ->
-      (* Extract module name from next line *)
-      let name =
-        match children with
-        | Node (child, _) :: _ -> parse_name (String.trim child.content)
-        | [] -> { prefix = []; base = "Unknown" }
-      in
-      { empty_acc with modules = [ { name; location = token.loc } ] }
-  | "Tstr_type" | "Pstr_type" ->
-      (* Extract type name *)
-      let child_ast = transform_tree_to_ast children in
-      { empty_acc with types = child_ast.types }
-  | "type_declaration" ->
-      (* Extract type name from content *)
-      let name =
-        match extract_quoted_string token.content with
-        | Some n -> parse_name n
-        | None -> { prefix = []; base = token.content }
-      in
-      { empty_acc with types = [ { name; location = token.loc } ] }
-  | _ ->
-      (* Process children and merge results *)
-      transform_tree_to_ast children
-
-and merge_ast acc ast =
-  {
-    expressions = acc.expressions @ ast.expressions;
-    functions = acc.functions @ ast.functions;
-    modules = acc.modules @ ast.modules;
-    types = acc.types @ ast.types;
-    exceptions = acc.exceptions @ ast.exceptions;
-    variants = acc.variants @ ast.variants;
-    identifiers = acc.identifiers @ ast.identifiers;
-    patterns = acc.patterns @ ast.patterns;
-  }
+exception Type_error
+(** Type error exception - raised when typedtree contains type errors *)
 
 type function_structure_info = { has_pattern_match : bool; case_count : int }
 (** Function structure analysis for E005 - function length detection *)
@@ -465,12 +270,3 @@ class function_structure_visitor () =
 let calculate_expr_line_count _expr =
   (* For now, return a simple default - we'll implement proper line counting later *)
   10
-
-(** Parse typedtree text dump into AST structure using three-phase approach *)
-let of_typedtree_text text =
-  (* Phase 1: Lex the text into tokens *)
-  let tokens = lex_text ~parse_loc_from_line:true text in
-  (* Phase 2: Build indentation-based tree *)
-  let trees = build_tree_from_tokens tokens in
-  (* Phase 3: Transform tree to AST *)
-  transform_tree_to_ast trees

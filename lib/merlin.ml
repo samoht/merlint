@@ -78,7 +78,7 @@ let get_dump file =
   match dump_value "typedtree" file with
   | Ok json -> (
       match json with
-      | `String text -> Ok (Ast.of_typedtree_text text)
+      | `String text -> Ok (Parser.typedtree text)
       | _ -> Error "Invalid typedtree format")
   | Error msg -> Error msg
 

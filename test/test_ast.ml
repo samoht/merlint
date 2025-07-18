@@ -2,39 +2,6 @@
 
 open Merlint
 
-(** Test that mock AST structure works correctly *)
-let test_mock_ast_structure () =
-  (* Test with mock AST data *)
-  let _mock_ast =
-    Ast.
-      {
-        identifiers =
-          [
-            {
-              name = { prefix = [ "Str" ]; base = "regexp" };
-              location =
-                Some
-                  Location.
-                    {
-                      file = "test.ml";
-                      start_line = 1;
-                      start_col = 14;
-                      end_line = 1;
-                      end_col = 24;
-                    };
-            };
-          ];
-        patterns = [];
-        modules = [];
-        types = [];
-        exceptions = [];
-        variants = [];
-        expressions = [];
-        functions = [];
-      }
-  in
-  ()
-
 let complexity_tests =
   [
     Alcotest.test_case "empty complexity" `Quick (fun () ->
@@ -485,7 +452,6 @@ let complexity_visitor_tests =
 let suite =
   [
     ( "ast",
-      [ Alcotest.test_case "mock_ast_structure" `Quick test_mock_ast_structure ]
-      @ complexity_tests @ visitor_tests @ function_finder_tests
+      complexity_tests @ visitor_tests @ function_finder_tests
       @ nesting_visitor_tests @ complexity_visitor_tests );
   ]
