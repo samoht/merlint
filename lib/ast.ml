@@ -117,67 +117,6 @@ module Nesting = struct
     depth_of 0 node
 end
 
-type function_structure = { has_pattern_match : bool; case_count : int }
-
-(** Analyze function structure to detect pattern matches *)
-let function_structure expr =
-  let has_pattern_match = ref false in
-  let case_count = ref 0 in
-  let rec analyze = function
-    | Match { expr; cases } ->
-        has_pattern_match := true;
-        case_count := !case_count + cases;
-        analyze expr
-    | If_then_else { cond; then_expr; else_expr } ->
-        analyze cond;
-        analyze then_expr;
-        Option.iter analyze else_expr
-    | Try { expr; _ } -> analyze expr
-    | Function { body; _ } -> analyze body
-    | Let { bindings; body } ->
-        List.iter (fun (_, e) -> analyze e) bindings;
-        analyze body
-    | Sequence exprs -> List.iter analyze exprs
-    | Other -> ()
-  in
-  analyze expr;
-  { has_pattern_match = !has_pattern_match; case_count = !case_count }
-
-(** Calculate expression line count for function length analysis *)
-let line_count expr =
-  (* Count the number of nodes in the expression tree as a proxy for lines *)
-  let count = ref 0 in
-  let rec count_nodes = function
-    | If_then_else { cond; then_expr; else_expr } ->
-        incr count;
-        count_nodes cond;
-        count_nodes then_expr;
-        Option.iter count_nodes else_expr
-    | Match { expr; cases } ->
-        incr count;
-        count_nodes expr;
-        (* Add extra count for each case *)
-        count := !count + cases
-    | Try { expr; handlers } ->
-        incr count;
-        count_nodes expr;
-        (* Add extra count for each handler *)
-        count := !count + handlers
-    | Function { body; _ } ->
-        incr count;
-        count_nodes body
-    | Let { bindings; body } ->
-        incr count;
-        List.iter (fun (_, expr) -> count_nodes expr) bindings;
-        count_nodes body
-    | Sequence exprs ->
-        incr count;
-        List.iter count_nodes exprs
-    | Other -> incr count
-  in
-  count_nodes expr;
-  !count
-
 (** Convert ppxlib expression to our AST representation *)
 let rec ppxlib_expr_to_ast (expr : Ppxlib.expression) : expr =
   Log.debug (fun m ->

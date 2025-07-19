@@ -244,26 +244,6 @@ let lex_text what text : token list =
   in
   tokenize [] "" 0 what
 
-(** Pretty print a token for debugging *)
-let pp_token ppf token =
-  match token.kind with
-  | Word content -> Fmt.pf ppf "Word(%s)" content
-  | Location loc -> Fmt.pf ppf "Location(%a)" Location.pp loc
-  | Module -> Fmt.string ppf "Module"
-  | Type -> Fmt.string ppf "Type"
-  | TypeDeclaration -> Fmt.string ppf "TypeDeclaration"
-  | Value -> Fmt.string ppf "Value"
-  | Exception -> Fmt.string ppf "Exception"
-  | Variant -> Fmt.string ppf "Variant"
-  | Ident -> Fmt.string ppf "Ident"
-  | Construct -> Fmt.string ppf "Construct"
-  | Pattern -> Fmt.string ppf "Pattern"
-  | Attribute -> Fmt.string ppf "Attribute"
-  | LParen -> Fmt.string ppf "LParen"
-  | RParen -> Fmt.string ppf "RParen"
-  | LBracket -> Fmt.string ppf "LBracket"
-  | RBracket -> Fmt.string ppf "RBracket"
-
 (** Parse structured name from string like "Str.regexp" or "Stdlib!.Obj.magic"
 *)
 let parse_name str =
@@ -291,42 +271,6 @@ let parse_name str =
   match List.rev parts with
   | [] -> { prefix = []; base = "" }
   | base :: rev_modules -> { prefix = List.rev rev_modules; base }
-
-(** Normalize node type based on what *)
-let normalize_node_type (what : what) (node_type : string) : string =
-  (* Special cases that don't follow P/T convention *)
-  match node_type with
-  | "Param_pat" | "Nolabel" | "Nonrec" | "Rec" | "Optional" | "Labelled"
-  | "Some" | "None" | "Const_int" | "Const_string" | "Const_float"
-  | "type_declaration" | "attribute" | "structure_item" ->
-      node_type
-  | _ -> (
-      if String.length node_type < 2 then node_type
-      else
-        let prefix = node_type.[0] in
-        match (prefix, what) with
-        | 'T', Typedtree | 'P', Parsetree ->
-            (* Correct prefix for the what, so we strip it. *)
-            String.sub node_type 1 (String.length node_type - 1)
-        | 'P', Typedtree ->
-            (* This shouldn't happen - raise error *)
-            let error_msg =
-              Printf.sprintf
-                "Found Parsetree node '%s' while parsing for Typedtree."
-                node_type
-            in
-            raise (Parse_error error_msg)
-        | 'T', Parsetree ->
-            (* This shouldn't happen - raise error *)
-            let error_msg =
-              Printf.sprintf
-                "Found Typedtree node '%s' while parsing for Parsetree."
-                node_type
-            in
-            raise (Parse_error error_msg)
-        | _ ->
-            (* Not a P or T node, so return it as is *)
-            node_type)
 
 (** Phase 2: Parser - Convert tokens into structured data *)
 

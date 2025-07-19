@@ -20,16 +20,6 @@ let to_snake_case name =
   done;
   Buffer.contents buffer
 
-let to_pascal_case name =
-  (* Convert snake_case to PascalCase *)
-  let parts = String.split_on_char '_' name in
-  let capitalize_first str =
-    if String.length str = 0 then str
-    else
-      String.mapi (fun i c -> if i = 0 then Char.uppercase_ascii c else c) str
-  in
-  String.concat "" (List.map capitalize_first parts)
-
 let is_pascal_case name =
   String.length name > 0
   && name.[0] >= 'A'

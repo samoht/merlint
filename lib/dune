@@ -3,7 +3,7 @@
 (library
  (public_name merlint)
  (name merlint)
- (libraries yojson unix re logs fmt astring sexplib0 parsexp ppxlib))
+ (libraries yojson unix re logs fmt astring fpath sexplib0 parsexp ppxlib))
 
 (rule
  (target examples.ml)

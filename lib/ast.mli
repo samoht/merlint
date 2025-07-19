@@ -47,14 +47,6 @@ module Nesting : sig
   (** Calculate maximum nesting depth of an AST expression node *)
 end
 
-type function_structure = { has_pattern_match : bool; case_count : int }
-
-val function_structure : expr -> function_structure
-(** Analyze function structure to detect pattern matches *)
-
-val line_count : expr -> int
-(** Calculate expression line count for function length analysis *)
-
 val extract_functions : string -> (string * expr) list
 (** Extract functions with their control flow from a source file using ppxlib.
     Returns a list of (function_name, control_flow_ast) pairs. *)

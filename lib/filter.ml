@@ -38,6 +38,9 @@ let parse_rule_spec spec =
 let parse rules_str =
   let rules_str = String.trim rules_str in
   if rules_str = "" then Ok empty
+  else if rules_str = "all" then
+    (* Special keyword to enable all rules *)
+    Ok empty
   else if rules_str = "none" then
     (* Special keyword to disable all rules *)
     Ok { enabled = Some []; disabled = [] }

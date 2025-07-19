@@ -113,7 +113,9 @@ let rec find_dune_files dir =
          if
            entry = "dune" && Sys.file_exists path && not (Sys.is_directory path)
          then [ path ]
-         else if Sys.is_directory path && entry <> "_build" && entry <> ".git"
+         else if
+           Sys.is_directory path && entry <> "_build" && entry <> ".git"
+           && entry <> "_opam"
          then find_dune_files path
          else [])
 
@@ -215,11 +217,29 @@ let extract_source_files sexp =
                 in
                 [ source_path ]
             | Sexplib0.Sexp.List
+                [ Sexplib0.Sexp.Atom "impl"; Sexplib0.Sexp.Atom path ] ->
+                (* impl entry with path directly *)
+                let source_path =
+                  if String.starts_with ~prefix:"_build/default/" path then
+                    String.sub path 15 (String.length path - 15)
+                  else path
+                in
+                [ source_path ]
+            | Sexplib0.Sexp.List
                 [
                   Sexplib0.Sexp.Atom "intf";
                   Sexplib0.Sexp.List [ Sexplib0.Sexp.Atom path ];
                 ] ->
                 (* intf entry with path in a list *)
+                let source_path =
+                  if String.starts_with ~prefix:"_build/default/" path then
+                    String.sub path 15 (String.length path - 15)
+                  else path
+                in
+                [ source_path ]
+            | Sexplib0.Sexp.List
+                [ Sexplib0.Sexp.Atom "intf"; Sexplib0.Sexp.Atom path ] ->
+                (* intf entry with path directly *)
                 let source_path =
                   if String.starts_with ~prefix:"_build/default/" path then
                     String.sub path 15 (String.length path - 15)
@@ -310,6 +330,123 @@ let extract_source_files sexp =
       m "extract_source_files result: [%s]" (String.concat "; " result));
   result
 
+(** Check if a dune stanza is a cram test *)
+let is_cram_stanza = function
+  | Sexp.List (Sexp.Atom "cram" :: _) -> true
+  | _ -> false
+
+(** Extract all source files mentioned in a dune stanza *)
+let extract_source_files_from_stanza dir = function
+  | Sexp.List (Sexp.Atom kind :: fields)
+    when kind = "library" || kind = "executable" || kind = "executables"
+         || kind = "test" || kind = "tests" ->
+      (* Look for modules field *)
+      let modules = List.concat_map extract_modules_field fields in
+      (* Look for name/names for executables/tests *)
+      let names =
+        List.concat_map
+          (function
+            | Sexp.List [ Sexp.Atom "name"; Sexp.Atom n ] -> [ n ]
+            | Sexp.List (Sexp.Atom "names" :: names) ->
+                List.filter_map
+                  (function Sexp.Atom n -> Some n | _ -> None)
+                  names
+            | _ -> [])
+          fields
+      in
+      let base_modules = if modules = [] then names else modules in
+      (* Generate .ml and .mli paths *)
+      List.concat_map
+        (fun m ->
+          let ml_path = Filename.concat dir (m ^ ".ml") in
+          let mli_path = Filename.concat dir (m ^ ".mli") in
+          List.filter Sys.file_exists [ ml_path; mli_path ])
+        base_modules
+  | _ -> []
+
+(** Find all OCaml source files by parsing dune files and using find as fallback
+*)
+let find_ocaml_files project_root =
+  (* First, find all dune files and identify cram directories *)
+  let dune_files = find_dune_files project_root in
+  Log.debug (fun m -> m "Found %d dune files" (List.length dune_files));
+
+  (* Identify directories containing cram tests *)
+  let cram_dirs =
+    List.filter_map
+      (fun dune_file ->
+        let stanzas = parse_dune_file dune_file in
+        if List.exists is_cram_stanza stanzas then
+          Some (Filename.dirname dune_file)
+        else None)
+      dune_files
+  in
+  Log.debug (fun m ->
+      m "Found %d cram test directories" (List.length cram_dirs));
+  List.iter
+    (fun dir -> Log.debug (fun m -> m "  Cram directory: %s" dir))
+    cram_dirs;
+
+  let files_from_dune =
+    List.concat_map
+      (fun dune_file ->
+        let dir = Filename.dirname dune_file in
+        let stanzas = parse_dune_file dune_file in
+        (* Skip if this directory has cram tests *)
+        if List.exists is_cram_stanza stanzas then []
+        else List.concat_map (extract_source_files_from_stanza dir) stanzas)
+      dune_files
+  in
+
+  (* Also use find to catch any files not in dune files *)
+  let cmd =
+    Fmt.str
+      "find %s -type f \\( -name '*.ml' -o -name '*.mli' \\) | grep -v \
+       '_build' | grep -v '_opam' | grep -v '.#'"
+      (Filename.quote project_root)
+  in
+  let files_from_find =
+    match Command.run cmd with
+    | Ok output ->
+        String.split_on_char '\n' output
+        |> List.filter (fun s -> String.length s > 0)
+        |> List.filter_map (fun path_str ->
+               match Fpath.of_string path_str with
+               | Error _ -> None
+               | Ok path -> (
+                   (* Convert to relative path if needed *)
+                   match Fpath.of_string project_root with
+                   | Error _ -> Some (Fpath.to_string path)
+                   | Ok root -> (
+                       match Fpath.relativize ~root path with
+                       | Some rel -> Some (Fpath.to_string rel)
+                       | None -> Some (Fpath.to_string path))))
+        |> List.filter (fun path_str ->
+               (* Exclude files in cram directories *)
+               not (List.exists (fun cram_dir ->
+                 (* Simple string prefix check for directories *)
+                 let cram_prefix = 
+                   if String.ends_with ~suffix:"/" cram_dir then cram_dir
+                   else cram_dir ^ "/"
+                 in
+                 String.starts_with ~prefix:cram_prefix path_str
+               ) cram_dirs))
+    | Error err ->
+        Log.err (fun m -> m "Failed to run find command: %s" err);
+        []
+  in
+
+  (* Combine and deduplicate *)
+  let all_files =
+    List.sort_uniq String.compare (files_from_dune @ files_from_find)
+  in
+  Log.debug (fun m ->
+      m "Found %d files from dune files, %d from find, %d total unique"
+        (List.length files_from_dune)
+        (List.length files_from_find)
+        (List.length all_files));
+  all_files
+
 (** Get all project source files using dune describe *)
 let get_project_files dune_describe =
   try
@@ -318,11 +455,16 @@ let get_project_files dune_describe =
     let unique_files = List.sort_uniq String.compare files in
     Log.debug (fun m ->
         m "Found %d source files from dune describe" (List.length unique_files));
-    unique_files
+    if List.length unique_files = 0 then (
+      Log.info (fun m ->
+          m "No files found from dune describe, falling back to find command");
+      find_ocaml_files ".")
+    else unique_files
   with exn ->
     Log.err (fun m ->
         m "Failed to extract source files: %s" (Printexc.to_string exn));
-    []
+    Log.info (fun m -> m "Falling back to find command");
+    find_ocaml_files "."
 
 let get_lib_modules dune_describe =
   let rec extract = function
