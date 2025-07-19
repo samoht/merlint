@@ -176,16 +176,8 @@ let print_issue_group (error_code, issues) =
       if List.length sorted_issues > 0 then
         List.iter
           (fun issue ->
-            match Merlint.Rule.Run.location issue with
-            | Some loc ->
-                (* Format the issue with its pretty-printer *)
-                let desc = Fmt.to_to_string Merlint.Rule.Run.pp issue in
-                (* Always print location: description on same line *)
-                (* Terminal will wrap naturally if too long *)
-                Fmt.pr "  - %a: %s@."
-                  (Fmt.styled `Bold Merlint.Location.pp)
-                  loc desc
-            | None -> ())
+            (* Print the issue using its pretty-printer, which already includes location *)
+            Fmt.pr "  - %a@." Merlint.Rule.Run.pp issue)
           sorted_issues
 
 (** Group issues by error code *)

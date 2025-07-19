@@ -11,7 +11,7 @@ Test bad example - should find bad type naming:
     Type names should use snake_case. The primary type in a module should be named
     t, and identifiers should be id. This convention helps maintain consistency
     across the codebase.
-    - bad.ml:1:0: bad.ml:1:0: Type name 'userProfile' should use snake_case: 'user_profile'
+    - bad.ml:1:0: Type name 'userProfile' should use snake_case: 'user_profile'
   ✓ Documentation (0 total issues)
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)

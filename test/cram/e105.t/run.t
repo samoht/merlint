@@ -9,7 +9,7 @@ Test bad example - should find catch-all exception handler:
     Catch-all exception handlers (with _ ->) can hide unexpected errors and make
     debugging difficult. Always handle specific exceptions explicitly. If you must
     catch all exceptions, log them or re-raise after cleanup.
-    - bad.ml:1:0: bad.ml:1:0: Catch-all exception handler found. This can hide unexpected errors.
+    - bad.ml:1:0: Catch-all exception handler found. This can hide unexpected errors.
   ✓ Code Style (0 total issues)
   ✓ Naming Conventions (0 total issues)
   ✓ Documentation (0 total issues)

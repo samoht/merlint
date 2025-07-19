@@ -12,7 +12,7 @@ Test bad example - should find function length issues:
     case). Pure data structures (lists, records) are also exempt from length
     checks. For better readability, consider using helper functions for complex
     logic. Aim for functions under 50 lines of actual logic.
-    - bad.ml:1:0: bad.ml:1:0: Function 'process_all_data' is 55 lines long (threshold: 50)
+    - bad.ml:1:0: Function 'process_all_data' is 55 lines long (threshold: 50)
   ✓ Code Style (0 total issues)
   ✓ Naming Conventions (0 total issues)
   ✓ Documentation (0 total issues)

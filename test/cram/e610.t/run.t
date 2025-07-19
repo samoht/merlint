@@ -57,8 +57,8 @@ Test bad example - should find test without library:
     Every test module should have a corresponding library module. This ensures
     that tests are testing actual library functionality rather than testing code
     that doesn't exist in the library.
-    - bad/test/test_old_feature.ml:1:0: bad/test/test_old_feature.ml:1:0: Test file 'test_old_feature.ml' exists but corresponding library module 'old_feature.ml' not found
-    - bad/test/test_runner.ml:1:0: bad/test/test_runner.ml:1:0: Test file 'test_runner.ml' exists but corresponding library module 'runner.ml' not found
+    - bad/test/test_old_feature.ml:1:0: Test file exists but corresponding library module 'old_feature.ml' not found
+    - bad/test/test_runner.ml:1:0: Test file exists but corresponding library module 'runner.ml' not found
   
   Summary: ✗ 2 total issues (applied 1 rules)
   ✗ Some checks failed. See details above.

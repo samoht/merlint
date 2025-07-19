@@ -13,7 +13,7 @@ Test bad example - should find missing interface file:
     Library modules should have corresponding .mli files for proper encapsulation
     and API documentation. Create interface files to hide implementation details
     and provide a clean API.
-    - bad.ml:1:0: bad.ml:1:0: Library module bad.ml is missing interface file bad.mli
+    - bad.ml:1:0: Library module bad.ml is missing interface file bad.mli
   ✓ Test Quality (0 total issues)
   
   Summary: ✗ 1 total issues (applied 1 rules)

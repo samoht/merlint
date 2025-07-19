@@ -27,8 +27,8 @@ Test bad example - should find global mutable state:
     using immutable data structures and passing state explicitly through function
     parameters. If mutation is necessary, consider using local state within
     functions or monadic patterns.
-    - bad.ml:2:0: bad.ml:2:0: Global mutable state 'counter' of type 'ref' detected - consider using functional patterns instead
-    - bad.ml:5:0: bad.ml:5:0: Global mutable state 'global_cache' of type 'array' detected - consider using functional patterns instead
+    - bad.ml:2:0: Global mutable state 'counter' of type 'ref' detected - consider using functional patterns instead
+    - bad.ml:5:0: Global mutable state 'global_cache' of type 'array' detected - consider using functional patterns instead
   ✓ Code Style (0 total issues)
   ✓ Naming Conventions (0 total issues)
   ✓ Documentation (0 total issues)

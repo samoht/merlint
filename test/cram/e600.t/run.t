@@ -14,7 +14,7 @@ Test bad example - should find test exports module name:
     Test executables (test.ml) should use test suites exported by test modules
     (test_*.ml) rather than defining their own test lists. This promotes
     modularity and ensures test modules are properly integrated.
-    - bad/test.ml:1:0: bad/test.ml:1:0: Test file 'bad/test.ml' should use test module suites (e.g., Test_user.suite) instead of defining its own test list
+    - bad/test.ml:1:0: Test file should use test module suites (e.g., Test_user.suite) instead of defining its own test list
   
   Summary: ✗ 1 total issues (applied 1 rules)
   ✗ Some checks failed. See details above.

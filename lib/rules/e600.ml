@@ -149,11 +149,10 @@ let check ctx =
       else [])
     files
 
-let pp ppf { filename; module_name = _ } =
+let pp ppf { filename = _; module_name = _ } =
   Fmt.pf ppf
-    "Test file '%s' should use test module suites (e.g., Test_user.suite) \
-     instead of defining its own test list"
-    filename
+    "Test file should use test module suites (e.g., Test_user.suite) instead \
+     of defining its own test list"
 
 let rule =
   Rule.v ~code:"E600" ~title:"Test Module Convention" ~category:Testing

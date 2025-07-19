@@ -11,8 +11,8 @@ Test bad example - should find bad value naming:
     Values and function names should use snake_case (e.g., find_user,
     create_channel). Short, descriptive, and lowercase with underscores. This is
     the standard convention in OCaml for values and functions.
-    - bad.ml:2:4: bad.ml:2:4: Value 'myValue' should use snake_case: 'my_value'
-    - bad.ml:3:4: bad.ml:3:4: Value 'getUserName' should use snake_case: 'get_user_name'
+    - bad.ml:2:4: Value 'myValue' should use snake_case: 'my_value'
+    - bad.ml:3:4: Value 'getUserName' should use snake_case: 'get_user_name'
   ✓ Documentation (0 total issues)
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)

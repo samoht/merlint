@@ -11,7 +11,7 @@ Test bad example - should find long identifier name:
     Avoid using too many underscores in identifier names as they make code harder
     to read. Consider using more descriptive names or restructuring the code to
     avoid deeply nested concepts.
-    - bad.ml:1:4: bad.ml:1:4: Identifier 'get_user_profile_data_from_database_by_id' has 7 underscores (max 4)
+    - bad.ml:1:4: Identifier 'get_user_profile_data_from_database_by_id' has 7 underscores (max 4)
   ✓ Documentation (0 total issues)
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)

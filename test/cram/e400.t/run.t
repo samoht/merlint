@@ -12,6 +12,7 @@ Test bad example - should find missing module documentation:
     MLI files should start with a documentation comment (** ... *) that describes
     the module's purpose and API. This helps users understand how to use the
     module.
+    - (global) Module bad (bad.mli) is missing documentation comment
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   

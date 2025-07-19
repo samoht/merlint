@@ -12,6 +12,7 @@ Test bad example - should find missing log source:
     [E510] Missing Log Source
     Modules that use logging should declare a log source for better debugging and
     log filtering. Add 'let src = Logs.Src.create "module.name" ~doc:"..."'
+    - (global) Missing log source check not yet implemented
   ✓ Test Quality (0 total issues)
   
   Summary: ✗ 1 total issues (applied 1 rules)
@@ -32,6 +33,7 @@ Test good example - should find no issues:
     [E510] Missing Log Source
     Modules that use logging should declare a log source for better debugging and
     log filtering. Add 'let src = Logs.Src.create "module.name" ~doc:"..."'
+    - (global) Missing log source check not yet implemented
   ✓ Test Quality (0 total issues)
   
   Summary: ✗ 1 total issues (applied 1 rules)

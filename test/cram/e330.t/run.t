@@ -11,9 +11,9 @@ Test bad example - should find redundant module name:
     Avoid prefixing type or function names with the module name. The module
     already provides the namespace, so Message.message_type should just be
     Message.t
-    - bad/process.ml:2:0: bad/process.ml:2:0: Function 'process_start' has redundant module prefix from Process
-    - bad/process.ml:3:0: bad/process.ml:3:0: Function 'process_stop' has redundant module prefix from Process
-    - bad/process.ml:4:0: bad/process.ml:4:0: Type 'process_config' has redundant module prefix from Process
+    - bad/process.ml:2:0: Function 'process_start' has redundant module prefix from Process
+    - bad/process.ml:3:0: Function 'process_stop' has redundant module prefix from Process
+    - bad/process.ml:4:0: Type 'process_config' has redundant module prefix from Process
   ✓ Documentation (0 total issues)
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)

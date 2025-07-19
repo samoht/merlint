@@ -10,8 +10,8 @@ Test bad example - should find error pattern usage:
     Using raw Error constructors with Fmt.str can lead to inconsistent error
     messages. Consider creating error helper functions (prefixed with 'err_') that
     encapsulate common error patterns and provide consistent formatting.
-    - bad.ml:3:0: bad.ml:3:0: Found 'Error (Fmt.str ...)' pattern - consider using 'err_*' helper functions for consistent error handling
-    - bad.ml:6:0: bad.ml:6:0: Found 'Error (Fmt.str ...)' pattern - consider using 'err_*' helper functions for consistent error handling
+    - bad.ml:3:0: Found 'Error (Fmt.str ...)' pattern - consider using 'err_*' helper functions for consistent error handling
+    - bad.ml:6:0: Found 'Error (Fmt.str ...)' pattern - consider using 'err_*' helper functions for consistent error handling
   ✓ Naming Conventions (0 total issues)
   ✓ Documentation (0 total issues)
   ✓ Project Structure (0 total issues)

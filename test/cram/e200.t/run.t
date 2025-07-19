@@ -10,8 +10,8 @@ Test bad example - should find usage of outdated Str module:
     The Str module is outdated and has a problematic API. Use the Re module
     instead for regular expressions. Re provides a better API, is more performant,
     and doesn't have global state issues.
-    - bad.ml:2:2: bad.ml:2:2: Usage of deprecated Str module detected - use Re module instead
-    - bad.ml:2:20: bad.ml:2:20: Usage of deprecated Str module detected - use Re module instead
+    - bad.ml:2:2: Usage of deprecated Str module detected - use Re module instead
+    - bad.ml:2:20: Usage of deprecated Str module detected - use Re module instead
   ✓ Naming Conventions (0 total issues)
   ✓ Documentation (0 total issues)
   ✓ Project Structure (0 total issues)

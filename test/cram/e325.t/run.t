@@ -11,8 +11,8 @@ Test bad example - should find bad function naming convention:
     Functions that return option types should be prefixed with 'find_', while
     functions that return non-option types should be prefixed with 'get_'. This
     convention helps communicate the function's behavior to callers.
-    - bad.ml:1:0: bad.ml:1:0: Function 'get_user' naming convention: consider 'find_user'
-    - bad.ml:2:0: bad.ml:2:0: Function 'find_name' naming convention: consider 'get_name'
+    - bad.ml:1:0: Function 'get_user' naming convention: consider 'find_user'
+    - bad.ml:2:0: Function 'find_name' naming convention: consider 'get_name'
   ✓ Documentation (0 total issues)
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)

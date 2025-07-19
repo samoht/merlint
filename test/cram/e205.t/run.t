@@ -10,8 +10,8 @@ Test bad example - should find usage of Printf instead of Fmt:
     The Fmt module provides a more modern and composable approach to formatting.
     It offers better type safety and cleaner APIs compared to Printf/Format
     modules.
-    - bad.ml:2:2: bad.ml:2:2: Consider using Fmt module instead of Printf for better formatting
-    - bad.ml:4:2: bad.ml:4:2: Consider using Fmt module instead of Printf for better formatting
+    - bad.ml:2:2: Consider using Fmt module instead of Printf for better formatting
+    - bad.ml:4:2: Consider using Fmt module instead of Printf for better formatting
   ✓ Naming Conventions (0 total issues)
   ✓ Documentation (0 total issues)
   ✓ Project Structure (0 total issues)

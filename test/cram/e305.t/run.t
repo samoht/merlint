@@ -11,7 +11,7 @@ Test bad example - should find bad module naming:
     Module names should use Snake_case (e.g., My_module, User_profile). File names
     use lowercase_with_underscores which OCaml automatically converts to module
     names.
-    - bad.ml:1:0: bad.ml:1:0: Module 'UserProfile' should use Snake_case: 'user_profile'
+    - bad.ml:1:0: Module 'UserProfile' should use Snake_case: 'user_profile'
   ✓ Documentation (0 total issues)
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)

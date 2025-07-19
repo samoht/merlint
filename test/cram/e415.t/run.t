@@ -12,6 +12,7 @@ Test bad example - should find missing standard functions:
     Types should implement standard functions like equal, compare, pp
     (pretty-printer), and to_string for better usability and consistency across
     the codebase.
+    - (global) Missing standard functions check not yet implemented
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   
@@ -33,6 +34,7 @@ Test good example - should find no issues:
     Types should implement standard functions like equal, compare, pp
     (pretty-printer), and to_string for better usability and consistency across
     the codebase.
+    - (global) Missing standard functions check not yet implemented
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   

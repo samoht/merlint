@@ -70,10 +70,9 @@ let check ctx =
       else None)
     test_files
 
-let pp ppf { test_file; expected_module } =
-  Fmt.pf ppf
-    "Test file '%s' exists but corresponding library module '%s' not found"
-    test_file expected_module
+let pp ppf { test_file = _; expected_module } =
+  Fmt.pf ppf "Test file exists but corresponding library module '%s' not found"
+    expected_module
 
 let rule =
   Rule.v ~code:"E610" ~title:"Test Without Library" ~category:Testing

@@ -11,9 +11,9 @@ Test bad example - should find bad variant naming:
     Variant constructors should use Snake_case (e.g., Waiting_for_input,
     Processing_data), not CamelCase. This matches the project's naming
     conventions.
-    - bad.ml:2:2: bad.ml:2:2: Variant 'WaitingForInput' should use Snake_case: 'waiting_for_input'
-    - bad.ml:3:2: bad.ml:3:2: Variant 'ProcessingData' should use Snake_case: 'processing_data'
-    - bad.ml:4:2: bad.ml:4:2: Variant 'ErrorOccurred' should use Snake_case: 'error_occurred'
+    - bad.ml:2:2: Variant 'WaitingForInput' should use Snake_case: 'waiting_for_input'
+    - bad.ml:3:2: Variant 'ProcessingData' should use Snake_case: 'processing_data'
+    - bad.ml:4:2: Variant 'ErrorOccurred' should use Snake_case: 'error_occurred'
   ✓ Documentation (0 total issues)
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)

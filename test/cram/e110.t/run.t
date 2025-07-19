@@ -10,7 +10,7 @@ Test bad example - should find silenced warning:
     Warnings should be addressed rather than silenced. Fix the underlying issue
     instead of using warning suppression attributes. If you must suppress a
     warning, document why it's necessary.
-    - bad.ml:1:0: bad.ml:1:0: Warning 32 is silenced instead of being fixed
+    - bad.ml:1:0: Warning 32 is silenced instead of being fixed
   ✓ Naming Conventions (0 total issues)
   ✓ Documentation (0 total issues)
   ✓ Project Structure (0 total issues)

@@ -11,7 +11,7 @@ Test bad example - should find used underscore-prefixed binding:
     Bindings prefixed with underscore (like '_x') indicate they are meant to be
     unused. If you need to use the binding, remove the underscore prefix. If the
     binding is truly unused, consider using a wildcard pattern '_' instead.
-    - bad.ml:1:4: bad.ml:1:4: Underscore-prefixed binding '_debug_mode' is used 1 time - underscore prefix indicates unused bindings
+    - bad.ml:1:4: Underscore-prefixed binding '_debug_mode' is used 1 time - underscore prefix indicates unused bindings
   ✓ Documentation (0 total issues)
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)

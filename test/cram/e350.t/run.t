@@ -21,7 +21,7 @@ Test bad example - should find boolean blindness:
     Functions with multiple boolean parameters are hard to use correctly. It's
     easy to mix up the order of arguments at call sites. Consider using variant
     types, labeled arguments, or a configuration record instead.
-    - bad.ml:1:0: bad.ml:1:0: Function 'create_window' has 3 boolean parameters - consider using a variant type or record for clarity
+    - bad.ml:1:0: Function 'create_window' has 3 boolean parameters - consider using a variant type or record for clarity
   ✓ Code Style (0 total issues)
   ✓ Naming Conventions (0 total issues)
   ✓ Documentation (0 total issues)

@@ -11,7 +11,7 @@ Test bad example - should find missing value documentation:
     [E405] Missing Value Documentation
     All public values should have documentation explaining their purpose and
     usage. Add doc comments (** ... *) above value declarations in .mli files.
-    - bad.mli:2:0: bad.mli:2:0: Public value 'parse' is missing documentation
+    - bad.mli:2:0: Public value 'parse' is missing documentation
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   

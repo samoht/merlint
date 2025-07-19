@@ -12,6 +12,7 @@ Test bad example - should find bad documentation style:
     Documentation should follow OCaml conventions: start with a capital letter,
     end with a period, and use proper grammar. Avoid redundant phrases like 'This
     function...' - just state what it does directly.
+    - (global) Bad documentation style check not yet implemented
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   
@@ -33,6 +34,7 @@ Test good example - should find no issues:
     Documentation should follow OCaml conventions: start with a capital letter,
     end with a period, and use proper grammar. Avoid redundant phrases like 'This
     function...' - just state what it does directly.
+    - (global) Bad documentation style check not yet implemented
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   

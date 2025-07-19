@@ -12,6 +12,7 @@ Test bad example - should find missing ocamlformat file:
     [E500] Missing OCamlformat File
     All OCaml projects should have a .ocamlformat file in the root directory to
     ensure consistent code formatting. Create one with your preferred settings.
+    - (global) Project is missing .ocamlformat file for consistent formatting
   ✓ Test Quality (0 total issues)
   
   Summary: ✗ 1 total issues (applied 1 rules)
@@ -32,6 +33,7 @@ Test good example - should find no issues:
     [E500] Missing OCamlformat File
     All OCaml projects should have a .ocamlformat file in the root directory to
     ensure consistent code formatting. Create one with your preferred settings.
+    - (global) Project is missing .ocamlformat file for consistent formatting
   ✓ Test Quality (0 total issues)
   
   Summary: ✗ 1 total issues (applied 1 rules)
