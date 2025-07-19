@@ -658,7 +658,6 @@ Test executables (test.ml) should use test suites exported by test modules (test
 ❌ **Bad:**
 ```ocaml
 (* test.ml - main test executable *)
-(* BAD: Creating our own tests instead of using test_user.suite *)
 let tests = []
 let () = Alcotest.run "test_user" [("user", tests)]
 ```
@@ -666,7 +665,6 @@ let () = Alcotest.run "test_user" [("user", tests)]
 ✅ **Good:**
 ```ocaml
 (* test.ml - main test executable *)
-(* GOOD: Using test_user.suite exported by test_user.ml *)
 module Test_user = struct
   let suite = ("user", [])
 end
@@ -677,14 +675,12 @@ let () = Alcotest.run "Test suite description" [Test_user.suite]
 
 ```ocaml
 (* test.ml - main test executable *)
-(* BAD: Creating our own tests instead of using test_user.suite *)
 let tests = []
 let () = Alcotest.run "test_user" [("user", tests)]
 ```
 
 ```ocaml
 (* test.ml - main test executable *)
-(* GOOD: Using test_user.suite exported by test_user.ml *)
 module Test_user = struct
   let suite = ("user", [])
 end

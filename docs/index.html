@@ -480,14 +480,12 @@ pre code {
 <div class="example bad">
   <h4>BAD</h4>
   <pre><code><span class="cm">(* test.ml - main test executable *)</span>
-<span class="cm">(* BAD: Creating our own tests instead of using test_user.suite *)</span>
 <span class="kw">let</span> tests = []
 <span class="kw">let</span> () = <span class="cn">Alcotest</span>.run &quot;test_user&quot; [(&quot;user&quot;, tests)]</code></pre>
 </div>
 <div class="example good">
   <h4>GOOD</h4>
   <pre><code><span class="cm">(* test.ml - main test executable *)</span>
-<span class="cm">(* GOOD: Using test_user.suite exported by test_user.ml *)</span>
 <span class="kw">module</span> <span class="cn">Test_user</span> = <span class="kw">struct</span>
   <span class="kw">let</span> suite = (&quot;user&quot;, [])
 <span class="kw">end</span>
