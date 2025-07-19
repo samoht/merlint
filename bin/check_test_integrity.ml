@@ -47,7 +47,12 @@ let check_test_files cram_dir error_code =
   in
   let run_exists = Sys.file_exists run_file in
   let dune_project_exists = Sys.file_exists dune_project_file in
-  let dune_exists = Sys.file_exists dune_file in
+  (* For dune file: 
+     - If bad.ml or good.ml exist at root, we need dune at root
+     - If only bad/ and good/ directories exist, we don't need dune at root
+       (subdirectories should have their own dune files) *)
+  let needs_root_dune = Sys.file_exists bad_file || Sys.file_exists good_file in
+  let dune_exists = (not needs_root_dune) || Sys.file_exists dune_file in
   (bad_exists, good_exists, run_exists, dune_project_exists, dune_exists)
 
 (* Check if run.t file uses correct -r flag format *)
