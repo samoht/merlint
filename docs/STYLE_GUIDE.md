@@ -673,21 +673,6 @@ let () = Alcotest.run "Test suite description" [Test_user.suite]
 ```
 
 
-```ocaml
-(* test.ml - main test executable *)
-let tests = []
-let () = Alcotest.run "test_user" [("user", tests)]
-```
-
-```ocaml
-(* test.ml - main test executable *)
-module Test_user = struct
-  let suite = ("user", [])
-end
-
-let () = Alcotest.run "Test suite description" [Test_user.suite]
-```
-
 ### [E605] Missing Test File
 
 Each library module should have a corresponding test file to ensure proper testing coverage. Create test files following the naming convention test_<module>.ml
