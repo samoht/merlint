@@ -30,14 +30,38 @@ exception Parse_error of string
 exception Type_error
 (** Type error exception - raised when typedtree contains type errors *)
 
+exception Wrong_ast_type
+(** Wrong AST type exception - raised when parsing Typedtree but found Parsetree
+    nodes *)
+
 (** Convert a structured name to a string *)
 let name_to_string (n : name) =
   match n.prefix with
   | [] -> n.base
   | prefix -> String.concat "." prefix ^ "." ^ n.base
 
-type token = { indent : int; content : string; loc : Location.t option }
-(** Phase 1: Token type for lexing *)
+(** Token kinds *)
+type token_kind =
+  | Word of string
+  | Location of
+      Location.t (* Parsed location like (file.ml[1,0+0]..file.ml[1,0+31]) *)
+  | Module (* Tstr_module / Pstr_module *)
+  | Type (* Tstr_type / Pstr_type *)
+  | TypeDeclaration (* type_declaration *)
+  | Value (* Tstr_value / Pstr_value *)
+  | Exception (* Tstr_exception / Pstr_exception *)
+  | Variant (* Ttype_variant / Ptype_variant *)
+  | Ident (* Texp_ident / Pexp_ident *)
+  | Construct (* Texp_construct / Pexp_construct *)
+  | Pattern (* Tpat_var / Ppat_var *)
+  | Attribute (* Tstr_attribute / Pstr_attribute *)
+  | LParen
+  | RParen
+  | LBracket
+  | RBracket
+
+type token = { kind : token_kind; loc : Location.t option }
+(** Token representation *)
 
 (** Empty accumulator for name extraction *)
 let empty_acc =
@@ -93,55 +117,163 @@ let parse_location str =
     Some (Location.create ~file ~start_line ~start_col ~end_line ~end_col)
   with Not_found -> None
 
-(** Parse line indentation - counts leading spaces *)
-let parse_indent line =
-  let len = String.length line in
-  let rec count_spaces i =
-    if i < len && line.[i] = ' ' then count_spaces (i + 1) else i
+(** Get AST node token kind if word is a recognized AST node in the given
+    context *)
+let get_ast_node_kind what word =
+  match (what, word) with
+  (* Typedtree context *)
+  | Typedtree, "Tstr_module" -> Some Module
+  | Typedtree, "Tstr_type" -> Some Type
+  | Typedtree, "Tstr_value" -> Some Value
+  | Typedtree, "Tstr_exception" -> Some Exception
+  | Typedtree, "Ttype_variant" -> Some Variant
+  | Typedtree, "Texp_ident" -> Some Ident
+  | Typedtree, "Texp_construct" -> Some Construct
+  | Typedtree, "Tpat_var" -> Some Pattern
+  (* Parsetree context *)
+  | Parsetree, "Pstr_module" -> Some Module
+  | Parsetree, "Pstr_type" -> Some Type
+  | Parsetree, "Pstr_value" -> Some Value
+  | Parsetree, "Pstr_exception" -> Some Exception
+  | Parsetree, "Ptype_variant" -> Some Variant
+  | Parsetree, "Pexp_ident" -> Some Ident
+  | Parsetree, "Pexp_construct" -> Some Construct
+  | Parsetree, "Ppat_var" -> Some Pattern
+  (* Context-independent nodes *)
+  | _, "type_declaration" -> Some TypeDeclaration
+  | Typedtree, "Tstr_attribute" -> Some Attribute
+  | Parsetree, "Pstr_attribute" -> Some Attribute
+  (* Mismatched contexts - fail early on known AST nodes *)
+  | ( Typedtree,
+      ( "Pstr_module" | "Pstr_type" | "Pstr_value" | "Pstr_exception"
+      | "Ptype_variant" | "Pexp_ident" | "Pexp_construct" | "Ppat_var" ) ) ->
+      raise Wrong_ast_type
+  | ( Parsetree,
+      ( "Tstr_module" | "Tstr_type" | "Tstr_value" | "Tstr_exception"
+      | "Ttype_variant" | "Texp_ident" | "Texp_construct" | "Tpat_var" ) ) ->
+      raise Wrong_ast_type
+  | _ -> None
+
+(** Classify a word as either an AST node or just a word *)
+let classify_word what_context word =
+  match get_ast_node_kind what_context word with
+  | Some k -> k
+  | None -> Word word
+
+(** Check if we're at the start of a location pattern *)
+let is_location_start text pos =
+  pos < String.length text
+  && text.[pos] = '('
+  &&
+  try
+    (* Look for pattern like (file.ml[... *)
+    let rec check i =
+      if i >= String.length text then false
+      else if text.[i] = '[' then true
+      else if text.[i] = ' ' || text.[i] = '\n' then false
+      else check (i + 1)
+    in
+    check (pos + 1)
+  with _ -> false
+
+(** Parse a complete location token *)
+let parse_location_token text start_pos =
+  let rec find_end pos paren_count =
+    if pos >= String.length text then pos
+    else
+      match text.[pos] with
+      | '(' -> find_end (pos + 1) (paren_count + 1)
+      | ')' ->
+          if paren_count = 1 then pos + 1
+          else find_end (pos + 1) (paren_count - 1)
+      | _ -> find_end (pos + 1) paren_count
   in
-  count_spaces 0
+  let end_pos = find_end start_pos 0 in
+  let loc_str = String.sub text start_pos (end_pos - start_pos) in
+  (parse_location loc_str, end_pos)
 
 (** Phase 1: Lexer - Convert raw text to tokens *)
-let lex_text ?(parse_loc_from_line = true) text : token list =
-  String.split_on_char '\n' text
-  |> List.filter_map (fun line ->
-         let len = String.length line in
-         if len = 0 then None
-         else
-           let indent = parse_indent line in
-           let trimmed = String.trim line in
-           if trimmed = "" then None
-           else
-             let loc =
-               if parse_loc_from_line then parse_location line else None
-             in
-             Some { indent; content = trimmed; loc })
-
-(** Extract node type from token content *)
-let get_node_type content =
-  match String.index_opt content ' ' with
-  | Some idx -> String.sub content 0 idx
-  | None -> content
-
-(** Extract content between quotes (useful for parsing AST dumps) *)
-let quoted_string line =
-  let quote_regex =
-    Re.compile
-      (Re.seq
-         [
-           Re.str "\"";
-           Re.group (Re.rep (Re.compl [ Re.char '"' ]));
-           Re.str "\"";
-         ])
+let lex_text what text : token list =
+  (* Tokenizer that recognizes AST nodes based on current what context *)
+  let rec tokenize acc current pos what_context =
+    if pos >= String.length text then
+      if current = "" then List.rev acc
+      else
+        let kind = classify_word what_context current in
+        List.rev ({ kind; loc = None } :: acc)
+    else if current = "" && is_location_start text pos then
+      (* Parse location token *)
+      let loc_opt, new_pos = parse_location_token text pos in
+      match loc_opt with
+      | Some loc ->
+          tokenize
+            ({ kind = Location loc; loc = None } :: acc)
+            "" new_pos what_context
+      | None ->
+          (* Failed to parse as location, treat as regular paren *)
+          tokenize
+            ({ kind = LParen; loc = None } :: acc)
+            "" (pos + 1) what_context
+    else
+      let ch = text.[pos] in
+      match ch with
+      | ' ' | '\n' | '\t' ->
+          if current = "" then tokenize acc current (pos + 1) what_context
+          else
+            let kind = classify_word what_context current in
+            tokenize ({ kind; loc = None } :: acc) "" (pos + 1) what_context
+      | ('(' | ')' | '[' | ']') as bracket ->
+          let bracket_kind =
+            match bracket with
+            | '(' -> LParen
+            | ')' -> RParen
+            | '[' -> LBracket
+            | ']' -> RBracket
+            | _ -> assert false
+          in
+          let acc' =
+            if current = "" then acc
+            else
+              let kind = classify_word what_context current in
+              { kind; loc = None } :: acc
+          in
+          tokenize
+            ({ kind = bracket_kind; loc = None } :: acc')
+            "" (pos + 1) what_context
+      | _ -> tokenize acc (current ^ String.make 1 ch) (pos + 1) what_context
   in
-  try
-    let m = Re.exec quote_regex line in
-    Some (Re.Group.get m 1)
-  with Not_found -> None
+  tokenize [] "" 0 what
+
+(** Pretty print a token for debugging *)
+let pp_token ppf token =
+  match token.kind with
+  | Word content -> Fmt.pf ppf "Word(%s)" content
+  | Location loc -> Fmt.pf ppf "Location(%a)" Location.pp loc
+  | Module -> Fmt.string ppf "Module"
+  | Type -> Fmt.string ppf "Type"
+  | TypeDeclaration -> Fmt.string ppf "TypeDeclaration"
+  | Value -> Fmt.string ppf "Value"
+  | Exception -> Fmt.string ppf "Exception"
+  | Variant -> Fmt.string ppf "Variant"
+  | Ident -> Fmt.string ppf "Ident"
+  | Construct -> Fmt.string ppf "Construct"
+  | Pattern -> Fmt.string ppf "Pattern"
+  | Attribute -> Fmt.string ppf "Attribute"
+  | LParen -> Fmt.string ppf "LParen"
+  | RParen -> Fmt.string ppf "RParen"
+  | LBracket -> Fmt.string ppf "LBracket"
+  | RBracket -> Fmt.string ppf "RBracket"
 
 (** Parse structured name from string like "Str.regexp" or "Stdlib!.Obj.magic"
 *)
 let parse_name str =
+  (* Remove quotes if present *)
+  let str =
+    let len = String.length str in
+    if len >= 2 && str.[0] = '"' && str.[len - 1] = '"' then
+      String.sub str 1 (len - 2)
+    else str
+  in
   (* Remove unique suffix like /123 if present *)
   let str =
     match String.index_opt str '/' with
@@ -196,134 +328,125 @@ let normalize_node_type (what : what) (node_type : string) : string =
             (* Not a P or T node, so return it as is *)
             node_type)
 
-(** Determine the parsing mode based on node type *)
-let determine_what current_what token node_type =
-  if node_type = "Tstr_attribute" then Parsetree
-  else if token.indent <= 8 && String.starts_with ~prefix:"T" node_type then
-    Typedtree
-  else if token.indent <= 8 && String.starts_with ~prefix:"P" node_type then
-    Parsetree
-  else current_what
+(** Phase 2: Parser - Convert tokens into structured data *)
 
-(** Check if we're in a variant section *)
-let update_variant_section in_variant_section token node_type =
-  if node_type = "Ttype_variant" || node_type = "Ptype_variant" then true
-  else if token.indent <= 8 && String.starts_with ~prefix:"ptype_" token.content
-  then false
-  else in_variant_section
-
-(** Try to normalize a node type, falling back to original on error *)
-let safe_normalize_node_type what node_type =
-  try
-    if
-      String.starts_with ~prefix:"T" node_type
-      || String.starts_with ~prefix:"P" node_type
-      || List.mem node_type
-           [
-             "type_declaration";
-             "attribute";
-             "structure_item";
-             "Param_pat";
-             "Nolabel";
-             "Nonrec";
-             "Rec";
-             "Optional";
-             "Labelled";
-             "Some";
-             "None";
-             "Const_int";
-             "Const_string";
-             "Const_float";
-           ]
-    then normalize_node_type what node_type
-    else node_type
-  with Parse_error _ -> node_type
-
-(** Extract name from a token based on normalized node type *)
-let extract_name_from_token acc location normalized token =
-  match normalized with
-  | "exp_ident" | "pat_var" -> (
-      match quoted_string token.content with
-      | Some str ->
-          let name = parse_name str in
-          if normalized = "exp_ident" then
-            { acc with identifiers = { name; location } :: acc.identifiers }
-          else { acc with patterns = { name; location } :: acc.patterns }
-      | None -> acc)
-  | "exp_construct" | "pat_construct" | "pat_variant" -> (
-      match quoted_string token.content with
-      | Some str ->
-          let name = parse_name str in
-          { acc with variants = { name; location } :: acc.variants }
-      | None -> acc)
-  | "type_declaration" -> (
-      let parts = String.split_on_char ' ' token.content in
-      match parts with
-      | _ :: name_str :: _ ->
-          let name = parse_name name_str in
-          { acc with types = { name; location } :: acc.types }
-      | _ -> acc)
-  | "str_module" ->
-      let name =
-        match quoted_string token.content with
-        | Some str -> parse_name str
-        | None -> parse_name (String.trim token.content)
-      in
-      { acc with modules = { name; location } :: acc.modules }
-  | _ ->
-      if
-        String.contains token.content '/'
-        && not (String.contains token.content ' ')
-      then
-        let name = parse_name token.content in
-        { acc with variants = { name; location } :: acc.variants }
-      else acc
-
-(** Check if token looks like a variant constructor *)
-let is_variant_constructor token =
-  String.contains token.content '/' && not (String.contains token.content ' ')
-
-(** Process a single token and update the accumulator *)
-let process_single_token acc location token current_what in_variant_section =
-  if is_variant_constructor token && in_variant_section then
-    (* Variant constructor like ProcessingData/278 *)
-    let name = parse_name token.content in
-    { acc with variants = { name; location } :: acc.variants }
-  else
-    let node_type = get_node_type token.content in
-    let normalized = safe_normalize_node_type current_what node_type in
-    extract_name_from_token acc location normalized token
-
-(** Process tokens and extract all names/identifiers *)
-let process_tokens what tokens =
-  let rec process_tokens_rec acc prev_token current_what in_variant_section
-      tokens =
-    match tokens with
+(** Parse token stream into structured AST *)
+let parse_tokens tokens =
+  let rec parse acc location = function
     | [] -> acc
-    | token :: rest ->
-        let node_type = get_node_type token.content in
-        let new_what = determine_what current_what token node_type in
-        let new_in_variant_section =
-          update_variant_section in_variant_section token node_type
-        in
-        let location =
-          match prev_token with Some pt -> pt.loc | None -> token.loc
-        in
+    | tok :: rest -> (
+        match tok.kind with
+        (* Direct location token *)
+        | Location loc -> parse acc (Some loc) rest
+        (* structure_item or similar - location already parsed if it was there *)
+        | Word content
+          when String.ends_with ~suffix:"_item" content
+               || content = "structure_item" ->
+            parse acc location rest
+        (* Found an AST node token *)
+        | Module -> parse_module acc location rest
+        | Type -> parse_type acc location rest
+        | TypeDeclaration -> parse_type_declaration acc location rest
+        | Variant -> parse_variants acc location rest
+        | Ident -> parse_ident acc location rest
+        | Pattern -> parse_pattern acc location rest
+        | Value -> parse_value acc location rest
+        | Construct -> parse_construct acc location rest
+        | Attribute -> parse_attribute acc location rest
+        | _ -> parse acc location rest)
+  and parse_module acc location = function
+    | { kind = Word name_with_id; _ } :: rest
+      when String.contains name_with_id '/' ->
+        let name = parse_name name_with_id in
         let new_acc =
-          process_single_token acc location token new_what
-            new_in_variant_section
+          { acc with modules = { name; location } :: acc.modules }
         in
-        process_tokens_rec new_acc (Some token) new_what new_in_variant_section
-          rest
+        parse new_acc location rest
+    | rest -> parse acc location rest
+  and parse_type acc location rest =
+    (* Just continue parsing, types are handled by TypeDeclaration *)
+    parse acc location rest
+  and parse_type_declaration acc location = function
+    | { kind = Word name_with_id; _ } :: rest
+      when String.contains name_with_id '/' ->
+        let name = parse_name name_with_id in
+        let new_acc = { acc with types = { name; location } :: acc.types } in
+        parse new_acc location rest
+    | rest -> parse acc location rest
+  and parse_variants acc location tokens =
+    (* Parse multiple variants until we hit something else *)
+    let rec collect_variants acc' current_loc = function
+      (* Update location if we see a location token *)
+      | { kind = Location loc; _ } :: rest ->
+          collect_variants acc' (Some loc) rest
+      (* Variant name *)
+      | { kind = Word content; _ } :: rest when String.contains content '/' ->
+          let name = parse_name content in
+          let new_acc =
+            {
+              acc' with
+              variants = { name; location = current_loc } :: acc'.variants;
+            }
+          in
+          collect_variants new_acc current_loc rest
+      (* Keep going through brackets and other tokens *)
+      | { kind = LBracket | RBracket | Word _; _ } :: rest ->
+          collect_variants acc' current_loc rest
+      (* Stop when we hit another AST node or run out of tokens *)
+      | rest -> parse acc' location rest
+    in
+    collect_variants acc location tokens
+  and parse_ident acc location = function
+    | { kind = Word content; _ } :: rest ->
+        let name = parse_name content in
+        let new_acc =
+          { acc with identifiers = { name; location } :: acc.identifiers }
+        in
+        parse new_acc location rest
+    | rest -> parse acc location rest
+  and parse_pattern acc location = function
+    | { kind = Word content; _ } :: rest ->
+        let name = parse_name content in
+        let new_acc =
+          { acc with patterns = { name; location } :: acc.patterns }
+        in
+        parse new_acc location rest
+    | rest -> parse acc location rest
+  and parse_value acc location rest =
+    (* Just continue parsing, values might be handled differently *)
+    parse acc location rest
+  and parse_construct acc location = function
+    | { kind = Word content; _ } :: rest ->
+        let name = parse_name content in
+        let new_acc =
+          { acc with variants = { name; location } :: acc.variants }
+        in
+        parse new_acc location rest
+    | rest -> parse acc location rest
+  and parse_attribute acc location tokens =
+    (* Skip attribute contents - they can contain mixed AST nodes *)
+    let rec skip_attribute depth = function
+      | [] -> []
+      | { kind = LBracket; _ } :: rest -> skip_attribute (depth + 1) rest
+      | { kind = RBracket; _ } :: rest ->
+          if depth <= 1 then rest else skip_attribute (depth - 1) rest
+      | _ :: rest -> skip_attribute depth rest
+    in
+    (* Attributes are typically followed by [ ... ] *)
+    match tokens with
+    | { kind = Word _; _ } :: { kind = LBracket; _ } :: rest ->
+        parse acc location (skip_attribute 1 rest)
+    | _ -> parse acc location tokens
   in
-  process_tokens_rec empty_acc None what false tokens
 
-(** Parse AST text with specific what (for testing) *)
+  parse empty_acc None tokens
+
+(** Parse AST text with specific what *)
 let text what input =
   (* Phase 1: Lex the text into tokens *)
-  let tokens = lex_text ~parse_loc_from_line:true input in
-  (* Phase 2: Process tokens to extract names *)
-  process_tokens what tokens
+  let tokens = lex_text what input in
+  (* Phase 2: Parse tokens into structured data *)
+  parse_tokens tokens
 
 (** Parse parsetree text dump into AST structure *)
 let parsetree input = text Parsetree input
@@ -343,12 +466,10 @@ let typedtree input =
       (* Type errors in the code - try with Parsetree *)
       Log.debug (fun m -> m "Type errors detected, falling back to Parsetree");
       text Parsetree input
-  | Parse_error msg
-    when String.length msg > 19 && String.sub msg 0 19 = "Found Parsetree node"
-    ->
-      (* Parse error due to Parsetree nodes in Typedtree dump - fall back *)
+  | Wrong_ast_type ->
+      (* Wrong AST type - Parsetree nodes in what should be Typedtree *)
       Log.debug (fun m ->
-          m "Parsetree nodes in Typedtree dump, falling back: %s" msg);
+          m "Wrong AST type detected, falling back to Parsetree");
       text Parsetree input
 
 (** Utility functions for working with dump data *)

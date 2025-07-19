@@ -338,7 +338,7 @@ let tls_config =
 
 ### [E300] Variant Naming Convention
 
-Variant constructors should use PascalCase (e.g., MyVariant, SomeConstructor). This is the standard convention in OCaml for variant constructors.
+Variant constructors should use snake_case (e.g., My_variant, Some_constructor). This matches the project's naming conventions.
 
 ```ocaml
 type status = 
@@ -390,7 +390,7 @@ let get_user_name user = user.name
 
 ### [E315] Type Naming Convention
 
-Type names should use snake_case, except for the conventional names 't' and 'id'. This convention helps maintain consistency across the codebase.
+Type names should use snake_case. This convention helps maintain consistency across the codebase.
 
 ```ocaml
 type userProfile = { name : string }

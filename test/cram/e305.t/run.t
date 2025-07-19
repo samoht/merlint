@@ -6,13 +6,18 @@ Test bad example - should find bad type naming:
   
   ✓ Code Quality (0 total issues)
   ✓ Code Style (0 total issues)
-  ✓ Naming Conventions (0 total issues)
+  ✗ Naming Conventions (1 total issues)
+    [E305] Module Naming Convention
+    Module names should use Snake_case (e.g., My_module, Some_component). This
+    helps distinguish modules from variant constructors.
+    - bad.ml:1:0: bad.ml:1:0: Module 'UserProfile' should use Snake_case: 'user_profile'
   ✓ Documentation (0 total issues)
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   
-  Summary: ✓ 0 total issues (applied 1 rules)
-  ✓ All checks passed!
+  Summary: ✗ 1 total issues (applied 1 rules)
+  ✗ Some checks failed. See details above.
+  [1]
 
 Test good example - should find no issues:
   $ merlint -r E305 good.ml

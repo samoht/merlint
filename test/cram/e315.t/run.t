@@ -6,13 +6,18 @@ Test bad example - should find bad function naming:
   
   ✓ Code Quality (0 total issues)
   ✓ Code Style (0 total issues)
-  ✓ Naming Conventions (0 total issues)
+  ✗ Naming Conventions (1 total issues)
+    [E315] Type Naming Convention
+    Type names should use snake_case. This convention helps maintain consistency
+    across the codebase.
+    - bad.ml:1:0: bad.ml:1:0: Type name 'userProfile' should use snake_case: 'user_profile'
   ✓ Documentation (0 total issues)
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   
-  Summary: ✓ 0 total issues (applied 1 rules)
-  ✓ All checks passed!
+  Summary: ✗ 1 total issues (applied 1 rules)
+  ✗ Some checks failed. See details above.
+  [1]
 
 Test good example - should find no issues:
   $ merlint -r E315 good.ml

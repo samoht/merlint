@@ -9,10 +9,7 @@ let check ctx =
   List.filter_map
     (fun (type_elt : Dump.elt) ->
       let name_str = type_elt.name.base in
-      if
-        name_str <> "t" && name_str <> "id"
-        && name_str <> Naming.to_snake_case name_str
-      then
+      if name_str <> Naming.to_snake_case name_str then
         match Dump.location type_elt with
         | Some loc ->
             Some
@@ -32,7 +29,6 @@ let rule =
   Rule.v ~code:"E315" ~title:"Type Naming Convention"
     ~category:Naming_conventions
     ~hint:
-      "Type names should use snake_case, except for the conventional names 't' \
-       and 'id'. This convention helps maintain consistency across the \
-       codebase."
+      "Type names should use snake_case. This convention helps maintain \
+       consistency across the codebase."
     ~examples:[] ~pp (File check)

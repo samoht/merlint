@@ -31,14 +31,44 @@ exception Parse_error of string
 exception Type_error
 (** Type error exception - raised when typedtree contains type errors *)
 
-type token = { indent : int; content : string; loc : Location.t option }
-(** Phase 1: Token type for lexing *)
+exception Wrong_ast_type
+(** Wrong AST type exception - raised when parsing Typedtree but found Parsetree
+    nodes *)
+
+(** Token kinds *)
+type token_kind =
+  | Word of string
+  | Location of
+      Location.t (* Parsed location like (file.ml[1,0+0]..file.ml[1,0+31]) *)
+  | Module (* Tstr_module / Pstr_module *)
+  | Type (* Tstr_type / Pstr_type *)
+  | TypeDeclaration (* type_declaration *)
+  | Value (* Tstr_value / Pstr_value *)
+  | Exception (* Tstr_exception / Pstr_exception *)
+  | Variant (* Ttype_variant / Ptype_variant *)
+  | Ident (* Texp_ident / Pexp_ident *)
+  | Construct (* Texp_construct / Pexp_construct *)
+  | Pattern (* Tpat_var / Ppat_var *)
+  | Attribute (* Tstr_attribute / Pstr_attribute *)
+  | LParen
+  | RParen
+  | LBracket
+  | RBracket
+
+type token = { kind : token_kind; loc : Location.t option }
+(** Token representation *)
 
 val name_to_string : name -> string
 (** Convert a structured name to a string *)
 
+val pp_token : Format.formatter -> token -> unit
+(** Pretty print a token for debugging *)
+
 val normalize_node_type : what -> string -> string
 (** Normalize node type based on what *)
+
+val lex_text : what -> string -> token list
+(** Lex AST text into tokens - for debugging *)
 
 val text : what -> string -> t
 (** Parse AST text with specific what *)
