@@ -407,7 +407,22 @@ pre code {
         <span class="error-code">E350</span>
         <span class="error-title">Boolean Blindness</span>
     </div>
-    <div class="error-hint"><p>Functions with multiple boolean parameters are hard to use correctly. It's easy to mix up the order of arguments at call sites. Consider using variant types, labeled arguments, or a configuration record instead.</p></div>
+    <div class="error-hint"><p>Functions with multiple boolean parameters are hard to use correctly. It's easy to mix up the order of arguments at call sites. Consider using variant types, labeled arguments, or a configuration record instead.</p><div class="examples-grid">
+<div class="example bad">
+  <h4>BAD</h4>
+  <pre><code><span class="cm">(* BAD - Boolean blindness *)</span>
+<span class="kw">let</span> create_widget visible bordered = ...
+<span class="kw">let</span> w = create_widget <span class="kw">true</span> <span class="kw">false</span>  <span class="cm">(* What does this mean? *)</span></code></pre>
+</div>
+<div class="example good">
+  <h4>GOOD</h4>
+  <pre><code><span class="cm">(* GOOD - Explicit variants *)</span>
+<span class="kw">type</span> visibility = <span class="cn">Visible</span> | <span class="cn">Hidden</span>
+<span class="kw">type</span> border = <span class="cn">With_border</span> | <span class="cn">Without_border</span>
+<span class="kw">let</span> create_widget ~visibility ~border = ...
+<span class="kw">let</span> w = create_widget ~visibility:<span class="cn">Visible</span> ~border:<span class="cn">Without_border</span></code></pre>
+</div>
+</div></div>
 </div>
 <div class="error-card" id="E351">
     <div>
@@ -430,14 +445,30 @@ pre code {
         <span class="error-code">E405</span>
         <span class="error-title">Missing Type Documentation</span>
     </div>
-    <div class="error-hint"><p>All public values should have documentation explaining their purpose and usage. Add doc comments (** ... *) above value declarations in .mli files.</p></div>
+    <div class="error-hint"><p>All public values should have documentation explaining their purpose and usage. Add doc comments (** ... *) above value declarations in .mli files.</p>
+<div class="example good">
+  <h4>GOOD</h4>
+  <pre><code>(** <span class="cn">User</span> <span class="cn">API</span>
+
+    <span class="cn">This</span> <span class="kw">module</span> provides types <span class="kw">and</span> functions <span class="kw">for</span> interacting <span class="kw">with</span> users. *)</code></pre>
+</div></div>
 </div>
 <div class="error-card" id="E410">
     <div>
         <span class="error-code">E410</span>
         <span class="error-title">Bad Documentation Style</span>
     </div>
-    <div class="error-hint"><p>Documentation should follow OCaml conventions: start with a capital letter, end with a period, and use proper grammar. Avoid redundant phrases like 'This function...' - just state what it does directly.</p></div>
+    <div class="error-hint"><p>Documentation should follow OCaml conventions: start with a capital letter, end with a period, and use proper grammar. Avoid redundant phrases like 'This function...' - just state what it does directly.</p>
+<div class="example good">
+  <h4>GOOD</h4>
+  <pre><code><span class="kw">val</span> is_bot : t -&gt; bool
+<span class="cm">(** [is_bot u] is [true] if [u] is a bot user. *)</span></code></pre>
+</div>
+<div class="example good">
+  <h4>GOOD</h4>
+  <pre><code><span class="kw">type</span> id = string
+<span class="cm">(** A user identifier. *)</span></code></pre>
+</div></div>
 </div>
 <div class="error-card" id="E415">
     <div>
@@ -467,7 +498,18 @@ pre code {
         <span class="error-code">E510</span>
         <span class="error-title">Missing Log Source</span>
     </div>
-    <div class="error-hint"><p>Modules that use logging should declare a log source for better debugging and log filtering. Add 'let src = Logs.Src.create "module.name" ~doc:"..."'</p></div>
+    <div class="error-hint"><p>Modules that use logging should declare a log source for better debugging and log filtering. Add 'let src = Logs.Src.create "module.name" ~doc:"..."'</p>
+<div class="example good">
+  <h4>GOOD</h4>
+  <pre><code><span class="kw">let</span> log_src = <span class="cn">Logs</span>.<span class="cn">Src</span>.create &quot;project_name.module_name&quot;
+<span class="kw">module</span> <span class="cn">Log</span> = (<span class="kw">val</span> <span class="cn">Logs</span>.src_log log_src : <span class="cn">Logs</span>.<span class="cn">LOG</span>)</code></pre>
+</div>
+<div class="example good">
+  <h4>GOOD</h4>
+  <pre><code><span class="cn">Log</span>.info (<span class="kw">fun</span> m -&gt;
+    m &quot;<span class="cn">Received</span> event: %s&quot; event_type
+      ~tags:(<span class="cn">Logs</span>.<span class="cn">Tag</span>.add &quot;channel_id&quot; channel_id <span class="cn">Logs</span>.<span class="cn">Tag</span>.empty))</code></pre>
+</div></div>
 </div>
 <h2 id="testing">Testing</h2>
 <div class="category">E600-E699 • Test coverage and test quality issues</div>

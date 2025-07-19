@@ -59,4 +59,23 @@ let rule =
        It's easy to mix up the order of arguments at call sites. Consider \
        using variant types, labeled arguments, or a configuration record \
        instead."
-    ~examples:[] ~pp (File check)
+    ~examples:
+      [
+        {
+          is_good = false;
+          code =
+            {|(* BAD - Boolean blindness *)
+let create_widget visible bordered = ...
+let w = create_widget true false  (* What does this mean? *)|};
+        };
+        {
+          is_good = true;
+          code =
+            {|(* GOOD - Explicit variants *)
+type visibility = Visible | Hidden
+type border = With_border | Without_border
+let create_widget ~visibility ~border = ...
+let w = create_widget ~visibility:Visible ~border:Without_border|};
+        };
+      ]
+    ~pp (File check)

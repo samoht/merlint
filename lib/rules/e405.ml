@@ -19,4 +19,14 @@ let rule =
       "All public values should have documentation explaining their purpose \
        and usage. Add doc comments (** ... *) above value declarations in .mli \
        files."
-    ~examples:[] ~pp (File check)
+    ~examples:
+      [
+        {
+          is_good = true;
+          code =
+            {|(** User API
+
+    This module provides types and functions for interacting with users. *)|};
+        };
+      ]
+    ~pp (File check)

@@ -16,4 +16,18 @@ let rule =
       "Documentation should follow OCaml conventions: start with a capital \
        letter, end with a period, and use proper grammar. Avoid redundant \
        phrases like 'This function...' - just state what it does directly."
-    ~examples:[] ~pp (File check)
+    ~examples:
+      [
+        {
+          is_good = true;
+          code =
+            {|val is_bot : t -> bool
+(** [is_bot u] is [true] if [u] is a bot user. *)|};
+        };
+        {
+          is_good = true;
+          code = {|type id = string
+(** A user identifier. *)|};
+        };
+      ]
+    ~pp (File check)

@@ -17,4 +17,20 @@ let rule =
       "Modules that use logging should declare a log source for better \
        debugging and log filtering. Add 'let src = Logs.Src.create \
        \"module.name\" ~doc:\"...\"'"
-    ~examples:[] ~pp (File check)
+    ~examples:
+      [
+        {
+          is_good = true;
+          code =
+            {|let log_src = Logs.Src.create "project_name.module_name"
+module Log = (val Logs.src_log log_src : Logs.LOG)|};
+        };
+        {
+          is_good = true;
+          code =
+            {|Log.info (fun m ->
+    m "Received event: %s" event_type
+      ~tags:(Logs.Tag.add "channel_id" channel_id Logs.Tag.empty))|};
+        };
+      ]
+    ~pp (File check)

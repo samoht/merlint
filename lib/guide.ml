@@ -46,8 +46,6 @@ let content =
           Paragraph
             {|7. **NEVER USE Obj.magic**: The `Obj` module is not part of the OCaml language and breaks type safety. There is always a better, type-safe solution.|};
           Rule "E100";
-          Code Examples.E100.bad_ml;
-          Code Examples.E100.good_ml;
         ] );
     Section
       ( "Dependencies and Tooling",
@@ -59,20 +57,14 @@ let content =
              `ocamlformat`. Run `dune fmt` before committing. Ensure you have \
              a `.ocamlformat` file in your project root.";
           Rule "E500";
-          Code Examples.E500.bad_ml;
-          Code Examples.E500.good_ml;
           Paragraph
             "**Core Libraries**: Projects typically embrace a curated set of \
              high-quality libraries for common tasks. For example:";
           Paragraph "- **Concurrency**: `eio`";
           Paragraph "- **Structured Output**: `fmt` (instead of Printf/Format)";
           Rule "E205";
-          Code Examples.E205.bad_ml;
-          Code Examples.E205.good_ml;
           Paragraph "- **Regular Expressions**: `re` (instead of Str module)";
           Rule "E200";
-          Code Examples.E200.bad_ml;
-          Code Examples.E200.good_ml;
           Paragraph "- **Logging**: `logs`";
           Paragraph "- **CLI Parsing**: `cmdliner`";
           Paragraph "- **JSON Handling**: `yojson`";
@@ -87,27 +79,14 @@ let content =
              documentation comment explaining its purpose. Focus on *what* the \
              module provides, not *how* it is implemented.";
           Rule "E405";
-          Code Examples.E405.bad_mli;
-          Code Examples.E405.good_mli;
-          Code
-            {|(** User API
-
-    This module provides types and functions for interacting with users. *)|};
           Paragraph
             "**Interface (`.mli`) Style**: Document every exported value. Use \
              a consistent, concise style.";
           Rule "E410";
-          Code Examples.E410.bad_mli;
-          Code Examples.E410.good_mli;
           Paragraph
             "**Documentation Philosophy**: For functions, use the \
              `[function_name arg1 arg2] is ...` pattern.";
-          Code
-            {|val is_bot : t -> bool
-(** [is_bot u] is [true] if [u] is a bot user. *)|};
           Paragraph "For values, describe what the value represents.";
-          Code {|type id = string
-(** A user identifier. *)|};
           Paragraph
             "**Abstract Types**: Keep types abstract (`type t`) whenever \
              possible. Expose smart constructors and accessors instead of \
@@ -117,8 +96,6 @@ let content =
              central data type `t`, consistently provide these functions where \
              applicable:";
           Rule "E415";
-          Code Examples.E415.bad_mli;
-          Code Examples.E415.good_mli;
           Paragraph
             "- `val v : ... -> t`: A pure, smart constructor for creating \
              values of type `t` in memory. This function should not perform \
@@ -149,15 +126,9 @@ let content =
             "**Interface Files**: Create `.mli` files for all public modules \
              to define clear interfaces and hide implementation details.";
           Rule "E505";
-          Code Examples.E505.bad_ml;
-          Code Examples.E505.good_ml;
-          Code Examples.E505.good_mli;
           Paragraph
             "**Code Formatting**: Maintain a `.ocamlformat` file in the \
              project root with consistent formatting settings.";
-          Rule "E500";
-          Code Examples.E500.bad_ml;
-          Code Examples.E500.good_ml;
         ] );
     Section
       ( "Command-Line Applications",
@@ -211,15 +182,11 @@ let find_user_id json =
             "**No Broad Exceptions**: Never use `try ... with _ -> ...`. \
              Always match on specific exceptions.";
           Rule "E105";
-          Code Examples.E105.bad_ml;
-          Code Examples.E105.good_ml;
           Paragraph
             "**No Silenced Warnings**: Fix underlying issues instead of \
              silencing compiler warnings with attributes like `[@warning \
              \"-nn\"]`.";
           Rule "E110";
-          Code Examples.E110.bad_ml;
-          Code Examples.E110.good_ml;
           Paragraph
             "**Initialization Failures**: For unrecoverable errors during \
              startup (e.g., missing configuration), it is acceptable to fail \
@@ -240,38 +207,26 @@ let find_user_id json =
             "**Module Naming**: Lowercase with underscores (e.g., \
              `user_profile`).";
           Rule "E300";
-          Code Examples.E300.bad_ml;
-          Code Examples.E300.good_ml;
           Paragraph
             "**Type Naming**: The primary type in a module is `t`. Identifiers \
              are named `id`. Use snake_case for all type names.";
           Rule "E305";
-          Code Examples.E305.bad_ml;
-          Code Examples.E305.good_ml;
           Paragraph
             "**Variant Constructors**: Use Snake_case for variant constructors \
              (e.g., `Waiting_for_input`, `Processing_data`), not CamelCase.";
           Rule "E310";
-          Code Examples.E310.bad_ml;
-          Code Examples.E310.good_ml;
           Paragraph
             "**Values**: Short, descriptive, and lowercase with underscores \
              (e.g., `find_user`, `create_channel`).";
           Rule "E315";
-          Code Examples.E315.bad_ml;
-          Code Examples.E315.good_ml;
           Paragraph
             "**Long Identifiers**: Avoid excessively long names with many \
              underscores. Keep names concise and meaningful.";
           Rule "E320";
-          Code Examples.E320.bad_ml;
-          Code Examples.E320.good_ml;
           Paragraph
             "**Function Naming**: Use `get_*` for extraction (returns value \
              directly), `find_*` for search (returns option type).";
           Rule "E325";
-          Code Examples.E325.bad_ml;
-          Code Examples.E325.good_ml;
           Paragraph
             "**Labels**: Use labels only when they clarify the meaning of an \
              argument, not for all arguments. Avoid `~f` and `~x`.";
@@ -285,16 +240,7 @@ let find_user_id json =
              in a function - they make call sites ambiguous and error-prone. \
              Instead, use explicit variant types that leverage OCaml's type \
              system for clarity.";
-          Code
-            {|(* BAD - Boolean blindness *)
-let create_widget visible bordered = ...
-let w = create_widget true false  (* What does this mean? *)
-
-(* GOOD - Explicit variants *)
-type visibility = Visible | Hidden
-type border = With_border | Without_border
-let create_widget ~visibility ~border = ...
-let w = create_widget ~visibility:Visible ~border:Without_border|};
+          Rule "E350";
           Paragraph
             "**Use Phantom Types for Safety**: When appropriate, use phantom \
              types to enforce invariants at compile time rather than runtime.";
@@ -315,19 +261,13 @@ let w = create_widget ~visibility:Visible ~border:Without_border|};
              than two or three levels is a strong signal that the function \
              should be refactored.";
           Rule "E005";
-          Code Examples.E005.bad_ml;
-          Code Examples.E005.good_ml;
           Rule "E010";
-          Code Examples.E010.bad_ml;
-          Code Examples.E010.good_ml;
           Paragraph
             "**Complexity Management**: Break down functions with high \n\
             \             cyclomatic complexity into smaller, focused helper \
              functions with \n\
             \             clear names.";
           Rule "E001";
-          Code Examples.E001.bad_ml;
-          Code Examples.E001.good_ml;
           Paragraph
             "**Composition over Abstraction**: Favor the composition of small, \n\
             \             concrete functions to build up complex behavior. \
@@ -354,9 +294,7 @@ let w = create_widget ~visibility:Visible ~border:Without_border|};
              the `logs` library for all logging.";
           Paragraph
             "**Log Source**: Each module should define its own log source.";
-          Code
-            {|let log_src = Logs.Src.create "project_name.module_name"
-module Log = (val Logs.src_log log_src : Logs.LOG)|};
+          Rule "E510";
           Paragraph
             "**Log Levels**: Use the following log levels appropriately:";
           Paragraph
@@ -377,10 +315,6 @@ module Log = (val Logs.src_log log_src : Logs.LOG)|};
           Paragraph
             "**Structured Logging**: Use tags to add structured context to log \
              messages. This is especially useful for machine-readable logs.";
-          Code
-            {|Log.info (fun m ->
-    m "Received event: %s" event_type
-      ~tags:(Logs.Tag.add "channel_id" channel_id Logs.Tag.empty))|};
         ] );
     Section
       ( "Testing",
@@ -396,20 +330,14 @@ module Log = (val Logs.src_log log_src : Logs.LOG)|};
                    have a corresponding test module in `test/`.";
                 Rule "E600";
                 Rule "E605";
-                Code Examples.E605.bad_ml;
-                Code Examples.E605.good_ml;
                 Paragraph
                   "3. **Test Organization**: Test files should export a \
                    `suite` value.";
                 Rule "E610";
-                Code Examples.E610.bad_ml;
-                Code Examples.E610.good_ml;
                 Paragraph
                   "4. **Test Inclusion**: All test suites must be included in \
                    the main test runner.";
                 Rule "E615";
-                Code Examples.E615.bad_ml;
-                Code Examples.E615.good_ml;
                 Paragraph
                   "5. **Clear Test Names**: Test names should describe what \
                    they test, not how.";

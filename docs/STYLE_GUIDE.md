@@ -25,20 +25,6 @@ This document outlines the coding and testing conventions for this project. The 
 
 Obj.magic completely bypasses OCaml's type system and is extremely dangerous. It can lead to segmentation faults, data corruption, and unpredictable behavior. Instead, use proper type definitions, GADTs, or polymorphic variants. If you absolutely must use unsafe features, document why and isolate the usage.
 
-```ocaml
-let coerce x = Stdlib.Obj.magic x
-```
-
-```ocaml
-(* Use proper type conversions *)
-let int_of_string_opt s =
-  try Some (int_of_string s) with _ -> None
-
-(* Or use variant types *)
-type value = Int of int | String of string
-let to_int = function Int i -> Some i | _ -> None
-```
-
 ## Dependencies and Tooling
 
 **Build System**: The project is built exclusively with `dune`.
@@ -48,15 +34,6 @@ let to_int = function Int i -> Some i | _ -> None
 ### [E500] Missing OCamlformat File
 
 All OCaml projects should have a .ocamlformat file in the root directory to ensure consistent code formatting. Create one with your preferred settings.
-
-```ocaml
-(* No .ocamlformat file in project root *)
-```
-
-```ocaml
-(* This project has .ocamlformat configured *)
-let well_formatted = true
-```
 
 **Core Libraries**: Projects typically embrace a curated set of high-quality libraries for common tasks. For example:
 
@@ -68,37 +45,11 @@ let well_formatted = true
 
 The Fmt module provides a more modern and composable approach to formatting. It offers better type safety and cleaner APIs compared to Printf/Format modules.
 
-```ocaml
-let make_error msg line = 
-  Stdlib.Printf.sprintf "Error: %s at line %d" msg line
-let print_count n = 
-  Stdlib.Printf.printf "Processing %d items...\n" n
-```
-
-```ocaml
-(* Requires: opam install fmt *)
-let make_error msg line = 
-  Fmt.str "Error: %s at line %d" msg line
-let print_count n = 
-  Fmt.pr "Processing %d items...@." n
-```
-
 - **Regular Expressions**: `re` (instead of Str module)
 
 ### [E200] Outdated Str Module
 
 The Str module is outdated and has a problematic API. Use the Re module instead for regular expressions. Re provides a better API, is more performant, and doesn't have global state issues.
-
-```ocaml
-let contains_at s = 
-  Str.string_match (Str.regexp ".*@.*") s 0
-```
-
-```ocaml
-(* Requires: opam install re *)
-let at_re = Re.compile (Re.str "@")
-let contains_at s = Re.execp at_re s
-```
 
 - **Logging**: `logs`
 
@@ -118,24 +69,15 @@ let contains_at s = Re.execp at_re s
 
 All public values should have documentation explaining their purpose and usage. Add doc comments (** ... *) above value declarations in .mli files.
 
-```ocaml
-type t
-val parse : string -> t
-```
+**Examples:**
 
-```ocaml
-type t
-
-(** [parse str] converts a string to type [t].
-    @raise Invalid_argument if [str] is malformed. *)
-val parse : string -> t
-```
-
+✅ **Good:**
 ```ocaml
 (** User API
 
     This module provides types and functions for interacting with users. *)
 ```
+
 
 **Interface (`.mli`) Style**: Document every exported value. Use a consistent, concise style.
 
@@ -143,33 +85,24 @@ val parse : string -> t
 
 Documentation should follow OCaml conventions: start with a capital letter, end with a period, and use proper grammar. Avoid redundant phrases like 'This function...' - just state what it does directly.
 
-```ocaml
-type t
+**Examples:**
 
-(* this function parses strings *)
-val parse : string -> t
-```
-
-```ocaml
-type t
-
-(** [parse str] parses a string into type [t]. *)
-val parse : string -> t
-```
-
-**Documentation Philosophy**: For functions, use the `[function_name arg1 arg2] is ...` pattern.
-
+✅ **Good:**
 ```ocaml
 val is_bot : t -> bool
 (** [is_bot u] is [true] if [u] is a bot user. *)
 ```
 
-For values, describe what the value represents.
-
+✅ **Good:**
 ```ocaml
 type id = string
 (** A user identifier. *)
 ```
+
+
+**Documentation Philosophy**: For functions, use the `[function_name arg1 arg2] is ...` pattern.
+
+For values, describe what the value represents.
 
 **Abstract Types**: Keep types abstract (`type t`) whenever possible. Expose smart constructors and accessors instead of record fields to maintain invariants.
 
@@ -178,17 +111,6 @@ type id = string
 ### [E415] Missing Standard Functions
 
 Types should implement standard functions like equal, compare, pp (pretty-printer), and to_string for better usability and consistency across the codebase.
-
-```ocaml
-type user = { id: int; name: string }
-```
-
-```ocaml
-type user = { id: int; name: string }
-val equal : user -> user -> bool
-val compare : user -> user -> int
-val pp : Format.formatter -> user -> unit
-```
 
 - `val v : ... -> t`: A pure, smart constructor for creating values of type `t` in memory. This function should not perform any I/O.
 
@@ -214,39 +136,7 @@ val pp : Format.formatter -> user -> unit
 
 Library modules should have corresponding .mli files for proper encapsulation and API documentation. Create interface files to hide implementation details and provide a clean API.
 
-```ocaml
-type t = { name: string; id: int }
-let create name id = { name; id }
-let name t = t.name
-```
-
-```ocaml
-type t = { name: string; id: int }
-let create name id = { name; id }
-let name t = t.name
-```
-
-```ocaml
-(* user.mli *)
-type t
-val create : string -> int -> t
-val name : t -> string
-```
-
 **Code Formatting**: Maintain a `.ocamlformat` file in the project root with consistent formatting settings.
-
-### [E500] Missing OCamlformat File
-
-All OCaml projects should have a .ocamlformat file in the root directory to ensure consistent code formatting. Create one with your preferred settings.
-
-```ocaml
-(* No .ocamlformat file in project root *)
-```
-
-```ocaml
-(* This project has .ocamlformat configured *)
-let well_formatted = true
-```
 
 ## Command-Line Applications
 
@@ -294,32 +184,11 @@ let find_user_id json =
 
 Catch-all exception handlers (with _ ->) can hide unexpected errors and make debugging difficult. Always handle specific exceptions explicitly. If you must catch all exceptions, log them or re-raise after cleanup.
 
-```ocaml
-try int_of_string "abc" with _ -> 0
-```
-
-```ocaml
-try int_of_string "abc" with
-| Failure _ -> 0
-| exn -> print_endline "unexpected"; raise exn
-```
-
 **No Silenced Warnings**: Fix underlying issues instead of silencing compiler warnings with attributes like `[@warning "-nn"]`.
 
 ### [E110] Silenced Warning
 
 Warnings should be addressed rather than silenced. Fix the underlying issue instead of using warning suppression attributes. If you must suppress a warning, document why it's necessary.
-
-```ocaml
-[@@@ocaml.warning "-32"] (* unused value *)
-let unused_function x = x + 1
-```
-
-```ocaml
-(* Remove unused code or use it *)
-let helper x = x + 1
-let result = helper 42
-```
 
 **Initialization Failures**: For unrecoverable errors during startup (e.g., missing configuration), it is acceptable to fail fast using `Fmt.failwith`.
 
@@ -340,33 +209,11 @@ let tls_config =
 
 Variant constructors should use snake_case (e.g., My_variant, Some_constructor). This matches the project's naming conventions.
 
-```ocaml
-type status = 
-  | WaitingForInput
-  | ProcessingData
-  | ErrorOccurred
-```
-
-```ocaml
-type status = 
-  | Waiting_for_input  (* Snake_case *)
-  | Processing_data
-  | Error_occurred
-```
-
 **Type Naming**: The primary type in a module is `t`. Identifiers are named `id`. Use snake_case for all type names.
 
 ### [E305] Module Naming Convention
 
 Module names should use Snake_case (e.g., My_module, Some_component). This helps distinguish modules from variant constructors.
-
-```ocaml
-module UserProfile = struct end
-```
-
-```ocaml
-module User_profile = struct end
-```
 
 **Variant Constructors**: Use Snake_case for variant constructors (e.g., `Waiting_for_input`, `Processing_data`), not CamelCase.
 
@@ -374,33 +221,11 @@ module User_profile = struct end
 
 Values and function names should use snake_case (e.g., my_value, get_data). This is the standard convention in OCaml for values and functions.
 
-```ocaml
-type user = { name : string }
-let myValue = 42
-let getUserName user = user.name
-```
-
-```ocaml
-type user = { name : string }
-let my_value = 42
-let get_user_name user = user.name
-```
-
 **Values**: Short, descriptive, and lowercase with underscores (e.g., `find_user`, `create_channel`).
 
 ### [E315] Type Naming Convention
 
 Type names should use snake_case. This convention helps maintain consistency across the codebase.
-
-```ocaml
-type userProfile = { name : string }
-type http_response = HttpOk | HttpError
-```
-
-```ocaml
-type user_profile = { name: string }
-type http_response = Ok | Error
-```
 
 **Long Identifiers**: Avoid excessively long names with many underscores. Keep names concise and meaningful.
 
@@ -408,29 +233,11 @@ type http_response = Ok | Error
 
 Avoid using too many underscores in identifier names as they make code harder to read. Consider using more descriptive names or restructuring the code to avoid deeply nested concepts.
 
-```ocaml
-let get_user_profile_data_from_database_by_id () = 42
-```
-
-```ocaml
-let get_user_by_id () = 42
-```
-
 **Function Naming**: Use `get_*` for extraction (returns value directly), `find_*` for search (returns option type).
 
 ### [E325] Function Naming Convention
 
 Functions that return option types should be prefixed with 'find_', while functions that return non-option types should be prefixed with 'get_'. This convention helps communicate the function's behavior to callers.
-
-```ocaml
-let get_user () = None  (* returns option but named get_* *)
-let find_name () = "John"  (* returns string but named find_* *)
-```
-
-```ocaml
-let find_user () = None  (* returns option, correctly named *)
-let get_name () = "John"  (* returns string, correctly named *)
-```
 
 **Labels**: Use labels only when they clarify the meaning of an argument, not for all arguments. Avoid `~f` and `~x`.
 
@@ -440,17 +247,28 @@ let get_name () = "John"  (* returns string, correctly named *)
 
 **Avoid Boolean Blindness**: Never use multiple boolean arguments in a function - they make call sites ambiguous and error-prone. Instead, use explicit variant types that leverage OCaml's type system for clarity.
 
+### [E350] Boolean Blindness
+
+Functions with multiple boolean parameters are hard to use correctly. It's easy to mix up the order of arguments at call sites. Consider using variant types, labeled arguments, or a configuration record instead.
+
+**Examples:**
+
+❌ **Bad:**
 ```ocaml
 (* BAD - Boolean blindness *)
 let create_widget visible bordered = ...
 let w = create_widget true false  (* What does this mean? *)
+```
 
+✅ **Good:**
+```ocaml
 (* GOOD - Explicit variants *)
 type visibility = Visible | Hidden
 type border = With_border | Without_border
 let create_widget ~visibility ~border = ...
 let w = create_widget ~visibility:Visible ~border:Without_border
 ```
+
 
 **Use Phantom Types for Safety**: When appropriate, use phantom types to enforce invariants at compile time rather than runtime.
 
@@ -464,98 +282,9 @@ let w = create_widget ~visibility:Visible ~border:Without_border
 
 This issue means your functions are too long and hard to read. Fix them by extracting logical sections into separate functions with descriptive names. Note: Functions with pattern matching get additional allowance (2 lines per case). Pure data structures (lists, records) are also exempt from length checks. For better readability, consider using helper functions for complex logic. Aim for functions under 50 lines of actual logic.
 
-```ocaml
-let process_all_data x y z =
-  (* This function is intentionally long to demonstrate the rule *)
-  let a = x + 1 in
-  let b = y + 1 in
-  let c = z + 1 in
-  let d = a * 2 in
-  let e = b * 2 in
-  let f = c * 2 in
-  let g = d + e in
-  let h = e + f in
-  let i = f + d in
-  let j = g * 2 in
-  let k = h * 2 in
-  let l = i * 2 in
-  let m = j + k in
-  let n = k + l in
-  let o = l + j in
-  let p = m * 2 in
-  let q = n * 2 in
-  let r = o * 2 in
-  let s = p + q in
-  let t = q + r in
-  let u = r + p in
-  let v = s * 2 in
-  let w = t * 2 in
-  let x1 = u * 2 in
-  let y1 = v + w in
-  let z1 = w + x1 in
-  let a1 = x1 + v in
-  let b1 = y1 * 2 in
-  let c1 = z1 * 2 in
-  let d1 = a1 * 2 in
-  let e1 = b1 + c1 in
-  let f1 = c1 + d1 in
-  let g1 = d1 + b1 in
-  let h1 = e1 * 2 in
-  let i1 = f1 * 2 in
-  let j1 = g1 * 2 in
-  let k1 = h1 + i1 in
-  let l1 = i1 + j1 in
-  let m1 = j1 + h1 in
-  let n1 = k1 * 2 in
-  let o1 = l1 * 2 in
-  let p1 = m1 * 2 in
-  let q1 = n1 + o1 in
-  let r1 = o1 + p1 in
-  let s1 = p1 + n1 in
-  let t1 = q1 * 2 in
-  let u1 = r1 * 2 in
-  let v1 = s1 * 2 in
-  let w1 = t1 + u1 in
-  let x2 = u1 + v1 in
-  let y2 = v1 + t1 in
-  let result = w1 + x2 + y2 in
-  result
-```
-
-```ocaml
-let step1 x y = (x + 1, y + 1)
-let step2 (a, b) = (a * 2, b * 2)
-let combine (c, d) = (c + d) * 2
-
-let process_all x y =
-  let (a, b) = step1 x y in
-  let (c, d) = step2 (a, b) in
-  combine (c, d)
-```
-
 ### [E010] Deep Nesting
 
 This issue means your code has too many nested conditions making it hard to follow. Fix it by extracting nested logic into helper functions, using early returns to reduce nesting, or combining conditions when appropriate. Aim for maximum nesting depth of 4.
-
-```ocaml
-let process x y z =
-  if x > 0 then
-    if y > 0 then
-      if z > 0 then
-        if x < 100 then
-          x + y + z
-        else 0
-      else 0
-    else 0
-  else 0
-```
-
-```ocaml
-let process x y z =
-  if x <= 0 || y <= 0 || z <= 0 then 0
-  else if x >= 100 then 0
-  else x + y + z
-```
 
 **Complexity Management**: Break down functions with high 
              cyclomatic complexity into smaller, focused helper functions with 
@@ -564,38 +293,6 @@ let process x y z =
 ### [E001] High Cyclomatic Complexity
 
 High cyclomatic complexity makes code harder to understand and test. Consider breaking complex functions into smaller, more focused functions. Each function should ideally do one thing well.
-
-```ocaml
-let check_input x y z =
-  if x > 0 then
-    if y > 0 then
-      if z > 0 then
-        if x + y > z then
-          if y + z > x then
-            if x + z > y then
-              "valid"
-            else "invalid"
-          else "invalid"
-        else "invalid"
-      else "invalid"
-    else "invalid"
-  else "invalid"
-```
-
-```ocaml
-let check_positive x = x > 0
-
-let check_triangle x y z =
-  x + y > z && y + z > x && x + z > y
-
-let check_input x y z =
-  if not (check_positive x && check_positive y && check_positive z) then
-    "invalid"
-  else if not (check_triangle x y z) then
-    "invalid"
-  else
-    "valid"
-```
 
 **Composition over Abstraction**: Favor the composition of small, 
              concrete functions to build up complex behavior. Avoid deep 
@@ -616,10 +313,25 @@ Effective logging is crucial for debugging and monitoring. We use the `logs` lib
 
 **Log Source**: Each module should define its own log source.
 
+### [E510] Missing Log Source
+
+Modules that use logging should declare a log source for better debugging and log filtering. Add 'let src = Logs.Src.create "module.name" ~doc:"..."'
+
+**Examples:**
+
+✅ **Good:**
 ```ocaml
 let log_src = Logs.Src.create "project_name.module_name"
 module Log = (val Logs.src_log log_src : Logs.LOG)
 ```
+
+✅ **Good:**
+```ocaml
+Log.info (fun m ->
+    m "Received event: %s" event_type
+      ~tags:(Logs.Tag.add "channel_id" channel_id Logs.Tag.empty))
+```
+
 
 **Log Levels**: Use the following log levels appropriately:
 
@@ -634,12 +346,6 @@ module Log = (val Logs.src_log log_src : Logs.LOG)
 - `Log.debug`: For detailed, verbose messages useful for debugging.
 
 **Structured Logging**: Use tags to add structured context to log messages. This is especially useful for machine-readable logs.
-
-```ocaml
-Log.info (fun m ->
-    m "Received event: %s" event_type
-      ~tags:(Logs.Tag.add "channel_id" channel_id Logs.Tag.empty))
-```
 
 ## Testing
 
@@ -677,59 +383,17 @@ let () = Alcotest.run "Test suite description" [Test_user.suite]
 
 Each library module should have a corresponding test file to ensure proper testing coverage. Create test files following the naming convention test_<module>.ml
 
-```ocaml
-(* lib/parser.ml exists but no test/test_parser.ml *)
-```
-
-```ocaml
-(* test/test_parser.ml *)
-let test_parse = fun () -> ()
-let test_errors = fun () -> ()
-let suite = ("parser", [test_parse; test_errors])
-```
-
 3. **Test Organization**: Test files should export a `suite` value.
 
 ### [E610] Test Without Library
 
 Every test module should have a corresponding library module. This ensures that tests are testing actual library functionality rather than testing code that doesn't exist in the library.
 
-```ocaml
-(* test/test_old_feature.ml exists but lib/old_feature.ml was removed *)
-```
-
-```ocaml
-(* Remove test/test_old_feature.ml or restore lib/old_feature.ml *)
-```
-
 4. **Test Inclusion**: All test suites must be included in the main test runner.
 
 ### [E615] Test Suite Not Included
 
 All test modules should be included in the main test runner (test.ml). Add the missing test suite to ensure all tests are run.
-
-```ocaml
-(* test/test.ml *)
-module Test_user = struct
-  let suite = ("user", [])
-end
-let () = Alcotest.run "all" [Test_user.suite] 
-(* Missing Test_parser.suite *)
-```
-
-```ocaml
-(* test/test.ml *)
-module Test_user = struct
-  let suite = ("user", [])
-end
-module Test_parser = struct
-  let suite = ("parser", [])
-end
-let () = Alcotest.run "all" [
-  Test_user.suite;
-  Test_parser.suite
-]
-```
 
 5. **Clear Test Names**: Test names should describe what they test, not how.
 
