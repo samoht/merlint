@@ -19,7 +19,7 @@ Merlint analyzes your OCaml code and reports issues across multiple categories, 
 - **No silenced warnings**: Avoid `[@warning "-..."]` attributes
 
 ### Naming Conventions (Medium Priority)
-- **Modules**: Must use snake_case (e.g., `user_profile`)
+- **Modules**: Must use Snake_case (e.g., `User_profile`)
 - **Variants**: Must use Snake_case (e.g., `Waiting_for_input`)
 - **Values/Functions**: Must use snake_case
 - **Types**: Must use snake_case (primary type should be `t`)
