@@ -1,5 +1,6 @@
-Test with bad.ml and good.ml for integrity check:
-  $ merlint -r E610 bad.ml
+
+Test bad example - should find test without library:
+  $ merlint -r E610 bad/
   File "dune", line 2, characters 7-16:
   2 |  (name test_e610))
              ^^^^^^^^^
@@ -8,41 +9,6 @@ Test with bad.ml and good.ml for integrity check:
   Warning: Dune build failed with exit code 1
   Function type analysis may not work properly.
   Continuing with analysis...
-  Warning: bad.ml does not exist
-  Warning: bad.ml does not exist
-  Running merlint analysis...
-  
-  Analyzing 0 files
-  
-  ✓ Code Quality (0 total issues)
-  ✓ Code Style (0 total issues)
-  ✓ Naming Conventions (0 total issues)
-  ✓ Documentation (0 total issues)
-  ✓ Project Structure (0 total issues)
-  ✓ Test Quality (0 total issues)
-  
-  Summary: ✓ 0 total issues (applied 1 rules)
-  ✓ All checks passed!
-
-  $ merlint -r E610 good.ml
-  Warning: good.ml does not exist
-  Warning: good.ml does not exist
-  Running merlint analysis...
-  
-  Analyzing 0 files
-  
-  ✓ Code Quality (0 total issues)
-  ✓ Code Style (0 total issues)
-  ✓ Naming Conventions (0 total issues)
-  ✓ Documentation (0 total issues)
-  ✓ Project Structure (0 total issues)
-  ✓ Test Quality (0 total issues)
-  
-  Summary: ✓ 0 total issues (applied 1 rules)
-  ✓ All checks passed!
-
-Test bad example - should find test without library:
-  $ merlint -r E610 bad/
   Running merlint analysis...
   
   Analyzing 4 files

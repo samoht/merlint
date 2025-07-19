@@ -20,21 +20,53 @@ let check (ctx : Context.project) =
         let test_content =
           In_channel.with_open_text test_file In_channel.input_all
         in
-        let test_modules = Context.test_modules ctx in
+
+        (* Remove comments to avoid false matches *)
+        let test_content_no_comments =
+          Re.replace_string
+            (Re.compile
+               (Re.seq
+                  [ Re.str "(*"; Re.non_greedy (Re.rep Re.any); Re.str "*)" ]))
+            ~by:"" test_content
+        in
+
+        (* Find test modules by looking for test_*.ml files in the same directory *)
+        let test_dir = Filename.dirname test_file in
+        let test_modules =
+          List.filter_map
+            (fun f ->
+              if
+                String.starts_with ~prefix:test_dir f
+                && String.ends_with ~suffix:".ml" f
+                && f <> test_file
+              then
+                let basename = Filename.basename f in
+                if String.starts_with ~prefix:"test_" basename then
+                  let module_name = Filename.chop_extension basename in
+                  Some module_name
+                else None
+              else None)
+            files
+        in
 
         (* Check which test modules are not included in test.ml *)
         let missing_includes = ref [] in
         List.iter
           (fun test_mod ->
             (* Look for Test_<module>.suite in test.ml *)
+            (* test_parser -> Test_parser (only capitalize first part) *)
+            let capitalized_mod = String.capitalize_ascii test_mod in
             let suite_pattern =
               Re.compile
                 (Re.seq
                    [
-                     Re.str (String.capitalize_ascii test_mod); Re.str ".suite";
+                     Re.bow;
+                     (* Word boundary to avoid matching in comments *)
+                     Re.str capitalized_mod;
+                     Re.str ".suite";
                    ])
             in
-            if not (Re.execp suite_pattern test_content) then
+            if not (Re.execp suite_pattern test_content_no_comments) then
               missing_includes := test_mod :: !missing_includes)
           test_modules;
 

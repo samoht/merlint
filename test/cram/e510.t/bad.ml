@@ -1,2 +1,3 @@
 (* No log source defined in module *)
-let process () = print_endline "processing"
+let process () = 
+  Logs.info (fun m -> m "processing")

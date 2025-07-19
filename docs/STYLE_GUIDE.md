@@ -134,23 +134,23 @@ For values, describe what the value represents.
 
 ### [E415] Missing Standard Functions
 
-Types should implement standard functions like equal, compare, pp (pretty-printer), and to_string for better usability and consistency across the codebase.
+The main type 't' should implement standard functions: equal, compare, and pp (pretty-printer) for better usability and consistency across the codebase.
 
 **Examples:**
 
 ❌ **Bad:**
 ```ocaml
-type user = { id: int; name: string }
+type t = { id: int; name: string }
 ```
 
 ✅ **Good:**
 ```ocaml
-type user = { id: int; name: string }
+type t = { id: int; name: string }
 let equal a b = a.id = b.id && a.name = b.name
 let compare a b = 
   let c = Int.compare a.id b.id in
   if c = 0 then String.compare a.name b.name else c
-let pp fmt u = Format.fprintf fmt "{id=%d; name=%S}" u.id u.name
+let pp fmt t = Format.fprintf fmt "{id=%d; name=%S}" t.id t.name
 ```
 
 

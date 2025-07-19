@@ -9,10 +9,9 @@ Test bad example - should find missing standard functions:
   ✓ Naming Conventions (0 total issues)
   ✗ Documentation (1 total issues)
     [E415] Missing Standard Functions
-    Types should implement standard functions like equal, compare, pp
-    (pretty-printer), and to_string for better usability and consistency across
-    the codebase.
-    - (global) Missing standard functions check not yet implemented
+    The main type 't' should implement standard functions: equal, compare, and pp
+    (pretty-printer) for better usability and consistency across the codebase.
+    - bad.mli:1:0: Type 't' is missing standard functions: equal, compare, pp
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   
@@ -29,15 +28,9 @@ Test good example - should find no issues:
   ✓ Code Quality (0 total issues)
   ✓ Code Style (0 total issues)
   ✓ Naming Conventions (0 total issues)
-  ✗ Documentation (1 total issues)
-    [E415] Missing Standard Functions
-    Types should implement standard functions like equal, compare, pp
-    (pretty-printer), and to_string for better usability and consistency across
-    the codebase.
-    - (global) Missing standard functions check not yet implemented
+  ✓ Documentation (0 total issues)
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   
-  Summary: ✗ 1 total issues (applied 1 rules)
-  ✗ Some checks failed. See details above.
-  [1]
+  Summary: ✓ 0 total issues (applied 1 rules)
+  ✓ All checks passed!

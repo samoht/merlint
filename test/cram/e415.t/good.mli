@@ -1,4 +1,4 @@
-type user = { id: int; name: string }
-val equal : user -> user -> bool
-val compare : user -> user -> int
-val pp : Format.formatter -> user -> unit
+type t = { id: int; name: string }
+val equal : t -> t -> bool
+val compare : t -> t -> int
+val pp : Format.formatter -> t -> unit

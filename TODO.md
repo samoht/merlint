@@ -2,12 +2,6 @@
 
 ## Current Work in Progress
 
-### ✅ Recent Fixes
-- [x] **Fixed Parser AST Analysis**
-  - Fixed sibling-based AST structure parsing for if-then-else, match, try expressions
-  - Implemented dialect switching for mixed Typedtree/Parsetree nodes (Tstr_attribute)
-  - Parser now correctly handles AST structure for complexity analysis
-
 ### 🔄 Next High Priority Tasks
 
 - [ ] **Fix file discovery bug when using 'dune exec -- merlint -vv'**
@@ -32,21 +26,24 @@
      - Module usage detection (E100, E200, E205)
   4. [ ] Remove complex three-phase parser in lib/dump.ml
   5. [ ] Update rules to use appropriate analysis method
+
 - [ ] **Refactor lib/dump.ml to Remove Code Duplication**
   1. [ ] Merge duplicate function extraction functions (`functions_from_value_binding` and `functions_from_bracket_node`)
   2. [ ] Consolidate expression extraction functions into a single unified function
   3. [ ] Create helper for extracting parsed names from quoted strings
   4. [ ] Create generic sibling extraction helper for expression patterns
   5. [ ] Add debug logging helper for what-to-string conversion
-  9. [ ] Remove extract_ prefix from functions - use shorter, meaningful names that reflect what they read or build
-  6. [ ] Simplify `process_tree` by grouping similar cases
-  7. [ ] Remove `find_function_body` and use unified expression extraction
-  8. [ ] Fix non-existent function call (`from_bracket_node` on line 309)
+  6. [ ] Remove extract_ prefix from functions - use shorter, meaningful names that reflect what they read or build
+  7. [ ] Simplify `process_tree` by grouping similar cases
+  8. [ ] Remove `find_function_body` and use unified expression extraction
+  9. [ ] Fix non-existent function call (`from_bracket_node` on line 309)
   10. [ ] Rename `what_to_string` to `pp_what`
+
 - [ ] **Fix Complexity Calculation in E001**
   - Parser now works correctly but complexity calculation needs adjustment
   - 14 cram tests expecting exit code [1] but getting [0]
   - Need to investigate why functions aren't being detected as complex
+
 - [ ] **GADT Refactoring of Issue.t and Rule.t**
   - Step 1: Parameterize Issue.t by payload directly (remove Issue.data variant)
   - Steps 2&3 (merged): Introduce GADT in Rule.t with type-safe payload matching and rename format_issue to pp
@@ -89,10 +86,8 @@ Note: Individual rule checks (`lib/rules/e*.ml`) are tested via cram tests, not 
 
 ## Medium Priority
 
-- [ ] Make E415 Missing_standard_function more reasonable
-  - Currently requires equal/compare/pp/to_string for ALL types
-  - Should only apply to types exposed in .mli files
-  - Or make it configurable per project
+- [ ] Fix E500 test setup - needs proper good case with .ocamlformat file
+- [ ] Fix E605 test setup - needs separate project structures for good/bad cases
 
 - [ ] Review E325 Function_naming (get_* vs find_*)
   - Convention is reasonable but not universal in OCaml
@@ -122,25 +117,10 @@ Note: Individual rule checks (`lib/rules/e*.ml`) are tested via cram tests, not 
   - Similar to existing Str/Printf rules but for concurrency
   - Allow Unix for non-concurrent operations (file stats, env vars)
 
-- [ ] Add documentation style section for E410
-  - E410 exists in error codes but has no reference in style guides
-  - Add section to lib/guide.ml explaining expected documentation style
-  - Should explicitly reference [E410] for documentation style issues
-
-- [ ] Implement E411: Docstring Format Convention
-  - Enforce `[function_name arg1 arg2] is ...` pattern for function docs
-  - Use regex to check docstrings in .mli files start with `[<name> ...] is`
-  - Ensures consistent documentation style across codebase
-
 - [ ] Fix E340 Error pattern detection
   - Infrastructure exists but needs deeper AST analysis to properly detect the pattern
   - Would need to analyze constructor applications with function calls as arguments
   - Typedtree doesn't provide enough context for this pattern
-
-- [ ] Implement E510: Missing Log Source
-  - Each module should define its own log source
-  - Check that every .ml file contains at least one `Logs.Src.create` call
-  - Ensures proper logging configuration per module
 
 - [ ] Implement E620: Test Name Convention
   - Test suite names should be lowercase, single words
@@ -170,55 +150,6 @@ Note: Individual rule checks (`lib/rules/e*.ml`) are tested via cram tests, not 
   - These test files exist but don't follow the 1:1 correspondence rule
   - Decide if they should be renamed or excluded from the check
 
-## Function Naming Convention Rule
-
-Implement a rule to enforce function naming conventions:
-
-- **`get_*`** - for functions that extract/retrieve something from an existing structure
-  - Should return the value directly (not wrapped in option)
-  - Example: `get_field record` returns `string`
-
-- **`find_*`** - for functions that search for something that might not exist  
-  - Should return an option type
-  - Example: `find_user_by_id id` returns `user option`
-
-### Implementation Notes
-
-This requires Merlin integration for accurate type analysis:
-
-1. **Use `ocamlmerlin single outline`** to get function signatures:
-   ```bash
-   echo "let get_user_by_id id = Some user" | ocamlmerlin single outline file.ml
-   ```
-   This gives us structured information about all functions, their names, and types.
-
-2. **Use `ocamlmerlin single type-enclosing`** for precise type information:
-   ```bash
-   echo "let find_user id = None" | ocamlmerlin single type-enclosing -position 1:15 file.ml
-   ```
-   This can give us the exact return type of functions.
-
-3. **Parse function signatures** to detect option return types:
-   - Look for functions ending with `option` in their return type
-   - Check if function names match the semantic convention
-
-4. **Flag violations**:
-   - `extract_*`, `locate_*`, `search_*` should be renamed to `get_*` or `find_*`
-   - `get_*` functions returning option should be `find_*`
-   - `find_*` functions not returning option should be `get_*`
-
-### Current Status
-- Issue type `Bad_function_naming` is defined and partially implemented
-- Currently checks get_/find_ naming based on return types from outline
-- Could be enhanced with more semantic analysis
-
-### Integration with Existing Code
-This would fit well with the existing `merlin_interface.ml` module:
-- Add `get_outline` function similar to existing `analyze_file`
-- Add `get_type_at_position` function for type queries
-- Create new `naming_analysis.ml` module for function naming checks
-- Call from `naming_rules.ml` alongside other naming checks
-
 ## Testing Gaps
 
 ### Summary of Testing Gaps
@@ -230,18 +161,6 @@ This would fit well with the existing `merlin_interface.ml` module:
 - **`lib/naming.ml`**
   - Gaps: Bad_variant_naming, Bad_function_naming, Redundant_module_name
   - Reason: The tests cover value, module, and type naming, but lack specific test cases for incorrect variant constructor names, get/find mismatches, or names that are redundant with the module name (e.g., My_module.my_module_do_thing)
-
-- **`lib/doc.ml`**
-  - Gaps: Missing_value_doc, Bad_doc_style
-  - Reason: The existing tests only check for the presence of the main module-level docstring ((** ... *)). They do not check if individual vals are missing documentation or if the documentation follows the [f x] is... style
-
-- **`lib/style.ml`**
-  - Gaps: Error_pattern, Mutable_state
-  - Reason: The tests cover Obj.magic, Str, Printf, and Catch_all_exception. However, there are no tests for the rule that discourages Error (Fmt.str ...) or the mutable state detection
-
-- **`lib/api_design.ml`**
-  - Status: Fully Tested
-  - Reason: The tests in test/test_api_design.ml correctly and thoroughly check for the Boolean_blindness rule
 
 - **`lib/format.ml`**
   - Gaps: Missing_ocamlformat_file, Missing_mli_file
@@ -257,7 +176,7 @@ This would fit well with the existing `merlin_interface.ml` module:
 
 ## Broken Tests (Rules Not Detecting Issues)
 
-As of 2025-07-15, these tests have bad.ml files that don't trigger their rules:
+As of 2025-07-19, these tests have bad.ml files that don't trigger their rules:
 
 ### Complexity Rules (partially fixed)
 - **E001** - High Cyclomatic Complexity: Parser fixed but still needs function detection
@@ -270,19 +189,26 @@ As of 2025-07-15, these tests have bad.ml files that don't trigger their rules:
 - **E315** - Type Naming: Type naming detection not working  
 - **E330** - Redundant Module Names: May not be detecting redundant prefixes correctly
 
-### Documentation Rules (not implemented)
-- **E405** - Missing Value Documentation: Rule not implemented
-- **E410** - Documentation Style: Rule not implemented (should detect `(* *)` vs `(** *)`)
-- **E415** - Missing Standard Functions: Rule not implemented
-
 ### Other Rules
 - **E105** - Catch-all Exception: Too broad - catches ALL `_` patterns, not just in try-with
 - **E340** - Inline Error Construction: Pattern detection not working
-- **E510** - Missing Log Source: Rule not implemented
 - **E600** - Test Module Convention: Only checks files named exactly "test.ml"
 - **E605** - Missing Test File: Rule not fully implemented
 - **E610** - Test Without Library: Rule not implemented
-- **E615** - Test Suite Not Included: Rule not implemented
+
+## Regex to Dump/AST Iterator Conversions
+
+These rules currently use regex or text-based analysis and should be converted to use dump.mli iterators or AST analysis:
+
+### High Priority Conversions
+- [ ] **E105 (Catch-all Exception Handler)** - Currently uses regex to find `with _ ->`. Need to enhance AST/dump to detect exception handler patterns
+- [ ] **E110 (Silenced Warning)** - Uses regex to find `[@warning...]`, `[@@warning...]`, `[@@@warning...]`. Need attribute support in dump module
+- [ ] **E340 (Error Pattern Detection)** - Uses regex to find `Error (Fmt.str`. Need to analyze constructor applications with function calls
+- [ ] **E351 (Global Mutable State)** - Uses regex on type signatures from outline to check for `ref` and `array`. Need better type analysis
+
+### Medium Priority Conversions  
+- [ ] **E400 (Missing MLI Documentation)** - Reads file content and checks if first non-empty line starts with `(**`. Could use dump for structure items
+- [ ] **E600 (Test Module Convention)** - Partially converted but test.ml checking was accidentally removed. Need to properly handle both File and Project contexts
 
 ## Other Improvements
 

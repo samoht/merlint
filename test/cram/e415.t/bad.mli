@@ -1,1 +1,1 @@
-type user = { id: int; name: string }
+type t = { id: int; name: string }
