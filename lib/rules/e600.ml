@@ -4,46 +4,37 @@ type payload = { filename : string; module_name : string }
 
 let is_test_file filename =
   (* Only test executables named test.ml should follow this convention *)
-  (* TODO: This doesn't work with cram test infrastructure which expects
-     all test files to be named bad.ml/good.ml. Either the cram test
-     infrastructure needs to support custom filenames per rule, or this
-     check needs to be relaxed to check more test file patterns. *)
   Filename.basename filename = "test.ml"
 
 let has_test_runner content =
   Re.execp (Re.compile (Re.str "Alcotest.run")) content
-  || Re.execp (Re.compile (Re.str "OUnit")) content
-  || Re.execp (Re.compile (Re.str "QCheck")) content
 
-let exports_suite content =
-  (* Check for proper Alcotest suite definition *)
+let uses_test_module_suites content =
+  (* Check if test.ml uses test module suites (Test_*.suite) *)
+  Re.execp
+    (Re.compile
+       (Re.seq
+          [
+            Re.bow;
+            Re.str "Test_";
+            Re.rep1 (Re.alt [ Re.alnum; Re.char '_' ]);
+            Re.str ".suite";
+          ]))
+    content
+
+let defines_own_tests content =
+  (* Check if test.ml defines its own test list directly *)
   Re.execp
     (Re.compile
        (Re.seq
           [
             Re.str "let";
             Re.rep1 Re.space;
-            Re.str "suite";
+            Re.group (Re.alt [ Re.str "tests"; Re.str "suite" ]);
             Re.rep Re.space;
-            Re.opt
-              (Re.seq
-                 [
-                   Re.str ":";
-                   Re.rep Re.space;
-                   Re.rep1
-                     (Re.alt
-                        [
-                          Re.alnum;
-                          Re.char '_';
-                          Re.char '.';
-                          Re.char ' ';
-                          Re.char '(';
-                          Re.char ')';
-                          Re.char '*';
-                        ]);
-                   Re.rep Re.space;
-                 ]);
             Re.str "=";
+            Re.rep Re.space;
+            Re.str "[";
           ]))
     content
 
@@ -54,37 +45,36 @@ let get_module_name filename =
     String.sub base_name 0 (String.length base_name - 5)
   else base_name
 
-let exports_module_name content module_base =
-  Re.execp
-    (Re.compile
-       (Re.seq
-          [
-            Re.str "Alcotest.run";
-            Re.rep1 Re.space;
-            Re.str "\"";
-            Re.str module_base;
-            Re.str "\"";
-          ]))
-    content
-
-(** Check if a test file properly exports suite instead of using module name
-    directly. *)
-let check_test_file_exports filename content =
-  if not (is_test_file filename) then []
-  else if not (has_test_runner content) then []
+(** Check if a test.ml file properly uses test module suites instead of defining
+    its own tests. *)
+let check_test_file_uses_modules filename content =
+  Logs.debug (fun m -> m "E600: Checking file %s" filename);
+  if not (is_test_file filename) then (
+    Logs.debug (fun m -> m "E600:   Not a test.ml file");
+    [])
+  else if not (has_test_runner content) then (
+    Logs.debug (fun m -> m "E600:   No test runner found");
+    [])
   else
-    let module_base = get_module_name filename in
-    (* Issue if using module name instead of exporting suite *)
-    if exports_module_name content module_base && not (exports_suite content)
-    then
+    let defines_own = defines_own_tests content in
+    let uses_modules = uses_test_module_suites content in
+    Logs.debug (fun m ->
+        m "E600:   defines_own_tests=%b, uses_test_module_suites=%b" defines_own
+          uses_modules);
+    if defines_own && not uses_modules then (
+      (* Issue if test.ml defines its own tests instead of using test modules *)
+      Logs.debug (fun m ->
+          m "E600:   Found issue - defines own tests without using modules");
       [
         Issue.v
           ~loc:
             (Location.create ~file:filename ~start_line:1 ~start_col:0
                ~end_line:1 ~end_col:0)
-          { filename; module_name = module_base };
-      ]
-    else []
+          { filename; module_name = "test" };
+      ])
+    else (
+      Logs.debug (fun m -> m "E600:   No issue found");
+      [])
 
 (** Check if a test_*.mli file exports only suite with correct type *)
 let check_test_mli_file filename content =
@@ -139,6 +129,10 @@ let check_test_mli_file filename content =
 (** Check all files for test convention issues *)
 let check ctx =
   let files = Context.all_files ctx in
+  (* Debug log to see what files we're analyzing *)
+  Logs.debug (fun m -> m "E600: Analyzing %d files:" (List.length files));
+  List.iter (fun f -> Logs.debug (fun m -> m "E600:   - %s" f)) files;
+
   List.concat_map
     (fun filename ->
       if
@@ -149,22 +143,27 @@ let check ctx =
           let content =
             In_channel.with_open_text filename In_channel.input_all
           in
-          check_test_file_exports filename content
+          check_test_file_uses_modules filename content
           @ check_test_mli_file filename content
         with _ -> []
       else [])
     files
 
-let pp ppf { filename; module_name } =
+let pp ppf { filename; module_name = _ } =
   Fmt.pf ppf
-    "Test file '%s' should export 'suite' instead of using module name '%s' \
-     directly"
-    filename module_name
+    "Test file '%s' should use test module suites (e.g., Test_user.suite) \
+     instead of defining its own test list"
+    filename
 
 let rule =
   Rule.v ~code:"E600" ~title:"Test Module Convention" ~category:Testing
     ~hint:
-      "Test modules should export a single 'suite' value that contains all \
-       tests. This makes it easier to compose and organize tests, and allows \
-       test runners to discover and run tests more effectively."
-    ~examples:[] ~pp (Project check)
+      "Test executables (test.ml) should use test suites exported by test \
+       modules (test_*.ml) rather than defining their own test lists. This \
+       promotes modularity and ensures test modules are properly integrated."
+    ~examples:
+      [
+        { Rule.is_good = false; code = Examples.E600.Bad.test_ml };
+        { Rule.is_good = true; code = Examples.E600.Good.test_ml };
+      ]
+    ~pp (Project check)

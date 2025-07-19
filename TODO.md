@@ -10,6 +10,10 @@
 
 ### 🔄 Next High Priority Tasks
 
+- [ ] **Fix file discovery bug when using 'dune exec -- merlint -vv'**
+  - Files are not being found properly when using `dune exec`
+  - This is a serious bug affecting usability
+  
 - [ ] **Refactor AST Analysis Architecture**
   1. [ ] Use Merlin outline for:
      - Function locations and boundaries (for E005 - function length)

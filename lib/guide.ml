@@ -395,8 +395,8 @@ module Log = (val Logs.src_log log_src : Logs.LOG)|};
                   "2. **1:1 Test Coverage**: Every module in `lib/` should \
                    have a corresponding test module in `test/`.";
                 Rule "E600";
-                Code Examples.E600.bad_ml;
-                Code Examples.E600.good_ml;
+                Code Examples.E600.Bad.test_ml;
+                Code Examples.E600.Good.test_ml;
                 Rule "E605";
                 Code Examples.E605.bad_ml;
                 Code Examples.E605.good_ml;

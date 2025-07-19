@@ -651,18 +651,45 @@ Log.info (fun m ->
 
 ### [E600] Test Module Convention
 
-Test modules should export a single 'suite' value that contains all tests. This makes it easier to compose and organize tests, and allows test runners to discover and run tests more effectively.
+Test executables (test.ml) should use test suites exported by test modules (test_*.ml) rather than defining their own test lists. This promotes modularity and ensures test modules are properly integrated.
+
+**Examples:**
+
+❌ **Bad:**
+```ocaml
+(* test.ml - main test executable *)
+(* BAD: Creating our own tests instead of using test_user.suite *)
+let tests = []
+let () = Alcotest.run "test_user" [("user", tests)]
+```
+
+✅ **Good:**
+```ocaml
+(* test.ml - main test executable *)
+(* GOOD: Using test_user.suite exported by test_user.ml *)
+module Test_user = struct
+  let suite = ("user", [])
+end
+
+let () = Alcotest.run "Test suite description" [Test_user.suite]
+```
+
 
 ```ocaml
 (* test.ml - main test executable *)
+(* BAD: Creating our own tests instead of using test_user.suite *)
 let tests = []
 let () = Alcotest.run "test_user" [("user", tests)]
 ```
 
 ```ocaml
 (* test.ml - main test executable *)
-let suite = ("user", [])
-let () = Alcotest.run "Test suite description" [suite]
+(* GOOD: Using test_user.suite exported by test_user.ml *)
+module Test_user = struct
+  let suite = ("user", [])
+end
+
+let () = Alcotest.run "Test suite description" [Test_user.suite]
 ```
 
 ### [E605] Missing Test File
