@@ -1,4 +1,4 @@
-Test bad example - should find bad variant naming:
+Test bad example - should find usage of outdated Str module:
   $ merlint -r E200 bad.ml
   Running merlint analysis...
   

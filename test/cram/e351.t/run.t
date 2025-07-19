@@ -1,4 +1,4 @@
-Test bad example - should find silenced warning:
+Test bad example - should find global mutable state:
   $ merlint -r E351 bad.ml
   File "bad.ml", line 3, characters 4-16:
   3 | let incr_counter () = counter := !counter + 1

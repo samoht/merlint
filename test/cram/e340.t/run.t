@@ -1,4 +1,4 @@
-Test bad example - should find mutable state:
+Test bad example - should find error pattern usage:
   $ merlint -r E340 bad.ml
   Running merlint analysis...
   

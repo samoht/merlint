@@ -93,9 +93,8 @@ let content =
              record fields to maintain invariants.";
           Paragraph
             "**Standard Interfaces for Data Types**: For modules defining a \
-             central data type `t`, consistently provide these functions where \
-             applicable:";
-          Rule "E415";
+             central data type `t`, consider providing the following functions \
+             where applicable:";
           Paragraph
             "- `val v : ... -> t`: A pure, smart constructor for creating \
              values of type `t` in memory. This function should not perform \
@@ -118,6 +117,7 @@ let content =
           Paragraph
             "- `val validate : t -> (t, string) result`: For validating the \
              integrity of the data.";
+          Rule "E415";
         ] );
     Section
       ( "Project Structure",
@@ -126,9 +126,6 @@ let content =
             "**Interface Files**: Create `.mli` files for all public modules \
              to define clear interfaces and hide implementation details.";
           Rule "E505";
-          Paragraph
-            "**Code Formatting**: Maintain a `.ocamlformat` file in the \
-             project root with consistent formatting settings.";
         ] );
     Section
       ( "Command-Line Applications",
@@ -203,29 +200,11 @@ let find_user_id json =
           Paragraph
             "**File Naming**: Lowercase with underscores (e.g., \
              `user_profile.ml`).";
-          Paragraph
-            "**Module Naming**: Lowercase with underscores (e.g., \
-             `user_profile`).";
-          Rule "E300";
-          Paragraph
-            "**Type Naming**: The primary type in a module is `t`. Identifiers \
-             are named `id`. Use snake_case for all type names.";
           Rule "E305";
-          Paragraph
-            "**Variant Constructors**: Use Snake_case for variant constructors \
-             (e.g., `Waiting_for_input`, `Processing_data`), not CamelCase.";
-          Rule "E310";
-          Paragraph
-            "**Values**: Short, descriptive, and lowercase with underscores \
-             (e.g., `find_user`, `create_channel`).";
+          Rule "E300";
           Rule "E315";
-          Paragraph
-            "**Long Identifiers**: Avoid excessively long names with many \
-             underscores. Keep names concise and meaningful.";
+          Rule "E310";
           Rule "E320";
-          Paragraph
-            "**Function Naming**: Use `get_*` for extraction (returns value \
-             directly), `find_*` for search (returns option type).";
           Rule "E325";
           Paragraph
             "**Labels**: Use labels only when they clarify the meaning of an \

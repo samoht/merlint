@@ -1,1 +1,0 @@
-(* Remove test/test_old_feature.ml or restore lib/old_feature.ml *)

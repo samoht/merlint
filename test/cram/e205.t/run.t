@@ -1,4 +1,4 @@
-Test bad example - should find bad module naming:
+Test bad example - should find usage of Printf instead of Fmt:
   $ merlint -r E205 bad.ml
   Running merlint analysis...
   

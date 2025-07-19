@@ -1,4 +1,4 @@
-Test bad example - should find used underscore binding:
+Test bad example - should find bad function naming convention:
   $ merlint -r E325 bad.ml
   Running merlint analysis...
   

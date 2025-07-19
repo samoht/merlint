@@ -1,4 +1,4 @@
-Test bad example - should find bad function naming:
+Test bad example - should find bad type naming:
   $ merlint -r E315 bad.ml
   Running merlint analysis...
   
@@ -8,7 +8,8 @@ Test bad example - should find bad function naming:
   ✓ Code Style (0 total issues)
   ✗ Naming Conventions (1 total issues)
     [E315] Type Naming Convention
-    Type names should use snake_case. This convention helps maintain consistency
+    Type names should use snake_case. The primary type in a module should be named
+    t, and identifiers should be id. This convention helps maintain consistency
     across the codebase.
     - bad.ml:1:0: bad.ml:1:0: Type name 'userProfile' should use snake_case: 'user_profile'
   ✓ Documentation (0 total issues)

@@ -1,3 +1,4 @@
+open Examples
 (** E320: Long Identifier Names *)
 
 type payload = { name : string; kind : string; length : int; max_length : int }
@@ -47,4 +48,5 @@ let rule =
       "Avoid using too many underscores in identifier names as they make code \
        harder to read. Consider using more descriptive names or restructuring \
        the code to avoid deeply nested concepts."
-    ~examples:[] ~pp (File check)
+    ~examples:[ Example.bad E320.bad_ml; Example.good E320.good_ml ]
+    ~pp (File check)

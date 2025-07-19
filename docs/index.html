@@ -312,14 +312,90 @@ pre code {
         <span class="error-code">E105</span>
         <span class="error-title">Catch-all Exception Handler</span>
     </div>
-    <div class="error-hint"><p>Catch-all exception handlers (with _ -&gt;) can hide unexpected errors and make debugging difficult. Always handle specific exceptions explicitly. If you must catch all exceptions, log them or re-raise after cleanup.</p></div>
+    <div class="error-hint"><p>Catch-all exception handlers (with _ -&gt;) can hide unexpected errors and make debugging difficult. Always handle specific exceptions explicitly. If you must catch all exceptions, log them or re-raise after cleanup.</p><div class="examples-grid">
+<div class="example bad">
+  <h4>BAD</h4>
+  <pre><code><span class="kw">let</span> parse_int s =
+  <span class="kw">try</span> int_of_string s <span class="kw">with</span> _ -&gt; <span class="nu">0</span>
+
+<span class="kw">let</span> read_config () =
+  <span class="kw">try</span> 
+    <span class="kw">let</span> ic = open_in &quot;config.txt&quot; <span class="kw">in</span>
+    <span class="kw">let</span> data = input_line ic <span class="kw">in</span>
+    close_in ic;
+    data
+  <span class="kw">with</span> _ -&gt; &quot;default&quot;</code></pre>
+</div>
+<div class="example good">
+  <h4>GOOD</h4>
+  <pre><code><span class="kw">let</span> parse_int s =
+  <span class="kw">try</span> int_of_string s <span class="kw">with</span>
+  | <span class="cn">Failure</span> _ -&gt; <span class="nu">0</span>
+
+<span class="kw">let</span> read_config () =
+  <span class="kw">try</span> 
+    <span class="kw">let</span> ic = open_in &quot;config.txt&quot; <span class="kw">in</span>
+    <span class="kw">let</span> data = input_line ic <span class="kw">in</span>
+    close_in ic;
+    data
+  <span class="kw">with</span>
+  | <span class="cn">Sys_error</span> msg -&gt; 
+      <span class="cn">Fmt</span>.epr &quot;<span class="cn">Config</span> error: %s@.&quot; msg;
+      &quot;default&quot;
+  | <span class="cn">End_of_file</span> -&gt; 
+      <span class="cn">Fmt</span>.epr &quot;<span class="cn">Config</span> file is empty@.&quot;;
+      &quot;default&quot;</code></pre>
+</div>
+<div class="example good">
+  <h4>GOOD</h4>
+  <pre><code><span class="kw">module</span> <span class="cn">Log</span> = <span class="kw">struct</span>
+  <span class="kw">let</span> err f = f <span class="cn">Format</span>.err_formatter
+<span class="kw">end</span>
+
+<span class="kw">let</span> dangerous_operation () =
+  failwith &quot;<span class="cn">Something</span> went wrong&quot;
+
+<span class="kw">let</span> safe_wrapper () =
+  <span class="kw">try</span> dangerous_operation () <span class="kw">with</span>
+  | exn -&gt;
+      <span class="cn">Log</span>.err (<span class="kw">fun</span> m -&gt; 
+        <span class="cn">Format</span>.fprintf m &quot;<span class="cn">Operation</span> failed: %s@.&quot; 
+          (<span class="cn">Printexc</span>.to_string exn));
+      <span class="kw">raise</span> exn</code></pre>
+</div>
+</div></div>
 </div>
 <div class="error-card" id="E110">
     <div>
         <span class="error-code">E110</span>
         <span class="error-title">Silenced Warning</span>
     </div>
-    <div class="error-hint"><p>Warnings should be addressed rather than silenced. Fix the underlying issue instead of using warning suppression attributes. If you must suppress a warning, document why it's necessary.</p></div>
+    <div class="error-hint"><p>Warnings should be addressed rather than silenced. Fix the underlying issue instead of using warning suppression attributes. If you must suppress a warning, document why it's necessary.</p><div class="examples-grid">
+<div class="example bad">
+  <h4>BAD</h4>
+  <pre><code>[@@@ocaml.warning &quot;-<span class="nu">32</span>&quot;]
+<span class="kw">let</span> unused_function x = x + <span class="nu">1</span>
+
+[@@ocaml.warning &quot;-<span class="nu">27</span>&quot;]
+<span class="kw">let</span> partial_match = <span class="kw">function</span>
+  | <span class="cn">Some</span> x -&gt; x
+
+[@ocaml.warning &quot;-<span class="nu">9</span>&quot;]
+<span class="kw">type</span> t = { <span class="kw">mutable</span> field : int; another : string }</code></pre>
+</div>
+<div class="example good">
+  <h4>GOOD</h4>
+  <pre><code><span class="kw">let</span> used_function x = x + <span class="nu">1</span>
+
+<span class="kw">let</span> () = print_int (used_function <span class="nu">5</span>)
+
+<span class="kw">let</span> complete_match = <span class="kw">function</span>
+  | <span class="cn">Some</span> x -&gt; x
+  | <span class="cn">None</span> -&gt; <span class="nu">0</span>
+
+<span class="kw">type</span> t = { field : int; another : string }</code></pre>
+</div>
+</div></div>
 </div>
 <h2 id="style-modernization">Style/Modernization</h2>
 <div class="category">E200-E299 • Code style and modernization recommendations</div>
@@ -344,35 +420,44 @@ pre code {
         <span class="error-code">E300</span>
         <span class="error-title">Variant Naming Convention</span>
     </div>
-    <div class="error-hint"><p>Variant constructors should use snake_case (e.g., My_variant, Some_constructor). This matches the project's naming conventions.</p></div>
+    <div class="error-hint"><p>Variant constructors should use Snake_case (e.g., Waiting_for_input, Processing_data), not CamelCase. This matches the project's naming conventions.</p></div>
 </div>
 <div class="error-card" id="E305">
     <div>
         <span class="error-code">E305</span>
         <span class="error-title">Module Naming Convention</span>
     </div>
-    <div class="error-hint"><p>Module names should use Snake_case (e.g., My_module, Some_component). This helps distinguish modules from variant constructors.</p></div>
+    <div class="error-hint"><p>Module names should use Snake_case (e.g., My_module, User_profile). File names use lowercase_with_underscores which OCaml automatically converts to module names.</p></div>
 </div>
 <div class="error-card" id="E310">
     <div>
         <span class="error-code">E310</span>
         <span class="error-title">Value Naming Convention</span>
     </div>
-    <div class="error-hint"><p>Values and function names should use snake_case (e.g., my_value, get_data). This is the standard convention in OCaml for values and functions.</p></div>
+    <div class="error-hint"><p>Values and function names should use snake_case (e.g., find_user, create_channel). Short, descriptive, and lowercase with underscores. This is the standard convention in OCaml for values and functions.</p></div>
 </div>
 <div class="error-card" id="E315">
     <div>
         <span class="error-code">E315</span>
         <span class="error-title">Type Naming Convention</span>
     </div>
-    <div class="error-hint"><p>Type names should use snake_case. This convention helps maintain consistency across the codebase.</p></div>
+    <div class="error-hint"><p>Type names should use snake_case. The primary type in a module should be named t, and identifiers should be id. This convention helps maintain consistency across the codebase.</p></div>
 </div>
 <div class="error-card" id="E320">
     <div>
         <span class="error-code">E320</span>
         <span class="error-title">Long Identifier Names</span>
     </div>
-    <div class="error-hint"><p>Avoid using too many underscores in identifier names as they make code harder to read. Consider using more descriptive names or restructuring the code to avoid deeply nested concepts.</p></div>
+    <div class="error-hint"><p>Avoid using too many underscores in identifier names as they make code harder to read. Consider using more descriptive names or restructuring the code to avoid deeply nested concepts.</p><div class="examples-grid">
+<div class="example bad">
+  <h4>BAD</h4>
+  <pre><code><span class="kw">let</span> get_user_profile_data_from_database_by_id () = <span class="nu">42</span></code></pre>
+</div>
+<div class="example good">
+  <h4>GOOD</h4>
+  <pre><code><span class="kw">let</span> get_user_by_id () = <span class="nu">42</span></code></pre>
+</div>
+</div></div>
 </div>
 <div class="error-card" id="E325">
     <div>
@@ -445,12 +530,20 @@ pre code {
         <span class="error-code">E405</span>
         <span class="error-title">Missing Type Documentation</span>
     </div>
-    <div class="error-hint"><p>All public values should have documentation explaining their purpose and usage. Add doc comments (** ... *) above value declarations in .mli files.</p>
+    <div class="error-hint"><p>All public values should have documentation explaining their purpose and usage. Add doc comments (** ... *) above value declarations in .mli files.</p><div class="examples-grid">
+<div class="example bad">
+  <h4>BAD</h4>
+  <pre><code><span class="kw">type</span> t
+<span class="kw">val</span> parse : string -&gt; t</code></pre>
+</div>
 <div class="example good">
   <h4>GOOD</h4>
-  <pre><code>(** <span class="cn">User</span> <span class="cn">API</span>
+  <pre><code><span class="kw">type</span> t
 
-    <span class="cn">This</span> <span class="kw">module</span> provides types <span class="kw">and</span> functions <span class="kw">for</span> interacting <span class="kw">with</span> users. *)</code></pre>
+(** [parse str] converts a string <span class="kw">to</span> <span class="kw">type</span> [t].
+    @<span class="kw">raise</span> <span class="cn">Invalid_argument</span> <span class="kw">if</span> [str] is malformed. *)
+<span class="kw">val</span> parse : string -&gt; t</code></pre>
+</div>
 </div></div>
 </div>
 <div class="error-card" id="E410">
@@ -475,7 +568,21 @@ pre code {
         <span class="error-code">E415</span>
         <span class="error-title">Missing Standard Functions</span>
     </div>
-    <div class="error-hint"><p>Types should implement standard functions like equal, compare, pp (pretty-printer), and to_string for better usability and consistency across the codebase.</p></div>
+    <div class="error-hint"><p>Types should implement standard functions like equal, compare, pp (pretty-printer), and to_string for better usability and consistency across the codebase.</p><div class="examples-grid">
+<div class="example bad">
+  <h4>BAD</h4>
+  <pre><code><span class="kw">type</span> user = { id: int; name: string }</code></pre>
+</div>
+<div class="example good">
+  <h4>GOOD</h4>
+  <pre><code><span class="kw">type</span> user = { id: int; name: string }
+<span class="kw">let</span> equal a b = a.id = b.id &amp;&amp; a.name = b.name
+<span class="kw">let</span> compare a b = 
+  <span class="kw">let</span> c = <span class="cn">Int</span>.compare a.id b.id <span class="kw">in</span>
+  <span class="kw">if</span> c = <span class="nu">0</span> <span class="kw">then</span> <span class="cn">String</span>.compare a.name b.name <span class="kw">else</span> c
+<span class="kw">let</span> pp fmt u = <span class="cn">Format</span>.fprintf fmt &quot;{id=%d; name=%<span class="cn">S</span>}&quot; u.id u.name</code></pre>
+</div>
+</div></div>
 </div>
 <h2 id="project structure">Project Structure</h2>
 <div class="category">E500-E599 • Project organization and configuration issues</div>

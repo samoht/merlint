@@ -1,4 +1,4 @@
-Test bad example - should find redundant module name:
+Test bad example - should find long identifier name:
   $ merlint -r E320 bad.ml
   Running merlint analysis...
   

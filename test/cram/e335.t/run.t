@@ -1,4 +1,4 @@
-Test bad example - should find boolean blindness:
+Test bad example - should find used underscore-prefixed binding:
   $ merlint -r E335 bad.ml
   Running merlint analysis...
   

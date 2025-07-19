@@ -11,12 +11,13 @@ let check (ctx : Context.file) =
       Issue.v ~loc { variant = variant_name; expected })
 
 let pp ppf { variant; expected } =
-  Fmt.pf ppf "Variant '%s' should use snake_case: '%s'" variant expected
+  Fmt.pf ppf "Variant '%s' should use Snake_case: '%s'" variant expected
 
 let rule =
   Rule.v ~code:"E300" ~title:"Variant Naming Convention"
     ~category:Naming_conventions
     ~hint:
-      "Variant constructors should use snake_case (e.g., My_variant, \
-       Some_constructor). This matches the project's naming conventions."
+      "Variant constructors should use Snake_case (e.g., Waiting_for_input, \
+       Processing_data), not CamelCase. This matches the project's naming \
+       conventions."
     ~examples:[] ~pp (File check)

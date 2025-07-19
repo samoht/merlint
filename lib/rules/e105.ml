@@ -1,3 +1,4 @@
+open Examples
 (** E105: Catch-all Exception Handler *)
 
 (** Payload for catch-all exception issues *)
@@ -58,4 +59,10 @@ let rule =
       "Catch-all exception handlers (with _ ->) can hide unexpected errors and \
        make debugging difficult. Always handle specific exceptions explicitly. \
        If you must catch all exceptions, log them or re-raise after cleanup."
-    ~examples:[] ~pp (File check)
+    ~examples:
+      [
+        Example.bad E105.broad_ml;
+        Example.good E105.specific_ml;
+        Example.good E105.with_logging_ml;
+      ]
+    ~pp (File check)

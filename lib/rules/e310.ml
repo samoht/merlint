@@ -21,7 +21,7 @@ let rule =
   Rule.v ~code:"E310" ~title:"Value Naming Convention"
     ~category:Naming_conventions
     ~hint:
-      "Values and function names should use snake_case (e.g., my_value, \
-       get_data). This is the standard convention in OCaml for values and \
-       functions."
+      "Values and function names should use snake_case (e.g., find_user, \
+       create_channel). Short, descriptive, and lowercase with underscores. \
+       This is the standard convention in OCaml for values and functions."
     ~examples:[] ~pp (File check)

@@ -35,6 +35,7 @@ let rule =
   Rule.v ~code:"E305" ~title:"Module Naming Convention"
     ~category:Naming_conventions
     ~hint:
-      "Module names should use Snake_case (e.g., My_module, Some_component). \
-       This helps distinguish modules from variant constructors."
+      "Module names should use Snake_case (e.g., My_module, User_profile). \
+       File names use lowercase_with_underscores which OCaml automatically \
+       converts to module names."
     ~examples:[] ~pp (File check)

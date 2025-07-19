@@ -1,3 +1,4 @@
+open Examples
 (** E405: Missing Type Documentation *)
 
 type payload = { reason : string }
@@ -19,14 +20,5 @@ let rule =
       "All public values should have documentation explaining their purpose \
        and usage. Add doc comments (** ... *) above value declarations in .mli \
        files."
-    ~examples:
-      [
-        {
-          is_good = true;
-          code =
-            {|(** User API
-
-    This module provides types and functions for interacting with users. *)|};
-        };
-      ]
+    ~examples:[ Example.bad E405.bad_mli; Example.good E405.good_mli ]
     ~pp (File check)

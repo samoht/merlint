@@ -1,3 +1,4 @@
+open Examples
 (** E110: Silenced Warning *)
 
 type payload = { warning_number : string }
@@ -56,4 +57,5 @@ let rule =
       "Warnings should be addressed rather than silenced. Fix the underlying \
        issue instead of using warning suppression attributes. If you must \
        suppress a warning, document why it's necessary."
-    ~examples:[] ~pp (Project check)
+    ~examples:[ Example.bad E110.suppressed_ml; Example.good E110.fixed_ml ]
+    ~pp (Project check)

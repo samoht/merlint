@@ -14,6 +14,12 @@
   - Files are not being found properly when using `dune exec`
   - This is a serious bug affecting usability
   
+- [ ] **Improve test/library file detection in E610 and related rules**
+  - Currently using brittle heuristics (checking for "test"/"tests" or "lib"/"src" in paths)
+  - Should use dune metadata to properly identify test executables/libraries
+  - See TODO comments in lib/rules/e610.ml
+  - This affects accuracy of E605, E610, and E615 rules
+  
 - [ ] **Refactor AST Analysis Architecture**
   1. [ ] Use Merlin outline for:
      - Function locations and boundaries (for E005 - function length)

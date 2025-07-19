@@ -1,4 +1,4 @@
-Test bad example - should find Printf module usage:
+Test bad example - should find boolean blindness:
   $ merlint -r E350 bad.ml
   File "bad.ml", line 6, characters 4-5:
   6 | let w = create_window true false true

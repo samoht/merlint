@@ -29,6 +29,7 @@ let rule =
   Rule.v ~code:"E315" ~title:"Type Naming Convention"
     ~category:Naming_conventions
     ~hint:
-      "Type names should use snake_case. This convention helps maintain \
-       consistency across the codebase."
+      "Type names should use snake_case. The primary type in a module should \
+       be named t, and identifiers should be id. This convention helps \
+       maintain consistency across the codebase."
     ~examples:[] ~pp (File check)

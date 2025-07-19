@@ -71,11 +71,19 @@ All public values should have documentation explaining their purpose and usage. 
 
 **Examples:**
 
+❌ **Bad:**
+```ocaml
+type t
+val parse : string -> t
+```
+
 ✅ **Good:**
 ```ocaml
-(** User API
+type t
 
-    This module provides types and functions for interacting with users. *)
+(** [parse str] converts a string to type [t].
+    @raise Invalid_argument if [str] is malformed. *)
+val parse : string -> t
 ```
 
 
@@ -106,11 +114,7 @@ For values, describe what the value represents.
 
 **Abstract Types**: Keep types abstract (`type t`) whenever possible. Expose smart constructors and accessors instead of record fields to maintain invariants.
 
-**Standard Interfaces for Data Types**: For modules defining a central data type `t`, consistently provide these functions where applicable:
-
-### [E415] Missing Standard Functions
-
-Types should implement standard functions like equal, compare, pp (pretty-printer), and to_string for better usability and consistency across the codebase.
+**Standard Interfaces for Data Types**: For modules defining a central data type `t`, consider providing the following functions where applicable:
 
 - `val v : ... -> t`: A pure, smart constructor for creating values of type `t` in memory. This function should not perform any I/O.
 
@@ -128,6 +132,28 @@ Types should implement standard functions like equal, compare, pp (pretty-printe
 
 - `val validate : t -> (t, string) result`: For validating the integrity of the data.
 
+### [E415] Missing Standard Functions
+
+Types should implement standard functions like equal, compare, pp (pretty-printer), and to_string for better usability and consistency across the codebase.
+
+**Examples:**
+
+❌ **Bad:**
+```ocaml
+type user = { id: int; name: string }
+```
+
+✅ **Good:**
+```ocaml
+type user = { id: int; name: string }
+let equal a b = a.id = b.id && a.name = b.name
+let compare a b = 
+  let c = Int.compare a.id b.id in
+  if c = 0 then String.compare a.name b.name else c
+let pp fmt u = Format.fprintf fmt "{id=%d; name=%S}" u.id u.name
+```
+
+
 ## Project Structure
 
 **Interface Files**: Create `.mli` files for all public modules to define clear interfaces and hide implementation details.
@@ -135,8 +161,6 @@ Types should implement standard functions like equal, compare, pp (pretty-printe
 ### [E505] Missing MLI File
 
 Library modules should have corresponding .mli files for proper encapsulation and API documentation. Create interface files to hide implementation details and provide a clean API.
-
-**Code Formatting**: Maintain a `.ocamlformat` file in the project root with consistent formatting settings.
 
 ## Command-Line Applications
 
@@ -184,11 +208,96 @@ let find_user_id json =
 
 Catch-all exception handlers (with _ ->) can hide unexpected errors and make debugging difficult. Always handle specific exceptions explicitly. If you must catch all exceptions, log them or re-raise after cleanup.
 
+**Examples:**
+
+❌ **Bad:**
+```ocaml
+let parse_int s =
+  try int_of_string s with _ -> 0
+
+let read_config () =
+  try 
+    let ic = open_in "config.txt" in
+    let data = input_line ic in
+    close_in ic;
+    data
+  with _ -> "default"
+```
+
+✅ **Good:**
+```ocaml
+let parse_int s =
+  try int_of_string s with
+  | Failure _ -> 0
+
+let read_config () =
+  try 
+    let ic = open_in "config.txt" in
+    let data = input_line ic in
+    close_in ic;
+    data
+  with
+  | Sys_error msg -> 
+      Fmt.epr "Config error: %s@." msg;
+      "default"
+  | End_of_file -> 
+      Fmt.epr "Config file is empty@.";
+      "default"
+```
+
+✅ **Good:**
+```ocaml
+module Log = struct
+  let err f = f Format.err_formatter
+end
+
+let dangerous_operation () =
+  failwith "Something went wrong"
+
+let safe_wrapper () =
+  try dangerous_operation () with
+  | exn ->
+      Log.err (fun m -> 
+        Format.fprintf m "Operation failed: %s@." 
+          (Printexc.to_string exn));
+      raise exn
+```
+
+
 **No Silenced Warnings**: Fix underlying issues instead of silencing compiler warnings with attributes like `[@warning "-nn"]`.
 
 ### [E110] Silenced Warning
 
 Warnings should be addressed rather than silenced. Fix the underlying issue instead of using warning suppression attributes. If you must suppress a warning, document why it's necessary.
+
+**Examples:**
+
+❌ **Bad:**
+```ocaml
+[@@@ocaml.warning "-32"]
+let unused_function x = x + 1
+
+[@@ocaml.warning "-27"]
+let partial_match = function
+  | Some x -> x
+
+[@ocaml.warning "-9"]
+type t = { mutable field : int; another : string }
+```
+
+✅ **Good:**
+```ocaml
+let used_function x = x + 1
+
+let () = print_int (used_function 5)
+
+let complete_match = function
+  | Some x -> x
+  | None -> 0
+
+type t = { field : int; another : string }
+```
+
 
 **Initialization Failures**: For unrecoverable errors during startup (e.g., missing configuration), it is acceptable to fail fast using `Fmt.failwith`.
 
@@ -203,37 +312,38 @@ let tls_config =
 
 **File Naming**: Lowercase with underscores (e.g., `user_profile.ml`).
 
-**Module Naming**: Lowercase with underscores (e.g., `user_profile`).
+### [E305] Module Naming Convention
+
+Module names should use Snake_case (e.g., My_module, User_profile). File names use lowercase_with_underscores which OCaml automatically converts to module names.
 
 ### [E300] Variant Naming Convention
 
-Variant constructors should use snake_case (e.g., My_variant, Some_constructor). This matches the project's naming conventions.
-
-**Type Naming**: The primary type in a module is `t`. Identifiers are named `id`. Use snake_case for all type names.
-
-### [E305] Module Naming Convention
-
-Module names should use Snake_case (e.g., My_module, Some_component). This helps distinguish modules from variant constructors.
-
-**Variant Constructors**: Use Snake_case for variant constructors (e.g., `Waiting_for_input`, `Processing_data`), not CamelCase.
-
-### [E310] Value Naming Convention
-
-Values and function names should use snake_case (e.g., my_value, get_data). This is the standard convention in OCaml for values and functions.
-
-**Values**: Short, descriptive, and lowercase with underscores (e.g., `find_user`, `create_channel`).
+Variant constructors should use Snake_case (e.g., Waiting_for_input, Processing_data), not CamelCase. This matches the project's naming conventions.
 
 ### [E315] Type Naming Convention
 
-Type names should use snake_case. This convention helps maintain consistency across the codebase.
+Type names should use snake_case. The primary type in a module should be named t, and identifiers should be id. This convention helps maintain consistency across the codebase.
 
-**Long Identifiers**: Avoid excessively long names with many underscores. Keep names concise and meaningful.
+### [E310] Value Naming Convention
+
+Values and function names should use snake_case (e.g., find_user, create_channel). Short, descriptive, and lowercase with underscores. This is the standard convention in OCaml for values and functions.
 
 ### [E320] Long Identifier Names
 
 Avoid using too many underscores in identifier names as they make code harder to read. Consider using more descriptive names or restructuring the code to avoid deeply nested concepts.
 
-**Function Naming**: Use `get_*` for extraction (returns value directly), `find_*` for search (returns option type).
+**Examples:**
+
+❌ **Bad:**
+```ocaml
+let get_user_profile_data_from_database_by_id () = 42
+```
+
+✅ **Good:**
+```ocaml
+let get_user_by_id () = 42
+```
+
 
 ### [E325] Function Naming Convention
 

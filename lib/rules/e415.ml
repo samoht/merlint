@@ -1,3 +1,4 @@
+open Examples
 (** E415: Missing Standard Functions *)
 
 type payload = { reason : string }
@@ -19,4 +20,5 @@ let rule =
       "Types should implement standard functions like equal, compare, pp \
        (pretty-printer), and to_string for better usability and consistency \
        across the codebase."
-    ~examples:[] ~pp (File check)
+    ~examples:[ Example.bad E415.bad_ml; Example.good E415.good_ml ]
+    ~pp (File check)
