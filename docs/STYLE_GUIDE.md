@@ -39,17 +39,9 @@ All OCaml projects should have a .ocamlformat file in the root directory to ensu
 
 - **Concurrency**: `eio`
 
-- **Structured Output**: `fmt` (instead of Printf/Format)
-
-### [E205] Consider Using Fmt Module
-
-The Fmt module provides a more modern and composable approach to formatting. It offers better type safety and cleaner APIs compared to Printf/Format modules.
-
 - **Regular Expressions**: `re` (instead of Str module)
 
-### [E200] Outdated Str Module
-
-The Str module is outdated and has a problematic API. Use the Re module instead for regular expressions. Re provides a better API, is more performant, and doesn't have global state issues.
+- **Structured Output**: `fmt` (instead of Printf/Format)
 
 - **Logging**: `logs`
 
@@ -60,6 +52,14 @@ The Str module is outdated and has a problematic API. Use the Re module instead 
 - **HTTP**: `cohttp-eio`
 
 - **Test Framework**: `Alcotest`
+
+### [E200] Outdated Str Module
+
+The Str module is outdated and has a problematic API. Use the Re module instead for regular expressions. Re provides a better API, is more performant, and doesn't have global state issues.
+
+### [E205] Consider Using Fmt Module
+
+The Fmt module provides a more modern and composable approach to formatting. It offers better type safety and cleaner APIs compared to Printf/Format modules.
 
 ## Module and Interface Design
 

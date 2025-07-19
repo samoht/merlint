@@ -61,15 +61,15 @@ let content =
             "**Core Libraries**: Projects typically embrace a curated set of \
              high-quality libraries for common tasks. For example:";
           Paragraph "- **Concurrency**: `eio`";
-          Paragraph "- **Structured Output**: `fmt` (instead of Printf/Format)";
-          Rule "E205";
           Paragraph "- **Regular Expressions**: `re` (instead of Str module)";
-          Rule "E200";
+          Paragraph "- **Structured Output**: `fmt` (instead of Printf/Format)";
           Paragraph "- **Logging**: `logs`";
           Paragraph "- **CLI Parsing**: `cmdliner`";
           Paragraph "- **JSON Handling**: `yojson`";
           Paragraph "- **HTTP**: `cohttp-eio`";
           Paragraph "- **Test Framework**: `Alcotest`";
+          Rule "E200";
+          Rule "E205";
         ] );
     Section
       ( "Module and Interface Design",
