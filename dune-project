@@ -25,4 +25,5 @@
   astring
   sexplib0
   parsexp
+  ppxlib
   (alcotest :with-test)))

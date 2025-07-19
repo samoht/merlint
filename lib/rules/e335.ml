@@ -6,14 +6,15 @@ type payload = { binding_name : string; usage_locations : Location.t list }
 let check ctx =
   (* First, collect all underscore-prefixed pattern bindings *)
   let underscore_bindings =
-    Helpers.filter_map_elements (Context.ast ctx).patterns
-      (fun (elt : Ast.elt) ->
-        let name = Ast.name_to_string elt.name in
+    List.filter_map
+      (fun (elt : Dump.elt) ->
+        let name = Dump.name_to_string elt.name in
         if String.length name > 0 && name.[0] = '_' then
-          match Helpers.extract_location elt with
+          match Dump.location elt with
           | Some loc -> Some (name, loc)
           | None -> None
         else None)
+      (Context.dump ctx).patterns
   in
 
   (* For each underscore binding, check if it's used in identifiers *)
@@ -21,11 +22,11 @@ let check ctx =
     (fun (binding_name, binding_loc) ->
       (* Find all usages of this binding *)
       let usage_locations =
-        Helpers.filter_map_elements (Context.ast ctx).identifiers
-          (fun (elt : Ast.elt) ->
-            let ident_name = Ast.name_to_string elt.name in
-            if ident_name = binding_name then Helpers.extract_location elt
-            else None)
+        List.filter_map
+          (fun (elt : Dump.elt) ->
+            let ident_name = Dump.name_to_string elt.name in
+            if ident_name = binding_name then Dump.location elt else None)
+          (Context.dump ctx).identifiers
       in
 
       (* If the binding is used, create an issue *)

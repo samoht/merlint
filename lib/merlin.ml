@@ -4,7 +4,10 @@ let src = Logs.Src.create "merlint.merlin" ~doc:"Merlin interface"
 
 module Log = (val Logs.src_log src : Logs.LOG)
 
-type t = { outline : (Outline.t, string) result; dump : (Ast.t, string) result }
+type t = {
+  outline : (Outline.t, string) result;
+  dump : (Dump.t, string) result;
+}
 
 let get_outline file =
   (* Ensure file exists before trying to analyze it *)

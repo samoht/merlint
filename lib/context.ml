@@ -1,5 +1,9 @@
 (** Context for rule checking - holds all parameters and data needed by rules *)
 
+let src = Logs.Src.create "merlint.context" ~doc:"Context management"
+
+module Log = (val Logs.src_log src : Logs.LOG)
+
 exception Analysis_error of string
 
 type file = {
@@ -7,8 +11,10 @@ type file = {
   config : Config.t;
   project_root : string;
   ast : Ast.t Lazy.t;
+  dump : Dump.t Lazy.t;
   outline : Outline.t Lazy.t;
   content : string Lazy.t;
+  functions : (string * Ast.expr) list Lazy.t;
 }
 
 type project = {
@@ -26,10 +32,11 @@ let create_file ~filename ~config ~project_root ~merlin_result =
     filename;
     config;
     project_root;
-    ast =
+    ast = lazy { Ast.functions = Ast.extract_functions filename };
+    dump =
       lazy
         (match merlin_result.Merlin.dump with
-        | Ok ast -> ast
+        | Ok dump -> dump
         | Error msg -> raise (Analysis_error msg));
     outline =
       lazy
@@ -44,6 +51,12 @@ let create_file ~filename ~config ~project_root ~merlin_result =
              (Analysis_error
                 (Printf.sprintf "Failed to read file %s: %s" filename
                    (Printexc.to_string exn))));
+    functions =
+      lazy
+        (let ast = Ast.extract_functions filename in
+         Log.debug (fun m ->
+             m "Context: extracted %d functions" (List.length ast));
+         ast);
   }
 
 let create_project ~config ~project_root ~all_files ~dune_describe =
@@ -61,8 +74,10 @@ let create_project ~config ~project_root ~all_files ~dune_describe =
 
 (* File context accessors *)
 let ast ctx = Lazy.force ctx.ast
+let dump ctx = Lazy.force ctx.dump
 let outline ctx = Lazy.force ctx.outline
 let content ctx = Lazy.force ctx.content
+let functions ctx = Lazy.force ctx.functions
 
 (* Project context accessors *)
 let all_files ctx = Lazy.force ctx.all_files

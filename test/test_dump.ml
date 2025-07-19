@@ -2,7 +2,7 @@
 *)
 
 open Merlint
-open Ast
+open Dump
 
 (** Test variant extraction from type declarations *)
 let test_variant_extraction () =
@@ -38,11 +38,11 @@ let test_variant_extraction () =
     \    ]\n\
      ]"
   in
-  let ast = Dump.typedtree ast_dump in
-  Alcotest.(check int) "type count" 1 (List.length ast.types);
-  Alcotest.(check int) "variant count" 3 (List.length ast.variants);
+  let dump = Dump.typedtree ast_dump in
+  Alcotest.(check int) "type count" 1 (List.length dump.types);
+  Alcotest.(check int) "variant count" 3 (List.length dump.variants);
   let variant_names =
-    List.map (fun v -> v.name.base) ast.variants |> List.sort String.compare
+    List.map (fun v -> v.name.base) dump.variants |> List.sort String.compare
   in
   Alcotest.(check (list string))
     "variant names"
@@ -72,15 +72,15 @@ let test_identifier_extraction () =
     \    ]\n\
      ]"
   in
-  let ast = Dump.typedtree ast_dump in
-  Alcotest.(check int) "identifier count" 2 (List.length ast.identifiers);
+  let dump = Dump.typedtree ast_dump in
+  Alcotest.(check int) "identifier count" 2 (List.length dump.identifiers);
   let has_obj_magic =
     List.exists
       (fun id ->
         match id.name.prefix with
         | [ "Stdlib"; "Obj" ] -> id.name.base = "magic"
         | _ -> false)
-      ast.identifiers
+      dump.identifiers
   in
   Alcotest.(check bool) "found Obj.magic" true has_obj_magic
 
@@ -99,9 +99,9 @@ let test_pattern_extraction () =
     \    ]\n\
      ]"
   in
-  let ast = Dump.typedtree ast_dump in
-  Alcotest.(check int) "pattern count" 1 (List.length ast.patterns);
-  match ast.patterns with
+  let dump = Dump.typedtree ast_dump in
+  Alcotest.(check int) "pattern count" 1 (List.length dump.patterns);
+  match dump.patterns with
   | [ { name; _ } ] -> Alcotest.(check string) "pattern name" "x" name.base
   | _ -> Alcotest.fail "Expected one pattern"
 
@@ -121,8 +121,8 @@ let test_type_error_fallback () =
      ]"
   in
   (* Should not raise exception *)
-  let ast = Dump.typedtree ast_dump in
-  Alcotest.(check int) "pattern count" 1 (List.length ast.patterns)
+  let dump = Dump.typedtree ast_dump in
+  Alcotest.(check int) "pattern count" 1 (List.length dump.patterns)
 
 (** Test snake_case variant extraction *)
 let test_snake_case_variants () =
@@ -158,10 +158,10 @@ let test_snake_case_variants () =
     \    ]\n\
      ]"
   in
-  let ast = Dump.typedtree ast_dump in
-  Alcotest.(check int) "variant count" 3 (List.length ast.variants);
+  let dump = Dump.typedtree ast_dump in
+  Alcotest.(check int) "variant count" 3 (List.length dump.variants);
   let variant_names =
-    List.map (fun v -> v.name.base) ast.variants |> List.sort String.compare
+    List.map (fun v -> v.name.base) dump.variants |> List.sort String.compare
   in
   Alcotest.(check (list string))
     "snake_case variant names"
@@ -187,9 +187,9 @@ let test_variant_constructors () =
     \    ]\n\
      ]"
   in
-  let ast = Dump.typedtree ast_dump in
-  Alcotest.(check int) "variant count" 1 (List.length ast.variants);
-  match ast.variants with
+  let dump = Dump.typedtree ast_dump in
+  Alcotest.(check int) "variant count" 1 (List.length dump.variants);
+  match dump.variants with
   | [ { name; _ } ] -> Alcotest.(check string) "variant name" "Some" name.base
   | _ -> Alcotest.fail "Expected one variant"
 

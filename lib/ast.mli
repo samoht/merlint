@@ -1,27 +1,13 @@
-(** Core AST types for expression analysis *)
+(** Core AST types for control flow and expression analysis
 
-(** What kind of AST dump we're parsing *)
-type what = Parsetree | Typedtree
+    This module defines types and functions for analyzing the control flow
+    structure of OCaml programs (if-then-else, match, try, etc.) to calculate
+    metrics like cyclomatic complexity and nesting depth. For name extraction,
+    see the Dump module. *)
 
-exception Parse_error of string
-(** Parse error exception *)
-
-exception Type_error
-(** Type error exception - raised when typedtree contains type errors *)
-
-type name = { prefix : string list; base : string }
-(** Structured name type *)
-
-type elt = { name : name; location : Location.t option }
-(** Common element type for all extracted items *)
+(** Control flow expression types *)
 
 type expr =
-  | Construct of { name : string; args : expr list }
-      (** Constructor application like Error(...) *)
-  | Apply of { func : expr; args : expr list }
-      (** Function application like Fmt.str "..." 42 *)
-  | Ident of string  (** Identifier like Fmt.str *)
-  | Constant of string  (** Constants like strings or integers *)
   | If_then_else of { cond : expr; then_expr : expr; else_expr : expr option }
       (** If-then-else expression *)
   | Match of { expr : expr; cases : int }
@@ -31,19 +17,12 @@ type expr =
   | Function of { params : int; body : expr }  (** Function definition *)
   | Let of { bindings : (string * expr) list; body : expr }  (** Let binding *)
   | Sequence of expr list  (** Sequence of expressions *)
-  | Other  (** Other expression nodes we don't care about *)
+  | Other  (** Catch-all for expressions we don't need to analyze *)
 
 type t = {
-  expressions : expr list;
   functions : (string * expr) list;
-      (** Named functions extracted from the typedtree *)
-  modules : elt list;  (** Module definitions *)
-  types : elt list;  (** Type definitions *)
-  exceptions : elt list;  (** Exception definitions *)
-  variants : elt list;  (** Variant constructors *)
-  identifiers : elt list;
-      (** All identifiers for compatibility with existing rules *)
-  patterns : elt list;  (** Pattern definitions for compatibility *)
+      (** Top-level functions with their control flow structure. This is used
+          for complexity and nesting analysis. *)
 }
 (** Parsed AST representation *)
 
@@ -58,51 +37,24 @@ module Complexity : sig
   }
 
   val empty : info
-  val analyze_expr : expr -> info
+  val analyze : expr -> info
   val calculate : info -> int
-end
-
-(** Generic visitor pattern for expr AST traversal *)
-class visitor : object
-  method visit_expr : expr -> unit
-
-  method visit_if_then_else :
-    cond:expr -> then_expr:expr -> else_expr:expr option -> unit
-
-  method visit_match : expr:expr -> cases:int -> unit
-  method visit_try : expr:expr -> handlers:int -> unit
-  method visit_apply : func:expr -> args:expr list -> unit
-  method visit_let : bindings:(string * expr) list -> body:expr -> unit
-  method visit_sequence : expr list -> unit
-  method visit_construct : name:string -> args:expr list -> unit
-  method visit_function : params:int -> body:expr -> unit
-  method visit_ident : string -> unit
-  method visit_constant : string -> unit
-  method visit_other : unit
-end
-
-(** Function finder visitor that searches for a specific function by name *)
-class function_finder_visitor : string -> object
-  inherit visitor
-  method get_result : expr option
 end
 
 (** Nesting depth analysis *)
 module Nesting : sig
-  val calculate_depth : expr -> int
+  val depth : expr -> int
   (** Calculate maximum nesting depth of an AST expression node *)
 end
 
-type function_structure_info = { has_pattern_match : bool; case_count : int }
-(** Function structure analysis for E005 - function length detection *)
+type function_structure = { has_pattern_match : bool; case_count : int }
 
-class function_structure_visitor : unit -> object
-  inherit visitor
-  method get_info : function_structure_info
-end
+val function_structure : expr -> function_structure
+(** Analyze function structure to detect pattern matches *)
 
-val calculate_expr_line_count : expr -> int
+val line_count : expr -> int
 (** Calculate expression line count for function length analysis *)
 
-val name_to_string : name -> string
-(** Convert a structured name to a string *)
+val extract_functions : string -> (string * expr) list
+(** Extract functions with their control flow from a source file using ppxlib.
+    Returns a list of (function_name, control_flow_ast) pairs. *)

@@ -5,21 +5,21 @@ type payload = { type_name : string; expected : string }
 
 let check ctx =
   (* Check type names *)
-  let ast = Context.ast ctx in
+  let ast = Context.dump ctx in
   List.filter_map
-    (fun (type_elt : Ast.elt) ->
+    (fun (type_elt : Dump.elt) ->
       let name_str = type_elt.name.base in
       if
         name_str <> "t" && name_str <> "id"
-        && name_str <> Helpers.to_snake_case name_str
+        && name_str <> Naming.to_snake_case name_str
       then
-        match Helpers.extract_location type_elt with
+        match Dump.location type_elt with
         | Some loc ->
             Some
               (Issue.v ~loc
                  {
                    type_name = name_str;
-                   expected = Helpers.to_snake_case name_str;
+                   expected = Naming.to_snake_case name_str;
                  })
         | None -> None
       else None)

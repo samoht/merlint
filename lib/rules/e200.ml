@@ -1,10 +1,10 @@
 (** E200: Outdated Str Module *)
 
 let check (ctx : Context.file) =
-  let ast_data = Context.ast ctx in
+  let dump_data = Context.dump ctx in
 
   (* Check identifiers for Str module usage *)
-  Helpers.check_module_usage ast_data.identifiers "Str" (fun ~loc ->
+  Dump.check_module_usage dump_data.identifiers "Str" (fun ~loc ->
       Issue.v ~loc ())
 
 let pp ppf () =

@@ -30,7 +30,7 @@ let check_regex regex line =
 
 (** Check all files for silenced warnings *)
 let check (ctx : Context.project) =
-  Helpers.process_ocaml_files ctx (fun filename content ->
+  File.process_ocaml_files ctx (fun filename content ->
       let warning_regexes =
         [ warning_attr_regex; warning_attr2_regex; warning_attr3_regex ]
       in
@@ -38,7 +38,7 @@ let check (ctx : Context.project) =
       (* Check each regex separately and collect all matches *)
       List.concat_map
         (fun regex ->
-          Helpers.process_lines_with_location filename content
+          File.process_lines_with_location filename content
             (fun _line_idx line loc ->
               match check_regex regex line with
               | Some warning_num ->

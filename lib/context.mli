@@ -7,9 +7,12 @@ type file = {
   filename : string;  (** The current file being analyzed *)
   config : Config.t;  (** The merlint configuration *)
   project_root : string;  (** The project root directory *)
-  ast : Ast.t Lazy.t;  (** AST from Merlin typedtree dump (lazy) *)
+  ast : Ast.t Lazy.t;  (** AST control flow from ppxlib (lazy) *)
+  dump : Dump.t Lazy.t;  (** Names/identifiers from Merlin dump (lazy) *)
   outline : Outline.t Lazy.t;  (** Outline from Merlin (lazy) *)
   content : string Lazy.t;  (** File content (lazy) *)
+  functions : (string * Ast.expr) list Lazy.t;
+      (** Functions extracted with ppxlib (lazy) *)
 }
 
 type project = {
@@ -43,12 +46,19 @@ val create_project :
 val ast : file -> Ast.t
 (** Force evaluation of the ast field, raising an exception if it's an error *)
 
+val dump : file -> Dump.t
+(** Force evaluation of the dump field, raising an exception if it's an error *)
+
 val outline : file -> Outline.t
 (** Force evaluation of the outline field, raising an exception if it's an error
 *)
 
 val content : file -> string
 (** Force evaluation of the content field *)
+
+val functions : file -> (string * Ast.expr) list
+(** Force evaluation of the functions field, returns list of function names and
+    their AST *)
 
 (* Project context accessors *)
 val all_files : project -> string list

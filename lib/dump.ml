@@ -3,22 +3,53 @@
 let src = Logs.Src.create "merlint.dump" ~doc:"AST dump parsing"
 
 module Log = (val Logs.src_log src : Logs.LOG)
-open Ast
+
+type name = { prefix : string list; base : string }
+(** Structured name type *)
+
+type elt = { name : name; location : Location.t option }
+(** Common element type for all extracted items *)
+
+type t = {
+  modules : elt list;  (** Module names *)
+  types : elt list;  (** Type declarations *)
+  exceptions : elt list;  (** Exception declarations *)
+  variants : elt list;  (** Variant constructors *)
+  identifiers : elt list;  (** Value identifiers (usage) *)
+  patterns : elt list;  (** Pattern variables *)
+  values : elt list;  (** Value bindings (definitions) *)
+}
+(** Extracted names and identifiers from the AST dump *)
+
+(** What kind of AST dump we're parsing *)
+type what = Parsetree | Typedtree
+
+exception Parse_error of string
+(** Parse error exception *)
+
+exception Type_error
+(** Type error exception - raised when typedtree contains type errors *)
+
+(** Convert a structured name to a string *)
+let name_to_string (n : name) =
+  match n.prefix with
+  | [] -> n.base
+  | prefix -> String.concat "." prefix ^ "." ^ n.base
 
 type token = { indent : int; content : string; loc : Location.t option }
 (** Phase 1: Token type for lexing *)
 
-(** Empty accumulator for AST construction *)
+(** Empty accumulator for name extraction *)
 let empty_acc =
   {
-    expressions = [];
-    functions = [];
     modules = [];
     types = [];
     exceptions = [];
     variants = [];
     identifiers = [];
     patterns = [];
+    values = [];
+    (* All value bindings including functions *)
   }
 
 (** Helper regex components for location parsing *)
@@ -319,3 +350,52 @@ let typedtree input =
       Log.debug (fun m ->
           m "Parsetree nodes in Typedtree dump, falling back: %s" msg);
       text Parsetree input
+
+(** Utility functions for working with dump data *)
+
+let iter_identifiers_with_location dump_data f =
+  List.iter
+    (fun (id : elt) ->
+      match id.location with Some loc -> f id loc | None -> ())
+    dump_data.identifiers
+
+let location (elt : elt) = elt.location
+
+let check_identifier_pattern identifiers pattern_match issue_constructor =
+  List.filter_map
+    (fun (id : elt) ->
+      match id.location with
+      | Some loc ->
+          let name = id.name in
+          if pattern_match name then Some (issue_constructor ~loc) else None
+      | None -> None)
+    identifiers
+
+let check_module_usage identifiers module_name issue_constructor =
+  check_identifier_pattern identifiers
+    (fun name ->
+      match name.prefix with
+      | [ "Stdlib"; m ] when m = module_name -> true
+      | [ m ] when m = module_name -> true
+      | _ -> false)
+    issue_constructor
+
+let check_function_usage identifiers module_name function_name issue_constructor
+    =
+  check_identifier_pattern identifiers
+    (fun name ->
+      match (name.prefix, name.base) with
+      | [ "Stdlib"; m ], base when m = module_name && base = function_name ->
+          true
+      | [ m ], base when m = module_name && base = function_name -> true
+      | _ -> false)
+    issue_constructor
+
+let check_elements elements check_fn create_issue_fn =
+  List.filter_map
+    (fun (elt : elt) ->
+      let name_str = name_to_string elt.name in
+      match (check_fn name_str, elt.location) with
+      | Some result, Some loc -> Some (create_issue_fn name_str loc result)
+      | _ -> None)
+    elements

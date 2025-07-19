@@ -26,7 +26,7 @@ let check ctx =
   in
 
   (* Check each line using the traverse helper *)
-  Helpers.process_lines_with_location filename content
+  File.process_lines_with_location filename content
     (fun _line_idx line location ->
       (* Don't flag error helper definitions themselves *)
       if

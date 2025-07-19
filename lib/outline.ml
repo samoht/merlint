@@ -135,3 +135,13 @@ let pp_item ppf item =
 (** Pretty print outline *)
 let pp ppf outline =
   Fmt.pf ppf "@[<v>%a@]" (Fmt.list ~sep:Fmt.cut pp_item) outline
+
+(** Extract location from outline item *)
+let location filename (item : item) =
+  match item.range with
+  | Some range ->
+      Some
+        (Location.create ~file:filename ~start_line:range.start.line
+           ~start_col:range.start.col ~end_line:range.end_.line
+           ~end_col:range.end_.col)
+  | None -> None

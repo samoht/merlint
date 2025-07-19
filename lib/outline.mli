@@ -43,3 +43,6 @@ val find_by_name : string -> t -> item option
 
 val pp : t Fmt.t
 (** Pretty print outline *)
+
+val location : string -> item -> Location.t option
+(** [location filename item] extracts location from outline item *)

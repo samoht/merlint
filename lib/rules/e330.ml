@@ -38,7 +38,7 @@ let check (ctx : Context.file) =
   List.filter_map
     (fun (item : Outline.item) ->
       let name = item.name in
-      let location = Helpers.extract_outline_location filename item in
+      let location = Outline.location filename item in
       let item_name_lower = String.lowercase_ascii name in
       if has_redundant_prefix item_name_lower module_name then
         match (kind_to_string item.kind, item.type_sig, location) with

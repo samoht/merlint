@@ -1,10 +1,10 @@
 (** E100: No Obj.magic *)
 
 let check ctx =
-  let ast_data = Context.ast ctx in
+  let dump_data = Context.dump ctx in
 
   (* Check identifiers for Obj.magic usage *)
-  Helpers.check_function_usage ast_data.identifiers "Obj" "magic" (fun ~loc ->
+  Dump.check_function_usage dump_data.identifiers "Obj" "magic" (fun ~loc ->
       Issue.v ~loc ())
 
 let pp ppf () =

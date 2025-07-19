@@ -22,8 +22,9 @@ let returns_option return_type =
 (* Check a single function for naming issues *)
 let check_single_function _filename name kind type_sig location =
   match (name, kind, type_sig, location) with
-  | Some n, Some "Value", Some ts, Some loc when Helpers.is_function_type ts ->
-      let return_type = Helpers.extract_return_type ts in
+  | Some n, Some "Value", Some ts, Some loc
+    when Type_analysis.is_function_type ts ->
+      let return_type = Type_analysis.extract_return_type ts in
       let is_option = returns_option return_type in
       (* Check get_* functions or just 'get' *)
       if (String.starts_with ~prefix:"get_" n || n = "get") && is_option then
@@ -58,7 +59,7 @@ let check ctx =
   let filename = ctx.filename in
   List.filter_map
     (fun item ->
-      let location = Helpers.extract_outline_location filename item in
+      let location = Outline.location filename item in
       check_single_function filename (Some item.name)
         (Some (kind_to_string item.kind))
         item.type_sig location)

@@ -26,9 +26,7 @@ let check_global_mutable_state ~filename outline =
     (fun item ->
       match item.Outline.kind with
       | Outline.Value -> (
-          match
-            (item.type_sig, Helpers.extract_outline_location filename item)
-          with
+          match (item.type_sig, Outline.location filename item) with
           | Some type_sig, Some location when is_mutable_type type_sig ->
               let kind =
                 if Re.execp ref_type_re type_sig then "ref"

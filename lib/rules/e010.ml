@@ -11,7 +11,7 @@ let check (ctx : Context.file) =
   List.filter_map
     (fun (name, expr) ->
       (* Calculate nesting depth using visitor pattern *)
-      let depth = Ast.Nesting.calculate_depth expr in
+      let depth = Ast.Nesting.depth expr in
 
       if depth > config.max_nesting then
         (* Create a dummy location for now - we'll improve this later *)

@@ -1,118 +1,22 @@
-(** Core AST types for expression analysis *)
+(** Core AST types for control flow analysis *)
 
-let src = Logs.Src.create "merlint.ast" ~doc:"AST parsing"
+let src = Logs.Src.create "merlint.ast" ~doc:"AST control flow analysis"
 
 module Log = (val Logs.src_log src : Logs.LOG)
 
-type name = { prefix : string list; base : string }
-type elt = { name : name; location : Location.t option }
-
 type expr =
-  | Construct of { name : string; args : expr list }
-  | Apply of { func : expr; args : expr list }
-  | Ident of string
-  | Constant of string
   | If_then_else of { cond : expr; then_expr : expr; else_expr : expr option }
   | Match of { expr : expr; cases : int }
   | Try of { expr : expr; handlers : int }
   | Function of { params : int; body : expr }
   | Let of { bindings : (string * expr) list; body : expr }
   | Sequence of expr list
-  | Other
+  | Other  (** Catch-all for expressions we don't need to analyze *)
 
 type t = {
-  expressions : expr list;
   functions : (string * expr) list;
-  modules : elt list;
-  types : elt list;
-  exceptions : elt list;
-  variants : elt list;
-  identifiers : elt list;
-  patterns : elt list;
+      (** Top-level functions with their control flow *)
 }
-
-(** Generic visitor pattern for expr AST traversal *)
-class visitor =
-  object (self)
-    method visit_if_then_else ~cond ~then_expr ~else_expr =
-      self#visit_expr cond;
-      self#visit_expr then_expr;
-      Option.iter self#visit_expr else_expr
-    (** Visit an if-then-else expression *)
-
-    method visit_match ~expr ~cases:_ = self#visit_expr expr
-    (** Visit a match expression *)
-
-    method visit_try ~expr ~handlers:_ = self#visit_expr expr
-    (** Visit a try expression *)
-
-    method visit_apply ~func ~args =
-      self#visit_expr func;
-      List.iter self#visit_expr args
-    (** Visit an apply expression *)
-
-    method visit_let ~bindings ~body =
-      List.iter (fun (_name, expr) -> self#visit_expr expr) bindings;
-      self#visit_expr body
-    (** Visit a let expression *)
-
-    method visit_sequence exprs = List.iter self#visit_expr exprs
-    (** Visit a sequence expression *)
-
-    method visit_construct ~name:_ ~args = List.iter self#visit_expr args
-    (** Visit a construct expression *)
-
-    method visit_function ~params:_ ~body = self#visit_expr body
-    (** Visit a function expression *)
-
-    method visit_ident _name = ()
-    (** Visit an identifier - default does nothing *)
-
-    method visit_constant _value = ()
-    (** Visit a constant - default does nothing *)
-
-    method visit_other = ()
-    (** Visit other expressions - default does nothing *)
-
-    method visit_expr node =
-      match node with
-      | If_then_else { cond; then_expr; else_expr } ->
-          self#visit_if_then_else ~cond ~then_expr ~else_expr
-      | Match { expr; cases } -> self#visit_match ~expr ~cases
-      | Try { expr; handlers } -> self#visit_try ~expr ~handlers
-      | Apply { func; args } -> self#visit_apply ~func ~args
-      | Let { bindings; body } -> self#visit_let ~bindings ~body
-      | Sequence exprs -> self#visit_sequence exprs
-      | Construct { name; args } -> self#visit_construct ~name ~args
-      | Function { params; body } -> self#visit_function ~params ~body
-      | Ident name -> self#visit_ident name
-      | Constant value -> self#visit_constant value
-      | Other -> self#visit_other
-    (** Main dispatch method - calls appropriate visit method based on node type
-    *)
-  end
-
-(** Function finder visitor that searches for a specific function by name *)
-class function_finder_visitor target_name =
-  object
-    inherit visitor as super
-    val mutable found_function = None
-    val mutable found = false
-    method get_result = found_function
-
-    method! visit_let ~bindings ~body =
-      if not found then (
-        (* Check if any binding matches our target function name *)
-        List.iter
-          (fun (binding_name, binding_expr) ->
-            if (not found) && String.equal binding_name target_name then (
-              found_function <- Some binding_expr;
-              found <- true))
-          bindings;
-
-        (* Continue traversal if not found yet *)
-        if not found then super#visit_let ~bindings ~body)
-  end
 
 (** Cyclomatic complexity analysis *)
 module Complexity = struct
@@ -133,8 +37,38 @@ module Complexity = struct
       boolean_operators = 0;
     }
 
-  (* Core merge function *)
-  let merge_info acc info =
+  (** Count decision points in an AST expression node *)
+  let rec analyze node =
+    match node with
+    | If_then_else { cond; then_expr; else_expr } -> (
+        let acc = { empty with if_then_else = 1; total = 1 } in
+        let acc = merge acc (analyze cond) in
+        let acc = merge acc (analyze then_expr) in
+        match else_expr with Some e -> merge acc (analyze e) | None -> acc)
+    | Match { expr; cases } ->
+        (* Each match case beyond the first adds complexity *)
+        let decision_points = max 0 (cases - 1) in
+        let acc =
+          { empty with match_cases = decision_points; total = decision_points }
+        in
+        merge acc (analyze expr)
+    | Try { expr; handlers } ->
+        (* Each exception handler adds complexity *)
+        let acc = { empty with try_handlers = handlers; total = handlers } in
+        merge acc (analyze expr)
+    | Function { body; _ } -> analyze body
+    | Let { bindings; body } ->
+        let acc =
+          List.fold_left
+            (fun acc (_, e) -> merge acc (analyze e))
+            empty bindings
+        in
+        merge acc (analyze body)
+    | Sequence exprs ->
+        List.fold_left (fun acc e -> merge acc (analyze e)) empty exprs
+    | Other -> empty
+
+  and merge acc info =
     {
       total = acc.total + info.total;
       if_then_else = acc.if_then_else + info.if_then_else;
@@ -143,142 +77,77 @@ module Complexity = struct
       boolean_operators = acc.boolean_operators + info.boolean_operators;
     }
 
-  (** Complexity analysis visitor *)
-  class complexity_visitor =
-    object (self)
-      inherit visitor as super
-      val mutable info = empty
-      method get_info = info
-      method private add_info new_info = info <- merge_info info new_info
-
-      method! visit_if_then_else ~cond ~then_expr ~else_expr =
-        (* Record if-then-else complexity *)
-        self#add_info { empty with if_then_else = 1; total = 1 };
-        super#visit_if_then_else ~cond ~then_expr ~else_expr
-
-      method! visit_match ~expr ~cases =
-        (* Each match case beyond the first adds complexity *)
-        let decision_points = max 0 (cases - 1) in
-        self#add_info
-          { empty with match_cases = decision_points; total = decision_points };
-        super#visit_match ~expr ~cases
-
-      method! visit_try ~expr ~handlers =
-        (* Each exception handler adds complexity *)
-        self#add_info { empty with try_handlers = handlers; total = handlers };
-        super#visit_try ~expr ~handlers
-
-      method! visit_apply ~func ~args =
-        (* Check for boolean operators *)
-        (match func with
-        | Ident name
-          when String.ends_with ~suffix:"&&" name
-               || String.ends_with ~suffix:"||" name ->
-            self#add_info { empty with boolean_operators = 1; total = 1 }
-        | _ -> ());
-        super#visit_apply ~func ~args
-    end
-
-  (** Count decision points in an AST expression node *)
-  let analyze_expr node =
-    let visitor = new complexity_visitor in
-    visitor#visit_expr node;
-    visitor#get_info
-
   (** Calculate cyclomatic complexity from complexity info (1 + total decision
       points) *)
   let calculate info = 1 + info.total
 end
 
-(** Nesting depth analysis using visitor pattern *)
+(** Nesting depth analysis *)
 module Nesting = struct
-  class depth_visitor =
-    object (self)
-      inherit visitor as super
-      val mutable max_depth = 0
-      val mutable current_depth = 0
-      method get_max_depth = max_depth
-
-      method private enter_nesting_level =
-        current_depth <- current_depth + 1;
-        max_depth <- max max_depth current_depth
-
-      method private exit_nesting_level = current_depth <- current_depth - 1
-
-      method! visit_if_then_else ~cond ~then_expr ~else_expr =
-        self#enter_nesting_level;
-        super#visit_if_then_else ~cond ~then_expr ~else_expr;
-        self#exit_nesting_level
-
-      method! visit_match ~expr ~cases =
-        self#enter_nesting_level;
-        super#visit_match ~expr ~cases;
-        self#exit_nesting_level
-
-      method! visit_try ~expr ~handlers =
-        self#enter_nesting_level;
-        super#visit_try ~expr ~handlers;
-        self#exit_nesting_level
-
-      method! visit_function ~params ~body =
-        self#enter_nesting_level;
-        super#visit_function ~params ~body;
-        self#exit_nesting_level
-    end
-
   (** Calculate maximum nesting depth of an AST expression node *)
-  let calculate_depth node =
-    let visitor = new depth_visitor in
-    visitor#visit_expr node;
-    visitor#get_max_depth
+  let depth node =
+    let rec depth_of current_depth = function
+      | If_then_else { cond; then_expr; else_expr } ->
+          let new_depth = current_depth + 1 in
+          let d1 = depth_of current_depth cond in
+          let d2 = depth_of new_depth then_expr in
+          let d3 =
+            match else_expr with
+            | Some e -> depth_of new_depth e
+            | None -> new_depth
+          in
+          max (max d1 d2) d3
+      | Match { expr; _ } | Try { expr; _ } ->
+          let new_depth = current_depth + 1 in
+          max (depth_of current_depth expr) new_depth
+      | Function { body; _ } -> depth_of (current_depth + 1) body
+      | Let { bindings; body } ->
+          let bind_depth =
+            List.fold_left
+              (fun acc (_, e) -> max acc (depth_of current_depth e))
+              current_depth bindings
+          in
+          max bind_depth (depth_of current_depth body)
+      | Sequence exprs ->
+          List.fold_left
+            (fun acc e -> max acc (depth_of current_depth e))
+            current_depth exprs
+      | Other -> current_depth
+    in
+    depth_of 0 node
 end
 
-(** Convert a structured name to a string *)
-let name_to_string (n : name) =
-  match n.prefix with
-  | [] -> n.base
-  | prefix -> String.concat "." prefix ^ "." ^ n.base
+type function_structure = { has_pattern_match : bool; case_count : int }
 
-(** What kind of AST dump we're parsing *)
-type what = Parsetree | Typedtree
-
-exception Parse_error of string
-(** Parse error exception *)
-
-exception Type_error
-(** Type error exception - raised when typedtree contains type errors *)
-
-type function_structure_info = { has_pattern_match : bool; case_count : int }
-(** Function structure analysis for E005 - function length detection *)
-
-class function_structure_visitor () =
-  object
-    inherit visitor as super
-    val mutable structure_info = { has_pattern_match = false; case_count = 0 }
-    method get_info = structure_info
-
-    method! visit_match ~expr ~cases =
-      structure_info <-
-        {
-          has_pattern_match = true;
-          case_count = structure_info.case_count + cases;
-        };
-      super#visit_match ~expr ~cases
-  end
+(** Analyze function structure to detect pattern matches *)
+let function_structure expr =
+  let has_pattern_match = ref false in
+  let case_count = ref 0 in
+  let rec analyze = function
+    | Match { expr; cases } ->
+        has_pattern_match := true;
+        case_count := !case_count + cases;
+        analyze expr
+    | If_then_else { cond; then_expr; else_expr } ->
+        analyze cond;
+        analyze then_expr;
+        Option.iter analyze else_expr
+    | Try { expr; _ } -> analyze expr
+    | Function { body; _ } -> analyze body
+    | Let { bindings; body } ->
+        List.iter (fun (_, e) -> analyze e) bindings;
+        analyze body
+    | Sequence exprs -> List.iter analyze exprs
+    | Other -> ()
+  in
+  analyze expr;
+  { has_pattern_match = !has_pattern_match; case_count = !case_count }
 
 (** Calculate expression line count for function length analysis *)
-let calculate_expr_line_count expr =
+let line_count expr =
   (* Count the number of nodes in the expression tree as a proxy for lines *)
   let count = ref 0 in
   let rec count_nodes = function
-    | Construct { args; _ } ->
-        incr count;
-        List.iter count_nodes args
-    | Apply { func; args } ->
-        incr count;
-        count_nodes func;
-        List.iter count_nodes args
-    | Ident _ | Constant _ -> incr count
     | If_then_else { cond; then_expr; else_expr } ->
         incr count;
         count_nodes cond;
@@ -308,3 +177,106 @@ let calculate_expr_line_count expr =
   in
   count_nodes expr;
   !count
+
+(** Convert ppxlib expression to our AST representation *)
+let rec ppxlib_expr_to_ast (expr : Ppxlib.expression) : expr =
+  Log.debug (fun m ->
+      m "ppxlib_expr_to_ast: %s" (Ppxlib.Pprintast.string_of_expression expr));
+  Log.debug (fun m ->
+      m "Expression type: %s"
+        (match expr.Ppxlib.pexp_desc with
+        | Ppxlib.Pexp_ifthenelse _ -> "Pexp_ifthenelse"
+        | Ppxlib.Pexp_match _ -> "Pexp_match"
+        | Ppxlib.Pexp_try _ -> "Pexp_try"
+        | Ppxlib.Pexp_function _ -> "Pexp_function"
+        | Ppxlib.Pexp_let _ -> "Pexp_let"
+        | Ppxlib.Pexp_sequence _ -> "Pexp_sequence"
+        | _ -> "Other"));
+  match expr.Ppxlib.pexp_desc with
+  | Ppxlib.Pexp_ifthenelse (cond, then_expr, else_expr) ->
+      If_then_else
+        {
+          cond = ppxlib_expr_to_ast cond;
+          then_expr = ppxlib_expr_to_ast then_expr;
+          else_expr = Option.map ppxlib_expr_to_ast else_expr;
+        }
+  | Ppxlib.Pexp_match (expr, cases) ->
+      Match { expr = ppxlib_expr_to_ast expr; cases = List.length cases }
+  | Ppxlib.Pexp_try (expr, cases) ->
+      Try { expr = ppxlib_expr_to_ast expr; handlers = List.length cases }
+  | Ppxlib.Pexp_function (params, _, body) ->
+      (* In OCaml 5, multi-parameter functions have all params here *)
+      Log.debug (fun m -> m "Pexp_function: %d params" (List.length params));
+
+      let body_expr =
+        match body with
+        | Ppxlib.Pfunction_body expr ->
+            Log.debug (fun m -> m "Found Pfunction_body");
+            ppxlib_expr_to_ast expr
+        | Ppxlib.Pfunction_cases (cases, _, _) ->
+            Log.debug (fun m ->
+                m "Found Pfunction_cases with %d cases" (List.length cases));
+            (* This is a pattern matching function - treat it as a match expression *)
+            Match { expr = Other; cases = List.length cases }
+      in
+
+      if List.length params = 0 then
+        (* No parameters - this is just a pattern match *)
+        body_expr
+      else Function { params = List.length params; body = body_expr }
+  | Ppxlib.Pexp_let (_, bindings, body) ->
+      let bindings =
+        List.map
+          (fun vb ->
+            match vb.Ppxlib.pvb_pat.Ppxlib.ppat_desc with
+            | Ppxlib.Ppat_var { txt; _ } ->
+                (txt, ppxlib_expr_to_ast vb.Ppxlib.pvb_expr)
+            | _ -> ("_", ppxlib_expr_to_ast vb.Ppxlib.pvb_expr))
+          bindings
+      in
+      Let { bindings; body = ppxlib_expr_to_ast body }
+  | Ppxlib.Pexp_sequence (e1, e2) ->
+      Sequence [ ppxlib_expr_to_ast e1; ppxlib_expr_to_ast e2 ]
+  | _ -> Other
+
+(** Extract function definitions from structure items *)
+let extract_functions_from_structure structure =
+  let functions = ref [] in
+
+  (* Use a visitor to find all value bindings *)
+  let visitor =
+    object
+      inherit Ppxlib.Ast_traverse.iter
+
+      method! value_binding vb =
+        match vb.Ppxlib.pvb_pat.Ppxlib.ppat_desc with
+        | Ppxlib.Ppat_var { txt = name; _ } ->
+            Log.debug (fun m -> m "Processing binding: %s" name);
+            let expr = ppxlib_expr_to_ast vb.pvb_expr in
+            Log.debug (fun m -> m "Converted %s to AST" name);
+            functions := (name, expr) :: !functions
+        | _ -> ()
+    end
+  in
+
+  visitor#structure structure;
+  List.rev !functions
+
+(** Extract functions from a source file using ppxlib *)
+let extract_functions filename =
+  try
+    Log.debug (fun m -> m "Parsing file: %s" filename);
+    let content = In_channel.with_open_text filename In_channel.input_all in
+    let lexbuf = Lexing.from_string content in
+    lexbuf.lex_curr_p <- { lexbuf.lex_curr_p with pos_fname = filename };
+
+    let structure = Ppxlib.Parse.implementation lexbuf in
+    let functions = extract_functions_from_structure structure in
+
+    Log.debug (fun m ->
+        m "Extracted %d functions from %s" (List.length functions) filename);
+    functions
+  with exn ->
+    Log.err (fun m ->
+        m "Failed to parse %s: %s" filename (Printexc.to_string exn));
+    []

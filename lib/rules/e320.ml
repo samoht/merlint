@@ -5,12 +5,13 @@ type payload = { name : string; kind : string; length : int; max_length : int }
 
 let check ctx =
   let max_underscores = 4 in
-  let ast = Context.ast ctx in
+  let ast = Context.dump ctx in
   let all_elts =
     ast.identifiers @ ast.patterns @ ast.modules @ ast.types @ ast.exceptions
     @ ast.variants
   in
-  Helpers.filter_map_elements all_elts (fun (elt : Ast.elt) ->
+  List.filter_map
+    (fun (elt : Dump.elt) ->
       (* Only check the base name, not the full qualified name *)
       let base_name = elt.name.base in
       let underscore_count =
@@ -19,10 +20,10 @@ let check ctx =
           0 base_name
       in
       if underscore_count > max_underscores && String.length base_name > 5 then
-        match Helpers.extract_location elt with
+        match Dump.location elt with
         | Some loc ->
             (* Use full name for display but count underscores only in base *)
-            let full_name = Ast.name_to_string elt.name in
+            let full_name = Dump.name_to_string elt.name in
             Some
               (Issue.v ~loc
                  {
@@ -33,6 +34,7 @@ let check ctx =
                  })
         | None -> None
       else None)
+    all_elts
 
 let pp ppf { name; kind = _; length; max_length } =
   Fmt.pf ppf "Identifier '%s' has %d underscores (max %d)" name length

@@ -11,15 +11,14 @@ module Log = (val Logs.src_log src : Logs.LOG)
 
 let check (ctx : Context.file) =
   let config = { max_complexity = ctx.Context.config.max_complexity } in
-  let ast = Context.ast ctx in
+  let functions = Context.functions ctx in
 
-  Log.debug (fun m ->
-      m "E001: Found %d functions in AST" (List.length ast.functions));
+  Log.debug (fun m -> m "E001: Found %d functions" (List.length functions));
 
-  (* Analyze each function in the AST *)
+  (* Analyze each function *)
   List.filter_map
     (fun (name, expr) ->
-      let complexity_info = Ast.Complexity.analyze_expr expr in
+      let complexity_info = Ast.Complexity.analyze expr in
       let complexity = Ast.Complexity.calculate complexity_info in
 
       Log.debug (fun m ->
@@ -51,7 +50,7 @@ let check (ctx : Context.file) =
         Some
           (Issue.v ~loc { name; complexity; threshold = config.max_complexity })
       else None)
-    ast.functions
+    functions
 
 let pp ppf { name; complexity; threshold } =
   Fmt.pf ppf "Function '%s' has cyclomatic complexity of %d (threshold: %d)"
