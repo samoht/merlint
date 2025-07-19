@@ -65,7 +65,7 @@ The Fmt module provides a more modern and composable approach to formatting. It 
 
 **Documentation**: Every `.mli` file must begin with a top-level documentation comment explaining its purpose. Focus on *what* the module provides, not *how* it is implemented.
 
-### [E405] Missing Type Documentation
+### [E405] Missing Value Documentation
 
 All public values should have documentation explaining their purpose and usage. Add doc comments (** ... *) above value declarations in .mli files.
 
