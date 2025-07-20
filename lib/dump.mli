@@ -32,8 +32,8 @@ exception Wrong_ast_type
 (** Convert a structured name to a string *)
 val name_to_string : name -> string
 
-val parsetree : string -> t
 (** Parse parsetree text dump into AST structure *)
+val parsetree : string -> t
 
 val typedtree : string -> t
 (** Parse typedtree text dump into AST structure *)

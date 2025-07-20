@@ -26,5 +26,9 @@ val print_status : bool -> string
 
 (** Apply color formatting to text based on passed state *)
 val print_color : bool -> string -> string
+
+(** Print a summary of all reports to stdout *)
 val print_summary : t list -> unit
+
+(** Extract all issues from a list of reports *)
 val get_all_issues : t list -> Rule.Run.result list

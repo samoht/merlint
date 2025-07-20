@@ -33,8 +33,8 @@ val v :
   'a scope ->
   t
 
-val code : t -> string
 (** Get the code of a rule *)
+val code : t -> string
 
 val title : t -> string
 (** Get the title of a rule *)

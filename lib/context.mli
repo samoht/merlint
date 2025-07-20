@@ -64,8 +64,8 @@ val functions : file -> (string * Ast.expr) list
 (** Force evaluation of the all_files field *)
 val all_files : project -> string list
 
-val executable_modules : project -> string list
 (** Get the list of executable module names *)
+val executable_modules : project -> string list
 
 val lib_modules : project -> string list
 (** Get the list of library module names *)
