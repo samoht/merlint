@@ -5,7 +5,28 @@ type payload = { variant : string; expected : string }
 let check (ctx : Context.file) =
   Dump.check_elements (Context.dump ctx).variants
     (fun name ->
-      if Naming.is_pascal_case name then Some (Naming.to_snake_case name)
+      (* Skip standard library constructors and compiler internals *)
+      if
+        List.mem name
+          [
+            "Some";
+            "None";
+            "Ok";
+            "Error";
+            "Match";
+            "Try";
+            "Function";
+            "Let";
+            "Sequence";
+            "Other";
+            "Format";
+            "String";
+            "Int";
+          ]
+      then None
+      else if String.contains name '.' then None
+        (* Skip qualified names like CamlinternalFormatBasics.Format *)
+      else if Naming.is_pascal_case name then Some (Naming.to_snake_case name)
       else None)
     (fun variant_name loc expected ->
       Issue.v ~loc { variant = variant_name; expected })

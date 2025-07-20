@@ -3,16 +3,16 @@
 type describe
 (** Abstract type for dune describe results *)
 
-val describe : string -> describe
+val describe : Fpath.t -> describe
 (** Get parsed dune describe output for a project, using cache when possible *)
 
-val ensure_project_built : string -> (unit, string) result
+val ensure_project_built : Fpath.t -> (unit, string) result
 (** Ensure the project is built by running 'dune build' if needed *)
 
-val is_executable : describe -> string -> bool
+val is_executable : describe -> Fpath.t -> bool
 (** Check if a file is an executable (binary or test) - no .mli needed *)
 
-val get_project_files : describe -> string list
+val get_project_files : describe -> Fpath.t list
 (** Get all project source files using dune describe. Returns a list of .ml and
     .mli files. *)
 
@@ -22,15 +22,15 @@ val get_lib_modules : describe -> string list
 val get_test_modules : describe -> string list
 (** Get test module names from dune describe *)
 
-val libraries : string -> (string * string list) list
+val libraries : Fpath.t -> (string * Fpath.t list) list
 (** Get all libraries in the project Returns a list of (library_name,
     source_files) pairs *)
 
-val executables : string -> (string * string list) list
+val executables : Fpath.t -> (string * Fpath.t list) list
 (** Get all executables in the project Returns a list of (executable_name,
     source_files) pairs The executable_name is the main entry point *)
 
-val tests : string -> (string * string list) list
+val tests : Fpath.t -> (string * Fpath.t list) list
 (** Get all tests in the project Returns a list of (test_name, source_files)
     pairs The test_name is the main entry point *)
 

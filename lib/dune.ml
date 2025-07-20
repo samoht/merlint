@@ -6,24 +6,26 @@ module Log = (val Logs.src_log src : Logs.LOG)
 open Sexplib0
 
 type describe = {
-  libraries : (string * string list) list;
-  executables : (string * string list) list;
-  tests : (string * string list) list;
+  libraries : (string * Fpath.t list) list;
+  executables : (string * Fpath.t list) list;
+  tests : (string * Fpath.t list) list;
 }
 (** Abstract type for dune describe results *)
 
 (** Forward declaration for describe function *)
 let describe_ref =
-  ref (fun _project_root -> { libraries = []; executables = []; tests = [] })
+  ref (fun (_project_root : Fpath.t) ->
+      { libraries = []; executables = []; tests = [] })
 
 (** Ensure the project is built by running 'dune build' if needed *)
 let ensure_project_built project_root =
-  let dune_project = Filename.concat project_root "dune-project" in
-  if not (Sys.file_exists dune_project) then
+  let dune_project = Fpath.(project_root / "dune-project") in
+  if not (Sys.file_exists (Fpath.to_string dune_project)) then
     Ok () (* Not a dune project, skip build *)
   else
     let cmd =
-      Fmt.str "dune build @check --root %s" (Filename.quote project_root)
+      Fmt.str "dune build @check --root %s"
+        (Filename.quote (Fpath.to_string project_root))
     in
     Log.info (fun m -> m "Ensuring project is built: %s" cmd);
     match Command.run cmd with
@@ -32,7 +34,7 @@ let ensure_project_built project_root =
 
 (** Check if a file is an executable *)
 let is_executable dune_describe ml_file =
-  let module_name = Filename.basename (Filename.remove_extension ml_file) in
+  let module_name = Fpath.(ml_file |> rem_ext |> basename) in
   List.exists
     (fun (name, _files) ->
       String.lowercase_ascii name = String.lowercase_ascii module_name)
@@ -40,8 +42,10 @@ let is_executable dune_describe ml_file =
 
 (** Find all dune files in a directory tree *)
 let rec find_dune_files dir =
-  let dir_path = Fpath.v dir in
-  let entries = try Sys.readdir dir with Sys_error _ -> [||] in
+  let dir_path = dir in
+  let entries =
+    try Sys.readdir (Fpath.to_string dir) with Sys_error _ -> [||]
+  in
   Array.to_list entries
   |> List.concat_map (fun entry ->
          let path = Fpath.(dir_path / entry) in
@@ -49,17 +53,17 @@ let rec find_dune_files dir =
          if
            entry = "dune" && Sys.file_exists path_str
            && not (Sys.is_directory path_str)
-         then [ path_str ]
+         then [ path ]
          else if
            Sys.is_directory path_str && entry <> "_build" && entry <> ".git"
            && entry <> "_opam"
-         then find_dune_files path_str
+         then find_dune_files path
          else [])
 
 (** Parse a dune file and extract module information *)
 let parse_dune_file filename =
   try
-    let ic = open_in filename in
+    let ic = open_in (Fpath.to_string filename) in
     let content = really_input_string ic (in_channel_length ic) in
     close_in ic;
 
@@ -76,10 +80,10 @@ let extract_modules_field = function
   | _ -> []
 
 type project_item =
-  | Library of { name : string; dir : string; modules : string list }
-  | Executable of { names : string list; dir : string; modules : string list }
-  | Test of { names : string list; dir : string; modules : string list }
-  | CramTest of { dir : string }
+  | Library of { name : string; dir : Fpath.t; modules : string list }
+  | Executable of { names : string list; dir : Fpath.t; modules : string list }
+  | Test of { names : string list; dir : Fpath.t; modules : string list }
+  | CramTest of { dir : Fpath.t }
 
 (** Check if a directory should be included based on dune directives *)
 let should_include_dir dune_file =
@@ -143,12 +147,12 @@ let extract_project_item dir = function
 (** Get source files for a project item *)
 let get_item_files = function
   | Library { dir; modules; _ } ->
-      let dir_path = Fpath.v dir in
+      let dir_path = dir in
       if modules = [] then (
         (* No explicit modules, find all .ml/.mli files in dir *)
         let files = ref [] in
         (try
-           let entries = Sys.readdir dir in
+           let entries = Sys.readdir (Fpath.to_string dir) in
            Array.iter
              (fun entry ->
                (* Skip temporary files (e.g., .#main.ml) *)
@@ -160,10 +164,7 @@ let get_item_files = function
                  && (String.ends_with ~suffix:".ml" entry
                     || String.ends_with ~suffix:".mli" entry)
                then
-                 let file_path =
-                   Fpath.(dir_path / entry)
-                   |> Fpath.normalize |> Fpath.to_string
-                 in
+                 let file_path = Fpath.(dir_path / entry) |> Fpath.normalize in
                  files := file_path :: !files)
              entries
          with _ -> ());
@@ -172,37 +173,28 @@ let get_item_files = function
         (* Explicit modules *)
         List.concat_map
           (fun m ->
-            let ml =
-              Fpath.(dir_path / (m ^ ".ml"))
-              |> Fpath.normalize |> Fpath.to_string
-            in
-            let mli =
-              Fpath.(dir_path / (m ^ ".mli"))
-              |> Fpath.normalize |> Fpath.to_string
-            in
-            List.filter Sys.file_exists [ ml; mli ])
+            let ml = Fpath.(dir_path / (m ^ ".ml")) |> Fpath.normalize in
+            let mli = Fpath.(dir_path / (m ^ ".mli")) |> Fpath.normalize in
+            List.filter
+              (fun p -> Sys.file_exists (Fpath.to_string p))
+              [ ml; mli ])
           modules
   | Executable { names; dir; modules } ->
-      let dir_path = Fpath.v dir in
+      let dir_path = dir in
       let base_modules = if modules = [] then names else modules in
       List.concat_map
         (fun m ->
-          let ml =
-            Fpath.(dir_path / (m ^ ".ml")) |> Fpath.normalize |> Fpath.to_string
-          in
-          let mli =
-            Fpath.(dir_path / (m ^ ".mli"))
-            |> Fpath.normalize |> Fpath.to_string
-          in
-          List.filter Sys.file_exists [ ml; mli ])
+          let ml = Fpath.(dir_path / (m ^ ".ml")) |> Fpath.normalize in
+          let mli = Fpath.(dir_path / (m ^ ".mli")) |> Fpath.normalize in
+          List.filter (fun p -> Sys.file_exists (Fpath.to_string p)) [ ml; mli ])
         base_modules
   | Test { dir; modules; _ } ->
-      let dir_path = Fpath.v dir in
+      let dir_path = dir in
       if modules = [] then (
         (* No explicit modules, find all .ml/.mli files in dir *)
         let files = ref [] in
         (try
-           let entries = Sys.readdir dir in
+           let entries = Sys.readdir (Fpath.to_string dir) in
            Array.iter
              (fun entry ->
                (* Skip temporary files (e.g., .#main.ml) *)
@@ -214,10 +206,7 @@ let get_item_files = function
                  && (String.ends_with ~suffix:".ml" entry
                     || String.ends_with ~suffix:".mli" entry)
                then
-                 let file_path =
-                   Fpath.(dir_path / entry)
-                   |> Fpath.normalize |> Fpath.to_string
-                 in
+                 let file_path = Fpath.(dir_path / entry) |> Fpath.normalize in
                  files := file_path :: !files)
              entries
          with _ -> ());
@@ -226,15 +215,11 @@ let get_item_files = function
         (* Explicit modules *)
         List.concat_map
           (fun m ->
-            let ml =
-              Fpath.(dir_path / (m ^ ".ml"))
-              |> Fpath.normalize |> Fpath.to_string
-            in
-            let mli =
-              Fpath.(dir_path / (m ^ ".mli"))
-              |> Fpath.normalize |> Fpath.to_string
-            in
-            List.filter Sys.file_exists [ ml; mli ])
+            let ml = Fpath.(dir_path / (m ^ ".ml")) |> Fpath.normalize in
+            let mli = Fpath.(dir_path / (m ^ ".mli")) |> Fpath.normalize in
+            List.filter
+              (fun p -> Sys.file_exists (Fpath.to_string p))
+              [ ml; mli ])
           modules
   | CramTest _ -> []
 
@@ -252,7 +237,7 @@ let get_project_files dune_describe =
 
   (* Combine and deduplicate *)
   let all_files =
-    lib_files @ exec_files @ test_files |> List.sort_uniq String.compare
+    lib_files @ exec_files @ test_files |> List.sort_uniq Fpath.compare
   in
   Log.debug (fun m -> m "Total unique files: %d" (List.length all_files));
   all_files
@@ -261,8 +246,9 @@ let get_project_files dune_describe =
 let get_lib_modules dune_describe =
   dune_describe.libraries |> List.concat_map snd
   |> List.filter_map (fun file ->
-         if String.ends_with ~suffix:".ml" file then
-           Some (Filename.basename file |> Filename.remove_extension)
+         let file_str = Fpath.to_string file in
+         if String.ends_with ~suffix:".ml" file_str then
+           Some Fpath.(file |> rem_ext |> basename)
          else None)
   |> List.sort_uniq String.compare
 
@@ -270,8 +256,9 @@ let get_lib_modules dune_describe =
 let get_test_modules dune_describe =
   dune_describe.tests |> List.concat_map snd
   |> List.filter_map (fun file ->
-         if String.ends_with ~suffix:".ml" file then
-           Some (Filename.basename file |> Filename.remove_extension)
+         let file_str = Fpath.to_string file in
+         if String.ends_with ~suffix:".ml" file_str then
+           Some Fpath.(file |> rem_ext |> basename)
          else None)
   |> List.sort_uniq String.compare
 
@@ -284,29 +271,39 @@ let get_project_structure project_root =
   let cram_dirs =
     List.fold_left
       (fun acc dune_file ->
-        let dir = Fpath.(v dune_file |> parent |> normalize |> to_string) in
+        let dir = Fpath.(dune_file |> parent |> normalize) in
         let stanzas = parse_dune_file dune_file in
         if
           List.exists
             (function Sexp.List (Sexp.Atom "cram" :: _) -> true | _ -> false)
             stanzas
         then (
-          Log.debug (fun m -> m "Found cram directory: %s" dir);
+          Log.debug (fun m ->
+              m "Found cram directory: %s" (Fpath.to_string dir));
           dir :: acc)
         else acc)
       [] dune_files
   in
   Log.debug (fun m ->
       m "Total cram directories found: %d" (List.length cram_dirs));
+  List.iter
+    (fun dir -> Log.debug (fun m -> m "Cram dir: %s" (Fpath.to_string dir)))
+    cram_dirs;
 
   (* Helper to check if a directory is under a cram directory *)
   let is_under_cram_dir path =
-    let norm_path = Fpath.(v path |> normalize |> to_string) in
-    List.exists
-      (fun cram_dir ->
-        String.starts_with ~prefix:(cram_dir ^ "/") norm_path
-        || norm_path = cram_dir)
-      cram_dirs
+    let path_fp = path |> Fpath.normalize in
+    let result =
+      List.exists
+        (fun cram_dir ->
+          let cram_fp = cram_dir |> Fpath.normalize in
+          Fpath.is_prefix cram_fp path_fp)
+        cram_dirs
+    in
+    if result then
+      Log.debug (fun m ->
+          m "Path %s is under cram directory" (Fpath.to_string path_fp));
+    result
   in
 
   (* Extract project structure, excluding anything under cram directories *)
@@ -314,13 +311,15 @@ let get_project_structure project_root =
     List.concat_map
       (fun dune_file ->
         if should_include_dir dune_file then
-          let dir = Fpath.(v dune_file |> parent |> normalize |> to_string) in
+          let dir = Fpath.(dune_file |> parent |> normalize) in
           if not (is_under_cram_dir dir) then
             let stanzas = parse_dune_file dune_file in
             List.filter_map (extract_project_item dir) stanzas
           else (
             Log.debug (fun m ->
-                m "Skipping dune file in cram dir: %s" dune_file);
+                m "Skipping dune file in cram dir: %s (dir=%s)"
+                  (Fpath.to_string dune_file)
+                  (Fpath.to_string dir));
             [])
         else [])
       dune_files
@@ -404,6 +403,7 @@ let exclude patterns describe =
   let filter_files files =
     List.filter
       (fun file ->
+        let file_str = Fpath.to_string file in
         not
           (List.exists
              (fun pattern ->
@@ -413,7 +413,7 @@ let exclude patterns describe =
                  && (String.sub s1 0 (String.length s2) = s2
                     || contains (String.sub s1 1 (String.length s1 - 1)) s2)
                in
-               contains file pattern)
+               contains file_str pattern)
              patterns))
       files
   in
@@ -434,4 +434,9 @@ let exclude patterns describe =
 
 (** Create a synthetic describe for individual files *)
 let create_synthetic files =
-  { libraries = []; executables = [ ("merlint_synthetic", files) ]; tests = [] }
+  let fpath_files = List.map Fpath.v files in
+  {
+    libraries = [];
+    executables = [ ("merlint_synthetic", fpath_files) ];
+    tests = [];
+  }

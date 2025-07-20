@@ -210,7 +210,7 @@ let run_analysis project_root dune_describe rule_filter show_profile =
   print_fix_hints all_issues
 
 let ensure_project_built project_root =
-  match Merlint.Dune.ensure_project_built project_root with
+  match Merlint.Dune.ensure_project_built (Fpath.v project_root) with
   | Ok () -> ()
   | Error msg ->
       Fmt.epr "Warning: %s@." msg;
@@ -236,7 +236,7 @@ let analyze_files ?(exclude_patterns = []) ?rule_filter ?(show_profile = false)
     match files with
     | [] ->
         (* No files specified, use dune for the project root *)
-        Merlint.Dune.describe project_root
+        Merlint.Dune.describe (Fpath.v project_root)
     | _ ->
         (* Files or directories specified *)
         let describes = ref [] in
@@ -245,7 +245,7 @@ let analyze_files ?(exclude_patterns = []) ?rule_filter ?(show_profile = false)
           (fun path ->
             if Sys.file_exists path && Sys.is_directory path then
               (* For directories, create a dune describe *)
-              let desc = Merlint.Dune.describe path in
+              let desc = Merlint.Dune.describe (Fpath.v path) in
               describes := desc :: !describes
             else if Sys.file_exists path then
               (* For individual files, we need to create a describe with them *)

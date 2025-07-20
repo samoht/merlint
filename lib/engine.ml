@@ -50,10 +50,11 @@ let run ~filter ~dune_describe project_root =
 
   (* Get all project files from dune describe *)
   let files_to_analyze = Dune.get_project_files dune_describe in
+  let files_to_analyze_str = List.map Fpath.to_string files_to_analyze in
 
   (* Create project context *)
   let project_ctx =
-    Context.create_project ~config ~project_root ~all_files:files_to_analyze
+    Context.create_project ~config ~project_root ~all_files:files_to_analyze_str
       ~dune_describe
   in
 
@@ -76,7 +77,8 @@ let run ~filter ~dune_describe project_root =
   let file_rules = List.filter Rule.is_file_scoped enabled_rules in
   let file_issues =
     List.concat_map
-      (fun filename ->
+      (fun filepath ->
+        let filename = Fpath.to_string filepath in
         try
           (* Run Merlin on the file *)
           let merlin_result = Merlin.analyze_file filename in
