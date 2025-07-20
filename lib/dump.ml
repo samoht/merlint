@@ -47,7 +47,7 @@ type token_kind =
       Location.t (* Parsed location like (file.ml[1,0+0]..file.ml[1,0+31]) *)
   | Module (* Tstr_module / Pstr_module *)
   | Type (* Tstr_type / Pstr_type *)
-  | TypeDeclaration (* type_declaration *)
+  | Type_declaration (* type_declaration *)
   | Value (* Tstr_value / Pstr_value *)
   | Exception (* Tstr_exception / Pstr_exception *)
   | Variant (* Ttype_variant / Ptype_variant *)
@@ -140,7 +140,7 @@ let get_ast_node_kind what word =
   | Parsetree, "Pexp_construct" -> Some Construct
   | Parsetree, "Ppat_var" -> Some Pattern
   (* Context-independent nodes *)
-  | _, "type_declaration" -> Some TypeDeclaration
+  | _, "type_declaration" -> Some Type_declaration
   | Typedtree, "Tstr_attribute" -> Some Attribute
   | Parsetree, "Pstr_attribute" -> Some Attribute
   (* Handle mismatched contexts - convert Parsetree nodes in Typedtree context *)

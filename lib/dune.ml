@@ -83,7 +83,7 @@ type project_item =
   | Library of { name : string; dir : Fpath.t; modules : string list }
   | Executable of { names : string list; dir : Fpath.t; modules : string list }
   | Test of { names : string list; dir : Fpath.t; modules : string list }
-  | CramTest of { dir : Fpath.t }
+  | Cram_test of { dir : Fpath.t }
 
 (** Check if a directory should be included based on dune directives *)
 let should_include_dir dune_file =
@@ -141,7 +141,7 @@ let extract_project_item dir = function
       in
       let modules = List.concat_map extract_modules_field fields in
       if names <> [] then Some (Test { names; dir; modules }) else None
-  | Sexp.List (Sexp.Atom "cram" :: _) -> Some (CramTest { dir })
+  | Sexp.List (Sexp.Atom "cram" :: _) -> Some (Cram_test { dir })
   | _ -> None
 
 (** Get source files for a project item *)
@@ -221,7 +221,7 @@ let get_item_files = function
               (fun p -> Sys.file_exists (Fpath.to_string p))
               [ ml; mli ])
           modules
-  | CramTest _ -> []
+  | Cram_test _ -> []
 
 (** Get all project source files from describe *)
 let get_project_files dune_describe =
