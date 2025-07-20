@@ -41,7 +41,7 @@ let is_executable dune_describe ml_file =
     dune_describe.executables
 
 (** Find all dune files in a directory tree *)
-let rec find_dune_files dir =
+let rec get_dune_files dir =
   let dir_path = dir in
   let entries =
     try Sys.readdir (Fpath.to_string dir) with Sys_error _ -> [||]
@@ -57,7 +57,7 @@ let rec find_dune_files dir =
          else if
            Sys.is_directory path_str && entry <> "_build" && entry <> ".git"
            && entry <> "_opam"
-         then find_dune_files path
+         then get_dune_files path
          else [])
 
 (** Parse a dune file and extract module information *)
@@ -265,7 +265,7 @@ let get_test_modules dune_describe =
 (** Get project structure from dune files *)
 let get_project_structure project_root =
   (* Find all dune files *)
-  let dune_files = find_dune_files project_root in
+  let dune_files = get_dune_files project_root in
 
   (* First pass: find all cram directories *)
   let cram_dirs =

@@ -119,7 +119,7 @@ let parse_location str =
 
 (** Get AST node token kind if word is a recognized AST node in the given
     context *)
-let get_ast_node_kind what word =
+let find_ast_node_kind what word =
   match (what, word) with
   (* Typedtree context *)
   | Typedtree, "Tstr_module" -> Some Module
@@ -165,7 +165,7 @@ let get_ast_node_kind what word =
 
 (** Classify a word as either an AST node or just a word *)
 let classify_word what_context word =
-  match get_ast_node_kind what_context word with
+  match find_ast_node_kind what_context word with
   | Some k -> k
   | None -> Word word
 
