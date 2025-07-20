@@ -299,7 +299,7 @@ let parse_tokens tokens =
         (* Found an AST node token *)
         | Module -> parse_module acc location rest
         | Type -> parse_type acc location rest
-        | TypeDeclaration -> parse_type_declaration acc location rest
+        | Type_declaration -> parse_type_declaration acc location rest
         | Variant -> parse_variants acc location rest
         | Ident -> parse_ident acc location rest
         | Pattern -> parse_pattern acc location rest
