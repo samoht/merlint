@@ -50,9 +50,8 @@ val ast : file -> Ast.t
 (** Force evaluation of the dump field, raising an exception if it's an error *)
 val dump : file -> Dump.t
 
+(** Force evaluation of the outline field, raising an exception if it's an error *)
 val outline : file -> Outline.t
-(** Force evaluation of the outline field, raising an exception if it's an error
-*)
 
 val content : file -> string
 (** Force evaluation of the content field *)
@@ -71,5 +70,5 @@ val executable_modules : project -> string list
 (** Get the list of library module names *)
 val lib_modules : project -> string list
 
-val test_modules : project -> string list
 (** Get the list of test module names *)
+val test_modules : project -> string list

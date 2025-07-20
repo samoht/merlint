@@ -39,8 +39,8 @@ val code : t -> string
 (** Get the title of a rule *)
 val title : t -> string
 
-val category : t -> category
 (** Get the category of a rule *)
+val category : t -> category
 
 val hint : t -> string
 (** Get the hint of a rule *)
