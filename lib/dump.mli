@@ -35,8 +35,8 @@ val name_to_string : name -> string
 (** Parse parsetree text dump into AST structure *)
 val parsetree : string -> t
 
-val typedtree : string -> t
 (** Parse typedtree text dump into AST structure *)
+val typedtree : string -> t
 
 (** {2 Utility functions for working with dump data} *)
 

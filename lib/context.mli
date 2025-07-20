@@ -34,6 +34,7 @@ val create_file :
   merlin_result:Merlin.t ->
   file
 
+(** Create a project context from the given parameters *)
 val create_project :
   config:Config.t ->
   project_root:string ->
@@ -46,8 +47,8 @@ val create_project :
 (** Force evaluation of the ast field, raising an exception if it's an error *)
 val ast : file -> Ast.t
 
-val dump : file -> Dump.t
 (** Force evaluation of the dump field, raising an exception if it's an error *)
+val dump : file -> Dump.t
 
 val outline : file -> Outline.t
 (** Force evaluation of the outline field, raising an exception if it's an error
@@ -67,8 +68,8 @@ val all_files : project -> string list
 (** Get the list of executable module names *)
 val executable_modules : project -> string list
 
-val lib_modules : project -> string list
 (** Get the list of library module names *)
+val lib_modules : project -> string list
 
 val test_modules : project -> string list
 (** Get the list of test module names *)
