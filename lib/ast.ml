@@ -209,12 +209,18 @@ let extract_functions filename =
     let lexbuf = Lexing.from_string content in
     lexbuf.lex_curr_p <- { lexbuf.lex_curr_p with pos_fname = filename };
 
-    let structure = Ppxlib.Parse.implementation lexbuf in
-    let functions = extract_functions_from_structure structure in
+    (* Check if it's an interface file *)
+    if Filename.check_suffix filename ".mli" then (
+      (* Interface files don't contain function implementations *)
+      Log.debug (fun m -> m "Skipping interface file: %s" filename);
+      [])
+    else
+      let structure = Ppxlib.Parse.implementation lexbuf in
+      let functions = extract_functions_from_structure structure in
 
-    Log.debug (fun m ->
-        m "Extracted %d functions from %s" (List.length functions) filename);
-    functions
+      Log.debug (fun m ->
+          m "Extracted %d functions from %s" (List.length functions) filename);
+      functions
   with exn ->
     Log.err (fun m ->
         m "Failed to parse %s: %s" filename (Printexc.to_string exn));
