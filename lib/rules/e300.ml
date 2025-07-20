@@ -13,12 +13,10 @@ let check (ctx : Context.file) =
           List.hd (List.rev parts)
         else name
       in
-      (* Standard library constructors are allowed to keep PascalCase *)
-      if List.mem name_to_check [ "Some"; "None"; "Ok"; "Error" ] then None
-      else if Naming.is_pascal_case name_to_check then
-        (* PascalCase needs to be converted to snake_case *)
-        Some (Naming.to_capitalized_snake_case name_to_check)
-      else None)
+      (* Check if the name needs to be converted *)
+      let expected = Naming.to_capitalized_snake_case name_to_check in
+      (* Only report if the conversion actually changes the name *)
+      if expected <> name_to_check then Some expected else None)
     (fun variant_name loc expected ->
       Issue.v ~loc { variant = variant_name; expected })
 
