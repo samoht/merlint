@@ -4,7 +4,7 @@ type payload = { value_name : string; expected : string }
 (** Payload for bad value naming *)
 
 let check_value_name name =
-  let expected = Naming.to_snake_case name in
+  let expected = Naming.to_lowercase_snake_case name in
   if name <> expected && name <> String.lowercase_ascii name then Some expected
   else None
 

@@ -10,6 +10,7 @@ let () =
     Test_config.suite @ Test_outline.suite @ Test_ast.suite @ Test_dump.suite
     @ Test_dune.suite @ Test_issue.suite @ Test_location.suite
     @ Test_merlin.suite @ Test_report.suite @ Test_engine.suite
+    @ [ ("naming", Test_naming.suite) ]
     @ [ Test_filter.suite ]
   in
   Alcotest.run "merlint" suites

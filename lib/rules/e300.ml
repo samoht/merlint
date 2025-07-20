@@ -5,28 +5,19 @@ type payload = { variant : string; expected : string }
 let check (ctx : Context.file) =
   Dump.check_elements (Context.dump ctx).variants
     (fun name ->
-      (* Skip standard library constructors and compiler internals *)
-      if
-        List.mem name
-          [
-            "Some";
-            "None";
-            "Ok";
-            "Error";
-            "Match";
-            "Try";
-            "Function";
-            "Let";
-            "Sequence";
-            "Other";
-            "Format";
-            "String";
-            "Int";
-          ]
-      then None
-      else if String.contains name '.' then None
-        (* Skip qualified names like CamlinternalFormatBasics.Format *)
-      else if Naming.is_pascal_case name then Some (Naming.to_snake_case name)
+      (* For qualified names, only check the basename *)
+      let name_to_check =
+        if String.contains name '.' then
+          (* Get everything after the last dot *)
+          let parts = String.split_on_char '.' name in
+          List.hd (List.rev parts)
+        else name
+      in
+      (* Standard library constructors are allowed to keep PascalCase *)
+      if List.mem name_to_check [ "Some"; "None"; "Ok"; "Error" ] then None
+      else if Naming.is_pascal_case name_to_check then
+        (* PascalCase needs to be converted to snake_case *)
+        Some (Naming.to_capitalized_snake_case name_to_check)
       else None)
     (fun variant_name loc expected ->
       Issue.v ~loc { variant = variant_name; expected })

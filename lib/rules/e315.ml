@@ -9,14 +9,14 @@ let check ctx =
   List.filter_map
     (fun (type_elt : Dump.elt) ->
       let name_str = type_elt.name.base in
-      if name_str <> Naming.to_snake_case name_str then
+      if name_str <> Naming.to_lowercase_snake_case name_str then
         match Dump.location type_elt with
         | Some loc ->
             Some
               (Issue.v ~loc
                  {
                    type_name = name_str;
-                   expected = Naming.to_snake_case name_str;
+                   expected = Naming.to_lowercase_snake_case name_str;
                  })
         | None -> None
       else None)
