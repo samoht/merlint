@@ -47,6 +47,6 @@ module Nesting : sig
   (** Calculate maximum nesting depth of an AST expression node *)
 end
 
-val extract_functions : string -> (string * expr) list
 (** Extract functions with their control flow from a source file using ppxlib.
     Returns a list of (function_name, control_flow_ast) pairs. *)
+val extract_functions : string -> (string * expr) list

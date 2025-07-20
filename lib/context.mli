@@ -26,13 +26,13 @@ type project = {
   test_modules : string list Lazy.t;  (** List of test module names (lazy) *)
 }
 
+(** Create a file context with all the necessary data for analysis *)
 val create_file :
   filename:string ->
   config:Config.t ->
   project_root:string ->
   merlin_result:Merlin.t ->
   file
-(** Create a file context from the given parameters *)
 
 val create_project :
   config:Config.t ->
@@ -43,8 +43,8 @@ val create_project :
 (** Create a project context from the given parameters *)
 
 (* File context accessors *)
-val ast : file -> Ast.t
 (** Force evaluation of the ast field, raising an exception if it's an error *)
+val ast : file -> Ast.t
 
 val dump : file -> Dump.t
 (** Force evaluation of the dump field, raising an exception if it's an error *)
@@ -61,8 +61,8 @@ val functions : file -> (string * Ast.expr) list
     their AST *)
 
 (* Project context accessors *)
-val all_files : project -> string list
 (** Force evaluation of the all_files field *)
+val all_files : project -> string list
 
 val executable_modules : project -> string list
 (** Get the list of executable module names *)
