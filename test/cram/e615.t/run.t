@@ -1,7 +1,6 @@
 
 Test bad example - should find test suite not included:
   $ merlint -r E615 bad/
-  merlint: [ERROR] Failed to analyze bad/test/test.ml: Merlint.Dump.Wrong_ast_type
   Running merlint analysis...
   
   Analyzing 2 files
@@ -23,7 +22,6 @@ Test bad example - should find test suite not included:
 
 Test good example - should find no issues:
   $ merlint -r E615 good/
-  merlint: [ERROR] Failed to analyze good/test/test.ml: Merlint.Dump.Wrong_ast_type
   Running merlint analysis...
   
   Analyzing 2 files

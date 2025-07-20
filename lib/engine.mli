@@ -6,12 +6,9 @@ val get_project_root : string -> string
 
 val run :
   filter:Filter.t ->
-  exclude:string list ->
-  ?files:string list ->
+  dune_describe:Dune.describe ->
   string ->
   Rule.Run.result list
-(** Run all checks on a project. [run ~filter ~exclude ?files project_root] runs
-    all enabled rules on the project at [project_root], excluding files matching
-    patterns in [exclude]. If [files] is provided, analyzes only those files;
-    otherwise discovers files using dune describe. Returns a sorted list of
-    issues found. *)
+(** Run all checks on a project. [run ~filter ~dune_describe project_root] runs
+    all enabled rules using the given dune describe for project structure.
+    Returns a sorted list of issues found. *)

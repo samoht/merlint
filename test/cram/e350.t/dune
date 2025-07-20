@@ -1,3 +1,4 @@
 (library
  (name test_e350)
- (modules bad good))
+ (modules bad good)
+ (flags :standard -w -32))

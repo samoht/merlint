@@ -4,6 +4,8 @@ let check (ctx : Context.file) =
   let dump_data = Context.dump ctx in
 
   (* Check identifiers for Str module usage *)
+  (* In typedtree, we get ["Stdlib"; "Str"] or ["Str"]
+     In parsetree, we get ["Str"] for Str.function_name *)
   Dump.check_module_usage dump_data.identifiers "Str" (fun ~loc ->
       Issue.v ~loc ())
 

@@ -1,4 +1,4 @@
 (test
  (name test)
- (modules test test_user)
+ (modules test test_parser)
  (libraries alcotest))

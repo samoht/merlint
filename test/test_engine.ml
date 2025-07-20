@@ -15,7 +15,8 @@ let test_run_empty_filter () =
   | Error msg ->
       Alcotest.fail (Printf.sprintf "Failed to create filter: %s" msg)
   | Ok filter ->
-      let results = Engine.run ~filter ~exclude:[] "." in
+      let dune_describe = Dune.describe "." in
+      let results = Engine.run ~filter ~dune_describe "." in
       Alcotest.(check int)
         "no results with all rules disabled" 0 (List.length results)
 

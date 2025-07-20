@@ -1,4 +1,5 @@
 (library
  (name test_e615)
  (modules bad good)
- (libraries alcotest))
+ (libraries alcotest)
+ (flags :standard -w -32))

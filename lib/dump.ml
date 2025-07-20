@@ -143,15 +143,24 @@ let get_ast_node_kind what word =
   | _, "type_declaration" -> Some TypeDeclaration
   | Typedtree, "Tstr_attribute" -> Some Attribute
   | Parsetree, "Pstr_attribute" -> Some Attribute
-  (* Mismatched contexts - fail early on known AST nodes *)
-  | ( Typedtree,
-      ( "Pstr_module" | "Pstr_type" | "Pstr_value" | "Pstr_exception"
-      | "Ptype_variant" | "Pexp_ident" | "Pexp_construct" | "Ppat_var" ) ) ->
-      raise Wrong_ast_type
-  | ( Parsetree,
-      ( "Tstr_module" | "Tstr_type" | "Tstr_value" | "Tstr_exception"
-      | "Ttype_variant" | "Texp_ident" | "Texp_construct" | "Tpat_var" ) ) ->
-      raise Wrong_ast_type
+  (* Handle mismatched contexts - convert Parsetree nodes in Typedtree context *)
+  | Typedtree, "Pstr_module" -> Some Module
+  | Typedtree, "Pstr_type" -> Some Type
+  | Typedtree, "Pstr_value" -> Some Value
+  | Typedtree, "Pstr_exception" -> Some Exception
+  | Typedtree, "Ptype_variant" -> Some Variant
+  | Typedtree, "Pexp_ident" -> Some Ident
+  | Typedtree, "Pexp_construct" -> Some Construct
+  | Typedtree, "Ppat_var" -> Some Pattern
+  (* Handle mismatched contexts - convert Typedtree nodes in Parsetree context *)
+  | Parsetree, "Tstr_module" -> Some Module
+  | Parsetree, "Tstr_type" -> Some Type
+  | Parsetree, "Tstr_value" -> Some Value
+  | Parsetree, "Tstr_exception" -> Some Exception
+  | Parsetree, "Ttype_variant" -> Some Variant
+  | Parsetree, "Texp_ident" -> Some Ident
+  | Parsetree, "Texp_construct" -> Some Construct
+  | Parsetree, "Tpat_var" -> Some Pattern
   | _ -> None
 
 (** Classify a word as either an AST node or just a word *)

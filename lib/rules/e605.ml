@@ -29,7 +29,11 @@ let check (ctx : Context.project) =
   let test_modules = Context.test_modules ctx in
 
   let missing_tests =
-    List.filter (fun lib_mod -> not (List.mem lib_mod test_modules)) lib_modules
+    List.filter
+      (fun lib_mod ->
+        let expected_test_module = "test_" ^ lib_mod in
+        not (List.mem expected_test_module test_modules))
+      lib_modules
   in
 
   List.map (fun m -> create_missing_test_issue m files) missing_tests

@@ -1,3 +1,4 @@
 (library
  (name test_e605)
- (modules bad good))
+ (modules bad good)
+ (flags :standard -w -32))

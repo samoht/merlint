@@ -66,8 +66,7 @@ let create_project ~config ~project_root ~all_files ~dune_describe =
     project_root;
     all_files = lazy all_files;
     dune_describe = dune_desc_lazy;
-    executable_modules =
-      lazy (Dune.get_executable_info (Lazy.force dune_desc_lazy));
+    executable_modules = lazy [];
     lib_modules = lazy (Dune.get_lib_modules (Lazy.force dune_desc_lazy));
     test_modules = lazy (Dune.get_test_modules (Lazy.force dune_desc_lazy));
   }

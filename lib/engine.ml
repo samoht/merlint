@@ -42,36 +42,19 @@ let run_project_rule ctx rule =
     []
 
 (** Run all checks on a project *)
-let run ~filter ~exclude ?files project_root =
+let run ~filter ~dune_describe project_root =
   Log.info (fun m -> m "Starting analysis of %s" project_root);
 
   (* Load configuration *)
   let config = Config.load_from_path project_root in
 
-  (* Get dune project description *)
-  let dune_describe = Dune.describe project_root in
-
-  (* Get all project files *)
-  let all_files =
-    match files with
-    | Some file_list -> file_list
-    | None -> Dune.get_project_files dune_describe
-  in
-
-  (* Filter out excluded files *)
-  let files_to_analyze =
-    List.filter
-      (fun file ->
-        not
-          (List.exists
-             (fun pattern -> Re.execp (Re.compile (Re.str pattern)) file)
-             exclude))
-      all_files
-  in
+  (* Get all project files from dune describe *)
+  let files_to_analyze = Dune.get_project_files dune_describe in
 
   (* Create project context *)
   let project_ctx =
-    Context.create_project ~config ~project_root ~all_files ~dune_describe
+    Context.create_project ~config ~project_root ~all_files:files_to_analyze
+      ~dune_describe
   in
 
   (* Get all rules and filter them *)
