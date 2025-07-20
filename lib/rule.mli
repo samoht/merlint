@@ -42,8 +42,8 @@ val title : t -> string
 (** Get the category of a rule *)
 val category : t -> category
 
-val hint : t -> string
 (** Get the hint of a rule *)
+val hint : t -> string
 
 val examples : t -> example list
 (** Get the examples of a rule *)

@@ -53,8 +53,8 @@ val dump : file -> Dump.t
 (** Force evaluation of the outline field, raising an exception if it's an error *)
 val outline : file -> Outline.t
 
-val content : file -> string
 (** Force evaluation of the content field *)
+val content : file -> string
 
 val functions : file -> (string * Ast.expr) list
 (** Force evaluation of the functions field, returns list of function names and
