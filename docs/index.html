@@ -530,11 +530,16 @@ pre code {
         <span class="error-code">E405</span>
         <span class="error-title">Missing Value Documentation</span>
     </div>
-    <div class="error-hint"><p>All public values should have documentation explaining their purpose and usage. Add doc comments (** ... *) above value declarations in .mli files.</p><div class="examples-grid">
+    <div class="error-hint"><p>All public values should have documentation explaining their purpose and usage. Add doc comments (** ... *) before or after value declarations in .mli files.</p><div class="examples-grid">
 <div class="example bad">
   <h4>BAD</h4>
   <pre><code><span class="kw">type</span> t
-<span class="kw">val</span> parse : string -&gt; t</code></pre>
+<span class="kw">val</span> parse : string -&gt; t
+
+<span class="cm">(** Documentation after is also acceptable *)</span>
+<span class="kw">val</span> format : t -&gt; string
+
+<span class="kw">val</span> missing_documentation : int -&gt; int</code></pre>
 </div>
 <div class="example good">
   <h4>GOOD</h4>
@@ -542,7 +547,13 @@ pre code {
 
 (** [parse str] converts a string <span class="kw">to</span> <span class="kw">type</span> [t].
     @<span class="kw">raise</span> <span class="cn">Invalid_argument</span> <span class="kw">if</span> [str] is malformed. *)
-<span class="kw">val</span> parse : string -&gt; t</code></pre>
+<span class="kw">val</span> parse : string -&gt; t
+
+<span class="kw">val</span> format : t -&gt; string
+<span class="cm">(** [format t] converts a value of type [t] to a string representation. *)</span>
+
+<span class="cm">(** [process n] processes an integer value. *)</span>
+<span class="kw">val</span> process : int -&gt; int</code></pre>
 </div>
 </div></div>
 </div>

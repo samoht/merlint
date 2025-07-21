@@ -67,7 +67,7 @@ The Fmt module provides a more modern and composable approach to formatting. It 
 
 ### [E405] Missing Value Documentation
 
-All public values should have documentation explaining their purpose and usage. Add doc comments (** ... *) above value declarations in .mli files.
+All public values should have documentation explaining their purpose and usage. Add doc comments (** ... *) before or after value declarations in .mli files.
 
 **Examples:**
 
@@ -75,6 +75,11 @@ All public values should have documentation explaining their purpose and usage. 
 ```ocaml
 type t
 val parse : string -> t
+
+(** Documentation after is also acceptable *)
+val format : t -> string
+
+val missing_documentation : int -> int
 ```
 
 ✅ **Good:**
@@ -84,6 +89,12 @@ type t
 (** [parse str] converts a string to type [t].
     @raise Invalid_argument if [str] is malformed. *)
 val parse : string -> t
+
+val format : t -> string
+(** [format t] converts a value of type [t] to a string representation. *)
+
+(** [process n] processes an integer value. *)
+val process : int -> int
 ```
 
 
