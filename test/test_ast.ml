@@ -298,6 +298,32 @@ let nesting_visitor_tests =
         in
         let depth = Ast.Nesting.depth simple_if in
         Alcotest.(check int) "simple if depth" 1 depth);
+    Alcotest.test_case "nesting depth else-if chain" `Quick (fun () ->
+        (* Test that else-if chains don't increase nesting depth *)
+        let else_if_chain =
+          Ast.If_then_else
+            {
+              cond = Ast.Other;
+              then_expr = Ast.Other;
+              else_expr = Some (
+                Ast.If_then_else
+                  {
+                    cond = Ast.Other;
+                    then_expr = Ast.Other;
+                    else_expr = Some (
+                      Ast.If_then_else
+                        {
+                          cond = Ast.Other;
+                          then_expr = Ast.Other;
+                          else_expr = Some Ast.Other;
+                        }
+                    );
+                  }
+              );
+            }
+        in
+        let depth = Ast.Nesting.depth else_if_chain in
+        Alcotest.(check int) "else-if chain depth" 1 depth);
     Alcotest.test_case "nesting depth nested if" `Quick (fun () ->
         let nested_if =
           Ast.If_then_else

@@ -1,4 +1,3 @@
-open Printf
 
 let string_contains s sub = Re.execp (Re.compile (Re.str sub)) s
 
@@ -78,7 +77,7 @@ let check_run_t_format cram_dir error_code =
               | "-r" :: next :: _ ->
                   if next <> rule_code then
                     Some
-                      (sprintf "Line uses '-r %s' instead of '-r %s'" next
+                      (Fmt.str "Line uses '-r %s' instead of '-r %s'" next
                          rule_code)
                   else None
               | _ :: rest -> check_r_flag rest
@@ -171,16 +170,16 @@ let main () =
   let defined_rules = get_all_error_codes () in
   let test_dirs = get_test_directories cram_dir in
 
-  printf "Checking test integrity...\n";
-  printf "Found %d defined rules\n" (List.length defined_rules);
-  printf "Found %d test directories\n" (List.length test_dirs);
+  Fmt.pr "Checking test integrity...@.";
+  Fmt.pr "Found %d defined rules@." (List.length defined_rules);
+  Fmt.pr "Found %d test directories@." (List.length test_dirs);
 
   (* Check 1: Every rule must have a test directory *)
   List.iter
     (fun rule_code ->
       if not (List.mem rule_code test_dirs) then
         errors :=
-          sprintf
+          Fmt.str
             "Error: Rule %s is defined but missing test directory at %s/%s.t/"
             (String.uppercase_ascii rule_code)
             cram_dir rule_code
@@ -192,7 +191,7 @@ let main () =
     (fun test_code ->
       if not (List.mem test_code defined_rules) then
         errors :=
-          sprintf
+          Fmt.str
             "Error: Test directory %s/%s.t/ exists but rule %s is not defined"
             cram_dir test_code
             (String.uppercase_ascii test_code)
@@ -212,15 +211,15 @@ let main () =
         in
         if not bad_exists then
           errors :=
-            sprintf "Error: %s/%s.t/bad.ml is missing" cram_dir rule_code
+            Fmt.str "Error: %s/%s.t/bad.ml is missing" cram_dir rule_code
             :: !errors;
         if not good_exists then
           errors :=
-            sprintf "Error: %s/%s.t/good.ml is missing" cram_dir rule_code
+            Fmt.str "Error: %s/%s.t/good.ml is missing" cram_dir rule_code
             :: !errors;
         (if not run_exists then
            errors :=
-             sprintf "Error: %s/%s.t/run.t is missing" cram_dir rule_code
+             Fmt.str "Error: %s/%s.t/run.t is missing" cram_dir rule_code
              :: !errors
          else
            (* Check 4: run.t must use correct -r flag format *)
@@ -229,14 +228,14 @@ let main () =
            in
            if not has_bad_test then
              errors :=
-               sprintf
+               Fmt.str
                  "Error: %s/%s.t/run.t doesn't test 'merlint -r %s bad.ml'"
                  cram_dir rule_code
                  (String.uppercase_ascii rule_code)
                :: !errors;
            if not has_good_test then
              errors :=
-               sprintf
+               Fmt.str
                  "Error: %s/%s.t/run.t doesn't test 'merlint -r %s good.ml'"
                  cram_dir rule_code
                  (String.uppercase_ascii rule_code)
@@ -245,22 +244,22 @@ let main () =
            List.iter
              (fun msg ->
                errors :=
-                 sprintf "Error: %s/%s.t/run.t: %s" cram_dir rule_code msg
+                 Fmt.str "Error: %s/%s.t/run.t: %s" cram_dir rule_code msg
                  :: !errors)
              wrong_formats);
         (* Check 5: test directories SHOULD have dune-project and dune files *)
         if not dune_project_exists then
           errors :=
-            sprintf "Error: %s/%s.t/dune-project is missing" cram_dir rule_code
+            Fmt.str "Error: %s/%s.t/dune-project is missing" cram_dir rule_code
             :: !errors;
         if not dune_exists then
           errors :=
-            sprintf "Error: %s/%s.t/dune is missing" cram_dir rule_code
+            Fmt.str "Error: %s/%s.t/dune is missing" cram_dir rule_code
             :: !errors))
     defined_rules;
 
   (* Check 6: Parse run.t files to verify expected behavior *)
-  printf "\nChecking expected test outputs...\n";
+  Fmt.pr "\nChecking expected test outputs...@.";
   List.iter
     (fun rule_code ->
       if List.mem rule_code test_dirs then
@@ -286,7 +285,7 @@ let main () =
 
             if has_dune_error && not continues_with_analysis then
               errors :=
-                sprintf
+                Fmt.str
                   "Error: %s/%s.t/run.t: %s.ml test shows Dune build failure"
                   cram_dir rule_code test_name
                 :: !errors
@@ -299,7 +298,7 @@ let main () =
               in
               if not has_exit_1 then
                 errors :=
-                  sprintf
+                  Fmt.str
                     "Error: %s/%s.t/run.t: bad.ml test doesn't show exit code \
                      [1] - should find issues"
                     cram_dir rule_code
@@ -321,7 +320,7 @@ let main () =
                 in
                 if has_exit_1 && shows_zero_issues then
                   errors :=
-                    sprintf
+                    Fmt.str
                       "Error: %s/%s.t/run.t: good.ml test shows exit [1] but \
                        claims 0 issues"
                       cram_dir rule_code
@@ -331,12 +330,12 @@ let main () =
 
   (* Report results *)
   if !errors = [] then (
-    printf "✓ Test integrity check passed!\n";
+    Fmt.pr "✓ Test integrity check passed!@.";
     exit 0)
   else (
-    printf "\n✗ Test integrity check failed:\n\n";
-    List.iter (fun e -> printf "  %s\n" e) (List.rev !errors);
-    printf "\nPlease fix these issues before proceeding.\n";
+    Fmt.pr "\n✗ Test integrity check failed:\n@.";
+    List.iter (fun e -> Fmt.pr "  %s@." e) (List.rev !errors);
+    Fmt.pr "\nPlease fix these issues before proceeding.@.";
     exit 1)
 
 let () = main ()

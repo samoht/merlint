@@ -93,7 +93,7 @@ module Nesting = struct
           let d2 = depth_of new_depth then_expr in
           let d3 =
             match else_expr with
-            | Some e -> depth_of new_depth e
+            | Some e -> depth_of current_depth e  (* else branch at same level as if *)
             | None -> new_depth
           in
           max (max d1 d2) d3
