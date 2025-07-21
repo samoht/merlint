@@ -1,4 +1,3 @@
-
 let string_contains s sub = Re.execp (Re.compile (Re.str sub)) s
 
 (* Get all error codes from rules *)

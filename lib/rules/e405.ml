@@ -35,6 +35,26 @@ let has_doc_comment content line_num =
   check_backwards (line_num - 2)
 (* -2 because line numbers are 1-based and we want to check the line before *)
 
+let has_doc_comment_after content line_num =
+  (* Check if there's a doc comment (** ... *) after the given line *)
+  let lines = String.split_on_char '\n' content in
+  let rec check_forward idx =
+    if idx >= List.length lines then false
+    else
+      let line = String.trim (List.nth lines idx) in
+      if line = "" then
+        (* Empty line, keep looking *)
+        check_forward (idx + 1)
+      else if String.starts_with ~prefix:"(**" line then
+        (* Found a doc comment *)
+        true
+      else
+        (* Some other content, no doc comment *)
+        false
+  in
+  check_forward line_num
+(* line_num because we want to check after the current line, and it's 0-based in the list *)
+
 let check (ctx : Context.file) =
   (* Only check .mli files *)
   if not (String.ends_with ~suffix:".mli" ctx.filename) then []
@@ -49,8 +69,9 @@ let check (ctx : Context.file) =
         | Outline.Value -> (
             match item.range with
             | Some range ->
-                let has_doc = has_doc_comment content range.start.line in
-                if not has_doc then
+                let has_doc_before = has_doc_comment content range.start.line in
+                let has_doc_after = has_doc_comment_after content range.end_.line in
+                if not has_doc_before && not has_doc_after then
                   let loc =
                     Location.create ~file:ctx.filename
                       ~start_line:range.start.line ~start_col:range.start.col
@@ -70,7 +91,7 @@ let rule =
     ~category:Documentation
     ~hint:
       "All public values should have documentation explaining their purpose \
-       and usage. Add doc comments (** ... *) above value declarations in .mli \
+       and usage. Add doc comments (** ... *) before or after value declarations in .mli \
        files."
     ~examples:[ Example.bad E405.bad_mli; Example.good E405.good_mli ]
     ~pp (File check)

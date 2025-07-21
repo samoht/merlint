@@ -118,30 +118,31 @@ let parse_location str =
   with Not_found -> None
 
 (** Lookup table for AST node kinds *)
-let ast_node_map = [
-  (* Typedtree nodes *)
-  ("Tstr_module", Module);
-  ("Tstr_type", Type);
-  ("Tstr_value", Value);
-  ("Tstr_exception", Exception);
-  ("Ttype_variant", Variant);
-  ("Texp_ident", Ident);
-  ("Texp_construct", Construct);
-  ("Tpat_var", Pattern);
-  ("Tstr_attribute", Attribute);
-  (* Parsetree nodes *)
-  ("Pstr_module", Module);
-  ("Pstr_type", Type);
-  ("Pstr_value", Value);
-  ("Pstr_exception", Exception);
-  ("Ptype_variant", Variant);
-  ("Pexp_ident", Ident);
-  ("Pexp_construct", Construct);
-  ("Ppat_var", Pattern);
-  ("Pstr_attribute", Attribute);
-  (* Context-independent *)
-  ("type_declaration", Type_declaration);
-]
+let ast_node_map =
+  [
+    (* Typedtree nodes *)
+    ("Tstr_module", Module);
+    ("Tstr_type", Type);
+    ("Tstr_value", Value);
+    ("Tstr_exception", Exception);
+    ("Ttype_variant", Variant);
+    ("Texp_ident", Ident);
+    ("Texp_construct", Construct);
+    ("Tpat_var", Pattern);
+    ("Tstr_attribute", Attribute);
+    (* Parsetree nodes *)
+    ("Pstr_module", Module);
+    ("Pstr_type", Type);
+    ("Pstr_value", Value);
+    ("Pstr_exception", Exception);
+    ("Ptype_variant", Variant);
+    ("Pexp_ident", Ident);
+    ("Pexp_construct", Construct);
+    ("Ppat_var", Pattern);
+    ("Pstr_attribute", Attribute);
+    (* Context-independent *)
+    ("type_declaration", Type_declaration);
+  ]
 
 (** Get AST node token kind if word is a recognized AST node in the given
     context *)

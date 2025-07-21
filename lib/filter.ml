@@ -20,8 +20,7 @@ let parse_range range_str =
             (fun i -> Fmt.str "E%03d" (start_num + i))
         in
         Ok codes
-      with Failure _ ->
-        Error (Fmt.str "Invalid range format: %s" range_str))
+      with Failure _ -> Error (Fmt.str "Invalid range format: %s" range_str))
   | _ -> Error (Fmt.str "Invalid range format: %s" range_str)
 
 (** Parse a single rule specification *)
@@ -64,8 +63,9 @@ let rec process_tokens enabled disabled = function
   | [] -> Ok { enabled = Some enabled; disabled }
   | [ spec ] ->
       (* Last token, add to enabled by default *)
-      parse_rule_spec spec |> Result.map (fun codes -> 
-        { enabled = Some (codes @ enabled); disabled })
+      parse_rule_spec spec
+      |> Result.map (fun codes ->
+             { enabled = Some (codes @ enabled); disabled })
   | spec :: "+" :: rest -> (
       match parse_rule_spec spec with
       | Ok codes -> process_tokens (codes @ enabled) disabled rest
@@ -73,8 +73,8 @@ let rec process_tokens enabled disabled = function
   | spec :: "-" :: rest -> (
       match parse_rule_spec spec with
       | Ok codes ->
-        (* First spec is added to enabled, rest goes to processing *)
-        process_tokens (codes @ enabled) disabled ("-" :: rest)
+          (* First spec is added to enabled, rest goes to processing *)
+          process_tokens (codes @ enabled) disabled ("-" :: rest)
       | Error _ as err -> err)
   | "-" :: spec :: rest -> (
       (* This spec should be disabled *)
@@ -88,26 +88,26 @@ let parse_exclusions excluded =
   let parts = String.split_on_char '-' excluded in
   let rec parse_parts acc = function
     | [] -> Ok acc
-    | part :: rest ->
+    | part :: rest -> (
         match parse_rule_spec part with
         | Ok codes -> parse_parts (codes @ acc) rest
-        | Error _ as err -> err
+        | Error _ as err -> err)
   in
-  parse_parts [] parts |> Result.map (fun disabled -> 
-    { enabled = None; disabled })
+  parse_parts [] parts
+  |> Result.map (fun disabled -> { enabled = None; disabled })
 
 (** Parse inclusion rules (E300+E305) *)
 let parse_inclusions rules_str =
   let parts = String.split_on_char '+' rules_str in
   let rec parse_parts acc = function
     | [] -> Ok acc
-    | part :: rest ->
+    | part :: rest -> (
         match parse_rule_spec part with
         | Ok codes -> parse_parts (codes @ acc) rest
-        | Error _ as err -> err
+        | Error _ as err -> err)
   in
-  parse_parts [] parts |> Result.map (fun enabled ->
-    { enabled = Some enabled; disabled = [] })
+  parse_parts [] parts
+  |> Result.map (fun enabled -> { enabled = Some enabled; disabled = [] })
 
 (** Parse rules using the format: all-E110-E205 or E300+E305 or none *)
 let parse rules_str =
@@ -120,7 +120,9 @@ let parse rules_str =
       (* Format: all-E110-E205 - all rules except these *)
       let excluded = String.sub rules_str 4 (String.length rules_str - 4) in
       parse_exclusions excluded
-  | _ when String.contains rules_str '-' && not (String.starts_with ~prefix:"all-" rules_str) ->
+  | _
+    when String.contains rules_str '-'
+         && not (String.starts_with ~prefix:"all-" rules_str) ->
       (* Mixed format with exclusions: 300..399-E320 or E300+E305-E320 *)
       let tokens = tokenize rules_str [] in
       process_tokens [] [] tokens
@@ -129,8 +131,8 @@ let parse rules_str =
       parse_inclusions rules_str
   | _ ->
       (* Single rule or range *)
-      parse_rule_spec rules_str |> Result.map (fun codes ->
-        { enabled = Some codes; disabled = [] })
+      parse_rule_spec rules_str
+      |> Result.map (fun codes -> { enabled = Some codes; disabled = [] })
 
 let is_enabled_by_code filter code =
   match filter.enabled with
