@@ -26,13 +26,13 @@ type project = {
   test_modules : string list Lazy.t;  (** List of test module names (lazy) *)
 }
 
-(** Create a file context with all the necessary data for analysis *)
 val create_file :
   filename:string ->
   config:Config.t ->
   project_root:string ->
   merlin_result:Merlin.t ->
   file
+(** Create a file context with all the necessary data for analysis *)
 
 (** Create a project context from the given parameters *)
 val create_project :
@@ -43,32 +43,35 @@ val create_project :
   project
 (** Create a project context from the given parameters *)
 
-(* File context accessors *)
-(** Force evaluation of the ast field, raising an exception if it's an error *)
+(** {2 File context accessors} *)
+
 val ast : file -> Ast.t
+(** Force evaluation of the ast field, raising an exception if it's an error *)
 
-(** Force evaluation of the dump field, raising an exception if it's an error *)
 val dump : file -> Dump.t
+(** Force evaluation of the dump field, raising an exception if it's an error *)
 
-(** Force evaluation of the outline field, raising an exception if it's an error *)
 val outline : file -> Outline.t
+(** Force evaluation of the outline field, raising an exception if it's an error
+*)
 
-(** Force evaluation of the content field *)
 val content : file -> string
+(** Force evaluation of the content field *)
 
 val functions : file -> (string * Ast.expr) list
 (** Force evaluation of the functions field, returns list of function names and
     their AST *)
 
-(* Project context accessors *)
-(** Force evaluation of the all_files field *)
+(** {2 Project context accessors} *)
+
 val all_files : project -> string list
+(** Force evaluation of the all_files field *)
 
-(** Get the list of executable module names *)
 val executable_modules : project -> string list
+(** Get the list of executable module names *)
 
-(** Get the list of library module names *)
 val lib_modules : project -> string list
+(** Get the list of library module names *)
 
-(** Get the list of test module names *)
 val test_modules : project -> string list
+(** Get the list of test module names *)

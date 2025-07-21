@@ -29,14 +29,14 @@ exception Type_error
 
 exception Wrong_ast_type
 
-(** Convert a structured name to a string *)
 val name_to_string : name -> string
+(** Convert a structured name to a string *)
 
-(** Parse parsetree text dump into AST structure *)
 val parsetree : string -> t
+(** Parse parsetree text dump into AST structure *)
 
-(** Parse typedtree text dump into AST structure *)
 val typedtree : string -> t
+(** Parse typedtree text dump into AST structure *)
 
 (** {2 Utility functions for working with dump data} *)
 

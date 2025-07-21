@@ -33,17 +33,17 @@ val v :
   'a scope ->
   t
 
-(** Get the code of a rule *)
 val code : t -> string
+(** Get the code of a rule *)
 
-(** Get the title of a rule *)
 val title : t -> string
+(** Get the title of a rule *)
 
-(** Get the category of a rule *)
 val category : t -> category
+(** Get the category of a rule *)
 
-(** Get the hint of a rule *)
 val hint : t -> string
+(** Get the hint of a rule *)
 
 val examples : t -> example list
 (** Get the examples of a rule *)

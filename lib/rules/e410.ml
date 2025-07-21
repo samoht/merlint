@@ -2,34 +2,9 @@
 
 type payload = { value_name : string; location : Location.t; issue : string }
 
-let check_doc_style doc =
-  let issues = ref [] in
-
-  (* Check if it starts with a capital letter *)
-  (if String.length doc > 0 then
-     let first_char = String.get doc 0 in
-     if first_char <> '[' && not (Char.uppercase_ascii first_char = first_char)
-     then issues := "should start with a capital letter or '['" :: !issues);
-
-  (* Check if it ends with a period *)
-  let trimmed = String.trim doc in
-  if
-    String.length trimmed > 0
-    && not
-         (String.ends_with ~suffix:"." trimmed
-         || String.ends_with ~suffix:"*)" trimmed)
-  then issues := "should end with a period" :: !issues;
-
-  (* Check for redundant "This function..." phrases *)
-  let lower = String.lowercase_ascii doc in
-  if
-    String.starts_with ~prefix:"this function" lower
-    || String.starts_with ~prefix:"this method" lower
-    || String.starts_with ~prefix:"this module" lower
-    || String.starts_with ~prefix:"this type" lower
-  then issues := "avoid redundant phrases like 'This function...'" :: !issues;
-
-  !issues
+let is_function_signature signature =
+  (* Check if the signature contains -> indicating a function *)
+  Re.execp (Re.compile (Re.str "->")) signature
 
 let extract_doc_comments content =
   let lines = String.split_on_char '\n' content in
@@ -54,8 +29,14 @@ let extract_doc_comments content =
                   if String.ends_with ~suffix:"*)" l then
                     let cleaned =
                       if j = i then
+                        (* Single line: (** text *) *)
                         String.sub l 3 (String.length l - 5) |> String.trim
-                      else String.sub l 0 (String.length l - 2) |> String.trim
+                      else
+                        (* Last line of multi-line, keep content as-is *)
+                        let content =
+                          String.sub l 0 (String.length l - 2) |> String.trim
+                        in
+                        content
                     in
                     (String.concat " " (List.rev (cleaned :: acc)), j + 1)
                   else if j = i then
@@ -77,18 +58,29 @@ let extract_doc_comments content =
         in
         match find_doc (idx - 1) with
         | Some (doc, doc_line) ->
-            let value_name =
-              let val_line = String.trim line in
+            let val_line = String.trim line in
+            let value_name, signature =
               try
                 let start = String.index val_line ' ' + 1 in
-                let end_idx =
+                let colon_idx = String.index val_line ':' in
+                let name_end =
                   try String.index_from val_line start ' '
-                  with Not_found -> String.index val_line ':'
+                  with Not_found -> colon_idx
                 in
-                String.sub val_line start (end_idx - start)
-              with _ -> "unknown"
+                let name =
+                  String.sub val_line start (min name_end colon_idx - start)
+                in
+                let sig_start = colon_idx + 1 in
+                let signature =
+                  String.sub val_line sig_start
+                    (String.length val_line - sig_start)
+                  |> String.trim
+                in
+                (name, signature)
+              with _ -> ("unknown", "")
             in
-            scan (idx + 1) ((value_name, doc, doc_line + 1, idx + 1) :: acc)
+            scan (idx + 1)
+              ((value_name, signature, doc, doc_line + 1, idx + 1) :: acc)
         | None -> scan (idx + 1) acc
       else scan (idx + 1) acc
   in
@@ -102,7 +94,7 @@ let check (ctx : Context.file) =
     let doc_comments = extract_doc_comments content in
 
     List.filter_map
-      (fun (value_name, doc, doc_line, _val_line) ->
+      (fun (value_name, signature, doc, doc_line, _val_line) ->
         if doc = "BAD_COMMENT" then
           (* Using regular comment instead of doc comment *)
           let loc =
@@ -119,8 +111,12 @@ let check (ctx : Context.file) =
                     ... *)";
                })
         else
-          (* Check doc comment style *)
-          let style_issues = check_doc_style doc in
+          (* Check doc comment style using the docs module *)
+          let style_issues =
+            if is_function_signature signature then
+              Docs.check_function_doc ~name:value_name ~doc
+            else Docs.check_value_doc ~name:value_name ~doc
+          in
           match style_issues with
           | [] -> None
           | issues ->
@@ -128,7 +124,10 @@ let check (ctx : Context.file) =
                 Location.create ~file:ctx.filename ~start_line:doc_line
                   ~start_col:0 ~end_line:doc_line ~end_col:0
               in
-              let issue_text = String.concat ", " issues in
+              let issue_texts =
+                List.map (Format.asprintf "%a" Docs.pp_style_issue) issues
+              in
+              let issue_text = String.concat ", " issue_texts in
               Some
                 (Issue.v ~loc
                    { value_name; location = loc; issue = issue_text }))
@@ -140,9 +139,9 @@ let pp ppf { value_name; location = _; issue } =
 let rule =
   Rule.v ~code:"E410" ~title:"Bad Documentation Style" ~category:Documentation
     ~hint:
-      "Documentation should follow OCaml conventions: start with a capital \
-       letter, end with a period, and use proper grammar. Avoid redundant \
-       phrases like 'This function...' - just state what it does directly."
+      "Follow OCaml documentation conventions: Functions should use '[name \
+       args] description.' format. All documentation should end with a period. \
+       Avoid redundant phrases like 'This function...'."
     ~examples:
       [
         {

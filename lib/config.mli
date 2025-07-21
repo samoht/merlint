@@ -18,8 +18,8 @@ type t = {
   require_mli_files : bool;
 }
 
-(** Default configuration with recommended settings *)
 val default : t
+(** Default configuration with recommended settings *)
 
 (** Configuration file loading *)
 

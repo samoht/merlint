@@ -12,5 +12,6 @@ let () =
     @ Test_merlin.suite @ Test_report.suite @ Test_engine.suite
     @ [ ("naming", Test_naming.suite) ]
     @ [ Test_filter.suite ]
+    @ [ ("docs", Test_docs.suite) ]
   in
   Alcotest.run "merlint" suites

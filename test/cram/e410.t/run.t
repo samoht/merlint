@@ -9,9 +9,9 @@ Test bad example - should find bad documentation style:
   ✓ Naming Conventions (0 total issues)
   ✗ Documentation (1 total issues)
     [E410] Bad Documentation Style
-    Documentation should follow OCaml conventions: start with a capital letter,
-    end with a period, and use proper grammar. Avoid redundant phrases like 'This
-    function...' - just state what it does directly.
+    Follow OCaml documentation conventions: Functions should use '[name args]
+    description.' format. All documentation should end with a period. Avoid
+    redundant phrases like 'This function...'.
     - bad.mli:3:0: Documentation for 'parse' use doc comment (** ... *) instead of regular comment (* ... *)
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)

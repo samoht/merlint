@@ -10,25 +10,25 @@ type t = {
   file_count : int;
 }
 
-(** Create a report with the given parameters *)
 val create :
   rule_name:string ->
   passed:bool ->
   issues:Rule.Run.result list ->
   file_count:int ->
   t
+(** Create a report with the given parameters *)
 
-(** Pretty-printer for a report *)
 val pp : t Fmt.t
+(** Pretty-printer for a report *)
 
-(** Get the status string (PASS/FAIL) for the given passed state *)
 val print_status : bool -> string
+(** Get the status string (PASS/FAIL) for the given passed state *)
 
-(** Apply color formatting to text based on passed state *)
 val print_color : bool -> string -> string
+(** Apply color formatting to text based on passed state *)
 
-(** Print a summary of all reports to stdout *)
 val print_summary : t list -> unit
+(** Print a summary of all reports to stdout *)
 
-(** Extract all issues from a list of reports *)
 val get_all_issues : t list -> Rule.Run.result list
+(** Extract all issues from a list of reports *)
