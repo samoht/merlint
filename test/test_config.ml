@@ -10,4 +10,4 @@ let test_default_config () =
     config.require_ocamlformat_file
 
 let tests = [ Alcotest.test_case "default_config" `Quick test_default_config ]
-let suite = [ ("config", tests) ]
+let suite = ("config", tests)

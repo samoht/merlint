@@ -242,6 +242,16 @@ let get_project_files dune_describe =
   Log.debug (fun m -> m "Total unique files: %d" (List.length all_files));
   all_files
 
+(** Get executable modules from describe *)
+let get_executable_modules dune_describe =
+  dune_describe.executables |> List.concat_map snd
+  |> List.filter_map (fun file ->
+         let file_str = Fpath.to_string file in
+         if String.ends_with ~suffix:".ml" file_str then
+           Some (String.capitalize_ascii Fpath.(file |> rem_ext |> basename))
+         else None)
+  |> List.sort_uniq String.compare
+
 (** Get library modules from describe *)
 let get_lib_modules dune_describe =
   dune_describe.libraries |> List.concat_map snd
@@ -435,8 +445,9 @@ let exclude patterns describe =
 (** Create a synthetic describe for individual files *)
 let create_synthetic files =
   let fpath_files = List.map Fpath.v files in
+  (* Treat individual files as library files by default, not executables *)
   {
-    libraries = [];
-    executables = [ ("merlint_synthetic", fpath_files) ];
+    libraries = [ ("merlint_synthetic", fpath_files) ];
+    executables = [];
     tests = [];
   }

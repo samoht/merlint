@@ -52,12 +52,10 @@ let test_create_extended () =
   Alcotest.(check int) "end_col" 20 ext.end_col
 
 let suite =
-  [
-    ( "location",
-      [
-        Alcotest.test_case "create" `Quick test_create;
-        Alcotest.test_case "pp" `Quick test_pp;
-        Alcotest.test_case "compare" `Quick test_compare;
-        Alcotest.test_case "create_extended" `Quick test_create_extended;
-      ] );
-  ]
+  ( "location",
+    [
+      Alcotest.test_case "create" `Quick test_create;
+      Alcotest.test_case "pp" `Quick test_pp;
+      Alcotest.test_case "compare" `Quick test_compare;
+      Alcotest.test_case "create_extended" `Quick test_create_extended;
+    ] )

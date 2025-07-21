@@ -47,12 +47,10 @@ let test_print_color () =
     (String.contains (String.uppercase_ascii red_text) 'F')
 
 let suite =
-  [
-    ( "report",
-      [
-        Alcotest.test_case "create report" `Quick test_create_report;
-        Alcotest.test_case "print status" `Quick test_print_status;
-        Alcotest.test_case "get all issues" `Quick test_get_all_issues;
-        Alcotest.test_case "print color" `Quick test_print_color;
-      ] );
-  ]
+  ( "report",
+    [
+      Alcotest.test_case "create report" `Quick test_create_report;
+      Alcotest.test_case "print status" `Quick test_print_status;
+      Alcotest.test_case "get all issues" `Quick test_get_all_issues;
+      Alcotest.test_case "print color" `Quick test_print_color;
+    ] )

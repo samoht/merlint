@@ -67,7 +67,8 @@ let test_is_pascal_case () =
   test "123" false
 
 let suite =
-  [
-    ("to_capitalized_snake_case", `Quick, test_to_capitalized_snake_case);
-    ("is_pascal_case", `Quick, test_is_pascal_case);
-  ]
+  ( "naming",
+    [
+      ("to_capitalized_snake_case", `Quick, test_to_capitalized_snake_case);
+      ("is_pascal_case", `Quick, test_is_pascal_case);
+    ] )

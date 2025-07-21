@@ -102,7 +102,7 @@ let check_test_mli_file filename content =
                 Re.rep Re.space;
                 Re.str ":";
                 Re.rep Re.space;
-                Re.str "(string * unit Alcotest.test_case list) list";
+                Re.str "string * unit Alcotest.test_case list";
               ]))
         content
     in

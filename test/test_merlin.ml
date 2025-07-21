@@ -14,7 +14,5 @@ let test_result_structure () =
     (Result.is_ok result.outline)
 
 let suite =
-  [
-    ( "merlin",
-      [ Alcotest.test_case "result structure" `Quick test_result_structure ] );
-  ]
+  ( "merlin",
+    [ Alcotest.test_case "result structure" `Quick test_result_structure ] )

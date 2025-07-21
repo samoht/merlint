@@ -53,11 +53,9 @@ let test_pp () =
   Alcotest.(check bool) "pp produces output" true (String.length str > 0)
 
 let suite =
-  [
-    ( "issue",
-      [
-        Alcotest.test_case "issue creation" `Quick test_creation;
-        Alcotest.test_case "compare" `Quick test_compare;
-        Alcotest.test_case "pp" `Quick test_pp;
-      ] );
-  ]
+  ( "issue",
+    [
+      Alcotest.test_case "issue creation" `Quick test_creation;
+      Alcotest.test_case "compare" `Quick test_compare;
+      Alcotest.test_case "pp" `Quick test_pp;
+    ] )

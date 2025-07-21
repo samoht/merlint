@@ -181,19 +181,16 @@ let test_exclude_substring () =
     files
 
 let suite =
-  [
-    ( "dune",
-      [
-        Alcotest.test_case "merge" `Quick test_merge;
-        Alcotest.test_case "exclude" `Quick test_exclude;
-        Alcotest.test_case "exclude patterns" `Quick test_exclude_patterns;
-        Alcotest.test_case "exclude substring" `Quick test_exclude_substring;
-        Alcotest.test_case "exclude cram" `Quick test_exclude_cram;
-        Alcotest.test_case "is_executable" `Quick test_is_executable;
-        Alcotest.test_case "get_lib_modules" `Quick test_get_lib_modules;
-        Alcotest.test_case "get_test_modules" `Quick test_get_test_modules;
-        Alcotest.test_case "ensure_project_built" `Quick
-          test_ensure_project_built;
-        Alcotest.test_case "cram exclusion" `Quick test_cram_exclusion;
-      ] );
-  ]
+  ( "dune",
+    [
+      Alcotest.test_case "merge" `Quick test_merge;
+      Alcotest.test_case "exclude" `Quick test_exclude;
+      Alcotest.test_case "exclude patterns" `Quick test_exclude_patterns;
+      Alcotest.test_case "exclude substring" `Quick test_exclude_substring;
+      Alcotest.test_case "exclude cram" `Quick test_exclude_cram;
+      Alcotest.test_case "is_executable" `Quick test_is_executable;
+      Alcotest.test_case "get_lib_modules" `Quick test_get_lib_modules;
+      Alcotest.test_case "get_test_modules" `Quick test_get_test_modules;
+      Alcotest.test_case "ensure_project_built" `Quick test_ensure_project_built;
+      Alcotest.test_case "cram exclusion" `Quick test_cram_exclusion;
+    ] )

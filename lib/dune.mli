@@ -16,6 +16,9 @@ val get_project_files : describe -> Fpath.t list
 (** Get all project source files using dune describe. Returns a list of .ml and
     .mli files. *)
 
+val get_executable_modules : describe -> string list
+(** Get executable module names from dune describe *)
+
 val get_lib_modules : describe -> string list
 (** Get library module names from dune describe *)
 

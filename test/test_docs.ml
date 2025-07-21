@@ -98,18 +98,19 @@ let test_value_doc_missing_period () =
     true
 
 let suite =
-  [
-    ("function doc - good style", `Quick, test_function_doc_good);
-    ( "function doc - missing brackets",
-      `Quick,
-      test_function_doc_missing_brackets );
-    ("function doc - missing period", `Quick, test_function_doc_missing_period);
-    ( "function doc - redundant phrase",
-      `Quick,
-      test_function_doc_redundant_phrase );
-    ("type doc - good style", `Quick, test_type_doc_good);
-    ("type doc - missing period", `Quick, test_type_doc_missing_period);
-    ("type doc - redundant phrase", `Quick, test_type_doc_redundant_phrase);
-    ("value doc - good style", `Quick, test_value_doc_good);
-    ("value doc - missing period", `Quick, test_value_doc_missing_period);
-  ]
+  ( "docs",
+    [
+      ("function doc - good style", `Quick, test_function_doc_good);
+      ( "function doc - missing brackets",
+        `Quick,
+        test_function_doc_missing_brackets );
+      ("function doc - missing period", `Quick, test_function_doc_missing_period);
+      ( "function doc - redundant phrase",
+        `Quick,
+        test_function_doc_redundant_phrase );
+      ("type doc - good style", `Quick, test_type_doc_good);
+      ("type doc - missing period", `Quick, test_type_doc_missing_period);
+      ("type doc - redundant phrase", `Quick, test_type_doc_redundant_phrase);
+      ("value doc - good style", `Quick, test_value_doc_good);
+      ("value doc - missing period", `Quick, test_value_doc_missing_period);
+    ] )

@@ -203,4 +203,4 @@ let tests =
     ("variant constructors", `Quick, test_variant_constructors);
   ]
 
-let suite = [ ("dump", tests) ]
+let suite = ("dump", tests)

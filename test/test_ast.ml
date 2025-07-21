@@ -448,4 +448,4 @@ let complexity_visitor_tests =
   ]
 *)
 
-let suite = [ ("ast", complexity_tests) ]
+let suite = ("ast", complexity_tests)

@@ -4,5 +4,5 @@
     Snake_case for modules/variants and lowercase_snake_case for values/types.
 *)
 
-val suite : unit Alcotest.test_case list
+val suite : string * unit Alcotest.test_case list
 (** Naming convention test suite *)

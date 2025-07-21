@@ -107,4 +107,4 @@ let tests =
     Alcotest.test_case "parse_kinds" `Quick test_parse_kinds;
   ]
 
-let suite = [ ("outline", tests) ]
+let suite = ("outline", tests)

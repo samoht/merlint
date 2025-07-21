@@ -21,10 +21,8 @@ let test_run_empty_filter () =
         "no results with all rules disabled" 0 (List.length results)
 
 let suite =
-  [
-    ( "engine",
-      [
-        Alcotest.test_case "get project root" `Quick test_get_project_root;
-        Alcotest.test_case "run with empty filter" `Quick test_run_empty_filter;
-      ] );
-  ]
+  ( "engine",
+    [
+      Alcotest.test_case "get project root" `Quick test_get_project_root;
+      Alcotest.test_case "run with empty filter" `Quick test_run_empty_filter;
+    ] )
