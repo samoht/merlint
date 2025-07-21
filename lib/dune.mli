@@ -25,18 +25,6 @@ val get_lib_modules : describe -> string list
 val get_test_modules : describe -> string list
 (** Get test module names from dune describe *)
 
-val libraries : Fpath.t -> (string * Fpath.t list) list
-(** Get all libraries in the project Returns a list of (library_name,
-    source_files) pairs *)
-
-val executables : Fpath.t -> (string * Fpath.t list) list
-(** Get all executables in the project Returns a list of (executable_name,
-    source_files) pairs The executable_name is the main entry point *)
-
-val tests : Fpath.t -> (string * Fpath.t list) list
-(** Get all tests in the project Returns a list of (test_name, source_files)
-    pairs The test_name is the main entry point *)
-
 val merge : describe list -> describe
 (** Merge multiple describe values into one, deduplicating entries *)
 

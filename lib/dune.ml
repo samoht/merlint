@@ -374,21 +374,6 @@ let () = describe_ref := describe_impl
 (* Public describe function that dereferences *)
 let describe project_root = !describe_ref project_root
 
-(** Get all libraries in the project *)
-let libraries project_root =
-  let desc = describe project_root in
-  desc.libraries
-
-(** Get all executables in the project *)
-let executables project_root =
-  let desc = describe project_root in
-  desc.executables
-
-(** Get all tests in the project *)
-let tests project_root =
-  let desc = describe project_root in
-  desc.tests
-
 (** Merge multiple describe values *)
 let merge describes =
   let libraries =
