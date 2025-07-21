@@ -52,6 +52,34 @@ let complexity_tests =
     Alcotest.test_case "match expression" `Quick (fun () ->
         let expr = Ast.Match { expr = Ast.Other; cases = 3 } in
         let c = Ast.Complexity.analyze expr in
+        Alcotest.(check int) "match_cases count" 1 c.match_cases;
+        Alcotest.(check int) "total" 1 c.total;
+        Alcotest.(check int)
+          "cyclomatic complexity" 2
+          (Ast.Complexity.calculate c));
+    Alcotest.test_case "match with many cases" `Quick (fun () ->
+        (* Pattern match with 10 cases should still count as 1 decision point *)
+        let expr = Ast.Match { expr = Ast.Other; cases = 10 } in
+        let c = Ast.Complexity.analyze expr in
+        Alcotest.(check int) "match_cases count" 1 c.match_cases;
+        Alcotest.(check int) "total" 1 c.total;
+        Alcotest.(check int)
+          "cyclomatic complexity" 2
+          (Ast.Complexity.calculate c));
+    Alcotest.test_case "match with 0 cases" `Quick (fun () ->
+        (* Edge case: match with no cases *)
+        let expr = Ast.Match { expr = Ast.Other; cases = 0 } in
+        let c = Ast.Complexity.analyze expr in
+        Alcotest.(check int) "match_cases count" 0 c.match_cases;
+        Alcotest.(check int) "total" 0 c.total;
+        Alcotest.(check int)
+          "cyclomatic complexity" 1
+          (Ast.Complexity.calculate c));
+    Alcotest.test_case "nested match expressions" `Quick (fun () ->
+        (* Two nested matches should count as 2 decision points total *)
+        let inner_match = Ast.Match { expr = Ast.Other; cases = 5 } in
+        let outer_match = Ast.Match { expr = inner_match; cases = 3 } in
+        let c = Ast.Complexity.analyze outer_match in
         Alcotest.(check int) "match_cases count" 2 c.match_cases;
         Alcotest.(check int) "total" 2 c.total;
         Alcotest.(check int)

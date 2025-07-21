@@ -46,8 +46,8 @@ module Complexity = struct
         let acc = merge acc (analyze then_expr) in
         match else_expr with Some e -> merge acc (analyze e) | None -> acc)
     | Match { expr; cases } ->
-        (* Each match case beyond the first adds complexity *)
-        let decision_points = max 0 (cases - 1) in
+        (* A match expression is a single decision point, regardless of cases *)
+        let decision_points = if cases > 0 then 1 else 0 in
         let acc =
           { empty with match_cases = decision_points; total = decision_points }
         in
