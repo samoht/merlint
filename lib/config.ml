@@ -37,13 +37,13 @@ let default =
     require_mli_files = true;
   }
 
-let config_filename = ".merlintrc"
+let filename = ".merlintrc"
 
 let find_config_file path =
   let project_root =
     if Sys.is_directory path then path else Filename.dirname path
   in
-  let config_path = Filename.concat project_root config_filename in
+  let config_path = Filename.concat project_root filename in
   if Sys.file_exists config_path then Some config_path else None
 
 (** Parse a single configuration line *)

@@ -15,7 +15,7 @@ type 'a scope =
   | File of (Context.file -> 'a Issue.t list)
   | Project of (Context.project -> 'a Issue.t list)
 
-type 'a rule = {
+type 'a desc = {
   code : string;
   title : string;
   category : category;
@@ -25,7 +25,7 @@ type 'a rule = {
   pp : 'a Fmt.t;
 }
 
-type t = T : _ rule -> t
+type t = T : _ desc -> t
 
 let v ~code ~title ~category ~hint ?(examples = []) ~pp check =
   T { code; title; category; hint; examples; check; pp }
@@ -46,31 +46,31 @@ let category_name = function
   | Project_structure -> "Project Structure"
   | Testing -> "Test Quality"
 
-let is_file_scoped (T rule) =
-  match rule.check with File _ -> true | Project _ -> false
+let is_file_scoped (T desc) =
+  match desc.check with File _ -> true | Project _ -> false
 
-let is_project_scoped (T rule) =
-  match rule.check with Project _ -> true | File _ -> false
+let is_project_scoped (T desc) =
+  match desc.check with Project _ -> true | File _ -> false
 
 (* Module for handling rule execution results *)
 module Run = struct
   type result = Result : string * string * 'a Fmt.t * 'a Issue.t -> result
 
-  let file (T rule) ctx =
-    match rule.check with
+  let file (T desc) ctx =
+    match desc.check with
     | File check_fn ->
         let issues = check_fn ctx in
         List.map
-          (fun issue -> Result (rule.code, rule.title, rule.pp, issue))
+          (fun issue -> Result (desc.code, desc.title, desc.pp, issue))
           issues
     | Project _ -> []
 
-  let project (T rule) ctx =
-    match rule.check with
+  let project (T desc) ctx =
+    match desc.check with
     | Project check_fn ->
         let issues = check_fn ctx in
         List.map
-          (fun issue -> Result (rule.code, rule.title, rule.pp, issue))
+          (fun issue -> Result (desc.code, desc.title, desc.pp, issue))
           issues
     | File _ -> []
 

@@ -1,6 +1,6 @@
 open Merlint
 
-let test_issue_creation () =
+let test_creation () =
   let location =
     Location.create ~file:"test.ml" ~start_line:1 ~start_col:0 ~end_line:1
       ~end_col:0
@@ -21,7 +21,7 @@ let test_issue_creation () =
   | None -> ()
   | Some _ -> Alcotest.fail "Expected no location"
 
-let test_issue_compare () =
+let test_compare () =
   let location1 =
     Location.create ~file:"test.ml" ~start_line:5 ~start_col:10 ~end_line:5
       ~end_col:10
@@ -39,7 +39,7 @@ let test_issue_compare () =
     "issue1 comes before issue2" true
     (Issue.compare issue1 issue2 < 0)
 
-let test_issue_pp () =
+let test_pp () =
   let location =
     Location.create ~file:"test.ml" ~start_line:1 ~start_col:0 ~end_line:1
       ~end_col:0
@@ -56,8 +56,8 @@ let suite =
   [
     ( "issue",
       [
-        Alcotest.test_case "issue creation" `Quick test_issue_creation;
-        Alcotest.test_case "compare" `Quick test_issue_compare;
-        Alcotest.test_case "pp" `Quick test_issue_pp;
+        Alcotest.test_case "issue creation" `Quick test_creation;
+        Alcotest.test_case "compare" `Quick test_compare;
+        Alcotest.test_case "pp" `Quick test_pp;
       ] );
   ]
