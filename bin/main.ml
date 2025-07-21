@@ -20,7 +20,8 @@ let get_terminal_width () =
     let width = int_of_string (input_line ic) in
     let _ = Unix.close_process_in ic in
     width
-  with _ -> 120 (* fallback to 120 columns for tests *)
+  with End_of_file | Failure _ | Sys_error _ ->
+    120 (* fallback to 120 columns for tests *)
 
 let wrap_text ?(indent = 2) ?(max_width = 120) text =
   let terminal_width = get_terminal_width () in

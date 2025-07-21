@@ -69,7 +69,7 @@ let parse_dune_file filename =
 
     (* Parse all S-expressions in the file *)
     Parsexp.Many.parse_string content |> Result.value ~default:[]
-  with _ -> []
+  with Sys_error _ | End_of_file -> []
 
 (** Extract modules from a modules field *)
 let extract_modules_field = function
@@ -167,7 +167,7 @@ let get_item_files = function
                  let file_path = Fpath.(dir_path / entry) |> Fpath.normalize in
                  files := file_path :: !files)
              entries
-         with _ -> ());
+         with Sys_error _ -> ());
         !files)
       else
         (* Explicit modules *)
@@ -209,7 +209,7 @@ let get_item_files = function
                  let file_path = Fpath.(dir_path / entry) |> Fpath.normalize in
                  files := file_path :: !files)
              entries
-         with _ -> ());
+         with Sys_error _ -> ());
         !files)
       else
         (* Explicit modules *)

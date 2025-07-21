@@ -117,51 +117,38 @@ let parse_location str =
     Some (Location.create ~file ~start_line ~start_col ~end_line ~end_col)
   with Not_found -> None
 
+(** Lookup table for AST node kinds *)
+let ast_node_map = [
+  (* Typedtree nodes *)
+  ("Tstr_module", Module);
+  ("Tstr_type", Type);
+  ("Tstr_value", Value);
+  ("Tstr_exception", Exception);
+  ("Ttype_variant", Variant);
+  ("Texp_ident", Ident);
+  ("Texp_construct", Construct);
+  ("Tpat_var", Pattern);
+  ("Tstr_attribute", Attribute);
+  (* Parsetree nodes *)
+  ("Pstr_module", Module);
+  ("Pstr_type", Type);
+  ("Pstr_value", Value);
+  ("Pstr_exception", Exception);
+  ("Ptype_variant", Variant);
+  ("Pexp_ident", Ident);
+  ("Pexp_construct", Construct);
+  ("Ppat_var", Pattern);
+  ("Pstr_attribute", Attribute);
+  (* Context-independent *)
+  ("type_declaration", Type_declaration);
+]
+
 (** Get AST node token kind if word is a recognized AST node in the given
     context *)
-let find_ast_node_kind what word =
-  match (what, word) with
-  (* Typedtree context *)
-  | Typedtree, "Tstr_module" -> Some Module
-  | Typedtree, "Tstr_type" -> Some Type
-  | Typedtree, "Tstr_value" -> Some Value
-  | Typedtree, "Tstr_exception" -> Some Exception
-  | Typedtree, "Ttype_variant" -> Some Variant
-  | Typedtree, "Texp_ident" -> Some Ident
-  | Typedtree, "Texp_construct" -> Some Construct
-  | Typedtree, "Tpat_var" -> Some Pattern
-  (* Parsetree context *)
-  | Parsetree, "Pstr_module" -> Some Module
-  | Parsetree, "Pstr_type" -> Some Type
-  | Parsetree, "Pstr_value" -> Some Value
-  | Parsetree, "Pstr_exception" -> Some Exception
-  | Parsetree, "Ptype_variant" -> Some Variant
-  | Parsetree, "Pexp_ident" -> Some Ident
-  | Parsetree, "Pexp_construct" -> Some Construct
-  | Parsetree, "Ppat_var" -> Some Pattern
-  (* Context-independent nodes *)
-  | _, "type_declaration" -> Some Type_declaration
-  | Typedtree, "Tstr_attribute" -> Some Attribute
-  | Parsetree, "Pstr_attribute" -> Some Attribute
-  (* Handle mismatched contexts - convert Parsetree nodes in Typedtree context *)
-  | Typedtree, "Pstr_module" -> Some Module
-  | Typedtree, "Pstr_type" -> Some Type
-  | Typedtree, "Pstr_value" -> Some Value
-  | Typedtree, "Pstr_exception" -> Some Exception
-  | Typedtree, "Ptype_variant" -> Some Variant
-  | Typedtree, "Pexp_ident" -> Some Ident
-  | Typedtree, "Pexp_construct" -> Some Construct
-  | Typedtree, "Ppat_var" -> Some Pattern
-  (* Handle mismatched contexts - convert Typedtree nodes in Parsetree context *)
-  | Parsetree, "Tstr_module" -> Some Module
-  | Parsetree, "Tstr_type" -> Some Type
-  | Parsetree, "Tstr_value" -> Some Value
-  | Parsetree, "Tstr_exception" -> Some Exception
-  | Parsetree, "Ttype_variant" -> Some Variant
-  | Parsetree, "Texp_ident" -> Some Ident
-  | Parsetree, "Texp_construct" -> Some Construct
-  | Parsetree, "Tpat_var" -> Some Pattern
-  | _ -> None
+let find_ast_node_kind _what word =
+  (* Since we handle both Typedtree and Parsetree nodes in both contexts,
+     we can use a single lookup table *)
+  List.assoc_opt word ast_node_map
 
 (** Classify a word as either an AST node or just a word *)
 let classify_word what_context word =
@@ -183,7 +170,7 @@ let is_location_start text pos =
       else check (i + 1)
     in
     check (pos + 1)
-  with _ -> false
+  with Invalid_argument _ -> false
 
 (** Parse a complete location token *)
 let parse_location_token text start_pos =

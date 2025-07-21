@@ -13,7 +13,7 @@ let process_ocaml_files ctx f =
             In_channel.with_open_text filename In_channel.input_all
           in
           f filename content
-        with _ -> []
+        with Sys_error _ -> []
       else [])
     files
 
