@@ -1,4 +1,4 @@
-(** Naming convention utilities *)
+(** Naming convention utilities. *)
 
 val to_capitalized_snake_case : string -> string
 (** [to_capitalized_snake_case name] converts PascalCase to Snake_case (for
@@ -27,7 +27,7 @@ val to_lowercase_snake_case : string -> string
     - getUserName -> get_user_name
     - XMLParser -> xml_parser
     - IOError -> io_error
-    - OCamlCompiler -> ocaml_compiler *)
+    - OCamlCompiler -> ocaml_compiler. *)
 
 val is_pascal_case : string -> bool
-(** [is_pascal_case name] checks if name follows PascalCase convention *)
+(** [is_pascal_case name] checks if name follows PascalCase convention. *)

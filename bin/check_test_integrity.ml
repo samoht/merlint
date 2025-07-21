@@ -44,14 +44,45 @@ let check_test_files cram_dir error_code =
     || (Sys.file_exists good_dir && Sys.is_directory good_dir)
   in
   let run_exists = Sys.file_exists run_file in
-  let dune_project_exists = Sys.file_exists dune_project_file in
+  (* Check if this test uses subdirectory structure *)
+  let has_subdirs =
+    Sys.file_exists bad_dir && Sys.is_directory bad_dir
+    && Sys.file_exists good_dir && Sys.is_directory good_dir
+  in
+
+  (* For dune-project file:
+     - If subdirs exist, dune-project should be in each subdir, NOT at root
+     - If no subdirs (regular structure), dune-project should be at root *)
+  let dune_project_exists =
+    if has_subdirs then
+      (* Subdirectory structure - check in subdirs and ensure NOT at root *)
+      let bad_dune_project = Filename.concat bad_dir "dune-project" in
+      let good_dune_project = Filename.concat good_dir "dune-project" in
+      Sys.file_exists bad_dune_project && Sys.file_exists good_dune_project
+    else
+      (* Regular structure - check at root *)
+      Sys.file_exists dune_project_file
+  in
+
+  (* Check for incorrect root-level files when using subdirs *)
+  let has_incorrect_root_files =
+    has_subdirs
+    && (Sys.file_exists dune_project_file || Sys.file_exists dune_file)
+  in
+
   (* For dune file: 
      - If bad.ml or good.ml exist at root, we need dune at root
      - If only bad/ and good/ directories exist, we don't need dune at root
        (subdirectories should have their own dune files) *)
   let needs_root_dune = Sys.file_exists bad_file || Sys.file_exists good_file in
   let dune_exists = (not needs_root_dune) || Sys.file_exists dune_file in
-  (bad_exists, good_exists, run_exists, dune_project_exists, dune_exists)
+  ( bad_exists,
+    good_exists,
+    run_exists,
+    dune_project_exists,
+    dune_exists,
+    has_subdirs,
+    has_incorrect_root_files )
 
 (* Check if run.t file uses correct -r flag format *)
 let check_run_t_format cram_dir error_code =
@@ -205,7 +236,9 @@ let main () =
               good_exists,
               run_exists,
               dune_project_exists,
-              dune_exists ) =
+              dune_exists,
+              has_subdirs,
+              has_incorrect_root_files ) =
           check_test_files cram_dir rule_code
         in
         if not bad_exists then
@@ -246,12 +279,27 @@ let main () =
                  Fmt.str "Error: %s/%s.t/run.t: %s" cram_dir rule_code msg
                  :: !errors)
              wrong_formats);
-        (* Check 5: test directories SHOULD have dune-project and dune files *)
-        if not dune_project_exists then
+        (* Check 5: test directories SHOULD have dune-project and dune files in correct location *)
+        if has_incorrect_root_files then
           errors :=
-            Fmt.str "Error: %s/%s.t/dune-project is missing" cram_dir rule_code
+            Fmt.str
+              "Error: %s/%s.t has dune or dune-project at root but uses \
+               subdirectory structure - these files should be in bad/ and \
+               good/ subdirs instead"
+              cram_dir rule_code
             :: !errors;
-        if not dune_exists then
+        if not dune_project_exists then
+          if has_subdirs then
+            errors :=
+              Fmt.str "Error: %s/%s.t/{bad,good}/dune-project files are missing"
+                cram_dir rule_code
+              :: !errors
+          else
+            errors :=
+              Fmt.str "Error: %s/%s.t/dune-project is missing" cram_dir
+                rule_code
+              :: !errors;
+        if (not dune_exists) && not has_subdirs then
           errors :=
             Fmt.str "Error: %s/%s.t/dune is missing" cram_dir rule_code
             :: !errors))

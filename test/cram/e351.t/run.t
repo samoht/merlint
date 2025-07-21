@@ -5,7 +5,7 @@ Test bad example - should find global mutable state:
   Analyzing 1 files
   
   ✗ Code Quality (2 total issues)
-    [E351] Global Mutable State
+    [E351] Global Mutable State (2 issues)
     Global mutable state makes programs harder to reason about and test. Consider
     using immutable data structures and passing state explicitly through function
     parameters. If mutation is necessary, consider using local state within
@@ -18,7 +18,7 @@ Test bad example - should find global mutable state:
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   
-  Summary: ✗ 2 total issues (applied 1 rules)
+  Summary: ✗ 2 total issues (applied 1 rule)
   ✗ Some checks failed. See details above.
   [1]
 
@@ -35,5 +35,5 @@ Test good example - should find no issues:
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   
-  Summary: ✓ 0 total issues (applied 1 rules)
+  Summary: ✓ 0 total issues (applied 1 rule)
   ✓ All checks passed!

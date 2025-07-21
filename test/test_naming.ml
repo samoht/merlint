@@ -4,7 +4,7 @@ let test_to_capitalized_snake_case () =
   let test input expected =
     let actual = Naming.to_capitalized_snake_case input in
     Alcotest.(check string)
-      (Printf.sprintf "to_capitalized_snake_case %s" input)
+      (Fmt.str "to_capitalized_snake_case %s" input)
       expected actual
   in
 
@@ -46,9 +46,7 @@ let test_to_capitalized_snake_case () =
 let test_is_pascal_case () =
   let test input expected =
     let actual = Naming.is_pascal_case input in
-    Alcotest.(check bool)
-      (Printf.sprintf "is_pascal_case %s" input)
-      expected actual
+    Alcotest.(check bool) (Fmt.str "is_pascal_case %s" input) expected actual
   in
 
   (* True cases *)

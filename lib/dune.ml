@@ -24,7 +24,7 @@ let ensure_project_built project_root =
     Ok () (* Not a dune project, skip build *)
   else
     let cmd =
-      Fmt.str "dune build @check --root %s"
+      Fmt.str "dune build @check --root %s 2>/dev/null"
         (Filename.quote (Fpath.to_string project_root))
     in
     Log.info (fun m -> m "Ensuring project is built: %s" cmd);

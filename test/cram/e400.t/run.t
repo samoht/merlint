@@ -8,7 +8,7 @@ Test bad example - should find missing module documentation:
   ✓ Code Style (0 total issues)
   ✓ Naming Conventions (0 total issues)
   ✗ Documentation (1 total issues)
-    [E400] Missing MLI Documentation
+    [E400] Missing MLI Documentation (1 issue)
     MLI files should start with a documentation comment (** ... *) that describes
     the module's purpose and API. This helps users understand how to use the
     module.
@@ -16,7 +16,7 @@ Test bad example - should find missing module documentation:
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   
-  Summary: ✗ 1 total issues (applied 1 rules)
+  Summary: ✗ 1 total issue (applied 1 rule)
   ✗ Some checks failed. See details above.
   [1]
 
@@ -33,5 +33,5 @@ Test good example - should find no issues:
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   
-  Summary: ✓ 0 total issues (applied 1 rules)
+  Summary: ✓ 0 total issues (applied 1 rule)
   ✓ All checks passed!

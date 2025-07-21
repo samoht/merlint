@@ -7,7 +7,7 @@ Test bad example - should find bad variant naming:
   ✓ Code Quality (0 total issues)
   ✓ Code Style (0 total issues)
   ✗ Naming Conventions (3 total issues)
-    [E300] Variant Naming Convention
+    [E300] Variant Naming Convention (3 issues)
     Variant constructors should use Snake_case (e.g., Waiting_for_input,
     Processing_data), not CamelCase. This matches the project's naming
     conventions.
@@ -18,7 +18,7 @@ Test bad example - should find bad variant naming:
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   
-  Summary: ✗ 3 total issues (applied 1 rules)
+  Summary: ✗ 3 total issues (applied 1 rule)
   ✗ Some checks failed. See details above.
   [1]
 TODO: Variant naming detection not working - Merlin may not provide variant info from type definitions
@@ -36,6 +36,6 @@ TODO: Variant naming detection not working - Merlin may not provide variant info
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   
-  Summary: ✓ 0 total issues (applied 1 rules)
+  Summary: ✓ 0 total issues (applied 1 rule)
   ✓ All checks passed!
 

@@ -1,4 +1,4 @@
-(** Central registry of all linting rules *)
+(** Central registry of all linting rules. *)
 
 val all_rules : Rule.t list
-(** All available linting rules *)
+(** [all_rules] list of all available linting rules. *)

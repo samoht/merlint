@@ -6,7 +6,7 @@ Test bad example - should find usage of outdated Str module:
   
   ✓ Code Quality (0 total issues)
   ✗ Code Style (2 total issues)
-    [E200] Outdated Str Module
+    [E200] Outdated Str Module (2 issues)
     The Str module is outdated and has a problematic API. Use the Re module
     instead for regular expressions. Re provides a better API, is more performant,
     and doesn't have global state issues.
@@ -17,7 +17,7 @@ Test bad example - should find usage of outdated Str module:
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   
-  Summary: ✗ 2 total issues (applied 1 rules)
+  Summary: ✗ 2 total issues (applied 1 rule)
   ✗ Some checks failed. See details above.
   [1]
 
@@ -34,5 +34,5 @@ Test good example - should find no issues:
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   
-  Summary: ✓ 0 total issues (applied 1 rules)
+  Summary: ✓ 0 total issues (applied 1 rule)
   ✓ All checks passed!

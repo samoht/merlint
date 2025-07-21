@@ -7,7 +7,7 @@ Test bad example - should find bad type naming:
   ✓ Code Quality (0 total issues)
   ✓ Code Style (0 total issues)
   ✗ Naming Conventions (1 total issues)
-    [E315] Type Naming Convention
+    [E315] Type Naming Convention (1 issue)
     Type names should use snake_case. The primary type in a module should be named
     t, and identifiers should be id. This convention helps maintain consistency
     across the codebase.
@@ -16,7 +16,7 @@ Test bad example - should find bad type naming:
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   
-  Summary: ✗ 1 total issues (applied 1 rules)
+  Summary: ✗ 1 total issue (applied 1 rule)
   ✗ Some checks failed. See details above.
   [1]
 
@@ -33,5 +33,5 @@ Test good example - should find no issues:
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   
-  Summary: ✓ 0 total issues (applied 1 rules)
+  Summary: ✓ 0 total issues (applied 1 rule)
   ✓ All checks passed!

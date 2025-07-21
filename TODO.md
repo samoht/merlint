@@ -4,6 +4,37 @@
 
 ### 🔄 Next High Priority Tasks
 
+- [ ] **Fix documentation formatting issues (52 occurrences)**
+  - All documentation should end with a period
+  - Functions should use '[function_name args] description.' format
+  - Avoid redundant phrases like 'This function...'
+  - Most issues are in .mli files
+
+- [ ] **Fix long functions (3 functions over 100 lines)**
+  - bin/check_test_integrity.ml:164:0: Function 'main' is 175 lines long
+  - lib/dump.ml:275:0: Function 'parse_tokens' is 109 lines long  
+  - lib/guide.ml:12:0: Function 'content' is 440 lines long
+
+- [ ] **Replace Printf usage with Fmt module (48 occurrences)**
+  - Modern OCaml prefers Fmt for better composability and type safety
+  - Focus on test files and generate_examples_ml.ml
+
+- [ ] **Add missing standard functions (equal, compare, pp) to types**
+  - 9 types missing these standard functions
+  - Improves usability and consistency
+
+- [ ] **Add missing test files for 8 library modules**
+  - command, context, data, example, file, guide, profiling, rule
+  - Need test_<module>.ml for each
+
+- [ ] **Add a rule to detect excessive use of String.contains in a function**
+  - Usually a code smell - better to use Re module
+  - Should flag functions with multiple String.contains calls
+
+- [ ] **Add rule to discourage (** *) comments in .ml files except for sections**
+  - Function comments in .ml should use (* *) and be useful
+  - Reserve (** *) for .mli files and section headers
+
 - [ ] **Fix file discovery bug when using 'dune exec -- merlint -vv'**
   - Files are not being found properly when using `dune exec`
   - This is a serious bug affecting usability

@@ -7,7 +7,7 @@ Test bad example - should find bad value naming:
   ✓ Code Quality (0 total issues)
   ✓ Code Style (0 total issues)
   ✗ Naming Conventions (2 total issues)
-    [E310] Value Naming Convention
+    [E310] Value Naming Convention (2 issues)
     Values and function names should use snake_case (e.g., find_user,
     create_channel). Short, descriptive, and lowercase with underscores. This is
     the standard convention in OCaml for values and functions.
@@ -17,7 +17,7 @@ Test bad example - should find bad value naming:
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   
-  Summary: ✗ 2 total issues (applied 1 rules)
+  Summary: ✗ 2 total issues (applied 1 rule)
   ✗ Some checks failed. See details above.
   [1]
 
@@ -34,5 +34,5 @@ Test good example - should find no issues:
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   
-  Summary: ✓ 0 total issues (applied 1 rules)
+  Summary: ✓ 0 total issues (applied 1 rule)
   ✓ All checks passed!

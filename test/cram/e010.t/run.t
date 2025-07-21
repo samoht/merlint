@@ -5,7 +5,7 @@ Test bad example - should find deep nesting issues:
   Analyzing 1 files
   
   ✗ Code Quality (1 total issues)
-    [E010] Deep Nesting
+    [E010] Deep Nesting (1 issue)
     This issue means your code has too many nested conditions making it hard to
     follow. Fix it by extracting nested logic into helper functions, using early
     returns to reduce nesting, or combining conditions when appropriate. Aim for
@@ -17,7 +17,7 @@ Test bad example - should find deep nesting issues:
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   
-  Summary: ✗ 1 total issues (applied 1 rules)
+  Summary: ✗ 1 total issue (applied 1 rule)
   ✗ Some checks failed. See details above.
   [1]
 
@@ -34,5 +34,5 @@ Test good example - should find no issues:
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   
-  Summary: ✓ 0 total issues (applied 1 rules)
+  Summary: ✓ 0 total issues (applied 1 rule)
   ✓ All checks passed!

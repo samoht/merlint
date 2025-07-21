@@ -1,15 +1,16 @@
-(** Issue types and formatting *)
+(** Issue types and formatting. *)
 
 type 'a t
-(** An issue with a specific payload type *)
+(** Issue with a specific payload type. *)
 
 val v : ?loc:Location.t -> 'a -> 'a t
-(** Create a new issue *)
+(** [v ?loc payload] creates a new issue. *)
 
 val pp : 'a Fmt.t -> 'a t Fmt.t
-(** Pretty-printer for issues *)
+(** [pp payload_pp] creates a pretty-printer. *)
 
 val compare : 'a t -> 'a t -> int
-(** Compare issues for sorting *)
+(** [compare a b] compares issues. *)
 
 val location : 'a t -> Location.t option
+(** [location issue] returns the location of an issue. *)

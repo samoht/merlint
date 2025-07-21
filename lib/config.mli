@@ -1,4 +1,4 @@
-(** Centralized configuration for all merlint rules *)
+(** Centralized configuration for all merlint rules. *)
 
 type t = {
   (* Complexity rules *)
@@ -19,10 +19,9 @@ type t = {
 }
 
 val default : t
-(** Default configuration with recommended settings *)
+(** [default] configuration with recommended settings. *)
 
-(** Configuration file loading *)
+(** Configuration file loading. *)
 
 val load_from_path : string -> t
-(** [load_from_path path] finds and loads the nearest .merlintrc file starting
-    from [path]. Returns default config if no config file is found. *)
+(** [load_from_path path] loads nearest config file. *)

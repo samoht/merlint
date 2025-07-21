@@ -16,19 +16,20 @@ val create :
   issues:Rule.Run.result list ->
   file_count:int ->
   t
-(** Create a report with the given parameters *)
+(** [create ~rule_name ~passed ~issues ~file_count] creates a report with the
+    given parameters. *)
 
 val pp : t Fmt.t
-(** Pretty-printer for a report *)
+(** [pp fmt t] pretty prints report. *)
 
 val print_status : bool -> string
-(** Get the status string (PASS/FAIL) for the given passed state *)
+(** [print_status passed] returns status string. *)
 
 val print_color : bool -> string -> string
-(** Apply color formatting to text based on passed state *)
+(** [print_color passed text] applies color. *)
 
 val print_summary : t list -> unit
-(** Print a summary of all reports to stdout *)
+(** [print_summary reports] prints summary. *)
 
 val get_all_issues : t list -> Rule.Run.result list
-(** Extract all issues from a list of reports *)
+(** [get_all_issues reports] extracts all issues. *)

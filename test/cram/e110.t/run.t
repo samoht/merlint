@@ -6,7 +6,7 @@ Test bad example - should find silenced warning:
   
   ✓ Code Quality (0 total issues)
   ✗ Code Style (1 total issues)
-    [E110] Silenced Warning
+    [E110] Silenced Warning (1 issue)
     Warnings should be addressed rather than silenced. Fix the underlying issue
     instead of using warning suppression attributes. If you must suppress a
     warning, document why it's necessary.
@@ -16,7 +16,7 @@ Test bad example - should find silenced warning:
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   
-  Summary: ✗ 1 total issues (applied 1 rules)
+  Summary: ✗ 1 total issue (applied 1 rule)
   ✗ Some checks failed. See details above.
   [1]
 
@@ -33,5 +33,5 @@ Test good example - should find no issues:
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   
-  Summary: ✓ 0 total issues (applied 1 rules)
+  Summary: ✓ 0 total issues (applied 1 rule)
   ✓ All checks passed!

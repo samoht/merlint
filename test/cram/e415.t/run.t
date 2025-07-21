@@ -8,14 +8,14 @@ Test bad example - should find missing standard functions:
   ✓ Code Style (0 total issues)
   ✓ Naming Conventions (0 total issues)
   ✗ Documentation (1 total issues)
-    [E415] Missing Standard Functions
+    [E415] Missing Standard Functions (1 issue)
     The main type 't' should implement standard functions: equal, compare, and pp
     (pretty-printer) for better usability and consistency across the codebase.
     - bad.mli:1:0: Type 't' is missing standard functions: equal, compare, pp
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   
-  Summary: ✗ 1 total issues (applied 1 rules)
+  Summary: ✗ 1 total issue (applied 1 rule)
   ✗ Some checks failed. See details above.
   [1]
 
@@ -32,5 +32,5 @@ Test good example - should find no issues:
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   
-  Summary: ✓ 0 total issues (applied 1 rules)
+  Summary: ✓ 0 total issues (applied 1 rule)
   ✓ All checks passed!

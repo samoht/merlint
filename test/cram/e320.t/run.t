@@ -7,7 +7,7 @@ Test bad example - should find long identifier name:
   ✓ Code Quality (0 total issues)
   ✓ Code Style (0 total issues)
   ✗ Naming Conventions (1 total issues)
-    [E320] Long Identifier Names
+    [E320] Long Identifier Names (1 issue)
     Avoid using too many underscores in identifier names as they make code harder
     to read. Consider using more descriptive names or restructuring the code to
     avoid deeply nested concepts.
@@ -16,7 +16,7 @@ Test bad example - should find long identifier name:
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   
-  Summary: ✗ 1 total issues (applied 1 rules)
+  Summary: ✗ 1 total issue (applied 1 rule)
   ✗ Some checks failed. See details above.
   [1]
 
@@ -33,5 +33,5 @@ Test good example - should find no issues:
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   
-  Summary: ✓ 0 total issues (applied 1 rules)
+  Summary: ✓ 0 total issues (applied 1 rule)
   ✓ All checks passed!

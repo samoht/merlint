@@ -28,7 +28,7 @@
 (executable
  (name generate_examples_ml)
  (modules generate_examples_ml)
- (libraries unix))
+ (libraries unix fmt))
 
 (executable
  (name check_test_integrity)

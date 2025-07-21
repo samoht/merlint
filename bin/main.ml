@@ -67,11 +67,13 @@ let print_issue_group (error_code, issues) =
   | first_issue :: _ ->
       (* Get title from the first issue *)
       let title = Merlint.Rule.Run.title first_issue in
-      Fmt.pr "  %a %a@."
+      let issue_count = List.length sorted_issues in
+      let issue_word = if issue_count = 1 then "issue" else "issues" in
+      Fmt.pr "  %a %a (%d %s)@."
         (Fmt.styled `Yellow Fmt.string)
         (Fmt.str "[%s]" error_code)
         (Fmt.styled `Bold Fmt.string)
-        title;
+        title issue_count issue_word;
 
       (* Find the rule to get the hint *)
       let rule_opt =
@@ -195,13 +197,35 @@ let run_analysis project_root dune_describe rule_filter show_profile =
         List.iter print_issue_group sorted_groups)
     issues_by_category;
 
-  (* Create a dummy report for the summary *)
-  let report =
-    Merlint.Report.create ~rule_name:"All Rules"
-      ~passed:(List.length all_issues = 0)
-      ~issues:all_issues ~file_count:files_count
+  (* Calculate the actual number of rules that were applied *)
+  let enabled_rules =
+    match rule_filter with
+    | Some filter ->
+        List.filter
+          (fun rule ->
+            Merlint.Filter.is_enabled_by_code filter (Merlint.Rule.code rule))
+          Merlint.Data.all_rules
+    | None -> Merlint.Data.all_rules
   in
-  Merlint.Report.print_summary [ report ];
+  let enabled_rule_count = List.length enabled_rules in
+
+  (* Print custom summary *)
+  let total_issues = List.length all_issues in
+  let all_passed = total_issues = 0 in
+  let rule_word = if enabled_rule_count = 1 then "rule" else "rules" in
+
+  Fmt.pr "@.Summary: %s %d total %s (applied %d %s)@."
+    (Merlint.Report.print_color all_passed
+       (Merlint.Report.print_status all_passed))
+    total_issues
+    (if total_issues = 1 then "issue" else "issues")
+    enabled_rule_count rule_word;
+
+  if all_passed then
+    Fmt.pr "%s All checks passed!@." (Merlint.Report.print_color true "✓")
+  else
+    Fmt.pr "%s Some checks failed. See details above.@."
+      (Merlint.Report.print_color false "✗");
 
   (* Print profiling summary if enabled *)
   if show_profile then (

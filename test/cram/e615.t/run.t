@@ -11,12 +11,12 @@ Test bad example - should find test suite not included:
   ✓ Documentation (0 total issues)
   ✓ Project Structure (0 total issues)
   ✗ Test Quality (1 total issues)
-    [E615] Test Suite Not Included
+    [E615] Test Suite Not Included (1 issue)
     All test modules should be included in the main test runner (test.ml). Add the
     missing test suite to ensure all tests are run.
     - bad/test/test.ml:1:0: Test module test_parser is not included in bad/test/test.ml
   
-  Summary: ✗ 1 total issues (applied 1 rules)
+  Summary: ✗ 1 total issue (applied 1 rule)
   ✗ Some checks failed. See details above.
   [1]
 
@@ -33,5 +33,5 @@ Test good example - should find no issues:
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   
-  Summary: ✓ 0 total issues (applied 1 rules)
+  Summary: ✓ 0 total issues (applied 1 rule)
   ✓ All checks passed!

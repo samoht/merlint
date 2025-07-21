@@ -117,7 +117,7 @@ let test_get_lib_modules () =
 
   (* In test environment, might have no libraries *)
   Alcotest.(check pass)
-    (Printf.sprintf "Found %d library modules" (List.length lib_modules))
+    (Fmt.str "Found %d library modules" (List.length lib_modules))
     () ()
 
 (* Test get_test_modules *)
@@ -127,7 +127,7 @@ let test_get_test_modules () =
 
   (* In test environment, might have no tests *)
   Alcotest.(check pass)
-    (Printf.sprintf "Found %d test modules" (List.length test_modules))
+    (Fmt.str "Found %d test modules" (List.length test_modules))
     () ()
 
 (* Test ensure_project_built *)

@@ -6,7 +6,7 @@ Test bad example - should find error pattern usage:
   
   ✓ Code Quality (0 total issues)
   ✗ Code Style (2 total issues)
-    [E340] Error Pattern Detection
+    [E340] Error Pattern Detection (2 issues)
     Using raw Error constructors with Fmt.str can lead to inconsistent error
     messages. Consider creating error helper functions (prefixed with 'err_') that
     encapsulate common error patterns and provide consistent formatting.
@@ -17,7 +17,7 @@ Test bad example - should find error pattern usage:
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   
-  Summary: ✗ 2 total issues (applied 1 rules)
+  Summary: ✗ 2 total issues (applied 1 rule)
   ✗ Some checks failed. See details above.
   [1]
 
@@ -34,5 +34,5 @@ Test good example - should find no issues:
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   
-  Summary: ✓ 0 total issues (applied 1 rules)
+  Summary: ✓ 0 total issues (applied 1 rule)
   ✓ All checks passed!

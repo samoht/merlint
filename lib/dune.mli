@@ -1,36 +1,41 @@
-(** Wrapper for dune commands *)
+(** Wrapper for dune commands. *)
 
 type describe
-(** Abstract type for dune describe results *)
+(** Abstract type for dune describe results. *)
 
 val describe : Fpath.t -> describe
-(** Get parsed dune describe output for a project, using cache when possible *)
+(** [describe project_path] returns parsed dune describe output for a project.
+*)
 
 val ensure_project_built : Fpath.t -> (unit, string) result
-(** Ensure the project is built by running 'dune build' if needed *)
+(** [ensure_project_built project_path] ensures the project is built by running
+    'dune build' if needed. *)
 
 val is_executable : describe -> Fpath.t -> bool
-(** Check if a file is an executable (binary or test) - no .mli needed *)
+(** [is_executable describe file_path] checks if a file is an executable (binary
+    or test) - no .mli needed. *)
 
 val get_project_files : describe -> Fpath.t list
-(** Get all project source files using dune describe. Returns a list of .ml and
-    .mli files. *)
+(** [get_project_files describe] returns all project source files. *)
 
 val get_executable_modules : describe -> string list
-(** Get executable module names from dune describe *)
+(** [get_executable_modules describe] gets executable module names from dune
+    describe. *)
 
 val get_lib_modules : describe -> string list
-(** Get library module names from dune describe *)
+(** [get_lib_modules describe] gets library module names from dune describe. *)
 
 val get_test_modules : describe -> string list
-(** Get test module names from dune describe *)
+(** [get_test_modules describe] gets test module names from dune describe. *)
 
 val merge : describe list -> describe
-(** Merge multiple describe values into one, deduplicating entries *)
+(** [merge describes] merges multiple describe values into one, deduplicating
+    entries. *)
 
 val exclude : string list -> describe -> describe
-(** Filter out files matching the given patterns from a describe. Patterns can
-    be simple strings or use * for wildcards. *)
+(** [exclude patterns describe] filters out files matching the given patterns
+    from a describe. Patterns can be simple strings or use * for wildcards. *)
 
 val create_synthetic : string list -> describe
-(** Create a synthetic describe for individual files passed on command line *)
+(** [create_synthetic files] creates a synthetic describe for individual files
+    passed on command line. *)

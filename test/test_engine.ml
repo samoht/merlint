@@ -12,8 +12,7 @@ let test_get_project_root () =
 let test_run_empty_filter () =
   (* Test running with all rules disabled using "none" keyword *)
   match Filter.parse "none" with
-  | Error msg ->
-      Alcotest.fail (Printf.sprintf "Failed to create filter: %s" msg)
+  | Error msg -> Alcotest.failf "Failed to create filter: %s" msg
   | Ok filter ->
       let dune_describe = Dune.describe (Fpath.v ".") in
       let results = Engine.run ~filter ~dune_describe "." in

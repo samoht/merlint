@@ -1,4 +1,4 @@
-(** Shared location types and utilities *)
+(** Shared location types and utilities. *)
 
 type t = {
   file : string;
@@ -7,7 +7,7 @@ type t = {
   end_line : int;
   end_col : int;
 }
-(** Location with range in a file *)
+(** Location with range in a file. *)
 
 val create :
   file:string ->
@@ -16,10 +16,11 @@ val create :
   end_line:int ->
   end_col:int ->
   t
-(** Create a location *)
+(** [create ~file ~start_line ~start_col ~end_line ~end_col] creates a location.
+*)
 
 val pp : t Fmt.t
-(** Pretty print a location *)
+(** [pp formatter location] pretty prints location. *)
 
 val compare : t -> t -> int
-(** Compare two locations *)
+(** [compare a b] compares two locations. *)

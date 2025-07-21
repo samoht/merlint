@@ -1,11 +1,10 @@
-(** Simple profiling module for measuring execution times *)
+(** Simple profiling module for measuring execution times. *)
 
 val reset : unit -> unit
-(** [reset ()] clears all recorded timings *)
+(** [reset] clears all timings. *)
 
 val print_summary : unit -> unit
-(** [print_summary ()] prints a formatted summary of all timings to stdout *)
+(** [print_summary] prints timing summary. *)
 
 val print_per_file_summary : unit -> unit
-(** [print_per_file_summary ()] prints a per-file breakdown of timings to stdout
-*)
+(** [print_per_file_summary] prints per-file breakdown. *)

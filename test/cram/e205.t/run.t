@@ -6,7 +6,7 @@ Test bad example - should find usage of Printf instead of Fmt:
   
   ✓ Code Quality (0 total issues)
   ✗ Code Style (2 total issues)
-    [E205] Consider Using Fmt Module
+    [E205] Consider Using Fmt Module (2 issues)
     The Fmt module provides a more modern and composable approach to formatting.
     It offers better type safety and cleaner APIs compared to Printf/Format
     modules.
@@ -17,7 +17,7 @@ Test bad example - should find usage of Printf instead of Fmt:
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   
-  Summary: ✗ 2 total issues (applied 1 rules)
+  Summary: ✗ 2 total issues (applied 1 rule)
   ✗ Some checks failed. See details above.
   [1]
 
@@ -34,5 +34,5 @@ Test good example - should find no issues:
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   
-  Summary: ✓ 0 total issues (applied 1 rules)
+  Summary: ✓ 0 total issues (applied 1 rule)
   ✓ All checks passed!

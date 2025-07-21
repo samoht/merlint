@@ -1,2 +1,0 @@
-; We don't need dune for simple test files
-; merlint will analyze the files directly

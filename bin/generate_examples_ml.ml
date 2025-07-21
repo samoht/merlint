@@ -1,5 +1,3 @@
-open Printf
-
 let read_file path =
   if Sys.file_exists path then (
     let ic = open_in path in
@@ -75,8 +73,8 @@ let generate () =
     |> List.sort String.compare
   in
 
-  printf "(** Auto-generated examples from test/cram/*.t/\n";
-  printf "    DO NOT EDIT - Run 'dune build @gen' to regenerate *)\n\n";
+  Fmt.pr "(** Auto-generated examples from test/cram/*.t/\n";
+  Fmt.pr "    DO NOT EDIT - Run 'dune build @gen' to regenerate *)\n\n";
 
   List.iter
     (fun dir_name ->
@@ -85,7 +83,7 @@ let generate () =
       | Some error_code ->
           let files = collect_files_recursively test_dir "" in
           if files <> [] then (
-            printf "module %s = struct\n" error_code;
+            Fmt.pr "module %s = struct\n" error_code;
 
             (* Group files by directory *)
             let by_dir = Hashtbl.create 10 in
@@ -114,7 +112,7 @@ let generate () =
                       match read_file full_path with
                       | Some content ->
                           let var_name = filename_to_identifier filename in
-                          printf "  let %s = {|%s|}\n" var_name content
+                          Fmt.pr "  let %s = {|%s|}\n" var_name content
                       | None -> ())
                     (List.rev dir_files)
                 else
@@ -134,20 +132,20 @@ let generate () =
                         else '_')
                       name
                   in
-                  printf "  module %s = struct\n" module_name;
+                  Fmt.pr "  module %s = struct\n" module_name;
                   List.iter
                     (fun (filename, full_path) ->
                       match read_file full_path with
                       | Some content ->
                           let var_name = filename_to_identifier filename in
-                          printf "    let %s = {|%s|}\n" var_name content
+                          Fmt.pr "    let %s = {|%s|}\n" var_name content
                       | None -> ())
                     (List.rev dir_files);
-                  printf "  end\n")
+                  Fmt.pr "  end\n")
               sorted_dirs;
 
-            printf "end\n\n")
-      | None -> eprintf "Warning: Invalid directory name %s\n" dir_name)
+            Fmt.pr "end\n\n")
+      | None -> Fmt.epr "Warning: Invalid directory name %s\n" dir_name)
     test_dirs
 
 let () = generate ()

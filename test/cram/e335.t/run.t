@@ -7,7 +7,7 @@ Test bad example - should find used underscore-prefixed binding:
   ✓ Code Quality (0 total issues)
   ✓ Code Style (0 total issues)
   ✗ Naming Conventions (1 total issues)
-    [E335] Used Underscore-Prefixed Binding
+    [E335] Used Underscore-Prefixed Binding (1 issue)
     Bindings prefixed with underscore (like '_x') indicate they are meant to be
     unused. If you need to use the binding, remove the underscore prefix. If the
     binding is truly unused, consider using a wildcard pattern '_' instead.
@@ -16,7 +16,7 @@ Test bad example - should find used underscore-prefixed binding:
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   
-  Summary: ✗ 1 total issues (applied 1 rules)
+  Summary: ✗ 1 total issue (applied 1 rule)
   ✗ Some checks failed. See details above.
   [1]
 
@@ -33,5 +33,5 @@ Test good example - should find no issues:
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   
-  Summary: ✓ 0 total issues (applied 1 rules)
+  Summary: ✓ 0 total issues (applied 1 rule)
   ✓ All checks passed!

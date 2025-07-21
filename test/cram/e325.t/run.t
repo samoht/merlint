@@ -7,7 +7,7 @@ Test bad example - should find bad function naming convention:
   ✓ Code Quality (0 total issues)
   ✓ Code Style (0 total issues)
   ✗ Naming Conventions (2 total issues)
-    [E325] Function Naming Convention
+    [E325] Function Naming Convention (2 issues)
     Functions that return option types should be prefixed with 'find_', while
     functions that return non-option types should be prefixed with 'get_'. This
     convention helps communicate the function's behavior to callers.
@@ -17,7 +17,7 @@ Test bad example - should find bad function naming convention:
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   
-  Summary: ✗ 2 total issues (applied 1 rules)
+  Summary: ✗ 2 total issues (applied 1 rule)
   ✗ Some checks failed. See details above.
   [1]
 
@@ -34,5 +34,5 @@ Test good example - should find no issues:
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   
-  Summary: ✓ 0 total issues (applied 1 rules)
+  Summary: ✓ 0 total issues (applied 1 rule)
   ✓ All checks passed!

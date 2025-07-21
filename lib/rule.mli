@@ -1,6 +1,6 @@
-(** Linting rule definitions and registry *)
+(** Linting rule definitions and registry. *)
 
-(** Rule categories *)
+(** Rule categories. *)
 type category =
   | Complexity
   | Security_safety
@@ -11,17 +11,17 @@ type category =
   | Testing
 
 type example = {
-  is_good : bool;  (** true for good examples, false for bad examples *)
-  code : string;  (** The example code *)
+  is_good : bool;  (** true for good examples, false for bad examples. *)
+  code : string;  (** The example code. *)
 }
-(** A code example with label *)
+(** A code example with label. *)
 
 type 'a scope =
   | File of (Context.file -> 'a Issue.t list)
   | Project of (Context.project -> 'a Issue.t list)
 
 type t
-(** Type for rules *)
+(** Type for rules. *)
 
 val v :
   code:string ->
@@ -32,54 +32,55 @@ val v :
   pp:'a Fmt.t ->
   'a scope ->
   t
+(** [v ~code ~title ~category ~hint ?examples ~pp scope] creates a new rule. *)
 
 val code : t -> string
-(** Get the code of a rule *)
+(** [code rule] returns rule code. *)
 
 val title : t -> string
-(** Get the title of a rule *)
+(** [title rule] returns rule title. *)
 
 val category : t -> category
-(** Get the category of a rule *)
+(** [category rule] returns rule category. *)
 
 val hint : t -> string
-(** Get the hint of a rule *)
+(** [hint rule] returns rule hint. *)
 
 val examples : t -> example list
-(** Get the examples of a rule *)
+(** [examples rule] returns rule examples. *)
 
 val category_name : category -> string
-(** Get the display name for a category *)
+(** [category_name category] returns display name. *)
 
 val is_file_scoped : t -> bool
-(** Check if a rule operates on individual files *)
+(** [is_file_scoped rule] checks if file scoped. *)
 
 val is_project_scoped : t -> bool
-(** Check if a rule operates on the entire project *)
+(** [is_project_scoped rule] checks if project scoped. *)
 
-(** Module for handling rule execution results *)
+(** Module for handling rule execution results. *)
 module Run : sig
   type result
-  (** Result of running a rule, containing the issue and metadata *)
+  (** Result of running a rule, containing the issue and metadata. *)
 
   val file : t -> Context.file -> result list
-  (** Run a file-scoped rule on a file context *)
+  (** [file rule context] runs file rule. *)
 
   val project : t -> Context.project -> result list
-  (** Run a project-scoped rule on a project context *)
+  (** [project rule context] runs project rule. *)
 
   val code : result -> string
-  (** Get the rule code from a result *)
+  (** [code result] returns rule code. *)
 
   val title : result -> string
-  (** Get the rule title from a result *)
+  (** [title result] returns rule title. *)
 
   val pp : result Fmt.t
-  (** Pretty-print a result *)
+  (** [pp fmt result] pretty prints result. *)
 
   val location : result -> Location.t option
-  (** Get the location from a result *)
+  (** [location result] returns location. *)
 
   val compare : result -> result -> int
-  (** Compare results for sorting *)
+  (** [compare r1 r2] compares results. *)
 end

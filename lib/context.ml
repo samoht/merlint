@@ -49,7 +49,7 @@ let create_file ~filename ~config ~project_root ~merlin_result =
          with exn ->
            raise
              (Analysis_error
-                (Printf.sprintf "Failed to read file %s: %s" filename
+                (Fmt.str "Failed to read file %s: %s" filename
                    (Printexc.to_string exn))));
     functions =
       lazy

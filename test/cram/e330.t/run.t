@@ -7,7 +7,7 @@ Test bad example - should find redundant module name:
   ✓ Code Quality (0 total issues)
   ✓ Code Style (0 total issues)
   ✗ Naming Conventions (3 total issues)
-    [E330] Redundant Module Name
+    [E330] Redundant Module Name (3 issues)
     Avoid prefixing type or function names with the module name. The module
     already provides the namespace, so Message.message_type should just be
     Message.t
@@ -18,7 +18,7 @@ Test bad example - should find redundant module name:
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   
-  Summary: ✗ 3 total issues (applied 1 rules)
+  Summary: ✗ 3 total issues (applied 1 rule)
   ✗ Some checks failed. See details above.
   [1]
 
@@ -35,5 +35,5 @@ Test good example - should find no issues:
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   
-  Summary: ✓ 0 total issues (applied 1 rules)
+  Summary: ✓ 0 total issues (applied 1 rule)
   ✓ All checks passed!
