@@ -252,19 +252,8 @@ let check_run_t_output cram_dir error_code =
     in
     parse_test "" false [] []
 
-let main () =
-  let cram_dir = "test/cram" in
-  let errors = ref [] in
-
-  (* Get all defined rules and test directories *)
-  let defined_rules = get_all_error_codes () in
-  let test_dirs = get_test_directories cram_dir in
-
-  Fmt.pr "Checking test integrity...@.";
-  Fmt.pr "Found %d defined rules@." (List.length defined_rules);
-  Fmt.pr "Found %d test directories@." (List.length test_dirs);
-
-  (* Check 1: Every rule must have a test directory *)
+(* Check 1: Every rule must have a test directory *)
+let check_missing_test_dirs cram_dir defined_rules test_dirs errors =
   List.iter
     (fun rule_code ->
       if not (List.mem rule_code test_dirs) then
@@ -274,9 +263,10 @@ let main () =
             (String.uppercase_ascii rule_code)
             cram_dir rule_code
           :: !errors)
-    defined_rules;
+    defined_rules
 
-  (* Check 2: Every test directory must correspond to a defined rule *)
+(* Check 2: Every test directory must correspond to a defined rule *)
+let check_undefined_rules cram_dir defined_rules test_dirs errors =
   List.iter
     (fun test_code ->
       if not (List.mem test_code defined_rules) then
@@ -286,9 +276,10 @@ let main () =
             cram_dir test_code
             (String.uppercase_ascii test_code)
           :: !errors)
-    test_dirs;
+    test_dirs
 
-  (* Check 3: Every test directory must have bad.ml, good.ml, run.t, dune-project, and dune *)
+(* Check 3: Every test directory must have required files *)
+let check_test_directory_structure cram_dir defined_rules test_dirs errors =
   List.iter
     (fun rule_code ->
       if List.mem rule_code test_dirs then (
@@ -309,69 +300,69 @@ let main () =
           errors :=
             Fmt.str "Error: %s/%s.t/good.ml is missing" cram_dir rule_code
             :: !errors;
-        (if not run_exists then
-           errors :=
-             Fmt.str "Error: %s/%s.t/run.t is missing" cram_dir rule_code
-             :: !errors
-         else
-           (* Check 4: run.t must use correct -r flag format *)
-           let has_bad_test, has_good_test, wrong_formats =
-             check_run_t_format cram_dir rule_code
-           in
-           if not has_bad_test then
-             errors :=
-               Fmt.str
-                 "Error: %s/%s.t/run.t doesn't test 'merlint -r %s bad.ml'"
-                 cram_dir rule_code
-                 (String.uppercase_ascii rule_code)
-               :: !errors;
-           if not has_good_test then
-             errors :=
-               Fmt.str
-                 "Error: %s/%s.t/run.t doesn't test 'merlint -r %s good.ml'"
-                 cram_dir rule_code
-                 (String.uppercase_ascii rule_code)
-               :: !errors;
-           (* Report any wrong -r flag usage *)
-           List.iter
-             (fun msg ->
-               errors :=
-                 Fmt.str "Error: %s/%s.t/run.t: %s" cram_dir rule_code msg
-                 :: !errors)
-             wrong_formats);
-        (* Check 5: test directories SHOULD have dune-project and dune files in correct location *)
-        if has_incorrect_root_files then
+        if not run_exists then
           errors :=
-            Fmt.str
-              "Error: %s/%s.t has dune or dune-project at root but uses \
-               subdirectory structure - these files should be in bad/ and \
-               good/ subdirs instead"
-              cram_dir rule_code
-            :: !errors;
-        if not dune_project_exists then
-          if has_subdirs then
+            Fmt.str "Error: %s/%s.t/run.t is missing" cram_dir rule_code
+            :: !errors
+        else
+          (* Check 4: run.t must use correct -r flag format *)
+          let has_bad_test, has_good_test, wrong_formats =
+            check_run_t_format cram_dir rule_code
+          in
+          if not has_bad_test then
             errors :=
-              Fmt.str "Error: %s/%s.t/{bad,good}/dune-project files are missing"
+              Fmt.str "Error: %s/%s.t/run.t doesn't test 'merlint -r %s bad.ml'"
                 cram_dir rule_code
-              :: !errors
-          else
-            errors :=
-              Fmt.str "Error: %s/%s.t/dune-project is missing" cram_dir
-                rule_code
+                (String.uppercase_ascii rule_code)
               :: !errors;
-        if (not dune_exists) && not has_subdirs then
-          errors :=
-            Fmt.str "Error: %s/%s.t/dune is missing" cram_dir rule_code
-            :: !errors))
-    defined_rules;
+          if not has_good_test then
+            errors :=
+              Fmt.str
+                "Error: %s/%s.t/run.t doesn't test 'merlint -r %s good.ml'"
+                cram_dir rule_code
+                (String.uppercase_ascii rule_code)
+              :: !errors;
+          (* Report any wrong -r flag usage *)
+          List.iter
+            (fun msg ->
+              errors :=
+                Fmt.str "Error: %s/%s.t/run.t: %s" cram_dir rule_code msg
+                :: !errors)
+            wrong_formats;
+          (* Check 5: test directories SHOULD have dune-project and dune files in correct location *)
+          if has_incorrect_root_files then
+            errors :=
+              Fmt.str
+                "Error: %s/%s.t has dune or dune-project at root but uses \
+                 subdirectory structure - these files should be in bad/ and \
+                 good/ subdirs instead"
+                cram_dir rule_code
+              :: !errors;
+          if not dune_project_exists then
+            if has_subdirs then
+              errors :=
+                Fmt.str
+                  "Error: %s/%s.t/{bad,good}/dune-project files are missing"
+                  cram_dir rule_code
+                :: !errors
+            else
+              errors :=
+                Fmt.str "Error: %s/%s.t/dune-project is missing" cram_dir
+                  rule_code
+                :: !errors;
+          if (not dune_exists) && not has_subdirs then
+            errors :=
+              Fmt.str "Error: %s/%s.t/dune is missing" cram_dir rule_code
+              :: !errors))
+    defined_rules
 
-  (* Check 6: Parse run.t files to verify expected behavior *)
+(* Check 6: Parse run.t files to verify expected behavior *)
+let check_expected_outputs cram_dir defined_rules test_dirs errors =
   Fmt.pr "\nChecking expected test outputs...@.";
   List.iter
     (fun rule_code ->
       if List.mem rule_code test_dirs then
         let test_outputs = check_run_t_output cram_dir rule_code in
-
         (* Check each test in the run.t file *)
         List.iter
           (fun (test_name, output_lines) ->
@@ -383,7 +374,6 @@ let main () =
             let continues_with_analysis =
               List.exists (fun line -> Re.execp re_continuing line) output_lines
             in
-
             if has_dune_error && not continues_with_analysis then
               errors :=
                 Fmt.str
@@ -421,9 +411,10 @@ let main () =
                       cram_dir rule_code
                     :: !errors)
           test_outputs)
-    defined_rules;
+    defined_rules
 
-  (* Report results *)
+(* Report results and exit *)
+let report_results errors =
   if !errors = [] then (
     Fmt.pr "✓ Test integrity check passed!@.";
     exit 0)
@@ -432,5 +423,32 @@ let main () =
     List.iter (fun e -> Fmt.pr "  %s@." e) (List.rev !errors);
     Fmt.pr "\nPlease fix these issues before proceeding.@.";
     exit 1)
+
+let main () =
+  let cram_dir = "test/cram" in
+  let errors = ref [] in
+
+  (* Get all defined rules and test directories *)
+  let defined_rules = get_all_error_codes () in
+  let test_dirs = get_test_directories cram_dir in
+
+  Fmt.pr "Checking test integrity...@.";
+  Fmt.pr "Found %d defined rules@." (List.length defined_rules);
+  Fmt.pr "Found %d test directories@." (List.length test_dirs);
+
+  (* Check 1: Every rule must have a test directory *)
+  check_missing_test_dirs cram_dir defined_rules test_dirs errors;
+
+  (* Check 2: Every test directory must correspond to a defined rule *)
+  check_undefined_rules cram_dir defined_rules test_dirs errors;
+
+  (* Check 3: Every test directory must have bad.ml, good.ml, run.t, dune-project, and dune *)
+  check_test_directory_structure cram_dir defined_rules test_dirs errors;
+
+  (* Check 6: Parse run.t files to verify expected behavior *)
+  check_expected_outputs cram_dir defined_rules test_dirs errors;
+
+  (* Report results *)
+  report_results errors
 
 let () = main ()

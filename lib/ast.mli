@@ -17,6 +17,7 @@ type expr =
   | Function of { params : int; body : expr }  (** Function definition. *)
   | Let of { bindings : (string * expr) list; body : expr }  (** Let binding. *)
   | Sequence of expr list  (** Sequence of expressions. *)
+  | List  (** List literals and array literals. *)
   | Other  (** Catch-all for expressions we don't need to analyze. *)
 
 type t = {

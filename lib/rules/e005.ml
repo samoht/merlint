@@ -10,6 +10,16 @@ let check (ctx : Context.file) =
     { max_function_length = ctx.Context.config.max_function_length }
   in
   let outline = Context.outline ctx in
+  let ast = Context.ast ctx in
+
+  (* Helper to check if an expression is a pure data structure *)
+  let rec is_pure_data_structure = function
+    | Ast.List -> true (* List and array literals *)
+    | Ast.Sequence exprs -> List.for_all is_pure_data_structure exprs
+    | Ast.Other | Ast.Let _ | Ast.Function _ | Ast.If_then_else _ | Ast.Match _
+    | Ast.Try _ ->
+        false
+  in
 
   (* Analyze each function from the outline *)
   List.filter_map
@@ -21,18 +31,27 @@ let check (ctx : Context.file) =
           | Some range ->
               let length = range.end_.line - range.start.line + 1 in
 
-              (* For now, we can't detect pattern matching from outline alone,
-                 so we use the base threshold *)
-              let threshold = config.max_function_length in
+              (* Check if this is a pure data structure *)
+              let is_data_def =
+                List.exists
+                  (fun (name, expr) ->
+                    name = item.name && is_pure_data_structure expr)
+                  ast.functions
+              in
 
-              if length > threshold then
-                let loc =
-                  Location.create ~file:ctx.filename
-                    ~start_line:range.start.line ~start_col:range.start.col
-                    ~end_line:range.end_.line ~end_col:range.end_.col
-                in
-                Some (Issue.v ~loc { name = item.name; length; threshold })
-              else None
+              (* Skip length check for pure data structures *)
+              if is_data_def then None
+              else
+                let threshold = config.max_function_length in
+
+                if length > threshold then
+                  let loc =
+                    Location.create ~file:ctx.filename
+                      ~start_line:range.start.line ~start_col:range.start.col
+                      ~end_line:range.end_.line ~end_col:range.end_.col
+                  in
+                  Some (Issue.v ~loc { name = item.name; length; threshold })
+                else None
           | None -> None)
       | Type | Module | Class | Exception | Constructor | Field | Method
       | Other _ ->

@@ -11,6 +11,7 @@ type expr =
   | Function of { params : int; body : expr }
   | Let of { bindings : (string * expr) list; body : expr }
   | Sequence of expr list
+  | List  (** List literals and array literals *)
   | Other  (** Catch-all for expressions we don't need to analyze *)
 
 type t = {
@@ -66,7 +67,7 @@ module Complexity = struct
         merge acc (analyze body)
     | Sequence exprs ->
         List.fold_left (fun acc e -> merge acc (analyze e)) empty exprs
-    | Other -> empty
+    | List | Other -> empty
 
   and merge acc info =
     {
@@ -122,7 +123,7 @@ module Nesting = struct
           List.fold_left
             (fun acc e -> max acc (depth_of current_depth e))
             current_depth exprs
-      | Other -> current_depth
+      | List | Other -> current_depth
     in
     depth_of 0 node
 end
@@ -186,6 +187,11 @@ let rec ppxlib_expr_to_ast (expr : Ppxlib.expression) : expr =
       Let { bindings; body = ppxlib_expr_to_ast body }
   | Ppxlib.Pexp_sequence (e1, e2) ->
       Sequence [ ppxlib_expr_to_ast e1; ppxlib_expr_to_ast e2 ]
+  | Ppxlib.Pexp_construct ({ txt = Lident "[]"; _ }, None) ->
+      List (* Empty list *)
+  | Ppxlib.Pexp_construct ({ txt = Lident "::"; _ }, Some _) ->
+      List (* List cons *)
+  | Ppxlib.Pexp_array _ -> List (* Array literal *)
   | _ -> Other
 
 (** Extract function definitions from structure items *)

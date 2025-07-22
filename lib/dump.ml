@@ -285,6 +285,48 @@ let parse_name str =
 
 (* Phase 2: Parser - Convert tokens into structured data *)
 
+(* Skip attribute contents - they can contain mixed AST nodes *)
+let rec skip_attribute depth = function
+  | [] -> []
+  | { kind = LBracket; _ } :: rest -> skip_attribute (depth + 1) rest
+  | { kind = RBracket; _ } :: rest ->
+      if depth <= 1 then rest else skip_attribute (depth - 1) rest
+  | _ :: rest -> skip_attribute depth rest
+
+(* Helper for parsing named items *)
+let parse_named_item tokens =
+  match tokens with
+  | { kind = Word name_with_id; _ } :: rest
+    when String.contains name_with_id '/' ->
+      Some (parse_name name_with_id, rest)
+  | _ -> None
+
+(* Parse variant list - can have multiple variants in sequence *)
+let parse_variant_list acc location tokens continue_parse =
+  (* Helper to update variants accumulator *)
+  let add_variant acc' name current_loc =
+    { acc' with variants = { name; location = current_loc } :: acc'.variants }
+  in
+
+  (* Parse multiple variants until we hit something else *)
+  let rec collect_variants acc' current_loc = function
+    | [] -> continue_parse acc' location []
+    | { kind; _ } :: rest -> (
+        match kind with
+        (* Update location if we see a location token *)
+        | Location loc -> collect_variants acc' (Some loc) rest
+        (* Variant name *)
+        | Word content when String.contains content '/' ->
+            let name = parse_name content in
+            let new_acc = add_variant acc' name current_loc in
+            collect_variants new_acc current_loc rest
+        (* Keep going through brackets and other tokens *)
+        | LBracket | RBracket | Word _ -> collect_variants acc' current_loc rest
+        (* Stop when we hit another AST node *)
+        | _ -> continue_parse acc' location ({ kind; loc = None } :: rest))
+  in
+  collect_variants acc location tokens
+
 (** Parse token stream into structured AST *)
 let parse_tokens tokens =
   (* Helper to dispatch to specific parsers *)
@@ -312,51 +354,27 @@ let parse_tokens tokens =
     | { kind; _ } :: rest ->
         (* Found an AST node token or other *)
         dispatch_parser acc location rest kind
-  and parse_module acc location = function
-    | { kind = Word name_with_id; _ } :: rest
-      when String.contains name_with_id '/' ->
-        let name = parse_name name_with_id in
+  and parse_module acc location tokens =
+    match parse_named_item tokens with
+    | Some (name, rest) ->
         let new_acc =
           { acc with modules = { name; location } :: acc.modules }
         in
         parse new_acc location rest
-    | rest -> parse acc location rest
+    | None -> parse acc location tokens
   and parse_type acc location rest =
     (* Just continue parsing, types are handled by TypeDeclaration *)
     parse acc location rest
-  and parse_type_declaration acc location = function
-    | { kind = Word name_with_id; _ } :: rest
-      when String.contains name_with_id '/' ->
-        let name = parse_name name_with_id in
+  and parse_type_declaration acc location tokens =
+    match parse_named_item tokens with
+    | Some (name, rest) ->
         let new_acc = { acc with types = { name; location } :: acc.types } in
         parse new_acc location rest
-    | rest -> parse acc location rest
+    | None -> parse acc location tokens
   and parse_variants acc location tokens =
-    (* Helper to update variants accumulator *)
-    let add_variant acc' name current_loc =
-      { acc' with variants = { name; location = current_loc } :: acc'.variants }
-    in
-
-    (* Parse multiple variants until we hit something else *)
-    let rec collect_variants acc' current_loc = function
-      | [] -> parse acc' location []
-      | { kind; _ } :: rest -> (
-          match kind with
-          (* Update location if we see a location token *)
-          | Location loc -> collect_variants acc' (Some loc) rest
-          (* Variant name *)
-          | Word content when String.contains content '/' ->
-              let name = parse_name content in
-              let new_acc = add_variant acc' name current_loc in
-              collect_variants new_acc current_loc rest
-          (* Keep going through brackets and other tokens *)
-          | LBracket | RBracket | Word _ ->
-              collect_variants acc' current_loc rest
-          (* Stop when we hit another AST node *)
-          | _ -> parse acc' location ({ kind; loc = None } :: rest))
-    in
-    collect_variants acc location tokens
-  and parse_ident acc location = function
+    parse_variant_list acc location tokens parse
+  and parse_ident acc location tokens =
+    match tokens with
     | { kind = Word content; _ } :: rest ->
         let name = parse_name content in
         let new_acc =
@@ -364,7 +382,8 @@ let parse_tokens tokens =
         in
         parse new_acc location rest
     | rest -> parse acc location rest
-  and parse_pattern acc location = function
+  and parse_pattern acc location tokens =
+    match tokens with
     | { kind = Word content; _ } :: rest ->
         let name = parse_name content in
         let new_acc =
@@ -375,7 +394,8 @@ let parse_tokens tokens =
   and parse_value acc location rest =
     (* Just continue parsing, values might be handled differently *)
     parse acc location rest
-  and parse_construct acc location = function
+  and parse_construct acc location tokens =
+    match tokens with
     | { kind = Word content; _ } :: rest ->
         let name = parse_name content in
         let new_acc =
@@ -384,14 +404,6 @@ let parse_tokens tokens =
         parse new_acc location rest
     | rest -> parse acc location rest
   and parse_attribute acc location tokens =
-    (* Skip attribute contents - they can contain mixed AST nodes *)
-    let rec skip_attribute depth = function
-      | [] -> []
-      | { kind = LBracket; _ } :: rest -> skip_attribute (depth + 1) rest
-      | { kind = RBracket; _ } :: rest ->
-          if depth <= 1 then rest else skip_attribute (depth - 1) rest
-      | _ :: rest -> skip_attribute depth rest
-    in
     (* Attributes are typically followed by [ ... ] *)
     match tokens with
     | { kind = Word _; _ } :: { kind = LBracket; _ } :: rest ->

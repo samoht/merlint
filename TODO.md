@@ -10,10 +10,6 @@
   - Avoid redundant phrases like 'This function...'
   - Most issues are in .mli files
 
-- [ ] **Fix long functions (3 functions over 100 lines)**
-  - bin/check_test_integrity.ml:164:0: Function 'main' is 175 lines long
-  - lib/dump.ml:275:0: Function 'parse_tokens' is 109 lines long  
-  - lib/guide.ml:12:0: Function 'content' is 440 lines long
 
 - [ ] **Replace Printf usage with Fmt module (48 occurrences)**
   - Modern OCaml prefers Fmt for better composability and type safety
@@ -247,3 +243,41 @@ These rules currently use regex or text-based analysis and should be converted t
 - Add more comprehensive documentation rules
 - Improve complexity analysis for more OCaml constructs
 - Add configuration file support for customizing thresholds
+
+## Rule Refactoring
+
+### Replace Manual Text Parsing with Structured Data
+
+Several rules parse raw file content using regular expressions or line-by-line analysis. This is often fragile and can fail with complex code, comments, or string literals. These rules should be refactored to use the structured data available from the Context (like Ast, Dump, or Outline).
+
+Example: `e415.ml` (Missing Standard Functions)
+- Currently parses .mli files manually to find type t and val declarations
+- Can be rewritten using Outline data for more robust parsing
+
+Other rules that would benefit:
+- **E405** (Missing Value Documentation): Complex manual doc comment logic could use Docs.extract_doc_comments
+- **E600** (Test Module Convention) & **E615** (Test Suite Not Included): Use AST parsing instead of regex for test.ml
+- **E105** (Catch-all Exception Handler): Use AST Try nodes instead of regex for `with _ ->`
+
+### Standardize Iteration and Checking Logic
+
+Many naming convention rules have similar logic. The Dump.check_elements helper used in e300 and e310 is a great pattern that should be used consistently.
+
+Example: `e315.ml` (Type Naming Convention) can be simplified using check_elements, making it more concise and consistent with other naming rules.
+
+This pattern could also be applied to:
+- E305 (Module Naming)
+- E320 (Long Identifier Names)
+
+### Consolidate Helper Functions
+
+- The kind_to_string function for Outline.kind is defined in both e325.ml and e330.ml
+- Should be moved into the Outline module itself
+
+### Use Dune Metadata for File Identification
+
+Some rules (E610, E615) use brittle path-based heuristics to identify test vs library files. They should use reliable project metadata from dune context, like E505 (Missing MLI File) does with:
+```ocaml
+let executable_modules = Context.executable_modules ctx in
+let test_modules = Context.test_modules ctx in
+```

@@ -114,6 +114,89 @@ let group_issues_by_code issues =
 
 let print_fix_hints all_issues = if all_issues <> [] then exit 1
 
+(* Group issues by category for visual reporting *)
+let group_issues_by_category all_issues =
+  let all_categories =
+    [
+      "Code Quality";
+      "Code Style";
+      "Naming Conventions";
+      "Documentation";
+      "Project Structure";
+      "Test Quality";
+    ]
+  in
+  List.map
+    (fun category_name ->
+      let category_issues =
+        List.filter
+          (fun issue ->
+            let code = Merlint.Rule.Run.code issue in
+            (* Find the rule to get its category *)
+            match
+              List.find_opt
+                (fun r -> Merlint.Rule.code r = code)
+                Merlint.Data.all_rules
+            with
+            | Some rule ->
+                let category = Merlint.Rule.category rule in
+                Merlint.Rule.category_name category = category_name
+            | None -> false)
+          all_issues
+      in
+      (category_name, category_issues))
+    all_categories
+
+(* Print issues grouped by category *)
+let print_categorized_issues issues_by_category =
+  List.iter
+    (fun (category_name, issues) ->
+      let total_issues = List.length issues in
+      let category_passed = total_issues = 0 in
+
+      Fmt.pr "%s %s (%d total issues)@."
+        (Merlint.Report.print_color category_passed
+           (Merlint.Report.print_status category_passed))
+        category_name total_issues;
+
+      (* Group by error code and print *)
+      if total_issues > 0 then
+        let grouped_issues = group_issues_by_code issues in
+        let sorted_groups =
+          List.sort (fun (a, _) (b, _) -> String.compare a b) grouped_issues
+        in
+        List.iter print_issue_group sorted_groups)
+    issues_by_category
+
+(* Get enabled rules based on filter *)
+let get_enabled_rules rule_filter =
+  match rule_filter with
+  | Some filter ->
+      List.filter
+        (fun rule ->
+          Merlint.Filter.is_enabled_by_code filter (Merlint.Rule.code rule))
+        Merlint.Data.all_rules
+  | None -> Merlint.Data.all_rules
+
+(* Print summary and status *)
+let print_summary all_issues enabled_rule_count =
+  let total_issues = List.length all_issues in
+  let all_passed = total_issues = 0 in
+  let rule_word = if enabled_rule_count = 1 then "rule" else "rules" in
+
+  Fmt.pr "@.Summary: %s %d total %s (applied %d %s)@."
+    (Merlint.Report.print_color all_passed
+       (Merlint.Report.print_status all_passed))
+    total_issues
+    (if total_issues = 1 then "issue" else "issues")
+    enabled_rule_count rule_word;
+
+  if all_passed then
+    Fmt.pr "%s All checks passed!@." (Merlint.Report.print_color true "✓")
+  else
+    Fmt.pr "%s Some checks failed. See details above.@."
+      (Merlint.Report.print_color false "✗")
+
 let run_analysis project_root dune_describe rule_filter show_profile =
   (* Set formatter margin based on terminal width *)
   let terminal_width = get_terminal_width () in
@@ -141,91 +224,18 @@ let run_analysis project_root dune_describe rule_filter show_profile =
   Fmt.pr "Running merlint analysis...@.@.";
   Fmt.pr "Analyzing %d files@.@." files_count;
 
-  (* Get all category names in order *)
-  let all_categories =
-    [
-      "Code Quality";
-      "Code Style";
-      "Naming Conventions";
-      "Documentation";
-      "Project Structure";
-      "Test Quality";
-    ]
-  in
-
   (* Group issues by category for reporting *)
-  let issues_by_category =
-    List.map
-      (fun category_name ->
-        let category_issues =
-          List.filter
-            (fun issue ->
-              let code = Merlint.Rule.Run.code issue in
-              (* Find the rule to get its category *)
-              match
-                List.find_opt
-                  (fun r -> Merlint.Rule.code r = code)
-                  Merlint.Data.all_rules
-              with
-              | Some rule ->
-                  let category = Merlint.Rule.category rule in
-                  Merlint.Rule.category_name category = category_name
-              | None -> false)
-            all_issues
-        in
-        (category_name, category_issues))
-      all_categories
-  in
+  let issues_by_category = group_issues_by_category all_issues in
 
   (* Process each category *)
-  List.iter
-    (fun (category_name, issues) ->
-      let total_issues = List.length issues in
-      let category_passed = total_issues = 0 in
-
-      Fmt.pr "%s %s (%d total issues)@."
-        (Merlint.Report.print_color category_passed
-           (Merlint.Report.print_status category_passed))
-        category_name total_issues;
-
-      (* Group by error code and print *)
-      if total_issues > 0 then
-        let grouped_issues = group_issues_by_code issues in
-        let sorted_groups =
-          List.sort (fun (a, _) (b, _) -> String.compare a b) grouped_issues
-        in
-        List.iter print_issue_group sorted_groups)
-    issues_by_category;
+  print_categorized_issues issues_by_category;
 
   (* Calculate the actual number of rules that were applied *)
-  let enabled_rules =
-    match rule_filter with
-    | Some filter ->
-        List.filter
-          (fun rule ->
-            Merlint.Filter.is_enabled_by_code filter (Merlint.Rule.code rule))
-          Merlint.Data.all_rules
-    | None -> Merlint.Data.all_rules
-  in
+  let enabled_rules = get_enabled_rules rule_filter in
   let enabled_rule_count = List.length enabled_rules in
 
   (* Print custom summary *)
-  let total_issues = List.length all_issues in
-  let all_passed = total_issues = 0 in
-  let rule_word = if enabled_rule_count = 1 then "rule" else "rules" in
-
-  Fmt.pr "@.Summary: %s %d total %s (applied %d %s)@."
-    (Merlint.Report.print_color all_passed
-       (Merlint.Report.print_status all_passed))
-    total_issues
-    (if total_issues = 1 then "issue" else "issues")
-    enabled_rule_count rule_word;
-
-  if all_passed then
-    Fmt.pr "%s All checks passed!@." (Merlint.Report.print_color true "✓")
-  else
-    Fmt.pr "%s Some checks failed. See details above.@."
-      (Merlint.Report.print_color false "✗");
+  print_summary all_issues enabled_rule_count;
 
   (* Print profiling summary if enabled *)
   if show_profile then (
