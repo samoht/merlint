@@ -3,6 +3,15 @@
 type t
 (** Rule filter configuration. *)
 
+val equal : t -> t -> bool
+(** [equal a b] returns true if [a] and [b] are equal filters. *)
+
+val compare : t -> t -> int
+(** [compare a b] returns a comparison result between [a] and [b]. *)
+
+val pp : t Fmt.t
+(** [pp fmt t] pretty-prints the filter configuration. *)
+
 val parse : string -> (t, string) result
 (** [parse spec] parses rule specification using simple format without quotes.
 *)

@@ -202,8 +202,8 @@ let run_analysis project_root dune_describe rule_filter show_profile =
   let terminal_width = get_terminal_width () in
   Format.set_margin terminal_width;
 
-  (* Reset profiling if enabled *)
-  if show_profile then Merlint.Profiling.reset ();
+  (* Create profiling state if enabled *)
+  let profiling_state = if show_profile then Some (Merlint.Profiling.create ()) else None in
 
   let files_count =
     List.length (Merlint.Dune.get_project_files dune_describe)
@@ -238,9 +238,11 @@ let run_analysis project_root dune_describe rule_filter show_profile =
   print_summary all_issues enabled_rule_count;
 
   (* Print profiling summary if enabled *)
-  if show_profile then (
-    Merlint.Profiling.print_summary ();
-    Merlint.Profiling.print_per_file_summary ());
+  match profiling_state with
+  | Some state ->
+      Merlint.Profiling.print_summary_from_state state;
+      Merlint.Profiling.print_per_file_summary_from_state state
+  | None -> ();
 
   print_fix_hints all_issues
 

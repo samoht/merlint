@@ -2,13 +2,23 @@
 
 type timing = { name : string; duration : float }
 
-(* Global state is intentional here - profiling needs to accumulate timings across calls *)
-let timings = ref []
-let reset () = timings := []
-let get_timings () = List.rev !timings
+(** Profiling state that encapsulates mutable timings *)
+type t = { mutable timings : timing list }
 
-let print_summary () =
-  let timings = get_timings () in
+(** Create an empty profiling state *)
+let create () = { timings = [] }
+
+(** Add a timing to the profiling state *)
+let add_timing t timing = t.timings <- timing :: t.timings
+
+(** Get all timings in chronological order *)
+let get_timings_from_state t = List.rev t.timings
+
+(** Reset timings in the state *)
+let reset_state t = t.timings <- []
+
+let print_summary_from_state t =
+  let timings = get_timings_from_state t in
   if timings <> [] then (
     Fmt.pr "\n[Profiling Summary]\n";
     Fmt.pr "%-40s %10s\n" "Operation" "Time (ms)";
@@ -36,8 +46,8 @@ let print_summary () =
     Fmt.pr "%s\n" (String.make 52 '-');
     Fmt.pr "%-40s %10.2f\n" "Total" (total *. 1000.0))
 
-let print_per_file_summary () =
-  let timings = get_timings () in
+let print_per_file_summary_from_state t =
+  let timings = get_timings_from_state t in
   if timings <> [] then
     (* Extract file-specific timings *)
     let file_timings =

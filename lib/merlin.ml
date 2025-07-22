@@ -16,6 +16,19 @@ type t = {
   dump : (Dump.t, string) result;
 }
 
+(** Standard functions using polymorphic equality and comparison *)
+let equal = ( = )
+let compare = compare
+
+let pp ppf t =
+  let pp_result pp_ok ppf = function
+    | Ok v -> pp_ok ppf v
+    | Error e -> Fmt.pf ppf "Error: %s" e
+  in
+  Fmt.pf ppf "@[<v>Merlin result:@,  outline: %a@,  dump: %a@]"
+    (pp_result Outline.pp) t.outline
+    (pp_result Dump.pp) t.dump
+
 let get_outline file =
   (* Ensure file exists before trying to analyze it *)
   if not (Sys.file_exists file) then err_file_not_found file

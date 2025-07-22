@@ -166,20 +166,28 @@ let is_bad_test line bad_test_re = Re.execp bad_test_re line
 (* Check if line is a good test *)
 let is_good_test line good_test_re = Re.execp good_test_re line
 
+(* State for tracking test format checking *)
+type format_check_state = {
+  has_bad_test : bool;
+  has_good_test : bool;
+  wrong_formats : string list;
+}
+
 (* Process a line from run.t for format checking *)
-let process_format_line line rule_code bad_test_re good_test_re has_bad_test
-    has_good_test wrong_formats =
+let process_format_line line rule_code bad_test_re good_test_re state =
   let new_wrong_formats =
     if Re.execp re_merlint_r_cmd line then
       let parts = String.split_on_char ' ' (String.trim line) in
       match check_r_flag_usage parts rule_code with
-      | Some err -> err :: wrong_formats
-      | None -> wrong_formats
-    else wrong_formats
+      | Some err -> err :: state.wrong_formats
+      | None -> state.wrong_formats
+    else state.wrong_formats
   in
-  let has_bad = has_bad_test || is_bad_test line bad_test_re in
-  let has_good = has_good_test || is_good_test line good_test_re in
-  (has_bad, has_good, new_wrong_formats)
+  {
+    has_bad_test = state.has_bad_test || is_bad_test line bad_test_re;
+    has_good_test = state.has_good_test || is_good_test line good_test_re;
+    wrong_formats = new_wrong_formats;
+  }
 
 let check_run_t_format cram_dir error_code =
   let test_dir = Filename.concat cram_dir (error_code ^ ".t") in
@@ -191,19 +199,19 @@ let check_run_t_format cram_dir error_code =
   if not (Sys.file_exists run_file) then (false, false, [])
   else
     let ic = open_in run_file in
-    let rec check_lines has_bad_test has_good_test wrong_formats =
+    let rec check_lines state =
       try
         let line = input_line ic in
-        let has_bad, has_good, new_wrong_formats =
-          process_format_line line rule_code bad_test_re good_test_re
-            has_bad_test has_good_test wrong_formats
+        let new_state =
+          process_format_line line rule_code bad_test_re good_test_re state
         in
-        check_lines has_bad has_good new_wrong_formats
+        check_lines new_state
       with End_of_file ->
         close_in ic;
-        (has_bad_test, has_good_test, List.rev wrong_formats)
+        (state.has_bad_test, state.has_good_test, List.rev state.wrong_formats)
     in
-    check_lines false false []
+    let initial_state = { has_bad_test = false; has_good_test = false; wrong_formats = [] } in
+    check_lines initial_state
 
 (* Parse run.t file to check expected output *)
 (* Extract test name from merlint command line *)
@@ -218,20 +226,28 @@ let add_test_result current_test output_lines acc =
     (current_test, List.rev output_lines) :: acc
   else acc
 
+(* State for parsing run.t files *)
+type parse_state = {
+  current_test : string;
+  in_output : bool;
+  output_lines : string list;
+  acc : (string * string list) list;
+}
+
 (* Process a line from run.t file *)
-let process_run_t_line line current_test in_output output_lines acc parse_test =
+let process_run_t_line line state =
   if Re.execp re_merlint_cmd line then
     (* Start of a new test *)
     let test_name = extract_test_name line in
-    let new_acc = add_test_result current_test output_lines acc in
-    parse_test test_name true [] new_acc
-  else if in_output && Re.execp re_two_spaces line then
+    let new_acc = add_test_result state.current_test state.output_lines state.acc in
+    { current_test = test_name; in_output = true; output_lines = []; acc = new_acc }
+  else if state.in_output && Re.execp re_two_spaces line then
     (* Part of the output *)
-    parse_test current_test true (line :: output_lines) acc
+    { state with output_lines = line :: state.output_lines }
   else
     (* End of output or other content *)
-    let new_acc = add_test_result current_test output_lines acc in
-    parse_test "" false [] new_acc
+    let new_acc = add_test_result state.current_test state.output_lines state.acc in
+    { current_test = ""; in_output = false; output_lines = []; acc = new_acc }
 
 let check_run_t_output cram_dir error_code =
   let test_dir = Filename.concat cram_dir (error_code ^ ".t") in
@@ -240,17 +256,18 @@ let check_run_t_output cram_dir error_code =
   if not (Sys.file_exists run_file) then []
   else
     let ic = open_in run_file in
-    let rec parse_test current_test in_output output_lines acc =
+    let rec parse_test state =
       try
         let line = input_line ic in
-        process_run_t_line line current_test in_output output_lines acc
-          parse_test
+        let new_state = process_run_t_line line state in
+        parse_test new_state
       with End_of_file ->
         close_in ic;
-        let final_acc = add_test_result current_test output_lines acc in
+        let final_acc = add_test_result state.current_test state.output_lines state.acc in
         List.rev final_acc
     in
-    parse_test "" false [] []
+    let initial_state = { current_test = ""; in_output = false; output_lines = []; acc = [] } in
+    parse_test initial_state
 
 (* Check 1: Every rule must have a test directory *)
 let check_missing_test_dirs cram_dir defined_rules test_dirs errors =

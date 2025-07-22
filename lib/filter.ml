@@ -7,6 +7,29 @@ type t = {
 
 let empty = { enabled = None; disabled = [] }
 
+(** Standard functions for type t *)
+
+let equal t1 t2 =
+  t1.enabled = t2.enabled && t1.disabled = t2.disabled
+
+let compare t1 t2 =
+  match compare t1.enabled t2.enabled with
+  | 0 -> compare t1.disabled t2.disabled
+  | n -> n
+
+let pp ppf t =
+  match t.enabled with
+  | None -> 
+      if t.disabled = [] then
+        Fmt.pf ppf "all"
+      else
+        Fmt.pf ppf "all-%a" Fmt.(list ~sep:(const string "-") string) t.disabled
+  | Some enabled ->
+      Fmt.pf ppf "%a%s%a" 
+        Fmt.(list ~sep:(const string "+") string) enabled
+        (if t.disabled = [] then "" else "-")
+        Fmt.(list ~sep:(const string "-") string) t.disabled
+
 (* Error helper functions *)
 let err_invalid_range range_str = Error ("Invalid range format: " ^ range_str)
 let err_invalid_spec spec = Error ("Invalid rule specification: " ^ spec)

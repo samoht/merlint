@@ -21,6 +21,15 @@ type t = {
   values : elt list;  (** Value bindings (definitions). *)
 }
 
+val equal : t -> t -> bool
+(** [equal a b] returns true if [a] and [b] are structurally equal. *)
+
+val compare : t -> t -> int
+(** [compare a b] returns a comparison result between [a] and [b]. *)
+
+val pp : t Fmt.t
+(** [pp fmt t] pretty-prints the dump data. *)
+
 exception Parse_error of string
 (** Parse error exception. *)
 

@@ -29,6 +29,12 @@ type item = {
 type t = item list
 (** Outline result. *)
 
+val equal : t -> t -> bool
+(** [equal a b] returns true if [a] and [b] are equal. Uses polymorphic equality. *)
+
+val compare : t -> t -> int
+(** [compare a b] returns a comparison result between [a] and [b]. Uses polymorphic comparison. *)
+
 val empty : unit -> t
 (** [empty] creates empty outline. *)
 

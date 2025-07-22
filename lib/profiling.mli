@@ -1,10 +1,16 @@
 (** Simple profiling module for measuring execution times. *)
 
-val reset : unit -> unit
-(** [reset] clears all timings. *)
+type t
+(** Profiling state. *)
 
-val print_summary : unit -> unit
-(** [print_summary] prints timing summary. *)
+val create : unit -> t
+(** [create ()] creates a new profiling state. *)
 
-val print_per_file_summary : unit -> unit
-(** [print_per_file_summary] prints per-file breakdown. *)
+val reset_state : t -> unit
+(** [reset_state t] clears all timings in the state. *)
+
+val print_summary_from_state : t -> unit
+(** [print_summary_from_state t] prints timing summary from the given state. *)
+
+val print_per_file_summary_from_state : t -> unit
+(** [print_per_file_summary_from_state t] prints per-file breakdown from the given state. *)

@@ -5,6 +5,10 @@ type t = {
   file_count : int;
 }
 
+(** Standard functions using polymorphic equality and comparison *)
+let equal = ( = )
+let compare = compare
+
 let create ~rule_name ~passed ~issues ~file_count =
   { rule_name; passed; issues; file_count }
 

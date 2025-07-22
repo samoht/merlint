@@ -492,3 +492,72 @@ let check_elements elements check_fn create_issue_fn =
       | Some result, Some loc -> Some (create_issue_fn name_str loc result)
       | _ -> None)
     elements
+
+(** Standard functions for type t *)
+
+let equal_name n1 n2 = n1.prefix = n2.prefix && n1.base = n2.base
+
+let equal_elt e1 e2 = equal_name e1.name e2.name && e1.location = e2.location
+
+let equal t1 t2 =
+  List.equal equal_elt t1.modules t2.modules
+  && List.equal equal_elt t1.types t2.types
+  && List.equal equal_elt t1.exceptions t2.exceptions
+  && List.equal equal_elt t1.variants t2.variants
+  && List.equal equal_elt t1.identifiers t2.identifiers
+  && List.equal equal_elt t1.patterns t2.patterns
+  && List.equal equal_elt t1.values t2.values
+
+let compare_name n1 n2 =
+  match compare n1.prefix n2.prefix with
+  | 0 -> compare n1.base n2.base
+  | n -> n
+
+let compare_elt e1 e2 =
+  match compare_name e1.name e2.name with
+  | 0 -> compare e1.location e2.location
+  | n -> n
+
+let compare t1 t2 =
+  match List.compare compare_elt t1.modules t2.modules with
+  | 0 -> (
+      match List.compare compare_elt t1.types t2.types with
+      | 0 -> (
+          match List.compare compare_elt t1.exceptions t2.exceptions with
+          | 0 -> (
+              match List.compare compare_elt t1.variants t2.variants with
+              | 0 -> (
+                  match List.compare compare_elt t1.identifiers t2.identifiers with
+                  | 0 -> (
+                      match List.compare compare_elt t1.patterns t2.patterns with
+                      | 0 -> List.compare compare_elt t1.values t2.values
+                      | n -> n)
+                  | n -> n)
+              | n -> n)
+          | n -> n)
+      | n -> n)
+  | n -> n
+
+let pp_name ppf name = Fmt.pf ppf "%s" (name_to_string name)
+
+let pp_elt ppf elt =
+  match elt.location with
+  | Some loc -> Fmt.pf ppf "%a at %a" pp_name elt.name Location.pp loc
+  | None -> pp_name ppf elt.name
+
+let pp_elt_list name ppf elts =
+  if elts <> [] then
+    Fmt.pf ppf "@[<v2>%s (%d):@,%a@]@." name (List.length elts)
+      (Fmt.list ~sep:Fmt.cut pp_elt)
+      elts
+
+let pp ppf t =
+  Fmt.pf ppf "@[<v>";
+  pp_elt_list "Modules" ppf t.modules;
+  pp_elt_list "Types" ppf t.types;
+  pp_elt_list "Exceptions" ppf t.exceptions;
+  pp_elt_list "Variants" ppf t.variants;
+  pp_elt_list "Identifiers" ppf t.identifiers;
+  pp_elt_list "Patterns" ppf t.patterns;
+  pp_elt_list "Values" ppf t.values;
+  Fmt.pf ppf "@]"
