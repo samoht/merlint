@@ -16,7 +16,7 @@ let test_category_name () =
     Alcotest.(check bool) "has name" true (String.length name > 0)
   ) categories
 
-let test_rule_accessors () =
+let test_accessors () =
   (* Test rule accessor functions *)
   let rules = Merlint.Data.all_rules in
   match rules with
@@ -52,7 +52,7 @@ let test_run_result () =
 let tests =
   [
     ("category_name", `Quick, test_category_name);
-    ("rule_accessors", `Quick, test_rule_accessors);
+    ("accessors", `Quick, test_accessors);
     ("issue_creation", `Quick, test_issue_creation);
     ("run_result", `Quick, test_run_result);
   ]
