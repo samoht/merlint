@@ -3,7 +3,7 @@
 (* Helper to make style_issue testable for Alcotest *)
 let testable_style_issue : Merlint.Docs.style_issue Alcotest.testable =
   let pp = Merlint.Docs.pp_style_issue in
-  let equal a b = Format.asprintf "%a" pp a = Format.asprintf "%a" pp b in
+  let equal a b = Fmt.str "%a" pp a = Fmt.str "%a" pp b in
   Alcotest.testable pp equal
 
 let test_check_function_doc () =

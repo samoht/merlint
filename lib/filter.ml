@@ -7,6 +7,10 @@ type t = {
 
 let empty = { enabled = None; disabled = [] }
 
+(* Error helper functions *)
+let err_invalid_range range_str = Error (Fmt.str "Invalid range format: %s" range_str)
+let err_invalid_spec spec = Error (Fmt.str "Invalid rule specification: %s" spec)
+
 (** Parse a range of error codes like "100..199" *)
 let parse_range range_str =
   match String.split_on_char '.' range_str with
@@ -20,8 +24,8 @@ let parse_range range_str =
             (fun i -> Fmt.str "E%03d" (start_num + i))
         in
         Ok codes
-      with Failure _ -> Error (Fmt.str "Invalid range format: %s" range_str))
-  | _ -> Error (Fmt.str "Invalid range format: %s" range_str)
+      with Failure _ -> err_invalid_range range_str)
+  | _ -> err_invalid_range range_str
 
 (** Parse a single rule specification *)
 let parse_rule_spec spec =
@@ -31,7 +35,7 @@ let parse_rule_spec spec =
   else if String.starts_with ~prefix:"E" spec then
     (* Single error code *)
     Ok [ spec ]
-  else Error (Fmt.str "Invalid rule specification: %s" spec)
+  else err_invalid_spec spec
 
 (** Get the next operator (+/-) position in a string *)
 let get_next_operator str start =

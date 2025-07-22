@@ -5,6 +5,9 @@ let src = Logs.Src.create "merlint.dune" ~doc:"Dune interface"
 module Log = (val Logs.src_log src : Logs.LOG)
 open Sexplib0
 
+(* Error helper function *)
+let err_build_failed msg = Error (Fmt.str "Failed to build project: %s" msg)
+
 type describe = {
   libraries : (string * Fpath.t list) list;
   executables : (string * Fpath.t list) list;
@@ -30,7 +33,7 @@ let ensure_project_built project_root =
     Log.info (fun m -> m "Ensuring project is built: %s" cmd);
     match Command.run cmd with
     | Ok _ -> Ok ()
-    | Error msg -> Error (Fmt.str "Failed to build project: %s" msg)
+    | Error msg -> err_build_failed msg
 
 (** Check if a file is an executable *)
 let is_executable dune_describe ml_file =

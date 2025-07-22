@@ -134,6 +134,71 @@ let rec core_type_to_string (typ : Ppxlib.core_type) =
       String.concat " * " type_strs
   | _ -> "<complex type>"
 
+(** Find regular comments that precede value declarations *)
+let find_regular_comments lines =
+  let regular_comments = ref [] in
+  List.iteri
+    (fun i line ->
+      let trimmed = String.trim line in
+      if
+        Re.execp (Re.compile (Re.str "(* ")) trimmed
+        && Re.execp (Re.compile (Re.str " *)")) trimmed
+        && not (String.starts_with ~prefix:"(**" trimmed)
+      then
+        if
+          (* Found a regular comment, check if next line is a val *)
+          i + 1 < List.length lines
+        then
+          let next_line = String.trim (List.nth lines (i + 1)) in
+          if String.starts_with ~prefix:"val " next_line then
+            regular_comments := (i + 2, "BAD_COMMENT") :: !regular_comments)
+    lines;
+  !regular_comments
+
+(** Process a value declaration and extract its documentation *)
+let process_value_declaration vd ~regular_comments ~last_floating_doc =
+  let open Ppxlib in
+  let value_name = vd.pval_name.txt in
+  let signature = core_type_to_string vd.pval_type in
+  let val_line, _ = extract_location vd.pval_loc in
+
+  (* Check if this value has a regular comment *)
+  let has_regular_comment =
+    List.exists (fun (line, _) -> line = val_line) regular_comments
+  in
+
+  if has_regular_comment then
+    (* Found regular comment instead of doc comment *)
+    {
+      value_name;
+      signature;
+      doc = "BAD_COMMENT";
+      doc_line = val_line - 1;
+      val_line;
+    }
+  else
+    (* First check for attached doc attribute *)
+    let attached_doc = find_doc_attribute vd.pval_attributes in
+
+    (* Use attached doc if available, otherwise use floating doc *)
+    let doc_info =
+      match attached_doc with
+      | Some doc when doc <> "" -> Some (doc, val_line)
+      | _ -> !last_floating_doc
+    in
+
+    (* Clear floating doc after use *)
+    last_floating_doc := None;
+
+    (* Always add the value, even without doc *)
+    let doc, doc_line =
+      match doc_info with
+      | Some (d, l) -> (d, l)
+      | None -> ("", val_line)
+    in
+
+    { value_name; signature; doc; doc_line; val_line }
+
 (** Extract documentation comments using ppxlib *)
 let extract_doc_comments content =
   try
@@ -145,25 +210,7 @@ let extract_doc_comments content =
     (* We need to also check for regular comments in the original content
        since ppxlib doesn't preserve them in the AST *)
     let lines = String.split_on_char '\n' content in
-    let regular_comments = ref [] in
-
-    (* Find regular comments that precede value declarations *)
-    List.iteri
-      (fun i line ->
-        let trimmed = String.trim line in
-        if
-          Re.execp (Re.compile (Re.str "(* ")) trimmed
-          && Re.execp (Re.compile (Re.str " *)")) trimmed
-          && not (String.starts_with ~prefix:"(**" trimmed)
-        then
-          if
-            (* Found a regular comment, check if next line is a val *)
-            i + 1 < List.length lines
-          then
-            let next_line = String.trim (List.nth lines (i + 1)) in
-            if String.starts_with ~prefix:"val " next_line then
-              regular_comments := (i + 2, "BAD_COMMENT") :: !regular_comments)
-      lines;
+    let regular_comments = find_regular_comments lines in
 
     (* Extract doc comments from signature items *)
     let doc_comments = ref [] in
@@ -192,51 +239,10 @@ let extract_doc_comments content =
                 last_floating_doc := Some (doc, doc_line)
             | _ -> ())
         | Psig_value vd ->
-            (* Value declaration *)
-            let value_name = vd.pval_name.txt in
-            let signature = core_type_to_string vd.pval_type in
-            let val_line, _ = extract_location vd.pval_loc in
-
-            (* Check if this value has a regular comment *)
-            let has_regular_comment =
-              List.exists (fun (line, _) -> line = val_line) !regular_comments
+            let comment = 
+              process_value_declaration vd ~regular_comments ~last_floating_doc
             in
-
-            if has_regular_comment then
-              (* Found regular comment instead of doc comment *)
-              doc_comments :=
-                {
-                  value_name;
-                  signature;
-                  doc = "BAD_COMMENT";
-                  doc_line = val_line - 1;
-                  val_line;
-                }
-                :: !doc_comments
-            else
-              (* First check for attached doc attribute *)
-              let attached_doc = find_doc_attribute vd.pval_attributes in
-
-              (* Use attached doc if available, otherwise use floating doc *)
-              let doc_info =
-                match attached_doc with
-                | Some doc when doc <> "" -> Some (doc, val_line)
-                | _ -> !last_floating_doc
-              in
-
-              (* Clear floating doc after use *)
-              last_floating_doc := None;
-
-              (* Always add the value, even without doc *)
-              let doc, doc_line =
-                match doc_info with
-                | Some (d, l) -> (d, l)
-                | None -> ("", val_line)
-              in
-
-              doc_comments :=
-                { value_name; signature; doc; doc_line; val_line }
-                :: !doc_comments
+            doc_comments := comment :: !doc_comments
         | _ ->
             (* Any other item clears the floating doc *)
             last_floating_doc := None)

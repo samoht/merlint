@@ -4,6 +4,11 @@ let src = Logs.Src.create "merlint.merlin" ~doc:"Merlin interface"
 
 module Log = (val Logs.src_log src : Logs.LOG)
 
+(* Error helper functions *)
+let err_file_not_found file = Error (Fmt.str "File not found: %s" file)
+let err_json_parse msg = Error (Fmt.str "Failed to parse Merlin JSON: %s" msg)
+let err_both_failed msg1 msg2 = Error (Fmt.str "Both typedtree and parsetree failed: %s, %s" msg1 msg2)
+
 type t = {
   outline : (Outline.t, string) result;
   dump : (Dump.t, string) result;
@@ -11,7 +16,7 @@ type t = {
 
 let get_outline file =
   (* Ensure file exists before trying to analyze it *)
-  if not (Sys.file_exists file) then Error (Fmt.str "File not found: %s" file)
+  if not (Sys.file_exists file) then err_file_not_found file
   else
     let cmd =
       Fmt.str "ocamlmerlin single outline -filename %s < %s"
@@ -64,7 +69,7 @@ let run_merlin_dump_raw format file =
       try Ok (Yojson.Safe.from_string json_str)
       with Yojson.Json_error msg ->
         Log.err (fun m -> m "Failed to parse Merlin JSON for %s: %s" file msg);
-        Error (Fmt.str "Failed to parse Merlin JSON: %s" msg))
+        err_json_parse msg)
 
 let dump_value format file =
   match run_merlin_dump_raw format file with
@@ -93,7 +98,7 @@ let get_dump file =
           | `String text -> Ok (Dump.parsetree text)
           | _ -> Error "Invalid parsetree format")
       | Error msg2 ->
-          Error (Fmt.str "Both typedtree and parsetree failed: %s, %s" msg msg2)
+          err_both_failed msg msg2
       )
 
 let analyze_file file =
