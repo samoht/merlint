@@ -21,6 +21,14 @@ let () =
       Test_naming.suite;
       Test_filter.suite;
       Test_docs.suite;
+      Test_command.suite;
+      Test_context.suite;
+      Test_data.suite;
+      Test_example.suite;
+      Test_file.suite;
+      Test_guide.suite;
+      Test_profiling.suite;
+      Test_rule.suite;
     ]
   in
   Alcotest.run "merlint" suites
