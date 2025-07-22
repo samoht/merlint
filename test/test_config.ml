@@ -17,13 +17,15 @@ let test_equal () =
   let config1 = Config.default in
   let config2 = Config.default in
   let config3 = { config1 with max_complexity = 20 } in
-  
+
   Alcotest.check config "same configs are equal" config1 config2;
   Alcotest.check Alcotest.bool "different configs not equal" false
     (Config.equal config1 config3)
 
-let tests = [
-  Alcotest.test_case "default_config" `Quick test_default_config;
-  Alcotest.test_case "equal" `Quick test_equal;
-]
+let tests =
+  [
+    Alcotest.test_case "default_config" `Quick test_default_config;
+    Alcotest.test_case "equal" `Quick test_equal;
+  ]
+
 let suite = ("config", tests)

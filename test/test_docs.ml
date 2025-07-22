@@ -16,8 +16,7 @@ let test_check_function_doc () =
   let issues =
     check_function_doc ~name:"bar" ~doc:"[bar x] computes bar of x"
   in
-  Alcotest.(check (list style_issue))
-    "missing period" [ Missing_period ] issues;
+  Alcotest.(check (list style_issue)) "missing period" [ Missing_period ] issues;
 
   (* Bad format *)
   let issues =
@@ -41,8 +40,7 @@ let test_check_value_doc () =
 
   (* Missing period *)
   let issues = check_value_doc ~name:"count" ~doc:"The total count" in
-  Alcotest.(check (list style_issue))
-    "missing period" [ Missing_period ] issues;
+  Alcotest.(check (list style_issue)) "missing period" [ Missing_period ] issues;
 
   (* Redundant phrase *)
   let issues =
@@ -61,8 +59,7 @@ let test_check_type_doc () =
 
   (* Missing period *)
   let issues = check_type_doc ~doc:"A user identifier" in
-  Alcotest.(check (list style_issue))
-    "missing period" [ Missing_period ] issues;
+  Alcotest.(check (list style_issue)) "missing period" [ Missing_period ] issues;
 
   (* Redundant phrase *)
   let issues = check_type_doc ~doc:"This type represents a user." in

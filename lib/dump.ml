@@ -190,6 +190,7 @@ let parse_location_token text start_pos =
   (parse_location loc_str, end_pos)
 
 (* Phase 1: Lexer - Convert raw text to tokens *)
+
 (** Process end of text *)
 let process_end_of_text acc current what_context =
   if current = "" then List.rev acc
@@ -202,7 +203,9 @@ let process_location_token acc text pos what_context tokenize =
   let loc_opt, new_pos = parse_location_token text pos in
   match loc_opt with
   | Some loc ->
-      tokenize ({ kind = Location loc; loc = None } :: acc) "" new_pos what_context
+      tokenize
+        ({ kind = Location loc; loc = None } :: acc)
+        "" new_pos what_context
   | None ->
       (* Failed to parse as location, treat as regular paren *)
       tokenize ({ kind = LParen; loc = None } :: acc) "" (pos + 1) what_context
@@ -230,7 +233,9 @@ let process_bracket bracket acc current pos what_context tokenize =
       let kind = classify_word what_context current in
       { kind; loc = None } :: acc
   in
-  tokenize ({ kind = bracket_kind; loc = None } :: acc') "" (pos + 1) what_context
+  tokenize
+    ({ kind = bracket_kind; loc = None } :: acc')
+    "" (pos + 1) what_context
 
 let lex_text what text : token list =
   (* Tokenizer that recognizes AST nodes based on current what context *)

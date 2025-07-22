@@ -3,8 +3,7 @@
 open Merlint
 
 (* Testable AST.t using our pp and equal functions *)
-let ast : Ast.t Alcotest.testable =
-  Alcotest.testable Ast.pp Ast.equal
+let ast : Ast.t Alcotest.testable = Alcotest.testable Ast.pp Ast.equal
 
 (* Testable for Complexity.info *)
 let complexity_info : Ast.Complexity.info Alcotest.testable =
@@ -109,6 +108,23 @@ let complexity_tests =
         Alcotest.(check int)
           "cyclomatic complexity" 1
           (Ast.Complexity.calculate c));
+    Alcotest.test_case "complexity info equality" `Quick (fun () ->
+        let c1 = Ast.Complexity.empty in
+        let c2 = Ast.Complexity.empty in
+        let c3 = { c1 with total = 5 } in
+
+        Alcotest.(check complexity_info) "empty infos are equal" c1 c2;
+        Alcotest.(check bool)
+          "different infos not equal" false
+          (Ast.Complexity.equal c1 c3));
+    Alcotest.test_case "AST type equality" `Quick (fun () ->
+        let ast1 = { Ast.functions = [ ("foo", Ast.Other) ] } in
+        let ast2 = { Ast.functions = [ ("foo", Ast.Other) ] } in
+        let ast3 = { Ast.functions = [ ("bar", Ast.Other) ] } in
+
+        Alcotest.(check ast) "same ASTs are equal" ast1 ast2;
+        Alcotest.(check bool)
+          "different ASTs not equal" false (Ast.equal ast1 ast3));
   ]
 
 (* Visitor tests removed - visitor pattern was removed from AST module *)

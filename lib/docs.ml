@@ -75,7 +75,7 @@ let pp_style_issue ppf = function
   | Regular_comment_instead_of_doc ->
       Fmt.string ppf "use doc comment (** ... *) instead of regular comment"
 
-let equal_style_issue = (=)
+let equal_style_issue = ( = )
 
 type doc_comment = {
   value_name : string;
@@ -194,9 +194,7 @@ let process_value_declaration vd ~regular_comments ~last_floating_doc =
 
     (* Always add the value, even without doc *)
     let doc, doc_line =
-      match doc_info with
-      | Some (d, l) -> (d, l)
-      | None -> ("", val_line)
+      match doc_info with Some (d, l) -> (d, l) | None -> ("", val_line)
     in
 
     { value_name; signature; doc; doc_line; val_line }
@@ -241,7 +239,7 @@ let extract_doc_comments content =
                 last_floating_doc := Some (doc, doc_line)
             | _ -> ())
         | Psig_value vd ->
-            let comment = 
+            let comment =
               process_value_declaration vd ~regular_comments ~last_floating_doc
             in
             doc_comments := comment :: !doc_comments

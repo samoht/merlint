@@ -5,9 +5,11 @@ let src = Logs.Src.create "merlint.merlin" ~doc:"Merlin interface"
 module Log = (val Logs.src_log src : Logs.LOG)
 
 (* Error helper functions *)
-let err_file_not_found file = Error (Fmt.str "File not found: %s" file)
-let err_json_parse msg = Error (Fmt.str "Failed to parse Merlin JSON: %s" msg)
-let err_both_failed msg1 msg2 = Error (Fmt.str "Both typedtree and parsetree failed: %s, %s" msg1 msg2)
+let err_file_not_found file = Error ("File not found: " ^ file)
+let err_json_parse msg = Error ("Failed to parse Merlin JSON: " ^ msg)
+
+let err_both_failed msg1 msg2 =
+  Error ("Both typedtree and parsetree failed: " ^ msg1 ^ ", " ^ msg2)
 
 type t = {
   outline : (Outline.t, string) result;
@@ -97,9 +99,7 @@ let get_dump file =
           match json with
           | `String text -> Ok (Dump.parsetree text)
           | _ -> Error "Invalid parsetree format")
-      | Error msg2 ->
-          err_both_failed msg msg2
-      )
+      | Error msg2 -> err_both_failed msg msg2)
 
 let analyze_file file =
   (* Run merlin commands for the file *)

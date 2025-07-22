@@ -80,9 +80,9 @@ module Complexity = struct
   (** Calculate cyclomatic complexity from complexity info (1 + total decision
       points) *)
   let calculate info = 1 + info.total
-  
-  let equal = (=)
-  
+
+  let equal = ( = )
+
   let pp ppf info =
     Fmt.pf ppf
       "{ total = %d; if_then_else = %d; match_cases = %d; try_handlers = %d; \
@@ -242,6 +242,7 @@ let equal a b = a.functions = b.functions
 let compare a b = compare a.functions b.functions
 
 let pp ppf t =
-  Fmt.pf ppf "@[<v>{ functions = %a }@]" 
-    (Fmt.list ~sep:Fmt.comma (Fmt.pair ~sep:(Fmt.any " -> ") Fmt.string Fmt.nop))
+  Fmt.pf ppf "@[<v>{ functions = %a }@]"
+    (Fmt.list ~sep:Fmt.comma
+       (Fmt.pair ~sep:(Fmt.any " -> ") Fmt.string Fmt.nop))
     t.functions
