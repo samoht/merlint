@@ -203,7 +203,9 @@ let run_analysis project_root dune_describe rule_filter show_profile =
   Format.set_margin terminal_width;
 
   (* Create profiling state if enabled *)
-  let profiling_state = if show_profile then Some (Merlint.Profiling.create ()) else None in
+  let profiling_state =
+    if show_profile then Some (Merlint.Profiling.create ()) else None
+  in
 
   let files_count =
     List.length (Merlint.Dune.get_project_files dune_describe)
@@ -242,9 +244,10 @@ let run_analysis project_root dune_describe rule_filter show_profile =
   | Some state ->
       Merlint.Profiling.print_summary state;
       Merlint.Profiling.print_file_summary state
-  | None -> ();
+  | None ->
+      ();
 
-  print_fix_hints all_issues
+      print_fix_hints all_issues
 
 let ensure_project_built project_root =
   match Merlint.Dune.ensure_project_built (Fpath.v project_root) with

@@ -10,27 +10,30 @@ let test_rule_codes_unique () =
   (* Test that all rule codes are unique *)
   let codes = List.map Merlint.Rule.code Merlint.Data.all_rules in
   let unique_codes = List.sort_uniq String.compare codes in
-  Alcotest.(check int) "all codes unique" 
-    (List.length codes) (List.length unique_codes)
+  Alcotest.(check int)
+    "all codes unique" (List.length codes) (List.length unique_codes)
 
 let test_rule_categories () =
   (* Test that rules have valid categories *)
-  let categories = 
-    List.map (fun r -> Merlint.Rule.category r) Merlint.Data.all_rules 
+  let categories =
+    List.map (fun r -> Merlint.Rule.category r) Merlint.Data.all_rules
   in
-  List.iter (fun cat ->
-    let name = Merlint.Rule.category_name cat in
-    Alcotest.(check bool) "category has name" true (String.length name > 0)
-  ) categories
+  List.iter
+    (fun cat ->
+      let name = Merlint.Rule.category_name cat in
+      Alcotest.(check bool) "category has name" true (String.length name > 0))
+    categories
 
 let test_rule_codes () =
   (* Test that rules have valid codes *)
   let rules = Merlint.Data.all_rules in
-  List.iter (fun rule ->
-    let code = Merlint.Rule.code rule in
-    Alcotest.(check bool) "code starts with E" true 
-      (String.length code > 0 && code.[0] = 'E')
-  ) rules
+  List.iter
+    (fun rule ->
+      let code = Merlint.Rule.code rule in
+      Alcotest.(check bool)
+        "code starts with E" true
+        (String.length code > 0 && code.[0] = 'E'))
+    rules
 
 let tests =
   [

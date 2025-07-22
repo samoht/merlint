@@ -18,6 +18,7 @@ type t = {
 
 (** Standard functions using polymorphic equality and comparison *)
 let equal = ( = )
+
 let compare = compare
 
 let pp ppf t =
@@ -26,8 +27,7 @@ let pp ppf t =
     | Error e -> Fmt.pf ppf "Error: %s" e
   in
   Fmt.pf ppf "@[<v>Merlin result:@,  outline: %a@,  dump: %a@]"
-    (pp_result Outline.pp) t.outline
-    (pp_result Dump.pp) t.dump
+    (pp_result Outline.pp) t.outline (pp_result Dump.pp) t.dump
 
 let get_outline file =
   (* Ensure file exists before trying to analyze it *)

@@ -2,19 +2,22 @@
 
 let test_category_name () =
   (* Test category names *)
-  let categories = [
-    Merlint.Rule.Complexity;
-    Merlint.Rule.Security_safety;
-    Merlint.Rule.Style_modernization;
-    Merlint.Rule.Naming_conventions;
-    Merlint.Rule.Documentation;
-    Merlint.Rule.Project_structure;
-    Merlint.Rule.Testing;
-  ] in
-  List.iter (fun cat ->
-    let name = Merlint.Rule.category_name cat in
-    Alcotest.(check bool) "has name" true (String.length name > 0)
-  ) categories
+  let categories =
+    [
+      Merlint.Rule.Complexity;
+      Merlint.Rule.Security_safety;
+      Merlint.Rule.Style_modernization;
+      Merlint.Rule.Naming_conventions;
+      Merlint.Rule.Documentation;
+      Merlint.Rule.Project_structure;
+      Merlint.Rule.Testing;
+    ]
+  in
+  List.iter
+    (fun cat ->
+      let name = Merlint.Rule.category_name cat in
+      Alcotest.(check bool) "has name" true (String.length name > 0))
+    categories
 
 let test_accessors () =
   (* Test rule accessor functions *)
@@ -34,8 +37,10 @@ let test_accessors () =
 
 let test_issue_creation () =
   (* Test creating issues - Issue is internal to Rule module *)
-  let loc = Merlint.Location.create ~file:"test.ml" 
-    ~start_line:1 ~start_col:0 ~end_line:1 ~end_col:10 in
+  let loc =
+    Merlint.Location.create ~file:"test.ml" ~start_line:1 ~start_col:0
+      ~end_line:1 ~end_col:10
+  in
   (* We can't create issues directly, but we can test location creation *)
   Alcotest.(check bool) "location created" true (loc = loc)
 

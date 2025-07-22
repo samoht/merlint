@@ -11,8 +11,9 @@ let test_element_types () =
   let has_section = ref false in
   let rec check_elements = function
     | [] -> ()
-    | Merlint.Guide.Title _ :: rest -> 
-        has_title := true; check_elements rest
+    | Merlint.Guide.Title _ :: rest ->
+        has_title := true;
+        check_elements rest
     | Merlint.Guide.Section (_, children) :: rest ->
         has_section := true;
         check_elements children;
@@ -29,9 +30,11 @@ let test_rule_references () =
   let rec count_rules = function
     | [] -> ()
     | Merlint.Guide.Rule _ :: rest ->
-        incr rule_count; count_rules rest
+        incr rule_count;
+        count_rules rest
     | Merlint.Guide.Section (_, children) :: rest ->
-        count_rules children; count_rules rest
+        count_rules children;
+        count_rules rest
     | _ :: rest -> count_rules rest
   in
   count_rules Merlint.Guide.content;

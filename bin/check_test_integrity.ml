@@ -210,7 +210,9 @@ let check_run_t_format cram_dir error_code =
         close_in ic;
         (state.has_bad_test, state.has_good_test, List.rev state.wrong_formats)
     in
-    let initial_state = { has_bad_test = false; has_good_test = false; wrong_formats = [] } in
+    let initial_state =
+      { has_bad_test = false; has_good_test = false; wrong_formats = [] }
+    in
     check_lines initial_state
 
 (* Parse run.t file to check expected output *)
@@ -239,14 +241,23 @@ let process_run_t_line line state =
   if Re.execp re_merlint_cmd line then
     (* Start of a new test *)
     let test_name = extract_test_name line in
-    let new_acc = add_test_result state.current_test state.output_lines state.acc in
-    { current_test = test_name; in_output = true; output_lines = []; acc = new_acc }
+    let new_acc =
+      add_test_result state.current_test state.output_lines state.acc
+    in
+    {
+      current_test = test_name;
+      in_output = true;
+      output_lines = [];
+      acc = new_acc;
+    }
   else if state.in_output && Re.execp re_two_spaces line then
     (* Part of the output *)
     { state with output_lines = line :: state.output_lines }
   else
     (* End of output or other content *)
-    let new_acc = add_test_result state.current_test state.output_lines state.acc in
+    let new_acc =
+      add_test_result state.current_test state.output_lines state.acc
+    in
     { current_test = ""; in_output = false; output_lines = []; acc = new_acc }
 
 let check_run_t_output cram_dir error_code =
@@ -263,10 +274,14 @@ let check_run_t_output cram_dir error_code =
         parse_test new_state
       with End_of_file ->
         close_in ic;
-        let final_acc = add_test_result state.current_test state.output_lines state.acc in
+        let final_acc =
+          add_test_result state.current_test state.output_lines state.acc
+        in
         List.rev final_acc
     in
-    let initial_state = { current_test = ""; in_output = false; output_lines = []; acc = [] } in
+    let initial_state =
+      { current_test = ""; in_output = false; output_lines = []; acc = [] }
+    in
     parse_test initial_state
 
 (* Check 1: Every rule must have a test directory *)

@@ -496,7 +496,6 @@ let check_elements elements check_fn create_issue_fn =
 (** Standard functions for type t *)
 
 let equal_name n1 n2 = n1.prefix = n2.prefix && n1.base = n2.base
-
 let equal_elt e1 e2 = equal_name e1.name e2.name && e1.location = e2.location
 
 let equal t1 t2 =
@@ -509,9 +508,7 @@ let equal t1 t2 =
   && List.equal equal_elt t1.values t2.values
 
 let compare_name n1 n2 =
-  match compare n1.prefix n2.prefix with
-  | 0 -> compare n1.base n2.base
-  | n -> n
+  match compare n1.prefix n2.prefix with 0 -> compare n1.base n2.base | n -> n
 
 let compare_elt e1 e2 =
   match compare_name e1.name e2.name with
@@ -527,9 +524,13 @@ let compare t1 t2 =
           | 0 -> (
               match List.compare compare_elt t1.variants t2.variants with
               | 0 -> (
-                  match List.compare compare_elt t1.identifiers t2.identifiers with
+                  match
+                    List.compare compare_elt t1.identifiers t2.identifiers
+                  with
                   | 0 -> (
-                      match List.compare compare_elt t1.patterns t2.patterns with
+                      match
+                        List.compare compare_elt t1.patterns t2.patterns
+                      with
                       | 0 -> List.compare compare_elt t1.values t2.values
                       | n -> n)
                   | n -> n)

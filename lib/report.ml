@@ -7,6 +7,7 @@ type t = {
 
 (** Standard functions using polymorphic equality and comparison *)
 let equal = ( = )
+
 let compare = compare
 
 let create ~rule_name ~passed ~issues ~file_count =

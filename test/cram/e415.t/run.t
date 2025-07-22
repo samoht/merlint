@@ -10,7 +10,10 @@ Test bad example - should find missing standard functions:
   ✗ Documentation (1 total issues)
     [E415] Missing Standard Functions (1 issue)
     The main type 't' should implement standard functions: equal, compare, and pp
-    (pretty-printer) for better usability and consistency across the codebase.
+    (pretty-printer) for better usability and consistency across the codebase. For
+    simple types, polymorphic equal (=) and compare functions are sufficient. For
+    more complex types with invariants or custom representations, implement
+    specialized versions.
     - bad.mli:1:0: Type 't' is missing standard functions: equal, compare, pp
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)

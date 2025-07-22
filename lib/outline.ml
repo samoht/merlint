@@ -27,6 +27,7 @@ let empty () = []
 
 (** Standard functions using polymorphic equality and comparison *)
 let equal = ( = )
+
 let compare = compare
 
 (** Parse kind from string *)

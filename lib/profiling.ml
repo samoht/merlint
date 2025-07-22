@@ -2,13 +2,14 @@
 
 type timing = { name : string; duration : float }
 
-(** Profiling state that encapsulates mutable timings *)
 type t = { mutable timings : timing list }
+(** Profiling state that encapsulates mutable timings *)
 
 (** Create an empty profiling state *)
 let create () = { timings = [] }
 
-(** Add a timing to the profiling state - currently unused but kept for future use *)
+(** Add a timing to the profiling state - currently unused but kept for future
+    use *)
 let _add_timing t timing = t.timings <- timing :: t.timings
 
 (** Get all timings in chronological order *)
@@ -19,11 +20,11 @@ let reset_state t = t.timings <- []
 
 (** Standard functions using polymorphic equality and comparison *)
 let equal = ( = )
+
 let compare = compare
 
 let pp ppf t =
-  Fmt.pf ppf "Profiling state with %d timing%s"
-    (List.length t.timings)
+  Fmt.pf ppf "Profiling state with %d timing%s" (List.length t.timings)
     (if List.length t.timings = 1 then "" else "s")
 
 let print_summary t =

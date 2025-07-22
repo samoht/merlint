@@ -4,7 +4,9 @@ let test_run_success () =
   (* Test running a simple command *)
   match Merlint.Command.run "echo test" with
   | Ok output ->
-      Alcotest.(check bool) "output contains test" true (String.contains output 't')
+      Alcotest.(check bool)
+        "output contains test" true
+        (String.contains output 't')
   | Error msg -> Alcotest.fail ("Expected success but got error: " ^ msg)
 
 let test_run_failure () =

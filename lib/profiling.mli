@@ -4,10 +4,12 @@ type t
 (** Profiling state. *)
 
 val equal : t -> t -> bool
-(** [equal a b] returns true if [a] and [b] have equal timings. Uses polymorphic equality. *)
+(** [equal a b] returns true if [a] and [b] have equal timings. Uses polymorphic
+    equality. *)
 
 val compare : t -> t -> int
-(** [compare a b] returns a comparison result between [a] and [b]. Uses polymorphic comparison. *)
+(** [compare a b] returns a comparison result between [a] and [b]. Uses
+    polymorphic comparison. *)
 
 val pp : t Fmt.t
 (** [pp fmt t] pretty-prints the profiling state. *)
