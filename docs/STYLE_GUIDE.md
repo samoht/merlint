@@ -145,7 +145,7 @@ For values, describe what the value represents.
 
 ### [E415] Missing Standard Functions
 
-The main type 't' should implement standard functions: equal, compare, and pp (pretty-printer) for better usability and consistency across the codebase.
+The main type 't' should implement standard functions: equal, compare, and pp (pretty-printer) for better usability and consistency across the codebase. For simple types, polymorphic equal (=) and compare functions are sufficient. For more complex types with invariants or custom representations, implement specialized versions.
 
 **Examples:**
 

@@ -8,8 +8,8 @@ type t = { mutable timings : timing list }
 (** Create an empty profiling state *)
 let create () = { timings = [] }
 
-(** Add a timing to the profiling state *)
-let add_timing t timing = t.timings <- timing :: t.timings
+(** Add a timing to the profiling state - currently unused but kept for future use *)
+let _add_timing t timing = t.timings <- timing :: t.timings
 
 (** Get all timings in chronological order *)
 let get_timings_from_state t = List.rev t.timings
@@ -17,7 +17,16 @@ let get_timings_from_state t = List.rev t.timings
 (** Reset timings in the state *)
 let reset_state t = t.timings <- []
 
-let print_summary_from_state t =
+(** Standard functions using polymorphic equality and comparison *)
+let equal = ( = )
+let compare = compare
+
+let pp ppf t =
+  Fmt.pf ppf "Profiling state with %d timing%s"
+    (List.length t.timings)
+    (if List.length t.timings = 1 then "" else "s")
+
+let print_summary t =
   let timings = get_timings_from_state t in
   if timings <> [] then (
     Fmt.pr "\n[Profiling Summary]\n";
@@ -46,7 +55,7 @@ let print_summary_from_state t =
     Fmt.pr "%s\n" (String.make 52 '-');
     Fmt.pr "%-40s %10.2f\n" "Total" (total *. 1000.0))
 
-let print_per_file_summary_from_state t =
+let print_file_summary t =
   let timings = get_timings_from_state t in
   if timings <> [] then
     (* Extract file-specific timings *)
