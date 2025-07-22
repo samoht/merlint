@@ -24,3 +24,6 @@ val pp : t Fmt.t
 
 val compare : t -> t -> int
 (** [compare a b] compares two locations. *)
+
+val equal : t -> t -> bool
+(** [equal a b] returns true if [a] and [b] represent the same location. *)

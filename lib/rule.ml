@@ -52,6 +52,8 @@ let is_file_scoped (T desc) =
 let is_project_scoped (T desc) =
   match desc.check with Project _ -> true | File _ -> false
 
+let equal (T desc1) (T desc2) = desc1.code = desc2.code
+
 (* Module for handling rule execution results *)
 module Run = struct
   type result = Result : string * string * 'a Fmt.t * 'a Issue.t -> result

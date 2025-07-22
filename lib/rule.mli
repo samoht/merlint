@@ -58,6 +58,9 @@ val is_file_scoped : t -> bool
 val is_project_scoped : t -> bool
 (** [is_project_scoped rule] checks if project scoped. *)
 
+val equal : t -> t -> bool
+(** [equal a b] returns true if [a] and [b] are the same rule. *)
+
 (** Module for handling rule execution results. *)
 module Run : sig
   type result
