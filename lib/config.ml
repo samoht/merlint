@@ -130,3 +130,31 @@ let load_from_path path =
   match find_config_file path with
   | Some config_path -> load config_path
   | None -> default
+
+(** Standard functions for type t *)
+let equal a b =
+  a.max_complexity = b.max_complexity
+  && a.max_function_length = b.max_function_length
+  && a.max_nesting = b.max_nesting
+  && a.exempt_data_definitions = b.exempt_data_definitions
+  && a.max_underscores_in_name = b.max_underscores_in_name
+  && a.min_name_length_underscore = b.min_name_length_underscore
+  && a.allow_obj_magic = b.allow_obj_magic
+  && a.allow_str_module = b.allow_str_module
+  && a.allow_catch_all_exceptions = b.allow_catch_all_exceptions
+  && a.require_ocamlformat_file = b.require_ocamlformat_file
+  && a.require_mli_files = b.require_mli_files
+
+let compare = compare
+
+let pp ppf t =
+  Fmt.pf ppf
+    "@[<v>{ max_complexity = %d; max_function_length = %d; max_nesting = %d; \
+     exempt_data_definitions = %b; max_underscores_in_name = %d; \
+     min_name_length_underscore = %d; allow_obj_magic = %b; allow_str_module = \
+     %b; allow_catch_all_exceptions = %b; require_ocamlformat_file = %b; \
+     require_mli_files = %b }@]"
+    t.max_complexity t.max_function_length t.max_nesting
+    t.exempt_data_definitions t.max_underscores_in_name
+    t.min_name_length_underscore t.allow_obj_magic t.allow_str_module
+    t.allow_catch_all_exceptions t.require_ocamlformat_file t.require_mli_files

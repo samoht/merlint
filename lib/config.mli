@@ -21,6 +21,15 @@ type t = {
 val default : t
 (** [default] configuration with recommended settings. *)
 
+val equal : t -> t -> bool
+(** [equal a b] returns true if [a] and [b] are equal. *)
+
+val compare : t -> t -> int
+(** [compare a b] returns a comparison result between [a] and [b]. *)
+
+val pp : t Fmt.t
+(** [pp fmt t] pretty-prints the configuration. *)
+
 (** Configuration file loading. *)
 
 val load_from_path : string -> t

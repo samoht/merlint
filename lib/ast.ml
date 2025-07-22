@@ -226,3 +226,13 @@ let extract_functions filename =
     Log.err (fun m ->
         m "Failed to parse %s: %s" filename (Printexc.to_string exn));
     []
+
+(** Standard functions for type t *)
+let equal a b = a.functions = b.functions
+
+let compare a b = compare a.functions b.functions
+
+let pp ppf t =
+  Fmt.pf ppf "@[<v>{ functions = %a }@]" 
+    (Fmt.list ~sep:Fmt.comma (Fmt.pair ~sep:(Fmt.any " -> ") Fmt.string Fmt.nop))
+    t.functions

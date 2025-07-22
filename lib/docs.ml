@@ -135,7 +135,7 @@ let rec core_type_to_string (typ : Ppxlib.core_type) =
   | _ -> "<complex type>"
 
 (** Find regular comments that precede value declarations *)
-let find_regular_comments lines =
+let get_regular_comments lines =
   let regular_comments = ref [] in
   List.iteri
     (fun i line ->
@@ -210,7 +210,7 @@ let extract_doc_comments content =
     (* We need to also check for regular comments in the original content
        since ppxlib doesn't preserve them in the AST *)
     let lines = String.split_on_char '\n' content in
-    let regular_comments = find_regular_comments lines in
+    let regular_comments = get_regular_comments lines in
 
     (* Extract doc comments from signature items *)
     let doc_comments = ref [] in
