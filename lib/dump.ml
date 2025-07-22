@@ -189,54 +189,63 @@ let parse_location_token text start_pos =
   let loc_str = String.sub text start_pos (end_pos - start_pos) in
   (parse_location loc_str, end_pos)
 
-(** Phase 1: Lexer - Convert raw text to tokens *)
+(* Phase 1: Lexer - Convert raw text to tokens *)
+(** Process end of text *)
+let process_end_of_text acc current what_context =
+  if current = "" then List.rev acc
+  else
+    let kind = classify_word what_context current in
+    List.rev ({ kind; loc = None } :: acc)
+
+(** Process location token *)
+let process_location_token acc text pos what_context tokenize =
+  let loc_opt, new_pos = parse_location_token text pos in
+  match loc_opt with
+  | Some loc ->
+      tokenize ({ kind = Location loc; loc = None } :: acc) "" new_pos what_context
+  | None ->
+      (* Failed to parse as location, treat as regular paren *)
+      tokenize ({ kind = LParen; loc = None } :: acc) "" (pos + 1) what_context
+
+(** Process whitespace character *)
+let process_whitespace acc current pos what_context tokenize =
+  if current = "" then tokenize acc current (pos + 1) what_context
+  else
+    let kind = classify_word what_context current in
+    tokenize ({ kind; loc = None } :: acc) "" (pos + 1) what_context
+
+(** Process bracket character *)
+let process_bracket bracket acc current pos what_context tokenize =
+  let bracket_kind =
+    match bracket with
+    | '(' -> LParen
+    | ')' -> RParen
+    | '[' -> LBracket
+    | ']' -> RBracket
+    | _ -> assert false
+  in
+  let acc' =
+    if current = "" then acc
+    else
+      let kind = classify_word what_context current in
+      { kind; loc = None } :: acc
+  in
+  tokenize ({ kind = bracket_kind; loc = None } :: acc') "" (pos + 1) what_context
+
 let lex_text what text : token list =
   (* Tokenizer that recognizes AST nodes based on current what context *)
   let rec tokenize acc current pos what_context =
     if pos >= String.length text then
-      if current = "" then List.rev acc
-      else
-        let kind = classify_word what_context current in
-        List.rev ({ kind; loc = None } :: acc)
+      process_end_of_text acc current what_context
     else if current = "" && is_location_start text pos then
-      (* Parse location token *)
-      let loc_opt, new_pos = parse_location_token text pos in
-      match loc_opt with
-      | Some loc ->
-          tokenize
-            ({ kind = Location loc; loc = None } :: acc)
-            "" new_pos what_context
-      | None ->
-          (* Failed to parse as location, treat as regular paren *)
-          tokenize
-            ({ kind = LParen; loc = None } :: acc)
-            "" (pos + 1) what_context
+      process_location_token acc text pos what_context tokenize
     else
       let ch = text.[pos] in
       match ch with
       | ' ' | '\n' | '\t' ->
-          if current = "" then tokenize acc current (pos + 1) what_context
-          else
-            let kind = classify_word what_context current in
-            tokenize ({ kind; loc = None } :: acc) "" (pos + 1) what_context
+          process_whitespace acc current pos what_context tokenize
       | ('(' | ')' | '[' | ']') as bracket ->
-          let bracket_kind =
-            match bracket with
-            | '(' -> LParen
-            | ')' -> RParen
-            | '[' -> LBracket
-            | ']' -> RBracket
-            | _ -> assert false
-          in
-          let acc' =
-            if current = "" then acc
-            else
-              let kind = classify_word what_context current in
-              { kind; loc = None } :: acc
-          in
-          tokenize
-            ({ kind = bracket_kind; loc = None } :: acc')
-            "" (pos + 1) what_context
+          process_bracket bracket acc current pos what_context tokenize
       | _ -> tokenize acc (current ^ String.make 1 ch) (pos + 1) what_context
   in
   tokenize [] "" 0 what
@@ -269,7 +278,7 @@ let parse_name str =
   | [] -> { prefix = []; base = "" }
   | base :: rev_modules -> { prefix = List.rev rev_modules; base }
 
-(** Phase 2: Parser - Convert tokens into structured data *)
+(* Phase 2: Parser - Convert tokens into structured data *)
 
 (** Parse token stream into structured AST *)
 let parse_tokens tokens =
