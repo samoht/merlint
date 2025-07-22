@@ -6,12 +6,13 @@ Test bad example - should find global mutable state:
   
   ✗ Code Quality (2 total issues)
     [E351] Global Mutable State (2 issues)
-    Global mutable state makes programs harder to reason about and test. Consider
-    using immutable data structures and passing state explicitly through function
-    parameters. If mutation is necessary, consider using local state within
-    functions or monadic patterns.
-    - bad.ml:2:0: Global mutable state 'counter' of type 'ref' detected - consider using functional patterns instead
-    - bad.ml:5:0: Global mutable state 'global_cache' of type 'array' detected - consider using functional patterns instead
+    Global mutable state makes programs harder to reason about and test. A good
+    design pattern is to create an init value and pass it around as a parameter
+    instead of accessing global refs. This makes data flow explicit and functions
+    easier to test. If mutation is necessary, consider using local state within
+    functions or returning updated values.
+    - bad.ml:2:0: Global mutable state 'counter' of type 'ref' detected - instead of accessing a global ref, consider creating an init value and passing it through function parameters
+    - bad.ml:5:0: Global mutable state 'global_cache' of type 'array' detected - instead of accessing a global ref, consider creating an init value and passing it through function parameters
   ✓ Code Style (0 total issues)
   ✓ Naming Conventions (0 total issues)
   ✓ Documentation (0 total issues)

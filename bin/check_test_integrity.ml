@@ -1,4 +1,67 @@
-let string_contains s sub = Re.execp (Re.compile (Re.str sub)) s
+(* Compile regular expressions once *)
+
+(* Matches a merlint command with -r flag: $ ... merlint ... -r ... *)
+let re_merlint_r_cmd =
+  Re.compile
+    (Re.seq
+       [
+         Re.char '$';
+         Re.rep Re.any;
+         Re.str "merlint";
+         Re.rep Re.any;
+         Re.str "-r";
+       ])
+
+(* Build regex for bad test: $ ... merlint ... -r RULE ... (bad.ml|bad/) *)
+let make_bad_test_re rule_code =
+  Re.compile
+    (Re.seq
+       [
+         Re.char '$';
+         Re.rep Re.any;
+         Re.str "merlint";
+         Re.rep Re.any;
+         Re.str "-r";
+         Re.rep1 Re.space;
+         Re.str rule_code;
+         Re.rep Re.any;
+         Re.alt [ Re.str "bad.ml"; Re.str "bad/" ];
+       ])
+
+(* Build regex for good test: $ ... merlint ... -r RULE ... (good.ml|good/) *)
+let make_good_test_re rule_code =
+  Re.compile
+    (Re.seq
+       [
+         Re.char '$';
+         Re.rep Re.any;
+         Re.str "merlint";
+         Re.rep Re.any;
+         Re.str "-r";
+         Re.rep1 Re.space;
+         Re.str rule_code;
+         Re.rep Re.any;
+         Re.alt [ Re.str "good.ml"; Re.str "good/" ];
+       ])
+
+let re_dune_error =
+  Re.compile
+    (Re.seq [ Re.str "ERROR"; Re.rep Re.any; Re.str "Dune build failed" ])
+
+let re_continuing = Re.compile (Re.str "Continuing with analysis")
+let re_exit_1 = Re.compile (Re.str "[1]")
+
+let re_zero_issues =
+  Re.compile
+    (Re.alt
+       [ Re.str "✓ 0 total issues"; Re.str "Summary: ✓ All checks passed" ])
+
+let re_merlint_cmd = Re.compile (Re.seq [ Re.bos; Re.str "  $ merlint" ])
+let re_two_spaces = Re.compile (Re.seq [ Re.bos; Re.str "  " ])
+
+(* Extract test name regex *)
+let re_bad_test_name = Re.compile (Re.alt [ Re.str "bad.ml"; Re.str "bad/" ])
+let re_good_test_name = Re.compile (Re.alt [ Re.str "good.ml"; Re.str "good/" ])
 
 (* Get all error codes from rules *)
 let get_all_error_codes () =
@@ -85,54 +148,55 @@ let check_test_files cram_dir error_code =
     has_incorrect_root_files )
 
 (* Check if run.t file uses correct -r flag format *)
+(* Check if a command line has the correct -r flag *)
+let check_r_flag_usage parts rule_code =
+  let rec find_r_flag = function
+    | "-r" :: next :: _ ->
+        if next <> rule_code then
+          Some (Fmt.str "Line uses '-r %s' instead of '-r %s'" next rule_code)
+        else None
+    | _ :: rest -> find_r_flag rest
+    | [] -> None
+  in
+  find_r_flag parts
+
+(* Check if line is a bad test *)
+let is_bad_test line bad_test_re = Re.execp bad_test_re line
+
+(* Check if line is a good test *)
+let is_good_test line good_test_re = Re.execp good_test_re line
+
+(* Process a line from run.t for format checking *)
+let process_format_line line rule_code bad_test_re good_test_re has_bad_test
+    has_good_test wrong_formats =
+  let new_wrong_formats =
+    if Re.execp re_merlint_r_cmd line then
+      let parts = String.split_on_char ' ' (String.trim line) in
+      match check_r_flag_usage parts rule_code with
+      | Some err -> err :: wrong_formats
+      | None -> wrong_formats
+    else wrong_formats
+  in
+  let has_bad = has_bad_test || is_bad_test line bad_test_re in
+  let has_good = has_good_test || is_good_test line good_test_re in
+  (has_bad, has_good, new_wrong_formats)
+
 let check_run_t_format cram_dir error_code =
   let test_dir = Filename.concat cram_dir (error_code ^ ".t") in
   let run_file = Filename.concat test_dir "run.t" in
   let rule_code = String.uppercase_ascii error_code in
+  let bad_test_re = make_bad_test_re rule_code in
+  let good_test_re = make_good_test_re rule_code in
 
-  if Sys.file_exists run_file then
+  if not (Sys.file_exists run_file) then (false, false, [])
+  else
     let ic = open_in run_file in
     let rec check_lines has_bad_test has_good_test wrong_formats =
       try
         let line = input_line ic in
-        let new_wrong_formats =
-          if
-            String.contains line '$'
-            && string_contains line "merlint"
-            && string_contains line "-r"
-          then
-            (* Check if it's using the correct format: -r E### *)
-            let parts = String.split_on_char ' ' (String.trim line) in
-            let rec check_r_flag = function
-              | "-r" :: next :: _ ->
-                  if next <> rule_code then
-                    Some
-                      (Fmt.str "Line uses '-r %s' instead of '-r %s'" next
-                         rule_code)
-                  else None
-              | _ :: rest -> check_r_flag rest
-              | [] -> None
-            in
-            match check_r_flag parts with
-            | Some err -> err :: wrong_formats
-            | None -> wrong_formats
-          else wrong_formats
-        in
-        let has_bad =
-          has_bad_test
-          || String.contains line '$'
-             && string_contains line "merlint"
-             && string_contains line "-r"
-             && string_contains line rule_code
-             && (string_contains line "bad.ml" || string_contains line "bad/")
-        in
-        let has_good =
-          has_good_test
-          || String.contains line '$'
-             && string_contains line "merlint"
-             && string_contains line "-r"
-             && string_contains line rule_code
-             && (string_contains line "good.ml" || string_contains line "good/")
+        let has_bad, has_good, new_wrong_formats =
+          process_format_line line rule_code bad_test_re good_test_re
+            has_bad_test has_good_test wrong_formats
         in
         check_lines has_bad has_good new_wrong_formats
       with End_of_file ->
@@ -140,57 +204,53 @@ let check_run_t_format cram_dir error_code =
         (has_bad_test, has_good_test, List.rev wrong_formats)
     in
     check_lines false false []
-  else (false, false, [])
 
 (* Parse run.t file to check expected output *)
+(* Extract test name from merlint command line *)
+let extract_test_name line =
+  if Re.execp re_bad_test_name line then "bad"
+  else if Re.execp re_good_test_name line then "good"
+  else ""
+
+(* Add test result if valid *)
+let add_test_result current_test output_lines acc =
+  if current_test <> "" && output_lines <> [] then
+    (current_test, List.rev output_lines) :: acc
+  else acc
+
+(* Process a line from run.t file *)
+let process_run_t_line line current_test in_output output_lines acc parse_test =
+  if Re.execp re_merlint_cmd line then
+    (* Start of a new test *)
+    let test_name = extract_test_name line in
+    let new_acc = add_test_result current_test output_lines acc in
+    parse_test test_name true [] new_acc
+  else if in_output && Re.execp re_two_spaces line then
+    (* Part of the output *)
+    parse_test current_test true (line :: output_lines) acc
+  else
+    (* End of output or other content *)
+    let new_acc = add_test_result current_test output_lines acc in
+    parse_test "" false [] new_acc
+
 let check_run_t_output cram_dir error_code =
   let test_dir = Filename.concat cram_dir (error_code ^ ".t") in
   let run_file = Filename.concat test_dir "run.t" in
 
-  if Sys.file_exists run_file then
+  if not (Sys.file_exists run_file) then []
+  else
     let ic = open_in run_file in
     let rec parse_test current_test in_output output_lines acc =
       try
         let line = input_line ic in
-        if String.starts_with ~prefix:"  $ merlint" line then
-          (* Start of a new test *)
-          let test_name =
-            if string_contains line "bad.ml" || string_contains line "bad/" then
-              "bad"
-            else if
-              string_contains line "good.ml" || string_contains line "good/"
-            then "good"
-            else ""
-          in
-          (* Process previous test if any *)
-          let new_acc =
-            if current_test <> "" && output_lines <> [] then
-              (current_test, List.rev output_lines) :: acc
-            else acc
-          in
-          parse_test test_name true [] new_acc
-        else if in_output && String.starts_with ~prefix:"  " line then
-          (* Part of the output *)
-          parse_test current_test true (line :: output_lines) acc
-        else
-          (* End of output or other content *)
-          let new_acc =
-            if current_test <> "" && output_lines <> [] then
-              (current_test, List.rev output_lines) :: acc
-            else acc
-          in
-          parse_test "" false [] new_acc
+        process_run_t_line line current_test in_output output_lines acc
+          parse_test
       with End_of_file ->
         close_in ic;
-        let final_acc =
-          if current_test <> "" && output_lines <> [] then
-            (current_test, List.rev output_lines) :: acc
-          else acc
-        in
+        let final_acc = add_test_result current_test output_lines acc in
         List.rev final_acc
     in
     parse_test "" false [] []
-  else []
 
 let main () =
   let cram_dir = "test/cram" in
@@ -318,16 +378,10 @@ let main () =
             (* Check for dune build failure *)
             (* Only consider it an error if merlint doesn't continue with analysis *)
             let has_dune_error =
-              List.exists
-                (fun line ->
-                  string_contains line "ERROR"
-                  && string_contains line "Dune build failed")
-                output_lines
+              List.exists (fun line -> Re.execp re_dune_error line) output_lines
             in
             let continues_with_analysis =
-              List.exists
-                (fun line -> string_contains line "Continuing with analysis")
-                output_lines
+              List.exists (fun line -> Re.execp re_continuing line) output_lines
             in
 
             if has_dune_error && not continues_with_analysis then
@@ -339,9 +393,7 @@ let main () =
             else if test_name = "bad" then
               (* bad.ml should exit with code [1] *)
               let has_exit_1 =
-                List.exists
-                  (fun line -> string_contains line "[1]")
-                  output_lines
+                List.exists (fun line -> Re.execp re_exit_1 line) output_lines
               in
               if not has_exit_1 then
                 errors :=
@@ -353,16 +405,12 @@ let main () =
               else if test_name = "good" then
                 (* good.ml should be successful (no exit code [1] at the end) *)
                 let has_exit_1 =
-                  List.exists
-                    (fun line -> string_contains line "[1]")
-                    output_lines
+                  List.exists (fun line -> Re.execp re_exit_1 line) output_lines
                 in
                 (* Check if it shows all checks passed for the specific rule *)
                 let shows_zero_issues =
                   List.exists
-                    (fun line ->
-                      string_contains line "✓ 0 total issues"
-                      || string_contains line "Summary: ✓ All checks passed")
+                    (fun line -> Re.execp re_zero_issues line)
                     output_lines
                 in
                 if has_exit_1 && shows_zero_issues then

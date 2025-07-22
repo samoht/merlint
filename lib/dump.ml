@@ -287,28 +287,31 @@ let parse_name str =
 
 (** Parse token stream into structured AST *)
 let parse_tokens tokens =
-  let rec parse acc location = function
+  (* Helper to dispatch to specific parsers *)
+  let rec dispatch_parser acc location rest = function
+    | Module -> parse_module acc location rest
+    | Type -> parse_type acc location rest
+    | Type_declaration -> parse_type_declaration acc location rest
+    | Variant -> parse_variants acc location rest
+    | Ident -> parse_ident acc location rest
+    | Pattern -> parse_pattern acc location rest
+    | Value -> parse_value acc location rest
+    | Construct -> parse_construct acc location rest
+    | Attribute -> parse_attribute acc location rest
+    | _ -> parse acc location rest
+  and parse acc location = function
     | [] -> acc
-    | tok :: rest -> (
-        match tok.kind with
+    | { kind = Location loc; _ } :: rest ->
         (* Direct location token *)
-        | Location loc -> parse acc (Some loc) rest
+        parse acc (Some loc) rest
+    | { kind = Word content; _ } :: rest
+      when String.ends_with ~suffix:"_item" content
+           || content = "structure_item" ->
         (* structure_item or similar - location already parsed if it was there *)
-        | Word content
-          when String.ends_with ~suffix:"_item" content
-               || content = "structure_item" ->
-            parse acc location rest
-        (* Found an AST node token *)
-        | Module -> parse_module acc location rest
-        | Type -> parse_type acc location rest
-        | Type_declaration -> parse_type_declaration acc location rest
-        | Variant -> parse_variants acc location rest
-        | Ident -> parse_ident acc location rest
-        | Pattern -> parse_pattern acc location rest
-        | Value -> parse_value acc location rest
-        | Construct -> parse_construct acc location rest
-        | Attribute -> parse_attribute acc location rest
-        | _ -> parse acc location rest)
+        parse acc location rest
+    | { kind; _ } :: rest ->
+        (* Found an AST node token or other *)
+        dispatch_parser acc location rest kind
   and parse_module acc location = function
     | { kind = Word name_with_id; _ } :: rest
       when String.contains name_with_id '/' ->
@@ -329,26 +332,28 @@ let parse_tokens tokens =
         parse new_acc location rest
     | rest -> parse acc location rest
   and parse_variants acc location tokens =
+    (* Helper to update variants accumulator *)
+    let add_variant acc' name current_loc =
+      { acc' with variants = { name; location = current_loc } :: acc'.variants }
+    in
+
     (* Parse multiple variants until we hit something else *)
     let rec collect_variants acc' current_loc = function
-      (* Update location if we see a location token *)
-      | { kind = Location loc; _ } :: rest ->
-          collect_variants acc' (Some loc) rest
-      (* Variant name *)
-      | { kind = Word content; _ } :: rest when String.contains content '/' ->
-          let name = parse_name content in
-          let new_acc =
-            {
-              acc' with
-              variants = { name; location = current_loc } :: acc'.variants;
-            }
-          in
-          collect_variants new_acc current_loc rest
-      (* Keep going through brackets and other tokens *)
-      | { kind = LBracket | RBracket | Word _; _ } :: rest ->
-          collect_variants acc' current_loc rest
-      (* Stop when we hit another AST node or run out of tokens *)
-      | rest -> parse acc' location rest
+      | [] -> parse acc' location []
+      | { kind; _ } :: rest -> (
+          match kind with
+          (* Update location if we see a location token *)
+          | Location loc -> collect_variants acc' (Some loc) rest
+          (* Variant name *)
+          | Word content when String.contains content '/' ->
+              let name = parse_name content in
+              let new_acc = add_variant acc' name current_loc in
+              collect_variants new_acc current_loc rest
+          (* Keep going through brackets and other tokens *)
+          | LBracket | RBracket | Word _ ->
+              collect_variants acc' current_loc rest
+          (* Stop when we hit another AST node *)
+          | _ -> parse acc' location ({ kind; loc = None } :: rest))
     in
     collect_variants acc location tokens
   and parse_ident acc location = function

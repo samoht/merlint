@@ -9,7 +9,6 @@ let empty = { enabled = None; disabled = [] }
 
 (* Error helper functions *)
 let err_invalid_range range_str = Error ("Invalid range format: " ^ range_str)
-
 let err_invalid_spec spec = Error ("Invalid rule specification: " ^ spec)
 
 (** Parse a range of error codes like "100..199" *)

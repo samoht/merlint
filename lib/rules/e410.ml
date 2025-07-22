@@ -33,11 +33,6 @@ let check (ctx : Context.file) =
               Docs.check_function_doc ~name:value_name ~doc
             else Docs.check_value_doc ~name:value_name ~doc
           in
-          (* Debug: print what we're checking *)
-          if
-            ctx.filename = "lib/context.mli"
-            && (value_name = "dump" || value_name = "ast")
-          then Printf.eprintf "DEBUG: %s has doc: '%s'\n%!" value_name doc;
           match style_issues with
           | [] -> None
           | issues ->

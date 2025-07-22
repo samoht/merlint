@@ -514,7 +514,7 @@ pre code {
         <span class="error-code">E351</span>
         <span class="error-title">Global Mutable State</span>
     </div>
-    <div class="error-hint"><p>Global mutable state makes programs harder to reason about and test. Consider using immutable data structures and passing state explicitly through function parameters. If mutation is necessary, consider using local state within functions or monadic patterns.</p></div>
+    <div class="error-hint"><p>Global mutable state makes programs harder to reason about and test. A good design pattern is to create an init value and pass it around as a parameter instead of accessing global refs. This makes data flow explicit and functions easier to test. If mutation is necessary, consider using local state within functions or returning updated values.</p></div>
 </div>
 <h2 id="documentation">Documentation</h2>
 <div class="category">E400-E499 • Missing or incorrect documentation</div>

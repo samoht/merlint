@@ -52,15 +52,18 @@ let check ctx =
 
 let pp ppf { kind; name } =
   Fmt.pf ppf
-    "Global mutable state '%s' of type '%s' detected - consider using \
-     functional patterns instead"
+    "Global mutable state '%s' of type '%s' detected - instead of accessing a \
+     global ref, consider creating an init value and passing it through \
+     function parameters"
     name kind
 
 let rule =
   Rule.v ~code:"E351" ~title:"Global Mutable State" ~category:Security_safety
     ~hint:
-      "Global mutable state makes programs harder to reason about and test. \
-       Consider using immutable data structures and passing state explicitly \
-       through function parameters. If mutation is necessary, consider using \
-       local state within functions or monadic patterns."
+      "Global mutable state makes programs harder to reason about and test. A \
+       good design pattern is to create an init value and pass it around as a \
+       parameter instead of accessing global refs. This makes data flow \
+       explicit and functions easier to test. If mutation is necessary, \
+       consider using local state within functions or returning updated \
+       values."
     ~examples:[] ~pp (File check)
