@@ -80,6 +80,15 @@ module Complexity = struct
   (** Calculate cyclomatic complexity from complexity info (1 + total decision
       points) *)
   let calculate info = 1 + info.total
+  
+  let equal = (=)
+  
+  let pp ppf info =
+    Fmt.pf ppf
+      "{ total = %d; if_then_else = %d; match_cases = %d; try_handlers = %d; \
+       boolean_operators = %d }"
+      info.total info.if_then_else info.match_cases info.try_handlers
+      info.boolean_operators
 end
 
 (** Nesting depth analysis *)

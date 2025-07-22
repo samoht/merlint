@@ -1,5 +1,9 @@
 open Merlint
 
+(* Testable location using our pp and equal functions *)
+let location : Location.t Alcotest.testable =
+  Alcotest.testable Location.pp Location.equal
+
 let test_create () =
   let loc =
     Location.create ~file:"test.ml" ~start_line:10 ~start_col:5 ~end_line:10
@@ -35,7 +39,8 @@ let test_compare () =
       ~end_col:5
   in
 
-  Alcotest.(check int) "same location" 0 (Location.compare loc1 loc2);
+  Alcotest.(check location) "same location" loc1 loc2;
+  Alcotest.(check int) "same location compare" 0 (Location.compare loc1 loc2);
   Alcotest.(check bool) "loc1 < loc3" true (Location.compare loc1 loc3 < 0);
   Alcotest.(check bool) "loc3 > loc1" true (Location.compare loc3 loc1 > 0);
   Alcotest.(check bool) "a.ml < b.ml" true (Location.compare loc1 loc4 < 0)

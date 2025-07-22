@@ -1,10 +1,8 @@
 (** Tests for the Docs module *)
 
 (* Helper to make style_issue testable for Alcotest *)
-let testable_style_issue : Merlint.Docs.style_issue Alcotest.testable =
-  let pp = Merlint.Docs.pp_style_issue in
-  let equal a b = Fmt.str "%a" pp a = Fmt.str "%a" pp b in
-  Alcotest.testable pp equal
+let style_issue : Merlint.Docs.style_issue Alcotest.testable =
+  Alcotest.testable Merlint.Docs.pp_style_issue Merlint.Docs.equal_style_issue
 
 let test_check_function_doc () =
   let open Merlint.Docs in
@@ -12,45 +10,45 @@ let test_check_function_doc () =
   let issues =
     check_function_doc ~name:"foo" ~doc:"[foo x] computes foo of x."
   in
-  Alcotest.(check (list testable_style_issue)) "good function doc" [] issues;
+  Alcotest.(check (list style_issue)) "good function doc" [] issues;
 
   (* Missing period *)
   let issues =
     check_function_doc ~name:"bar" ~doc:"[bar x] computes bar of x"
   in
-  Alcotest.(check (list testable_style_issue))
+  Alcotest.(check (list style_issue))
     "missing period" [ Missing_period ] issues;
 
   (* Bad format *)
   let issues =
     check_function_doc ~name:"baz" ~doc:"This function computes baz."
   in
-  Alcotest.(check (list testable_style_issue))
+  Alcotest.(check (list style_issue))
     "bad format"
     [ Redundant_phrase "This function"; Bad_function_format ]
     issues;
 
   (* Missing bracket format *)
   let issues = check_function_doc ~name:"qux" ~doc:"Computes qux of x." in
-  Alcotest.(check (list testable_style_issue))
+  Alcotest.(check (list style_issue))
     "missing brackets" [ Bad_function_format ] issues
 
 let test_check_value_doc () =
   let open Merlint.Docs in
   (* Good value doc *)
   let issues = check_value_doc ~name:"version" ~doc:"The current version." in
-  Alcotest.(check (list testable_style_issue)) "good value doc" [] issues;
+  Alcotest.(check (list style_issue)) "good value doc" [] issues;
 
   (* Missing period *)
   let issues = check_value_doc ~name:"count" ~doc:"The total count" in
-  Alcotest.(check (list testable_style_issue))
+  Alcotest.(check (list style_issue))
     "missing period" [ Missing_period ] issues;
 
   (* Redundant phrase *)
   let issues =
     check_value_doc ~name:"data" ~doc:"This value represents data."
   in
-  Alcotest.(check (list testable_style_issue))
+  Alcotest.(check (list style_issue))
     "redundant phrase"
     [ Redundant_phrase "This value" ]
     issues
@@ -59,16 +57,16 @@ let test_check_type_doc () =
   let open Merlint.Docs in
   (* Good type doc *)
   let issues = check_type_doc ~doc:"A user identifier." in
-  Alcotest.(check (list testable_style_issue)) "good type doc" [] issues;
+  Alcotest.(check (list style_issue)) "good type doc" [] issues;
 
   (* Missing period *)
   let issues = check_type_doc ~doc:"A user identifier" in
-  Alcotest.(check (list testable_style_issue))
+  Alcotest.(check (list style_issue))
     "missing period" [ Missing_period ] issues;
 
   (* Redundant phrase *)
   let issues = check_type_doc ~doc:"This type represents a user." in
-  Alcotest.(check (list testable_style_issue))
+  Alcotest.(check (list style_issue))
     "redundant phrase"
     [ Redundant_phrase "This type" ]
     issues

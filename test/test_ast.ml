@@ -2,6 +2,14 @@
 
 open Merlint
 
+(* Testable AST.t using our pp and equal functions *)
+let ast : Ast.t Alcotest.testable =
+  Alcotest.testable Ast.pp Ast.equal
+
+(* Testable for Complexity.info *)
+let complexity_info : Ast.Complexity.info Alcotest.testable =
+  Alcotest.testable Ast.Complexity.pp Ast.Complexity.equal
+
 let complexity_tests =
   [
     Alcotest.test_case "empty complexity" `Quick (fun () ->

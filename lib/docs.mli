@@ -26,6 +26,9 @@ val check_value_doc : name:string -> doc:string -> style_issue list
 val pp_style_issue : style_issue Fmt.t
 (** [pp_style_issue] pretty-prints a style issue. *)
 
+val equal_style_issue : style_issue -> style_issue -> bool
+(** [equal_style_issue a b] returns true if [a] and [b] are equal. *)
+
 type doc_comment = {
   value_name : string;
   signature : string;

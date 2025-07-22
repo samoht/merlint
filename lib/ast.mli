@@ -52,6 +52,12 @@ module Complexity : sig
 
   val calculate : info -> int
   (** [calculate info] returns the total cyclomatic complexity from info. *)
+  
+  val equal : info -> info -> bool
+  (** [equal a b] returns true if [a] and [b] are equal. *)
+  
+  val pp : info Fmt.t
+  (** [pp fmt info] pretty-prints complexity info. *)
 end
 
 (** Nesting depth analysis. *)

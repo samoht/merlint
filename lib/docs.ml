@@ -75,6 +75,8 @@ let pp_style_issue ppf = function
   | Regular_comment_instead_of_doc ->
       Fmt.string ppf "use doc comment (** ... *) instead of regular comment"
 
+let equal_style_issue = (=)
+
 type doc_comment = {
   value_name : string;
   signature : string;
