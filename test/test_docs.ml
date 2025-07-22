@@ -123,27 +123,6 @@ val empty : string
   Alcotest.(check string) "fourth value name" "empty" fourth.value_name;
   Alcotest.(check string) "empty doc" "" fourth.doc
 
-let _test_extract_multiline_doc () =
-  let open Merlint.Docs in
-  let content =
-    {|(** [process data] processes the input data.
-    
-    This function handles various data formats and
-    returns the processed result. *)
-val process : data -> result|}
-  in
-
-  let comments = extract_doc_comments content in
-
-  Alcotest.(check int) "one comment" 1 (List.length comments);
-
-  let comment = List.hd comments in
-  Alcotest.(check string)
-    "multiline doc combined"
-    "[process data] processes the input data. This function handles various \
-     data formats and returns the processed result."
-    comment.doc
-
 let tests =
   let open Alcotest in
   [

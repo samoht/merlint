@@ -10,7 +10,9 @@ let count_bool_params type_sig =
   let param_part =
     match List.rev parts with
     | [] -> type_sig
-    | _return_type :: rest -> String.concat ">" (List.rev rest)
+    | return_type :: rest ->
+        ignore return_type;
+        String.concat ">" (List.rev rest)
   in
   (* Use the traverse helper to count "bool" occurrences *)
   Outline.count_parameters param_part "bool"

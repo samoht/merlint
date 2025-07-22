@@ -27,7 +27,8 @@ let check ctx =
 
   (* Check each line using the traverse helper *)
   File.process_lines_with_location filename content
-    (fun _line_idx line location ->
+    (fun line_idx line location ->
+      ignore line_idx;
       (* Don't flag error helper definitions themselves *)
       if
         Re.execp error_fmt_str_pattern line

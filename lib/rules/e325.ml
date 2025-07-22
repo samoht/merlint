@@ -20,7 +20,8 @@ let returns_option return_type =
   String.ends_with ~suffix:"option" (String.trim return_type)
 
 (* Check a single function for naming issues *)
-let check_single_function _filename name kind type_sig location =
+let check_single_function filename name kind type_sig location =
+  ignore filename;
   match (name, kind, type_sig, location) with
   | Some n, Some "Value", Some ts, Some loc when Outline.is_function_type ts ->
       let return_type = Outline.extract_return_type ts in

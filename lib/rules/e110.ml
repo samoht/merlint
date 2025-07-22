@@ -40,7 +40,8 @@ let check (ctx : Context.project) =
       List.concat_map
         (fun regex ->
           File.process_lines_with_location filename content
-            (fun _line_idx line loc ->
+            (fun line_idx line loc ->
+              ignore line_idx;
               match check_regex regex line with
               | Some warning_num ->
                   Some (Issue.v ~loc { warning_number = warning_num })

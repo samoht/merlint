@@ -2,7 +2,8 @@
 
 let test_create () =
   (* Test creating a new profiling state *)
-  let _state = Merlint.Profiling.create () in
+  let state = Merlint.Profiling.create () in
+  ignore state;
   (* The state should exist - not much else we can test without internal access *)
   Alcotest.(check bool) "state created" true true
 

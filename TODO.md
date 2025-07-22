@@ -19,9 +19,6 @@
   - 9 types missing these standard functions
   - Improves usability and consistency
 
-- [ ] **Add missing test files for 8 library modules**
-  - command, context, data, example, file, guide, profiling, rule
-  - Need test_<module>.ml for each
 
 - [ ] **Add a rule to detect excessive use of String.contains in a function**
   - Usually a code smell - better to use Re module

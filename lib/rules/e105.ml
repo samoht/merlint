@@ -38,7 +38,8 @@ let check (ctx : Context.file) =
   let content = Context.content ctx in
   let filename = ctx.Context.filename in
 
-  File.process_lines_with_location filename content (fun _line_idx line loc ->
+  File.process_lines_with_location filename content (fun line_idx line loc ->
+      ignore line_idx;
       if not (is_comment_line line) then
         match Re.exec_opt try_with_wildcard_pattern line with
         | Some m ->

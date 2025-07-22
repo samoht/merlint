@@ -146,16 +146,14 @@ let ast_node_map =
 
 (** Get AST node token kind if word is a recognized AST node in the given
     context *)
-let find_ast_node_kind _what word =
+let find_ast_node_kind word =
   (* Since we handle both Typedtree and Parsetree nodes in both contexts,
      we can use a single lookup table *)
   List.assoc_opt word ast_node_map
 
 (** Classify a word as either an AST node or just a word *)
-let classify_word what_context word =
-  match find_ast_node_kind what_context word with
-  | Some k -> k
-  | None -> Word word
+let classify_word word =
+  match find_ast_node_kind word with Some k -> k | None -> Word word
 
 (** Check if we're at the start of a location pattern *)
 let is_location_start text pos =
@@ -192,10 +190,10 @@ let parse_location_token text start_pos =
 (* Phase 1: Lexer - Convert raw text to tokens *)
 
 (** Process end of text *)
-let process_end_of_text acc current what_context =
+let process_end_of_text acc current =
   if current = "" then List.rev acc
   else
-    let kind = classify_word what_context current in
+    let kind = classify_word current in
     List.rev ({ kind; loc = None } :: acc)
 
 (** Process location token *)
@@ -214,7 +212,7 @@ let process_location_token acc text pos what_context tokenize =
 let process_whitespace acc current pos what_context tokenize =
   if current = "" then tokenize acc current (pos + 1) what_context
   else
-    let kind = classify_word what_context current in
+    let kind = classify_word current in
     tokenize ({ kind; loc = None } :: acc) "" (pos + 1) what_context
 
 (** Process bracket character *)
@@ -230,7 +228,7 @@ let process_bracket bracket acc current pos what_context tokenize =
   let acc' =
     if current = "" then acc
     else
-      let kind = classify_word what_context current in
+      let kind = classify_word current in
       { kind; loc = None } :: acc
   in
   tokenize
@@ -240,8 +238,7 @@ let process_bracket bracket acc current pos what_context tokenize =
 let lex_text what text : token list =
   (* Tokenizer that recognizes AST nodes based on current what context *)
   let rec tokenize acc current pos what_context =
-    if pos >= String.length text then
-      process_end_of_text acc current what_context
+    if pos >= String.length text then process_end_of_text acc current
     else if current = "" && is_location_start text pos then
       process_location_token acc text pos what_context tokenize
     else

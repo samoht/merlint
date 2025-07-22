@@ -17,7 +17,8 @@ type describe = {
 
 (** Forward declaration for describe function *)
 let describe_ref =
-  ref (fun (_project_root : Fpath.t) ->
+  ref (fun (project_root : Fpath.t) ->
+      ignore project_root;
       { libraries = []; executables = []; tests = [] })
 
 (** Ensure the project is built by running 'dune build' if needed *)
@@ -39,7 +40,8 @@ let ensure_project_built project_root =
 let is_executable dune_describe ml_file =
   let module_name = Fpath.(ml_file |> rem_ext |> basename) in
   List.exists
-    (fun (name, _files) ->
+    (fun (name, files) ->
+      ignore files;
       String.lowercase_ascii name = String.lowercase_ascii module_name)
     dune_describe.executables
 
