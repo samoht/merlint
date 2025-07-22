@@ -1,5 +1,8 @@
 (** Simple profiling module for measuring execution times. *)
 
+type timing = { name : string; duration : float }
+(** A single timing record with operation name and duration in seconds. *)
+
 type t
 (** Profiling state. *)
 
@@ -16,6 +19,9 @@ val pp : t Fmt.t
 
 val create : unit -> t
 (** [create ()] creates a new profiling state. *)
+
+val add_timing : t -> timing -> unit
+(** [add_timing t timing] adds a timing record to the profiling state. *)
 
 val reset_state : t -> unit
 (** [reset_state t] clears all timings in the state. *)

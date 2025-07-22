@@ -8,6 +8,9 @@ type t = { mutable timings : timing list }
 (** Create an empty profiling state *)
 let create () = { timings = [] }
 
+(** Add a timing to the profiling state *)
+let add_timing t timing = t.timings <- timing :: t.timings
+
 (** Get all timings in chronological order *)
 let get_timings_from_state t = List.rev t.timings
 
