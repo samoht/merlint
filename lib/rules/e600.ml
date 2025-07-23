@@ -160,9 +160,4 @@ let rule =
       "Test executables (test.ml) should use test suites exported by test \
        modules (test_*.ml) rather than defining their own test lists. This \
        promotes modularity and ensures test modules are properly integrated."
-    ~examples:
-      [
-        { Rule.is_good = false; code = Examples.E600.Bad.test_ml };
-        { Rule.is_good = true; code = Examples.E600.Good.test_ml };
-      ]
-    ~pp (Project check)
+    ~examples:[] ~pp (Project check)

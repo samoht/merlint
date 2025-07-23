@@ -907,11 +907,9 @@ pre code {
 <div class="example good">
   <h4>GOOD</h4>
   <pre><code><span class="kw">type</span> t = { id: int; name: string }
-<span class="kw">let</span> equal a b = a.id = b.id &amp;&amp; a.name = b.name
-<span class="kw">let</span> compare a b = 
-  <span class="kw">let</span> c = <span class="cn">Int</span>.compare a.id b.id <span class="kw">in</span>
-  <span class="kw">if</span> c = <span class="nu">0</span> <span class="kw">then</span> <span class="cn">String</span>.compare a.name b.name <span class="kw">else</span> c
-<span class="kw">let</span> pp fmt t = <span class="cn">Format</span>.fprintf fmt &quot;{id=%d; name=%<span class="cn">S</span>}&quot; t.id t.name</code></pre>
+<span class="kw">val</span> equal : t -&gt; t -&gt; bool
+<span class="kw">val</span> compare : t -&gt; t -&gt; int
+<span class="kw">val</span> pp : <span class="cn">Format</span>.formatter -&gt; t -&gt; unit</code></pre>
 </div>
 </div></div>
 </div>
@@ -970,110 +968,28 @@ pre code {
         <span class="error-code">E600</span>
         <span class="error-title">Test Module Convention</span>
     </div>
-    <div class="error-hint"><p>Test executables (test.ml) should use test suites exported by test modules (test_*.ml) rather than defining their own test lists. This promotes modularity and ensures test modules are properly integrated.</p><div class="examples-grid">
-<div class="example bad">
-  <h4>BAD</h4>
-  <pre><code><span class="cm">(* test.ml - main test executable *)</span>
-<span class="kw">let</span> tests = []
-<span class="kw">let</span> () = <span class="cn">Alcotest</span>.run &quot;test_user&quot; [(&quot;user&quot;, tests)]</code></pre>
-</div>
-<div class="example good">
-  <h4>GOOD</h4>
-  <pre><code><span class="cm">(* test.ml - main test executable *)</span>
-<span class="kw">module</span> <span class="cn">Test_user</span> = <span class="kw">struct</span>
-  <span class="kw">let</span> suite = (&quot;user&quot;, [])
-<span class="kw">end</span>
-
-<span class="kw">let</span> () = <span class="cn">Alcotest</span>.run &quot;<span class="cn">Test</span> suite description&quot; [<span class="cn">Test_user</span>.suite]</code></pre>
-</div>
-</div></div>
+    <div class="error-hint"><p>Test executables (test.ml) should use test suites exported by test modules (test_*.ml) rather than defining their own test lists. This promotes modularity and ensures test modules are properly integrated.</p></div>
 </div>
 <div class="error-card" id="E605">
     <div>
         <span class="error-code">E605</span>
         <span class="error-title">Missing Test File</span>
     </div>
-    <div class="error-hint"><p>Each library module should have a corresponding test file to ensure proper testing coverage. Create test files following the naming convention test_&lt;module&gt;.ml</p><div class="examples-grid">
-<div class="example bad">
-  <h4>BAD</h4>
-  <pre><code><span class="cm">(* Test for utils module *)</span>
-
-<span class="kw">let</span> test_string_of_list () =
-  <span class="kw">let</span> result = <span class="cn">Myproject</span>.<span class="cn">Utils</span>.string_of_list string_of_int [<span class="nu">1</span>; <span class="nu">2</span>; <span class="nu">3</span>] <span class="kw">in</span>
-  <span class="kw">assert</span> (result = &quot;[<span class="nu">1</span>; <span class="nu">2</span>; <span class="nu">3</span>]&quot;)
-
-<span class="kw">let</span> test_option_map () =
-  <span class="kw">let</span> result = <span class="cn">Myproject</span>.<span class="cn">Utils</span>.option_map (<span class="kw">fun</span> x -&gt; x + <span class="nu">1</span>) (<span class="cn">Some</span> <span class="nu">41</span>) <span class="kw">in</span>
-  <span class="kw">assert</span> (result = <span class="cn">Some</span> <span class="nu">42</span>)
-
-<span class="kw">let</span> () =
-  test_string_of_list ();
-  test_option_map ();
-  print_endline &quot;<span class="cn">Utils</span> tests passed&quot;</code></pre>
-</div>
-<div class="example good">
-  <h4>GOOD</h4>
-  <pre><code><span class="cm">(* Test for config module *)</span>
-
-<span class="kw">let</span> test_default_config () =
-  <span class="kw">let</span> config = <span class="cn">Myproject</span>.<span class="cn">Config</span>.default <span class="kw">in</span>
-  <span class="kw">assert</span> (<span class="kw">not</span> config.debug);
-  <span class="kw">assert</span> (<span class="kw">not</span> config.verbose);
-  <span class="kw">assert</span> (config.max_iterations = <span class="nu">100</span>)
-
-<span class="kw">let</span> test_from_env () =
-  <span class="cm">(* Test without DEBUG env var *)</span>
-  <span class="kw">let</span> config = <span class="cn">Myproject</span>.<span class="cn">Config</span>.from_env () <span class="kw">in</span>
-  <span class="kw">assert</span> (<span class="kw">not</span> config.debug)
-
-<span class="kw">let</span> () =
-  test_default_config ();
-  test_from_env ();
-  print_endline &quot;<span class="cn">Config</span> tests passed&quot;</code></pre>
-</div>
-</div></div>
+    <div class="error-hint"><p>Each library module should have a corresponding test file to ensure proper testing coverage. Create test files following the naming convention test_&lt;module&gt;.ml</p></div>
 </div>
 <div class="error-card" id="E610">
     <div>
         <span class="error-code">E610</span>
         <span class="error-title">Test Without Library</span>
     </div>
-    <div class="error-hint"><p>Every test module should have a corresponding library module. This ensures that tests are testing actual library functionality rather than testing code that doesn't exist in the library.</p><div class="examples-grid">
-<div class="example bad">
-  <h4>BAD</h4>
-  <pre><code><span class="cm">(* Test for old_feature module - but lib/old_feature.ml was removed! *)</span></code></pre>
-</div>
-<div class="example good">
-  <h4>GOOD</h4>
-  <pre><code><span class="cm">(* Test for old_feature module - but lib/old_feature.ml was removed! *)</span></code></pre>
-</div>
-</div></div>
+    <div class="error-hint"><p>Every test module should have a corresponding library module. This ensures that tests are testing actual library functionality rather than testing code that doesn't exist in the library.</p></div>
 </div>
 <div class="error-card" id="E615">
     <div>
         <span class="error-code">E615</span>
         <span class="error-title">Test Suite Not Included</span>
     </div>
-    <div class="error-hint"><p>All test modules should be included in the main test runner (test.ml). Add the missing test suite to ensure all tests are run.</p><div class="examples-grid">
-<div class="example bad">
-  <h4>BAD</h4>
-  <pre><code><span class="cm">(* Main test runner - missing Test_parser.suite *)</span>
-<span class="kw">module</span> <span class="cn">Test_user</span> = <span class="kw">struct</span>
-  <span class="kw">let</span> suite = (&quot;user&quot;, [])
-<span class="kw">end</span>
-
-<span class="kw">let</span> () = <span class="cn">Alcotest</span>.run &quot;all&quot; [<span class="cn">Test_user</span>.suite]</code></pre>
-</div>
-<div class="example good">
-  <h4>GOOD</h4>
-  <pre><code><span class="cm">(* Main test runner - includes all test modules *)</span>
-<span class="kw">module</span> <span class="cn">Test_user</span> = <span class="kw">struct</span>
-  <span class="kw">let</span> suite = (&quot;user&quot;, [])
-<span class="kw">end</span>
-
-<span class="kw">let</span> () = <span class="cn">Alcotest</span>.run &quot;all&quot; [<span class="cn">Test_user</span>.suite; <span class="cn">Test_parser</span>.suite]</code></pre>
-</div>
-</div></div>
+    <div class="error-hint"><p>All test modules should be included in the main test runner (test.ml). Add the missing test suite to ensure all tests are run.</p></div>
 </div>
 
     <a href="#top" class="back-to-top">↑ Top</a>

@@ -119,5 +119,5 @@ let rule =
        codebase. For simple types, polymorphic equal (=) and compare functions \
        are sufficient. For more complex types with invariants or custom \
        representations, implement specialized versions."
-    ~examples:[ Example.bad E415.bad_ml; Example.good E415.good_ml ]
+    ~examples:[ Example.bad E415.bad_mli; Example.good E415.good_mli ]
     ~pp (File check)

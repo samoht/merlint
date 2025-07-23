@@ -213,11 +213,9 @@ type t = { id: int; name: string }
 **Good:**
 ```ocaml
 type t = { id: int; name: string }
-let equal a b = a.id = b.id && a.name = b.name
-let compare a b = 
-  let c = Int.compare a.id b.id in
-  if c = 0 then String.compare a.name b.name else c
-let pp fmt t = Format.fprintf fmt "{id=%d; name=%S}" t.id t.name
+val equal : t -> t -> bool
+val compare : t -> t -> int
+val pp : Format.formatter -> t -> unit
 ```
 
 
@@ -769,71 +767,9 @@ Log.info (fun m ->
 
 Test executables (test.ml) should use test suites exported by test modules (test_*.ml) rather than defining their own test lists. This promotes modularity and ensures test modules are properly integrated.
 
-**Examples:**
-
-**Bad:**
-```ocaml
-(* test.ml - main test executable *)
-let tests = []
-let () = Alcotest.run "test_user" [("user", tests)]
-```
-
-**Good:**
-```ocaml
-(* test.ml - main test executable *)
-module Test_user = struct
-  let suite = ("user", [])
-end
-
-let () = Alcotest.run "Test suite description" [Test_user.suite]
-```
-
-
 ### [E605] Missing Test File
 
 Each library module should have a corresponding test file to ensure proper testing coverage. Create test files following the naming convention test_<module>.ml
-
-**Examples:**
-
-**Bad:**
-```ocaml
-(* Test for utils module *)
-
-let test_string_of_list () =
-  let result = Myproject.Utils.string_of_list string_of_int [1; 2; 3] in
-  assert (result = "[1; 2; 3]")
-
-let test_option_map () =
-  let result = Myproject.Utils.option_map (fun x -> x + 1) (Some 41) in
-  assert (result = Some 42)
-
-let () =
-  test_string_of_list ();
-  test_option_map ();
-  print_endline "Utils tests passed"
-```
-
-**Good:**
-```ocaml
-(* Test for config module *)
-
-let test_default_config () =
-  let config = Myproject.Config.default in
-  assert (not config.debug);
-  assert (not config.verbose);
-  assert (config.max_iterations = 100)
-
-let test_from_env () =
-  (* Test without DEBUG env var *)
-  let config = Myproject.Config.from_env () in
-  assert (not config.debug)
-
-let () =
-  test_default_config ();
-  test_from_env ();
-  print_endline "Config tests passed"
-```
-
 
 3. **Test Organization**: Test files should export a `suite` value.
 
@@ -841,47 +777,11 @@ let () =
 
 Every test module should have a corresponding library module. This ensures that tests are testing actual library functionality rather than testing code that doesn't exist in the library.
 
-**Examples:**
-
-**Bad:**
-```ocaml
-(* Test for old_feature module - but lib/old_feature.ml was removed! *)
-```
-
-**Good:**
-```ocaml
-(* Test for old_feature module - but lib/old_feature.ml was removed! *)
-```
-
-
 4. **Test Inclusion**: All test suites must be included in the main test runner.
 
 ### [E615] Test Suite Not Included
 
 All test modules should be included in the main test runner (test.ml). Add the missing test suite to ensure all tests are run.
-
-**Examples:**
-
-**Bad:**
-```ocaml
-(* Main test runner - missing Test_parser.suite *)
-module Test_user = struct
-  let suite = ("user", [])
-end
-
-let () = Alcotest.run "all" [Test_user.suite]
-```
-
-**Good:**
-```ocaml
-(* Main test runner - includes all test modules *)
-module Test_user = struct
-  let suite = ("user", [])
-end
-
-let () = Alcotest.run "all" [Test_user.suite; Test_parser.suite]
-```
-
 
 5. **Clear Test Names**: Test names should describe what they test, not how.
 

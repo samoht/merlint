@@ -48,9 +48,4 @@ let rule =
       "Each library module should have a corresponding test file to ensure \
        proper testing coverage. Create test files following the naming \
        convention test_<module>.ml"
-    ~examples:
-      [
-        Example.bad Examples.E605.Bad_test.test_utils_ml;
-        Example.good Examples.E605.Good_test.test_config_ml;
-      ]
-    ~pp (Project check)
+    ~examples:[] ~pp (Project check)
