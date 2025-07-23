@@ -59,4 +59,6 @@ let rule =
        explicit and functions easier to test. If mutation is necessary, \
        consider using local state within functions or returning updated \
        values."
-    ~examples:[] ~pp (File check)
+    ~examples:
+      [ Example.bad Examples.E351.bad_ml; Example.good Examples.E351.good_ml ]
+    ~pp (File check)

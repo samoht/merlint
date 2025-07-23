@@ -18,4 +18,6 @@ let rule =
       "The Str module is outdated and has a problematic API. Use the Re module \
        instead for regular expressions. Re provides a better API, is more \
        performant, and doesn't have global state issues."
-    ~examples:[] ~pp (File check)
+    ~examples:
+      [ Example.bad Examples.E200.bad_ml; Example.good Examples.E200.good_ml ]
+    ~pp (File check)

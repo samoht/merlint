@@ -89,4 +89,9 @@ let rule =
     ~hint:
       "All test modules should be included in the main test runner (test.ml). \
        Add the missing test suite to ensure all tests are run."
-    ~examples:[] ~pp (Project check)
+    ~examples:
+      [
+        Example.bad Examples.E615.Bad_test.test_ml;
+        Example.good Examples.E615.Good_test.test_ml;
+      ]
+    ~pp (Project check)

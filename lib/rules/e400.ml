@@ -40,4 +40,6 @@ let rule =
       "MLI files should start with a documentation comment (** ... *) that \
        describes the module's purpose and API. This helps users understand how \
        to use the module."
-    ~examples:[] ~pp (Project check)
+    ~examples:
+      [ Example.bad Examples.E400.bad_mli; Example.good Examples.E400.good_mli ]
+    ~pp (Project check)

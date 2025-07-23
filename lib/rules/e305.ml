@@ -38,4 +38,6 @@ let rule =
       "Module names should use Snake_case (e.g., My_module, User_profile). \
        File names use lowercase_with_underscores which OCaml automatically \
        converts to module names."
-    ~examples:[] ~pp (File check)
+    ~examples:
+      [ Example.bad Examples.E305.bad_ml; Example.good Examples.E305.good_ml ]
+    ~pp (File check)

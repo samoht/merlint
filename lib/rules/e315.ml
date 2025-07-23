@@ -32,4 +32,6 @@ let rule =
       "Type names should use snake_case. The primary type in a module should \
        be named t, and identifiers should be id. This convention helps \
        maintain consistency across the codebase."
-    ~examples:[] ~pp (File check)
+    ~examples:
+      [ Example.bad Examples.E315.bad_ml; Example.good Examples.E315.good_ml ]
+    ~pp (File check)

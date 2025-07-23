@@ -34,4 +34,6 @@ let rule =
        hard to follow. Fix it by extracting nested logic into helper \
        functions, using early returns to reduce nesting, or combining \
        conditions when appropriate. Aim for maximum nesting depth of 4."
-    ~examples:[] ~pp (File check)
+    ~examples:
+      [ Example.bad Examples.E010.bad_ml; Example.good Examples.E010.good_ml ]
+    ~pp (File check)

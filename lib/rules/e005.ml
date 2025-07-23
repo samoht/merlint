@@ -72,4 +72,6 @@ let rule =
        exempt from length checks. For better readability, consider using \
        helper functions for complex logic. Aim for functions under 50 lines of \
        actual logic."
-    ~examples:[] ~pp (File check)
+    ~examples:
+      [ Example.bad Examples.E005.bad_ml; Example.good Examples.E005.good_ml ]
+    ~pp (File check)

@@ -58,4 +58,6 @@ let rule =
       "Library modules should have corresponding .mli files for proper \
        encapsulation and API documentation. Create interface files to hide \
        implementation details and provide a clean API."
-    ~examples:[] ~pp (Project check)
+    ~examples:
+      [ Example.bad Examples.E505.bad_ml; Example.good Examples.E505.good_mli ]
+    ~pp (Project check)

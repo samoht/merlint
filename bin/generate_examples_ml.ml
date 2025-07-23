@@ -63,8 +63,8 @@ let rec collect_files_recursively base_dir current_path =
   else []
 
 let generate () =
-  (* When run by dune, we're in _build/default, so need ../../test/cram *)
-  let cram_dir = "../../test/cram" in
+  (* When run by dune with chdir .., we're in the project root *)
+  let cram_dir = "test/cram" in
   let test_dirs =
     Sys.readdir cram_dir |> Array.to_list
     |> List.filter (fun e ->

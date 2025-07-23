@@ -18,4 +18,6 @@ let rule =
        unpredictable behavior. Instead, use proper type definitions, GADTs, or \
        polymorphic variants. If you absolutely must use unsafe features, \
        document why and isolate the usage."
-    ~examples:[] ~pp (File check)
+    ~examples:
+      [ Example.bad Examples.E100.bad_ml; Example.good Examples.E100.good_ml ]
+    ~pp (File check)

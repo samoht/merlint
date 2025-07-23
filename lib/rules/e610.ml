@@ -80,4 +80,9 @@ let rule =
       "Every test module should have a corresponding library module. This \
        ensures that tests are testing actual library functionality rather than \
        testing code that doesn't exist in the library."
-    ~examples:[] ~pp (Project check)
+    ~examples:
+      [
+        Example.bad Examples.E610.Bad_test.test_old_feature_ml;
+        Example.good Examples.E610.Good_test.test_old_feature_ml;
+      ]
+    ~pp (Project check)

@@ -64,4 +64,9 @@ let rule =
       "Avoid prefixing type or function names with the module name. The module \
        already provides the namespace, so Message.message_type should just be \
        Message.t"
-    ~examples:[] ~pp (File check)
+    ~examples:
+      [
+        Example.bad Examples.E330.Bad.process_ml;
+        Example.good Examples.E330.Good.process_ml;
+      ]
+    ~pp (File check)

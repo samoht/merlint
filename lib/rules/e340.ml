@@ -56,4 +56,6 @@ let rule =
        error messages. Consider creating error helper functions (prefixed with \
        'err_') that encapsulate common error patterns and provide consistent \
        formatting."
-    ~examples:[] ~pp (File check)
+    ~examples:
+      [ Example.bad Examples.E340.bad_ml; Example.good Examples.E340.good_ml ]
+    ~pp (File check)

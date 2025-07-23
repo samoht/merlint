@@ -23,9 +23,7 @@ let rec element_to_markdown = function
             | [] -> ""
             | examples ->
                 let format_example (ex : Rule.example) =
-                  let label =
-                    if ex.is_good then "✅ **Good:**" else "❌ **Bad:**"
-                  in
+                  let label = if ex.is_good then "**Good:**" else "**Bad:**" in
                   Fmt.str "%s\n```ocaml\n%s\n```\n" label ex.code
                 in
                 "\n\n**Examples:**\n\n"

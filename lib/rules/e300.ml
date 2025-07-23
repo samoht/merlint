@@ -30,4 +30,6 @@ let rule =
       "Variant constructors should use Snake_case (e.g., Waiting_for_input, \
        Processing_data), not CamelCase. This matches the project's naming \
        conventions."
-    ~examples:[] ~pp (File check)
+    ~examples:
+      [ Example.bad Examples.E300.bad_ml; Example.good Examples.E300.good_ml ]
+    ~pp (File check)

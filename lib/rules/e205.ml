@@ -38,4 +38,6 @@ let rule =
       "The Fmt module provides a more modern and composable approach to \
        formatting. It offers better type safety and cleaner APIs compared to \
        Printf/Format modules."
-    ~examples:[] ~pp (File check)
+    ~examples:
+      [ Example.bad Examples.E205.bad_ml; Example.good Examples.E205.good_ml ]
+    ~pp (File check)

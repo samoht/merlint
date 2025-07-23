@@ -51,4 +51,6 @@ let rule =
        to be unused. If you need to use the binding, remove the underscore \
        prefix. If the binding is truly unused, consider using a wildcard \
        pattern '_' instead."
-    ~examples:[] ~pp (File check)
+    ~examples:
+      [ Example.bad Examples.E335.bad_ml; Example.good Examples.E335.good_ml ]
+    ~pp (File check)

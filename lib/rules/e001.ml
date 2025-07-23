@@ -62,4 +62,6 @@ let rule =
       "High cyclomatic complexity makes code harder to understand and test. \
        Consider breaking complex functions into smaller, more focused \
        functions. Each function should ideally do one thing well."
-    ~examples:[] ~pp (File check)
+    ~examples:
+      [ Example.bad Examples.E001.bad_ml; Example.good Examples.E001.good_ml ]
+    ~pp (File check)

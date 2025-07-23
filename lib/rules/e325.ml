@@ -77,4 +77,6 @@ let rule =
        while functions that return non-option types should be prefixed with \
        'get_'. This convention helps communicate the function's behavior to \
        callers."
-    ~examples:[] ~pp (File check)
+    ~examples:
+      [ Example.bad Examples.E325.bad_ml; Example.good Examples.E325.good_ml ]
+    ~pp (File check)

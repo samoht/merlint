@@ -24,4 +24,6 @@ let rule =
       "Values and function names should use snake_case (e.g., find_user, \
        create_channel). Short, descriptive, and lowercase with underscores. \
        This is the standard convention in OCaml for values and functions."
-    ~examples:[] ~pp (File check)
+    ~examples:
+      [ Example.bad Examples.E310.bad_ml; Example.good Examples.E310.good_ml ]
+    ~pp (File check)
