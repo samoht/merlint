@@ -1,82 +1,31 @@
 # Merlint
 
-An opinionated OCaml linter that enforces modern OCaml coding conventions and best practices.
+An opinionated linter for modern OCaml development.
+
+Merlint is a static analysis tool that helps you write clean,
+consistent, and robust OCaml code. It enforces modern best practices
+and identifies common issues across several categories, from code
+complexity and style to naming conventions and testing.
+
+For a complete reference of all rules, visit the official documentation:
+**[https://samoht.github.io/merlint/](https://samoht.github.io/merlint/)**
 
 ## Features
 
-Merlint analyzes your OCaml code and reports issues across multiple categories, with intelligent **priority-based sorting** to help you focus on the most important problems first.
+- **Comprehensive Analysis**: Checks for issues in code quality,
+    style, naming, documentation, project structure, and testing.
+- **Intelligent Prioritization**: Automatically sorts issues by
+    severity, so you can focus on the most critical problems first.
+- **Modern & Opinionated**: Enforces current best practices, such as
+    using `Fmt` over `Printf` and `Re` over `Str`.
+- **Zero Configuration**: Works out of the box with sensible defaults,
+    requiring no setup to get started.
 
-### Code Quality (High Priority)
-- **Cyclomatic complexity**: Functions should have complexity ≤ 10
-- **Function length**: Functions should be ≤ 50 lines (with automatic adjustments for pattern matching and data structures)
-- **Nesting depth**: Code should not nest deeper than 3 levels
+## Output Example
 
-### Code Style (High Priority)
-- **No Obj.magic**: Never use `Obj.magic` (highest priority)
-- **No catch-all**: Avoid `try ... with _ -> ...` patterns
-- **Use Re not Str**: Use `Re` module instead of `Str` for regular expressions
-- **Use Fmt not Printf**: Use `Fmt` module instead of `Printf` for formatting
-- **No silenced warnings**: Avoid `[@warning "-..."]` attributes
+Merlint provides clear, color-coded output that groups issues by
+category and explains how to fix them.
 
-### Naming Conventions (Medium Priority)
-- **Modules**: Must use snake_case (e.g., `user_profile`)
-- **Variants**: Must use Snake_case (e.g., `Waiting_for_input`)
-- **Values/Functions**: Must use snake_case
-- **Types**: Must use snake_case (primary type should be `t`)
-- **Long identifiers**: Avoid names with too many underscores (>3)
-- **Function naming**: Use `get_*` for direct access, `find_*` for optional returns
-- **Redundant names**: Avoid repeating module name in functions/types
-
-### Documentation (Lower Priority)
-- **MLI files**: Must have module-level documentation comments
-- **Module interface files**: Every `.ml` file should have a corresponding `.mli`
-- **Value documentation**: Public values should be documented
-- **Standard functions**: Types should implement standard functions (pp, equal, compare)
-
-### Project Structure
-- **OCamlformat**: Projects should include `.ocamlformat` file
-- **Interface files**: Missing `.mli` files for modules
-
-### Test Quality
-- **Test conventions**: Test files should export `suite` value for test runners
-- **Test coverage**: Library modules should have corresponding test files
-- **Test organization**: Tests should be included in the test runner
-
-## Installation
-
-```bash
-opam install . --deps-only
-dune build
-dune install
-```
-
-## Usage
-
-### Basic Usage
-```bash
-# Analyze entire project (visual mode)
-merlint
-
-# Analyze specific files or directories
-merlint src/ lib/
-merlint src/parser.ml
-
-# Quiet mode (one issue per line)
-merlint --quiet
-
-# Exclude directories or files
-merlint --exclude test/ --exclude _build/
-merlint --exclude "test/**" --exclude "*.temp.ml"
-
-# Filter rules (disable specific checks)
-merlint --rules A-E110          # All rules except E110 (silenced warnings)
-merlint --rules A-E205-E320     # All except Printf and long identifiers
-merlint -r A-E005              # All except long functions
-```
-
-### Output Modes
-
-**Visual Mode (default)**: Shows categorized results with priority-based sorting
 ```
 Running merlint analysis...
 
@@ -109,39 +58,49 @@ Analyzing 15 files
 Summary: ✗ 5 total issues
 ```
 
-**Quiet Mode**: Simple line-by-line output sorted by priority
+## Quick Start
+
+### Installation
 ```bash
-merlint --quiet
-```
-```
-[E100] src/utils.ml:33:8: Never use Obj.magic
-[E200] src/parser.ml:45:2: Use Re module instead of Str
-[E300] src/types.ml:8:2: Variant 'waitingForInput' should be 'Waiting_for_input'
-[E320] src/api.ml:12:4: 'very_long_function_name_with_many_underscores' has too many underscores (6)
-[E305] src/types.ml:12:4: Module 'myModule' should be 'my_module'
+opam install . --deps-only
+dune build
+dune install
 ```
 
-## Priority System
+### Usage
+```bash
+# Analyze the entire project
+merlint
 
-Issues are automatically sorted by priority to help you focus on the most important problems:
+# Analyze specific files or directories
+merlint src/ lib/
 
-1. **Critical** (Priority 1-2): `Obj.magic` usage, catch-all exception handlers
-2. **High** (Priority 3-5): Complexity, nesting, function length
-3. **Medium** (Priority 6-12): Style issues, naming conventions, missing interfaces
-4. **Low** (Priority 13-17): Documentation, project structure
+# Exclude directories
+merlint --exclude test/
 
-## Error Codes
+# Filter rules (e.g., run all rules except E110)
+merlint --rules A-E110
+```
 
-For a complete reference of all error codes with detailed explanations and examples, visit:
-**https://samoht.github.io/merlint/**
+## Rules Overview
 
-Error codes can be used with the `--rules` flag to filter specific checks.
+Merlint groups rules by category and priority:
+
+1.  **Critical (Priority 1-2)**: `Obj.magic` usage, catch-all
+exception handlers.
+2.  **High (Priority 3-5)**: High cyclomatic complexity, long
+functions, and deep nesting.
+3.  **Medium (Priority 6-12)**: Modernization (e.g., `Re` vs. `Str`),
+naming conventions, and missing interface files.
+4.  **Low (Priority 13-17)**: Documentation standards and project
+structure.
+
+For a complete list of rules and error codes, see the **[official
+documentation](https://samoht.github.io/merlint/)**.
 
 ## Integration
 
 ### Git Pre-commit Hook
-Merlint can be integrated into your git workflow:
-
 ```bash
 # Add to .git/hooks/pre-commit
 #!/bin/bash
@@ -158,25 +117,23 @@ fi
 ```
 
 ### CI/CD
-Use merlint in your continuous integration:
 ```yaml
 - name: Lint OCaml code
-  run: merlint --quiet
+  run: |
+    merlint --exclude test/
+    # Exit code 1 if issues found, 0 if clean
 ```
 
 ## Style Guide
 
-For detailed guidelines on OCaml coding conventions and best practices enforced by Merlint, see:
-**[docs/STYLE_GUIDE.md](docs/STYLE_GUIDE.md)**
+For detailed guidelines on the OCaml coding conventions enforced by
+Merlint, see the official **[Style Guide](docs/STYLE_GUIDE.md)**.
 
 ## Development
 
 ```bash
 # Run tests
 dune runtest
-
-# Run tests excluding samples
-dune exec -- merlint test --exclude test/samples
 
 # Format code
 dune fmt
@@ -189,17 +146,9 @@ merlint lib/ bin/
 
 Merlint uses a multi-strategy approach to analyze OCaml code:
 
-1. **Merlin outline** for:
-   - Function locations and boundaries (for E005 - function length)
-   - Getting accurate line counts
-
-2. **ppxlib on parsetree** for:
-   - Cyclomatic complexity analysis
-   - Control flow detection
-   - Name extraction (for naming convention rules)
-
-3. **Simple regex on typedtree text** for:
-   - Module usage detection (E100, E200, E205)
+1.  **Merlin outline** for function boundaries and line counts.
+2.  **`ppxlib` on `parsetree`** for cyclomatic complexity, control flow, and name extraction.
+3.  **Pattern matching and regex on source text** for detecting specific code patterns.
 
 This hybrid approach ensures accurate analysis while maintaining simplicity and performance.
 
@@ -215,18 +164,17 @@ This hybrid approach ensures accurate analysis while maintaining simplicity and 
   the tool has been tested extensively and works well in practice,
   users should be aware that:
 
-1. **Technical implications**: AI-generated code may have unique
-   patterns or subtle bugs. We've used `merlint` on itself and other
-   projects successfully, but thorough testing is always recommended.
+1.  **Technical implications**: AI-generated code may have unique
+    patterns or subtle bugs. We've used `merlint` on itself and other
+    projects successfully, but thorough testing is always recommended.
 
-2. **Legal uncertainty**: The copyright status, license implications,
-   and liability for AI-generated code remain legally untested. We cannot
-   trace which training data influenced specific code patterns.
+2.  **Legal uncertainty**: The copyright status, license implications,
+    and liability for AI-generated code remain legally untested. We cannot
+    trace which training data influenced specific code patterns.
 
-3. **Our Commitment**: Despite these unknowns, we believe `merlint`
-   provides real value to the OCaml community. We are committed to
-   maintaining it, using it ourselves, and being transparent about its AI
-   origins.
+3.  **Practical use**: Despite these unknowns, `merlint` has been tested
+    on real OCaml projects and provides useful results. The tool is actively
+    maintained and used in practice.
 
 For deeper context on these issues, see the [Software Freedom
 Conservancy](https://sfconservancy.org/blog/2022/feb/03/github-copilot-copyleft-gpl/)
@@ -235,8 +183,8 @@ positions](https://www.fsf.org/blogs/licensing/fsf-funded-call-for-white-papers-
 on AI-generated code.
 
 **By using this tool, you acknowledge these uncertainties.** As with
-  any code modification tool: use version control, review all changes,
-  and test thoroughly.
+any code modification tool: use version control, review all changes,
+and test thoroughly.
 
 ## License
 
