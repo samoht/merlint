@@ -3,7 +3,7 @@ open Examples
 
 type payload = { type_name : string; missing_functions : string list }
 
-let standard_functions = [ "equal"; "compare"; "pp" ]
+let standard_functions = [ "pp" ]
 
 let extract_type_declarations content =
   let lines = String.split_on_char '\n' content in
@@ -111,13 +111,11 @@ let pp ppf { type_name; missing_functions } =
     (String.concat ", " missing_functions)
 
 let rule =
-  Rule.v ~code:"E415" ~title:"Missing Standard Functions"
-    ~category:Documentation
+  Rule.v ~code:"E415" ~title:"Missing Pretty Printer" ~category:Documentation
     ~hint:
-      "The main type 't' should implement standard functions: equal, compare, \
-       and pp (pretty-printer) for better usability and consistency across the \
-       codebase. For simple types, polymorphic equal (=) and compare functions \
-       are sufficient. For more complex types with invariants or custom \
-       representations, implement specialized versions."
+      "The main type 't' should implement a pretty-printer function (pp) for \
+       better debugging and logging. Unlike equality and comparison which can \
+       use polymorphic functions (= and compare), pretty-printing requires a \
+       custom implementation to provide meaningful output."
     ~examples:[ Example.bad E415.bad_mli; Example.good E415.good_mli ]
     ~pp (File check)

@@ -1,5 +1,9 @@
 Test bad example - should find missing standard functions:
   $ merlint -r E415 bad.mli
+  merlint: [ERROR] Command failed with exit code 1
+  Warning: Failed to build project: Command failed with exit code 1
+  Function type analysis may not work properly.
+  Continuing with analysis...
   Running merlint analysis...
   
   Analyzing 1 files
@@ -8,13 +12,12 @@ Test bad example - should find missing standard functions:
   ✓ Code Style (0 total issues)
   ✓ Naming Conventions (0 total issues)
   ✗ Documentation (1 total issues)
-    [E415] Missing Standard Functions (1 issue)
-    The main type 't' should implement standard functions: equal, compare, and pp
-    (pretty-printer) for better usability and consistency across the codebase. For
-    simple types, polymorphic equal (=) and compare functions are sufficient. For
-    more complex types with invariants or custom representations, implement
-    specialized versions.
-    - bad.mli:1:0: Type 't' is missing standard functions: equal, compare, pp
+    [E415] Missing Pretty Printer (1 issue)
+    The main type 't' should implement a pretty-printer function (pp) for better
+    debugging and logging. Unlike equality and comparison which can use
+    polymorphic functions (= and compare), pretty-printing requires a custom
+    implementation to provide meaningful output.
+    - bad.mli:1:0: Type 't' is missing standard functions: pp
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   
@@ -24,6 +27,10 @@ Test bad example - should find missing standard functions:
 
 Test good example - should find no issues:
   $ merlint -r E415 good.mli
+  merlint: [ERROR] Command failed with exit code 1
+  Warning: Failed to build project: Command failed with exit code 1
+  Function type analysis may not work properly.
+  Continuing with analysis...
   Running merlint analysis...
   
   Analyzing 1 files

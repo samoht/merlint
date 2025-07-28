@@ -199,9 +199,9 @@ For values, describe what the value represents.
 
 - `val validate : t -> (t, string) result`: For validating the integrity of the data.
 
-### [E415] Missing Standard Functions
+### [E415] Missing Pretty Printer
 
-The main type 't' should implement standard functions: equal, compare, and pp (pretty-printer) for better usability and consistency across the codebase. For simple types, polymorphic equal (=) and compare functions are sufficient. For more complex types with invariants or custom representations, implement specialized versions.
+The main type 't' should implement a pretty-printer function (pp) for better debugging and logging. Unlike equality and comparison which can use polymorphic functions (= and compare), pretty-printing requires a custom implementation to provide meaningful output.
 
 **Examples:**
 
@@ -213,8 +213,6 @@ type t = { id: int; name: string }
 **Good:**
 ```ocaml
 type t = { id: int; name: string }
-val equal : t -> t -> bool
-val compare : t -> t -> int
 val pp : Format.formatter -> t -> unit
 ```
 

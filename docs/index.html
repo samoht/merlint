@@ -897,9 +897,9 @@ pre code {
 <div class="error-card" id="E415">
     <div>
         <span class="error-code">E415</span>
-        <span class="error-title">Missing Standard Functions</span>
+        <span class="error-title">Missing Pretty Printer</span>
     </div>
-    <div class="error-hint"><p>The main type 't' should implement standard functions: equal, compare, and pp (pretty-printer) for better usability and consistency across the codebase. For simple types, polymorphic equal (=) and compare functions are sufficient. For more complex types with invariants or custom representations, implement specialized versions.</p><div class="examples-grid">
+    <div class="error-hint"><p>The main type 't' should implement a pretty-printer function (pp) for better debugging and logging. Unlike equality and comparison which can use polymorphic functions (= and compare), pretty-printing requires a custom implementation to provide meaningful output.</p><div class="examples-grid">
 <div class="example bad">
   <h4>BAD</h4>
   <pre><code><span class="kw">type</span> t = { id: int; name: string }</code></pre>
@@ -907,8 +907,6 @@ pre code {
 <div class="example good">
   <h4>GOOD</h4>
   <pre><code><span class="kw">type</span> t = { id: int; name: string }
-<span class="kw">val</span> equal : t -&gt; t -&gt; bool
-<span class="kw">val</span> compare : t -&gt; t -&gt; int
 <span class="kw">val</span> pp : <span class="cn">Format</span>.formatter -&gt; t -&gt; unit</code></pre>
 </div>
 </div></div>
