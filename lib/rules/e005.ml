@@ -21,6 +21,29 @@ let check (ctx : Context.file) =
         false
   in
 
+  (* Count total match cases in an expression *)
+  let rec count_match_cases = function
+    | Ast.Match { cases; _ } -> cases
+    | Ast.Function { body; _ } -> count_match_cases body
+    | Ast.Let { body; bindings } ->
+        let binding_cases =
+          List.fold_left
+            (fun acc (_, expr) -> acc + count_match_cases expr)
+            0 bindings
+        in
+        binding_cases + count_match_cases body
+    | Ast.If_then_else { then_expr; else_expr; _ } ->
+        let then_cases = count_match_cases then_expr in
+        let else_cases =
+          match else_expr with Some expr -> count_match_cases expr | None -> 0
+        in
+        then_cases + else_cases
+    | Ast.Sequence exprs ->
+        List.fold_left (fun acc expr -> acc + count_match_cases expr) 0 exprs
+    | Ast.Try { expr; _ } -> count_match_cases expr
+    | Ast.List | Ast.Other -> 0
+  in
+
   (* Analyze each function from the outline *)
   List.filter_map
     (fun (item : Outline.item) ->
@@ -42,7 +65,21 @@ let check (ctx : Context.file) =
               (* Skip length check for pure data structures *)
               if is_data_def then None
               else
-                let threshold = config.max_function_length in
+                (* Find the function's AST to count match cases *)
+                let match_cases =
+                  match
+                    List.find_opt
+                      (fun (name, _) -> name = item.name)
+                      ast.functions
+                  with
+                  | Some (_, expr) -> count_match_cases expr
+                  | None -> 0
+                in
+
+                (* Apply additional allowance for pattern matching (2 lines per case) *)
+                let threshold =
+                  config.max_function_length + (match_cases * 2)
+                in
 
                 if length > threshold then
                   let loc =
