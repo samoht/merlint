@@ -9,7 +9,12 @@ let check ctx =
     List.filter_map
       (fun (elt : Dump.elt) ->
         let name = Dump.name_to_string elt.name in
-        if String.length name > 0 && name.[0] = '_' then
+        if
+          String.length name > 0
+          && name.[0] = '_'
+          && not (String.starts_with ~prefix:"__" name)
+        (* Ignore PPX-generated code *)
+        then
           match Dump.location elt with
           | Some loc -> Some (name, loc)
           | None -> None
@@ -50,7 +55,8 @@ let rule =
       "Bindings prefixed with underscore (like '_x') indicate they are meant \
        to be unused. If you need to use the binding, remove the underscore \
        prefix. If the binding is truly unused, consider using a wildcard \
-       pattern '_' instead."
+       pattern '_' instead. Note: PPX-generated code with double underscore \
+       prefix (like '__ppx_generated') is excluded from this check."
     ~examples:
       [ Example.bad Examples.E335.bad_ml; Example.good Examples.E335.good_ml ]
     ~pp (File check)

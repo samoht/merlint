@@ -721,7 +721,7 @@ pre code {
         <span class="error-code">E335</span>
         <span class="error-title">Used Underscore-Prefixed Binding</span>
     </div>
-    <div class="error-hint"><p>Bindings prefixed with underscore (like '_x') indicate they are meant to be unused. If you need to use the binding, remove the underscore prefix. If the binding is truly unused, consider using a wildcard pattern '_' instead.</p><div class="examples-grid">
+    <div class="error-hint"><p>Bindings prefixed with underscore (like '_x') indicate they are meant to be unused. If you need to use the binding, remove the underscore prefix. If the binding is truly unused, consider using a wildcard pattern '_' instead. Note: PPX-generated code with double underscore prefix (like '__ppx_generated') is excluded from this check.</p><div class="examples-grid">
 <div class="example bad">
   <h4>BAD</h4>
   <pre><code><span class="kw">let</span> _debug_mode = <span class="kw">true</span> <span class="kw">in</span>
