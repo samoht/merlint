@@ -75,3 +75,6 @@ val lib_modules : project -> string list
 
 val test_modules : project -> string list
 (** [test_modules project] returns test module names. *)
+
+val dune_describe : project -> Dune.describe
+(** [dune_describe project] returns the dune project description. *)

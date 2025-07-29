@@ -39,3 +39,9 @@ val exclude : string list -> describe -> describe
 val create_synthetic : string list -> describe
 (** [create_synthetic files] creates a synthetic describe for individual files
     passed on command line. *)
+
+val get_libraries : describe -> (string * Fpath.t list) list
+(** [get_libraries describe] returns the list of libraries with their files. *)
+
+val get_tests : describe -> (string * Fpath.t list) list
+(** [get_tests describe] returns the list of test stanzas with their files. *)

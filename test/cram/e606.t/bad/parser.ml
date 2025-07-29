@@ -1,0 +1,1 @@
+let parse s = int_of_string s

@@ -441,3 +441,9 @@ let create_synthetic files =
     executables = [];
     tests = [];
   }
+
+(** Get libraries from describe *)
+let get_libraries describe = describe.libraries
+
+(** Get tests from describe *)
+let get_tests describe = describe.tests

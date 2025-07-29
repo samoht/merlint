@@ -31,37 +31,7 @@ let all_rules =
     E510.rule;
     E600.rule;
     E605.rule;
+    E606.rule;
     E610.rule;
     E615.rule;
-    (* TODO: Convert remaining rules to GADT format
-  Rule.Pack E005.rule;
-  Rule.Pack E010.rule;
-  Rule.Pack E100.rule;
-  Rule.Pack E105.rule;
-  Rule.Pack E110.rule;
-  Rule.Pack E200.rule;
-  Rule.Pack E205.rule;
-  Rule.Pack E300.rule;
-  Rule.Pack E305.rule;
-  Rule.Pack E310.rule;
-  Rule.Pack E315.rule;
-  Rule.Pack E320.rule;
-  Rule.Pack E325.rule;
-  Rule.Pack E330.rule;
-  Rule.Pack E335.rule;
-  Rule.Pack E340.rule;
-  Rule.Pack E350.rule;
-  Rule.Pack E351.rule;
-  Rule.Pack E400.rule;
-  Rule.Pack E405.rule;
-  Rule.Pack E410.rule;
-  Rule.Pack E415.rule;
-  Rule.Pack E500.rule;
-  Rule.Pack E505.rule;
-  Rule.Pack E510.rule;
-  Rule.Pack E600.rule;
-  Rule.Pack E605.rule;
-  Rule.Pack E610.rule;
-  Rule.Pack E615.rule;
-  *)
   ]

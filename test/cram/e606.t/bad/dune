@@ -1,0 +1,11 @@
+(library
+ (name parser_lib)
+ (modules parser))
+
+(library
+ (name utils_lib) 
+ (modules utils))
+
+(test
+ (name test_parser)
+ (modules test_parser test_utils))
