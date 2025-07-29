@@ -40,3 +40,6 @@ _esy/
 
 # Generated files
 lib/examples.ml
+
+# Debug logs
+logs.txt
