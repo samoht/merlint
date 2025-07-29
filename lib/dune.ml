@@ -435,11 +435,19 @@ let exclude patterns describe =
 (** Create a synthetic describe for individual files *)
 let create_synthetic files =
   let fpath_files = List.map Fpath.v files in
-  (* Treat individual files as library files by default, not executables *)
+  (* Separate test files from library files based on module name *)
+  let lib_files, test_files =
+    List.partition
+      (fun f ->
+        let basename = Fpath.(f |> rem_ext |> basename) in
+        not (String.starts_with ~prefix:"test_" basename || basename = "test"))
+      fpath_files
+  in
   {
-    libraries = [ ("merlint_synthetic", fpath_files) ];
+    libraries =
+      (if lib_files = [] then [] else [ ("merlint_synthetic", lib_files) ]);
     executables = [];
-    tests = [];
+    tests = (if test_files = [] then [] else [ ("test", test_files) ]);
   }
 
 (** Get libraries from describe *)

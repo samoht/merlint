@@ -19,6 +19,7 @@ let check (ctx : Context.project) =
     let is_test =
       List.mem module_name test_modules
       || List.mem module_name_capitalized test_modules
+      || String.starts_with ~prefix:"test_" module_name
     in
 
     if is_exe then

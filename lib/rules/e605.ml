@@ -26,21 +26,28 @@ let create_missing_test_issue module_name files =
 let check (ctx : Context.project) =
   let files = Context.all_files ctx in
   let lib_modules = Context.lib_modules ctx in
+  let test_modules = Context.test_modules ctx in
 
   (* E605 checks if library modules have corresponding test files.
-     It's up to the user to include the right directories when running merlint. *)
+     First check dune metadata, then check actual files being analyzed. *)
   let missing_tests =
     List.filter
       (fun lib_mod ->
-        let expected_test_name = "test_" ^ lib_mod in
-        (* Check if test file exists in the files list *)
-        not
-          (List.exists
-             (fun f ->
-               String.ends_with ~suffix:".ml" f
-               && Filename.basename (Filename.remove_extension f)
-                  = expected_test_name)
-             files))
+        (* Skip if this is already a test module *)
+        if String.starts_with ~prefix:"test_" lib_mod then false
+        else
+          let expected_test_name = "test_" ^ lib_mod in
+          (* Check both:
+             1. If test module exists in dune metadata (test_modules)
+             2. If test file exists in the files being analyzed *)
+          (not (List.mem expected_test_name test_modules))
+          && not
+               (List.exists
+                  (fun f ->
+                    String.ends_with ~suffix:".ml" f
+                    && Filename.basename (Filename.remove_extension f)
+                       = expected_test_name)
+                  files))
       lib_modules
   in
   List.map (fun m -> create_missing_test_issue m files) missing_tests
