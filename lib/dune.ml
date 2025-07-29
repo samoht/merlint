@@ -429,21 +429,18 @@ let describe project_root = !describe_ref project_root
 
 (** Merge multiple describe values *)
 let merge describes =
-  let libraries =
-    describes
-    |> List.concat_map (fun d -> d.libraries)
-    |> List.sort_uniq (fun (n1, _) (n2, _) -> String.compare n1 n2)
-  in
-  let executables =
-    describes
-    |> List.concat_map (fun d -> d.executables)
-    |> List.sort_uniq (fun (n1, _) (n2, _) -> String.compare n1 n2)
-  in
-  let tests =
-    describes
-    |> List.concat_map (fun d -> d.tests)
-    |> List.sort_uniq (fun (n1, _) (n2, _) -> String.compare n1 n2)
-  in
+  Log.debug (fun m -> m "Merging %d describes" (List.length describes));
+
+  (* Concatenate all entries without merging - entries from different directories
+     should remain separate even if they have the same name *)
+  let libraries = describes |> List.concat_map (fun d -> d.libraries) in
+  let executables = describes |> List.concat_map (fun d -> d.executables) in
+  let tests = describes |> List.concat_map (fun d -> d.tests) in
+
+  Log.debug (fun m ->
+      m "Merged describes: %d libraries, %d executables, %d tests"
+        (List.length libraries) (List.length executables) (List.length tests));
+
   { libraries; executables; tests }
 
 (** Filter out files matching patterns *)
