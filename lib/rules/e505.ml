@@ -15,15 +15,18 @@ let check (ctx : Context.project) =
     (* Skip if it's an executable *)
     let is_exe = List.mem module_name_capitalized executable_modules in
 
-    (* Skip if it's a test module *)
-    let is_test = List.mem module_name_capitalized test_modules in
+    (* Skip if it's a test module - check both regular and lowercase module names *)
+    let is_test =
+      List.mem module_name test_modules
+      || List.mem module_name_capitalized test_modules
+    in
 
     if is_exe then
       Logs.debug (fun m ->
           m "File %s is executable (module %s)" ml_file module_name_capitalized);
     if is_test then
       Logs.debug (fun m ->
-          m "File %s is test module (module %s)" ml_file module_name_capitalized);
+          m "File %s is test module (module %s)" ml_file module_name);
 
     is_exe || is_test
   in

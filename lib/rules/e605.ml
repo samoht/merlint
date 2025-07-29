@@ -26,17 +26,44 @@ let create_missing_test_issue module_name files =
 let check (ctx : Context.project) =
   let files = Context.all_files ctx in
   let lib_modules = Context.lib_modules ctx in
-  let test_modules = Context.test_modules ctx in
 
-  let missing_tests =
-    List.filter
-      (fun lib_mod ->
-        let expected_test_module = "test_" ^ lib_mod in
-        not (List.mem expected_test_module test_modules))
-      lib_modules
+  (* E605 checks if library modules have corresponding test files.
+     Only check if we're analyzing files from a library directory AND
+     we can see the whole project structure (e.g., test directories). *)
+
+  (* Check if we're only analyzing a subset of the project *)
+  let analyzing_subset =
+    List.exists (fun f -> String.contains f '/') files
+    && not
+         (List.exists
+            (fun f ->
+              String.contains f '/' && String.contains f '.'
+              && String.contains (Filename.dirname f) '/'
+              && Filename.basename (Filename.dirname f) = "test")
+            files)
   in
 
-  List.map (fun m -> create_missing_test_issue m files) missing_tests
+  if analyzing_subset then
+    (* We're only analyzing part of the project (e.g., just lib/), 
+       so we can't reliably check for test files *)
+    []
+  else
+    (* We can see the full project structure, so check for test files *)
+    let missing_tests =
+      List.filter
+        (fun lib_mod ->
+          let expected_test_name = "test_" ^ lib_mod in
+          (* Check if test file exists in the files list *)
+          not
+            (List.exists
+               (fun f ->
+                 String.ends_with ~suffix:".ml" f
+                 && Filename.basename (Filename.remove_extension f)
+                    = expected_test_name)
+               files))
+        lib_modules
+    in
+    List.map (fun m -> create_missing_test_issue m files) missing_tests
 
 let pp ppf { module_name; expected_test_file } =
   Fmt.pf ppf "Library module %s is missing test file %s" module_name
