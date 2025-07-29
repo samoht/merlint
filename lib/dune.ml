@@ -73,15 +73,28 @@ let parse_dune_file filename =
     close_in ic;
 
     (* Parse all S-expressions in the file *)
-    Parsexp.Many.parse_string content |> Result.value ~default:[]
+    let stanzas =
+      Parsexp.Many.parse_string content |> Result.value ~default:[]
+    in
+    Log.debug (fun m ->
+        m "Parsed dune file %a: found %d stanzas" Fpath.pp filename
+          (List.length stanzas));
+    stanzas
   with Sys_error _ | End_of_file -> []
 
 (** Extract modules from a modules field *)
 let extract_modules_field = function
   | Sexp.List (Sexp.Atom "modules" :: modules) ->
-      List.filter_map
-        (function Sexp.Atom name -> Some name | _ -> None)
-        modules
+      let result =
+        List.filter_map
+          (function Sexp.Atom name -> Some name | _ -> None)
+          modules
+      in
+      Log.debug (fun m ->
+          m "Extracted modules from field: %a"
+            Fmt.(list ~sep:comma string)
+            result);
+      result
   | _ -> []
 
 type project_item =
@@ -147,6 +160,12 @@ let extract_project_item dir = function
       let modules = List.concat_map extract_modules_field fields in
       (* Handle test stanzas without explicit names - use "test" as default *)
       let test_names = if names = [] then [ "test" ] else names in
+      Log.debug (fun m ->
+          m "Found test stanza in %a: names=%a, modules=%a" Fpath.pp dir
+            Fmt.(list ~sep:comma string)
+            test_names
+            Fmt.(list ~sep:comma string)
+            modules);
       Some (Test { names = test_names; dir; modules })
   | Sexp.List (Sexp.Atom "cram" :: _) -> Some (Cram_test { dir })
   | _ -> None
@@ -157,6 +176,9 @@ let get_item_files = function
       let dir_path = dir in
       if modules = [] then (
         (* No explicit modules, find all .ml/.mli files in dir *)
+        Log.debug (fun m ->
+            m "Library in %a has no explicit modules, scanning directory"
+              Fpath.pp dir);
         let files = ref [] in
         (try
            let entries = Sys.readdir (Fpath.to_string dir) in
@@ -170,14 +192,21 @@ let get_item_files = function
                     && String.contains entry '#'))
                  && (String.ends_with ~suffix:".ml" entry
                     || String.ends_with ~suffix:".mli" entry)
-               then
+               then (
                  let file_path = Fpath.(dir_path / entry) |> Fpath.normalize in
-                 files := file_path :: !files)
+                 Log.debug (fun m -> m "  Found file: %a" Fpath.pp file_path);
+                 files := file_path :: !files))
              entries
          with Sys_error _ -> ());
+        Log.debug (fun m ->
+            m "Library in %a found %d files" Fpath.pp dir (List.length !files));
         !files)
-      else
+      else (
         (* Explicit modules *)
+        Log.debug (fun m ->
+            m "Library in %a has explicit modules: %a" Fpath.pp dir
+              Fmt.(list ~sep:comma string)
+              modules);
         List.concat_map
           (fun m ->
             let ml = Fpath.(dir_path / (m ^ ".ml")) |> Fpath.normalize in
@@ -185,7 +214,7 @@ let get_item_files = function
             List.filter
               (fun p -> Sys.file_exists (Fpath.to_string p))
               [ ml; mli ])
-          modules
+          modules)
   | Executable { names; dir; modules } ->
       let dir_path = dir in
       let base_modules = if modules = [] then names else modules in
@@ -199,6 +228,9 @@ let get_item_files = function
       let dir_path = dir in
       if modules = [] then (
         (* No explicit modules, find all .ml/.mli files in dir *)
+        Log.debug (fun m ->
+            m "Test in %a has no explicit modules, scanning directory" Fpath.pp
+              dir);
         let files = ref [] in
         (try
            let entries = Sys.readdir (Fpath.to_string dir) in
@@ -212,14 +244,22 @@ let get_item_files = function
                     && String.contains entry '#'))
                  && (String.ends_with ~suffix:".ml" entry
                     || String.ends_with ~suffix:".mli" entry)
-               then
+               then (
                  let file_path = Fpath.(dir_path / entry) |> Fpath.normalize in
-                 files := file_path :: !files)
+                 Log.debug (fun m ->
+                     m "  Found test file: %a" Fpath.pp file_path);
+                 files := file_path :: !files))
              entries
          with Sys_error _ -> ());
+        Log.debug (fun m ->
+            m "Test in %a found %d files" Fpath.pp dir (List.length !files));
         !files)
-      else
+      else (
         (* Explicit modules *)
+        Log.debug (fun m ->
+            m "Test in %a has explicit modules: %a" Fpath.pp dir
+              Fmt.(list ~sep:comma string)
+              modules);
         List.concat_map
           (fun m ->
             let ml = Fpath.(dir_path / (m ^ ".ml")) |> Fpath.normalize in
@@ -227,7 +267,7 @@ let get_item_files = function
             List.filter
               (fun p -> Sys.file_exists (Fpath.to_string p))
               [ ml; mli ])
-          modules
+          modules)
   | Cram_test _ -> []
 
 (** Get all project source files from describe *)
@@ -283,6 +323,12 @@ let get_test_modules dune_describe =
 let get_project_structure project_root =
   (* Find all dune files *)
   let dune_files = get_dune_files project_root in
+  Log.debug (fun m ->
+      m "Found %d dune files in %a" (List.length dune_files) Fpath.pp
+        project_root);
+  List.iter
+    (fun f -> Log.debug (fun m -> m "  Dune file: %a" Fpath.pp f))
+    dune_files;
 
   (* First pass: find all cram directories *)
   let cram_dirs =
