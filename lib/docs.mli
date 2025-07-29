@@ -8,6 +8,7 @@
 type style_issue =
   | Missing_period
   | Bad_function_format
+  | Bad_operator_format
   | Redundant_phrase of string
   | Regular_comment_instead_of_doc  (** Documentation style issues. *)
 

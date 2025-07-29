@@ -3,6 +3,7 @@
 type style_issue =
   | Missing_period
   | Bad_function_format
+  | Bad_operator_format
   | Redundant_phrase of string
   | Regular_comment_instead_of_doc
 
@@ -10,14 +11,38 @@ let check_function_doc ~name ~doc =
   (* Function docs should follow: [function_name args] description. *)
   let issues = ref [] in
 
-  (* Check for [name ...] format *)
-  let pattern =
-    Re.compile
-      (Re.seq [ Re.str "["; Re.str name; Re.alt [ Re.space; Re.str "]" ] ])
+  (* Check if this is an operator (contains special operator characters) *)
+  let is_operator =
+    (* Check if name contains operator characters and doesn't start with a letter *)
+    String.length name > 0
+    && not
+         (match name.[0] with
+         | 'a' .. 'z' | 'A' .. 'Z' | '_' -> true
+         | _ -> false)
   in
-  let has_bracket_format = Re.execp pattern doc in
 
-  if not has_bracket_format then issues := Bad_function_format :: !issues;
+  let has_bracket_format =
+    if is_operator then
+      (* For operators, only accept infix notation [x op y] *)
+      let infix_pattern =
+        Re.compile
+          (Re.seq
+             [ Re.str "["; Re.rep1 Re.alnum; Re.space; Re.str name; Re.space ])
+      in
+      Re.execp infix_pattern doc
+    else
+      (* Regular function: [name ...] format *)
+      let pattern =
+        Re.compile
+          (Re.seq [ Re.str "["; Re.str name; Re.alt [ Re.space; Re.str "]" ] ])
+      in
+      Re.execp pattern doc
+  in
+
+  if not has_bracket_format then
+    issues :=
+      (if is_operator then Bad_operator_format else Bad_function_format)
+      :: !issues;
 
   (* Check for redundant phrases *)
   let lower = String.lowercase_ascii doc in
@@ -71,6 +96,8 @@ let pp_style_issue ppf = function
   | Missing_period -> Fmt.string ppf "should end with a period"
   | Bad_function_format ->
       Fmt.string ppf "should use '[function_name args] description.' format"
+  | Bad_operator_format ->
+      Fmt.string ppf "should use '[x op y] description.' format for operators"
   | Redundant_phrase phrase -> Fmt.pf ppf "avoid redundant phrase '%s'" phrase
   | Regular_comment_instead_of_doc ->
       Fmt.string ppf "use doc comment (** ... *) instead of regular comment"

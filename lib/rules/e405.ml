@@ -4,7 +4,7 @@ open Examples
 type payload = { value_name : string; location : Location.t }
 
 let has_doc_comment content line_num =
-  (* Check if there's a doc comment (** ... *) before the given line *)
+  (* Check if there's a doc comment (** ... *) immediately before the given line *)
   let lines = String.split_on_char '\n' content in
   let rec check_backwards idx =
     if idx < 0 then false
@@ -29,7 +29,7 @@ let has_doc_comment content line_num =
         (* Single-line doc comment *)
         true
       else
-        (* Some other content, no doc comment *)
+        (* Any other content (including declarations), no doc comment immediately before *)
         false
   in
   check_backwards (line_num - 2)

@@ -56,7 +56,8 @@ let rule =
   Rule.v ~code:"E410" ~title:"Bad Documentation Style" ~category:Documentation
     ~hint:
       "Follow OCaml documentation conventions: Functions should use '[name \
-       args] description.' format. All documentation should end with a period. \
+       args] description.' format. Operators should use infix notation like \
+       '[x op y] description.' All documentation should end with a period. \
        Avoid redundant phrases like 'This function...'."
     ~examples:
       [
