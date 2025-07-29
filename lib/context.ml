@@ -64,7 +64,27 @@ let create_project ~config ~project_root ~all_files ~dune_describe =
   {
     config;
     project_root;
-    all_files = lazy all_files;
+    all_files =
+      lazy
+        (Log.debug (fun m ->
+             m "Context: Total files to analyze: %d" (List.length all_files));
+         (* Check specifically for test_author.ml and similar *)
+         let specific_test_files =
+           [ "test_author.ml"; "test_blog.ml"; "test_build.ml" ]
+         in
+         List.iter
+           (fun name ->
+             let found =
+               List.exists (fun f -> String.ends_with ~suffix:name f) all_files
+             in
+             if found then
+               let path =
+                 List.find (fun f -> String.ends_with ~suffix:name f) all_files
+               in
+               Log.debug (fun m -> m "Context: Found %s at: %s" name path)
+             else Log.debug (fun m -> m "Context: NOT FOUND: %s" name))
+           specific_test_files;
+         all_files);
     dune_describe = dune_desc_lazy;
     executable_modules =
       lazy (Dune.get_executable_modules (Lazy.force dune_desc_lazy));
