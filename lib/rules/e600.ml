@@ -38,13 +38,6 @@ let defines_own_tests content =
           ]))
     content
 
-let get_module_name filename =
-  let base_name = Filename.basename filename |> Filename.chop_extension in
-  (* Remove _test suffix if present *)
-  if String.ends_with ~suffix:"_test" base_name then
-    String.sub base_name 0 (String.length base_name - 5)
-  else base_name
-
 (** Check if a test.ml file properly uses test module suites instead of defining
     its own tests. *)
 let check_test_file_uses_modules filename content =
@@ -79,52 +72,73 @@ let check_test_file_uses_modules filename content =
 (** Check if a test_*.mli file exports only suite with correct type *)
 let check_test_mli_file filename content =
   let basename = Filename.basename filename in
-  (* Only check test_*.mli files in test directories, not test.mli *)
   if
-    not
-      (String.starts_with ~prefix:"test_" basename
-      && String.ends_with ~suffix:".mli" basename
-      && String.contains filename '/'
-      &&
-      let parts = String.split_on_char '/' filename in
-      List.exists (fun p -> p = "test" || p = "tests") parts)
-  then []
-  else
-    (* Check if it has the correct suite signature *)
-    let has_correct_suite =
-      Re.execp
-        (Re.compile
-           (Re.seq
-              [
-                Re.str "val";
-                Re.rep1 Re.space;
-                Re.str "suite";
-                Re.rep Re.space;
-                Re.str ":";
-                Re.rep Re.space;
-                Re.str "string * unit Alcotest.test_case list";
-              ]))
-        content
-    in
-    (* Check if it exports anything else (simplified check) *)
+    String.ends_with ~suffix:".mli" basename
+    && String.starts_with ~prefix:"test_" basename
+    && basename <> "test.mli"
+  then
+    (* Parse the interface to check what's exported *)
     let lines = String.split_on_char '\n' content in
-    let val_lines =
+    let non_comment_lines =
       List.filter
         (fun line ->
           let trimmed = String.trim line in
-          String.starts_with ~prefix:"val " trimmed
-          && not (String.starts_with ~prefix:"val suite" trimmed))
+          trimmed <> "" && not (String.starts_with ~prefix:"(*" trimmed))
         lines
     in
-    if (not has_correct_suite) || val_lines <> [] then
+    (* Check if it exports only a suite with the correct type *)
+    let exports_suite =
+      List.exists
+        (fun line ->
+          Re.execp
+            (Re.compile
+               (Re.seq
+                  [
+                    Re.bow;
+                    Re.str "val";
+                    Re.rep1 Re.space;
+                    Re.str "suite";
+                    Re.rep Re.space;
+                    Re.str ":";
+                  ]))
+            line)
+        non_comment_lines
+    in
+    let exports_other =
+      List.exists
+        (fun line ->
+          let is_val_line =
+            Re.execp
+              (Re.compile (Re.seq [ Re.bow; Re.str "val"; Re.rep1 Re.space ]))
+              line
+          in
+          let is_suite_line =
+            Re.execp
+              (Re.compile
+                 (Re.seq
+                    [
+                      Re.bow;
+                      Re.str "val";
+                      Re.rep1 Re.space;
+                      Re.str "suite";
+                      Re.rep Re.space;
+                      Re.str ":";
+                    ]))
+              line
+          in
+          is_val_line && not is_suite_line)
+        non_comment_lines
+    in
+    if exports_other || not exports_suite then
       [
         Issue.v
           ~loc:
             (Location.create ~file:filename ~start_line:1 ~start_col:0
                ~end_line:1 ~end_col:0)
-          { filename; module_name = get_module_name filename };
+          { filename; module_name = basename |> Filename.chop_extension };
       ]
     else []
+  else []
 
 (** Check all files for test convention issues *)
 let check ctx =
@@ -149,15 +163,21 @@ let check ctx =
       else [])
     files
 
-let pp ppf { filename = _; module_name = _ } =
-  Fmt.pf ppf
-    "Test file should use test module suites (e.g., Test_user.suite) instead \
-     of defining its own test list"
+let pp ppf { filename; module_name = _ } =
+  if String.ends_with ~suffix:".mli" filename then
+    Fmt.pf ppf
+      "Test module interface should only export 'suite' with type unit \
+       Alcotest.test"
+  else
+    Fmt.pf ppf
+      "Test file should use test module suites (e.g., Test_user.suite) instead \
+       of defining its own test list"
 
 let rule =
   Rule.v ~code:"E600" ~title:"Test Module Convention" ~category:Testing
     ~hint:
       "Test executables (test.ml) should use test suites exported by test \
-       modules (test_*.ml) rather than defining their own test lists. This \
-       promotes modularity and ensures test modules are properly integrated."
+       modules (test_*.ml) rather than defining their own test lists. Test \
+       module interfaces (test_*.mli) should only export a 'suite' value with \
+       the correct type to ensure proper test organization."
     ~examples:[] ~pp (Project check)

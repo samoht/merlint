@@ -763,7 +763,7 @@ Log.info (fun m ->
 
 ### [E600] Test Module Convention
 
-Test executables (test.ml) should use test suites exported by test modules (test_*.ml) rather than defining their own test lists. This promotes modularity and ensures test modules are properly integrated.
+Test executables (test.ml) should use test suites exported by test modules (test_*.ml) rather than defining their own test lists. Test module interfaces (test_*.mli) should only export a 'suite' value with the correct type to ensure proper test organization.
 
 ### [E605] Missing Test File
 

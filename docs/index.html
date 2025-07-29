@@ -966,7 +966,7 @@ pre code {
         <span class="error-code">E600</span>
         <span class="error-title">Test Module Convention</span>
     </div>
-    <div class="error-hint"><p>Test executables (test.ml) should use test suites exported by test modules (test_*.ml) rather than defining their own test lists. This promotes modularity and ensures test modules are properly integrated.</p></div>
+    <div class="error-hint"><p>Test executables (test.ml) should use test suites exported by test modules (test_*.ml) rather than defining their own test lists. Test module interfaces (test_*.mli) should only export a 'suite' value with the correct type to ensure proper test organization.</p></div>
 </div>
 <div class="error-card" id="E605">
     <div>
@@ -984,7 +984,9 @@ pre code {
 <div class="example bad">
   <h4>BAD</h4>
   <pre><code><span class="cm">(** Bad: test_utils tests utils_lib but is in test_parser stanza *)</span>
-<span class="kw">let</span> test_identity () = <span class="kw">assert</span> (<span class="cn">Utils</span>.identity <span class="nu">1</span> = <span class="nu">1</span>)</code></pre>
+<span class="kw">let</span> test_identity () = <span class="kw">assert</span> (<span class="cn">Utils_lib</span>.<span class="cn">Utils</span>.identity <span class="nu">1</span> = <span class="nu">1</span>)
+
+<span class="kw">let</span> () = test_identity ()</code></pre>
 </div>
 <div class="example good">
   <h4>GOOD</h4>

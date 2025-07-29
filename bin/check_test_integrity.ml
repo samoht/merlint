@@ -48,7 +48,6 @@ let re_dune_error =
   Re.compile
     (Re.seq [ Re.str "ERROR"; Re.rep Re.any; Re.str "Dune build failed" ])
 
-let re_continuing = Re.compile (Re.str "Continuing with analysis")
 let re_exit_1 = Re.compile (Re.str "[1]")
 
 let re_zero_issues =
@@ -398,18 +397,26 @@ let check_expected_outputs cram_dir defined_rules test_dirs errors =
         (* Check each test in the run.t file *)
         List.iter
           (fun (test_name, output_lines) ->
-            (* Check for dune build failure *)
-            (* Only consider it an error if merlint doesn't continue with analysis *)
-            let has_dune_error =
-              List.exists (fun line -> Re.execp re_dune_error line) output_lines
+            (* Check for any build failures or warnings - these should not be present in tests *)
+            let has_build_error =
+              let re_command_failed =
+                Re.compile (Re.str "Command failed with exit code")
+              in
+              let re_build_warning =
+                Re.compile (Re.str "Warning: Failed to build project")
+              in
+              List.exists
+                (fun line ->
+                  Re.execp re_dune_error line
+                  || Re.execp re_command_failed line
+                  || Re.execp re_build_warning line)
+                output_lines
             in
-            let continues_with_analysis =
-              List.exists (fun line -> Re.execp re_continuing line) output_lines
-            in
-            if has_dune_error && not continues_with_analysis then
+            if has_build_error then
               errors :=
                 Fmt.str
-                  "Error: %s/%s.t/run.t: %s.ml test shows Dune build failure"
+                  "Error: %s/%s.t/run.t: %s.ml test shows build \
+                   errors/warnings - fix the test project setup"
                   cram_dir rule_code test_name
                 :: !errors
             else if test_name = "bad" then

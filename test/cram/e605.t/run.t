@@ -36,3 +36,8 @@ Test good example - should find no issues:
   
   Summary: ✓ 0 total issues (applied 1 rule)
   ✓ All checks passed!
+
+Test multidir - analyzing lib and test together should not report missing tests when they exist:
+  $ merlint -r E605 good/lib good/test 2>&1 | grep -c "missing test file"
+  0
+  [1]

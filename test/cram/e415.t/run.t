@@ -1,9 +1,5 @@
 Test bad example - should find missing standard functions:
   $ merlint -r E415 bad.mli
-  merlint: [ERROR] Command failed with exit code 1
-  Warning: Failed to build project: Command failed with exit code 1
-  Function type analysis may not work properly.
-  Continuing with analysis...
   Running merlint analysis...
   
   Analyzing 1 files
@@ -27,10 +23,6 @@ Test bad example - should find missing standard functions:
 
 Test good example - should find no issues:
   $ merlint -r E415 good.mli
-  merlint: [ERROR] Command failed with exit code 1
-  Warning: Failed to build project: Command failed with exit code 1
-  Function type analysis may not work properly.
-  Continuing with analysis...
   Running merlint analysis...
   
   Analyzing 1 files

@@ -1,6 +1,2 @@
-(* test.ml - main test executable *)
-module Test_user = struct
-  let suite = ("user", [])
-end
-
-let () = Alcotest.run "Test suite description" [Test_user.suite]
+(* test.ml - main test executable that properly uses test suites *)
+let () = Alcotest.run "test" [Test_user.suite]

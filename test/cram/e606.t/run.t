@@ -15,10 +15,6 @@ Good tests in correct test stanza:
 
 Bad test files in wrong test stanza:
   $ merlint -r E606 bad/
-  merlint: [ERROR] Command failed with exit code 1
-  Warning: Failed to build project: Command failed with exit code 1
-  Function type analysis may not work properly.
-  Continuing with analysis...
   Running merlint analysis...
   
   Analyzing 4 files

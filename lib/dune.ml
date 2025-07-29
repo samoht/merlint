@@ -145,7 +145,9 @@ let extract_project_item dir = function
           fields
       in
       let modules = List.concat_map extract_modules_field fields in
-      if names <> [] then Some (Test { names; dir; modules }) else None
+      (* Handle test stanzas without explicit names - use "test" as default *)
+      let test_names = if names = [] then [ "test" ] else names in
+      Some (Test { names = test_names; dir; modules })
   | Sexp.List (Sexp.Atom "cram" :: _) -> Some (Cram_test { dir })
   | _ -> None
 
