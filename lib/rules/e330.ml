@@ -17,8 +17,11 @@ let kind_to_string = function
 
 (** Check if an item name has redundant module prefix *)
 let has_redundant_prefix item_name_lower module_name =
-  String.starts_with ~prefix:(module_name ^ "_") item_name_lower
-  || item_name_lower = module_name
+  (* Special case: pp function in pp module is idiomatic *)
+  if item_name_lower = "pp" && module_name = "pp" then false
+  else
+    String.starts_with ~prefix:(module_name ^ "_") item_name_lower
+    || item_name_lower = module_name
 
 (** Create redundant module name issue *)
 let create_redundant_name_issue item_name module_name location item_type =
@@ -63,7 +66,7 @@ let rule =
     ~hint:
       "Avoid prefixing type or function names with the module name. The module \
        already provides the namespace, so Message.message_type should just be \
-       Message.t"
+       Message.t. Exception: Pp.pp is idiomatic for pretty-printing modules."
     ~examples:
       [
         Example.bad Examples.E330.Bad.process_ml;

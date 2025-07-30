@@ -698,7 +698,7 @@ pre code {
         <span class="error-code">E330</span>
         <span class="error-title">Redundant Module Name</span>
     </div>
-    <div class="error-hint"><p>Avoid prefixing type or function names with the module name. The module already provides the namespace, so Message.message_type should just be Message.t</p><div class="examples-grid">
+    <div class="error-hint"><p>Avoid prefixing type or function names with the module name. The module already provides the namespace, so Message.message_type should just be Message.t. Exception: Pp.pp is idiomatic for pretty-printing modules.</p><div class="examples-grid">
 <div class="example bad">
   <h4>BAD</h4>
   <pre><code><span class="cm">(* Module process.ml *)</span>
