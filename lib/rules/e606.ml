@@ -1,10 +1,6 @@
 (** E606: Test Files Mixed From Different Libraries *)
 
-type payload = {
-  test_module : string;
-  library_name : string;
-  mixed_with : string list; (* Other libraries in same test directory *)
-}
+type payload = { test_module : string; library_name : string }
 
 let check (ctx : Context.project) =
   let dune_describe = Context.dune_describe ctx in
@@ -12,18 +8,29 @@ let check (ctx : Context.project) =
   (* Build a map from module names to all libraries that contain them *)
   let module_to_libraries =
     List.fold_left
-      (fun acc (lib_name, files) ->
+      (fun acc (lib_info : Dune.library_info) ->
         List.fold_left
           (fun acc file ->
             if Fpath.has_ext ".ml" file then
               let module_name = Fpath.(file |> rem_ext |> basename) in
               match List.assoc_opt module_name acc with
               | Some libs ->
-                  (module_name, lib_name :: libs)
+                  (module_name, lib_info.name :: libs)
                   :: List.remove_assoc module_name acc
-              | None -> (module_name, [ lib_name ]) :: acc
+              | None -> (module_name, [ lib_info.name ]) :: acc
             else acc)
-          acc files)
+          acc lib_info.files)
+      []
+      (Dune.get_libraries dune_describe)
+  in
+
+  (* Build a map from public names to internal names for declared library resolution *)
+  let public_to_internal =
+    List.fold_left
+      (fun acc (lib_info : Dune.library_info) ->
+        match lib_info.public_name with
+        | Some pub_name -> (pub_name, lib_info.name) :: acc
+        | None -> acc)
       []
       (Dune.get_libraries dune_describe)
   in
@@ -31,7 +38,7 @@ let check (ctx : Context.project) =
   (* For each test stanza, find which libraries are tested *)
   let test_stanza_libraries =
     List.fold_left
-      (fun acc (test_name, files) ->
+      (fun acc test_info ->
         let test_file_libs =
           List.filter_map
             (fun file ->
@@ -45,14 +52,15 @@ let check (ctx : Context.project) =
                   | Some libs ->
                       (* Only include if module exists in exactly one library *)
                       if List.length libs = 1 then
-                        Some (basename, List.hd libs, Fpath.to_string file)
+                        let lib = List.hd libs in
+                        Some (basename, lib, Fpath.to_string file)
                       else None (* Skip ambiguous modules *)
                   | None -> None
                 else None
               else None)
-            files
+            test_info.Dune.files
         in
-        (test_name, test_file_libs) :: acc)
+        (test_info.Dune.name, test_file_libs, test_info.Dune.libraries) :: acc)
       []
       (Dune.get_tests dune_describe)
   in
@@ -61,51 +69,40 @@ let check (ctx : Context.project) =
   let issues = ref [] in
 
   List.iter
-    (fun (_, test_files) ->
-      (* Get unique libraries in this test stanza *)
-      let libraries_in_stanza =
-        test_files
-        |> List.map (fun (_, lib, _) -> lib)
-        |> List.sort_uniq String.compare
-      in
-
-      (* If more than one library is tested in this stanza, flag each test file *)
-      if List.length libraries_in_stanza > 1 then
+    (fun (_, test_files, declared_libraries) ->
+      (* If there are declared libraries, check that test files only test those *)
+      if declared_libraries <> [] then
+        (* Resolve declared libraries: map public names to internal names if needed *)
+        let resolved_libraries =
+          List.map
+            (fun declared_lib ->
+              match List.assoc_opt declared_lib public_to_internal with
+              | Some internal_name -> internal_name
+              | None -> declared_lib (* Already an internal name *))
+            declared_libraries
+        in
         List.iter
           (fun (test_module, lib_name, file_path) ->
-            let other_libs =
-              test_files
-              |> List.filter_map (fun (_, lib, _) ->
-                     if lib <> lib_name then Some lib else None)
-              |> List.sort_uniq String.compare
-            in
-            let loc =
-              Location.create ~file:file_path ~start_line:1 ~start_col:0
-                ~end_line:1 ~end_col:0
-            in
-            issues :=
-              Issue.v ~loc
-                {
-                  test_module;
-                  library_name = lib_name;
-                  mixed_with = other_libs;
-                }
-              :: !issues)
-          test_files)
+            if not (List.mem lib_name resolved_libraries) then
+              let loc =
+                Location.create ~file:file_path ~start_line:1 ~start_col:0
+                  ~end_line:1 ~end_col:0
+              in
+              issues :=
+                Issue.v ~loc { test_module; library_name = lib_name } :: !issues)
+          test_files
+      else
+        (* No declared libraries - skip this test stanza *)
+        ())
     test_stanza_libraries;
 
   !issues
 
-let pp ppf { test_module; library_name; mixed_with } =
+let pp ppf { test_module; library_name } =
   Fmt.pf ppf
-    "Test file '%s.ml' tests library '%s' but is mixed with tests for %s"
+    "Test file '%s.ml' tests library '%s' which is not explicitly declared in \
+     the test's dune file"
     test_module library_name
-    (match mixed_with with
-    | [] -> "other libraries"
-    | [ other ] -> Fmt.str "library '%s'" other
-    | others ->
-        Fmt.str "libraries %s"
-          (String.concat ", " (List.map (fun l -> "'" ^ l ^ "'") others)))
 
 let rule =
   Rule.v ~code:"E606" ~title:"Test File in Wrong Directory" ~category:Testing

@@ -8,16 +8,16 @@ let check ctx =
   (* Build a set of library modules for each library *)
   let library_modules =
     List.fold_left
-      (fun acc (lib_name, files) ->
+      (fun acc (lib_info : Dune.library_info) ->
         let modules =
           List.filter_map
             (fun file ->
               if Fpath.has_ext ".ml" file then
                 Some Fpath.(file |> rem_ext |> basename)
               else None)
-            files
+            lib_info.files
         in
-        (lib_name, modules) :: acc)
+        (lib_info.name, modules) :: acc)
       []
       (Dune.get_libraries dune_describe)
   in
@@ -25,7 +25,7 @@ let check ctx =
   (* Check each test file *)
   let issues = ref [] in
   List.iter
-    (fun (test_stanza, files) ->
+    (fun test_info ->
       List.iter
         (fun file ->
           if Fpath.has_ext ".ml" file then
@@ -37,6 +37,7 @@ let check ctx =
               (* Check if this library module exists in the expected library *)
               (* For test stanza "test" or starting with "test_", check all libraries; 
                  otherwise check specific library *)
+              let test_stanza = test_info.Dune.name in
               let found =
                 if
                   test_stanza = "test"
@@ -64,7 +65,7 @@ let check ctx =
                       expected_module = expected_lib_module ^ ".ml";
                     }
                   :: !issues)
-        files)
+        test_info.Dune.files)
     (Dune.get_tests dune_describe);
   List.rev !issues
 

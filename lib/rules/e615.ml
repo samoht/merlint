@@ -2,6 +2,60 @@
 
 type payload = { test_module : string; test_runner_file : string }
 
+(** Determine if a test file should be excluded based on E606 logic *)
+let should_exclude_test_file dune_describe test_file declared_libraries =
+  if declared_libraries = [] then false
+    (* No declared libraries - don't exclude anything *)
+  else
+    (* Build the same mappings as E606 *)
+    let module_to_libraries =
+      List.fold_left
+        (fun acc (lib_info : Dune.library_info) ->
+          List.fold_left
+            (fun acc file ->
+              if Fpath.has_ext ".ml" file then
+                let module_name = Fpath.(file |> rem_ext |> basename) in
+                match List.assoc_opt module_name acc with
+                | Some libs ->
+                    (module_name, lib_info.name :: libs)
+                    :: List.remove_assoc module_name acc
+                | None -> (module_name, [ lib_info.name ]) :: acc
+              else acc)
+            acc lib_info.files)
+        []
+        (Dune.get_libraries dune_describe)
+    in
+
+    let public_to_internal =
+      List.fold_left
+        (fun acc (lib_info : Dune.library_info) ->
+          match lib_info.public_name with
+          | Some pub_name -> (pub_name, lib_info.name) :: acc
+          | None -> acc)
+        []
+        (Dune.get_libraries dune_describe)
+    in
+
+    let resolved_libraries =
+      List.map
+        (fun declared_lib ->
+          match List.assoc_opt declared_lib public_to_internal with
+          | Some internal_name -> internal_name
+          | None -> declared_lib)
+        declared_libraries
+    in
+
+    (* Check if this specific test file tests a library not in resolved_libraries *)
+    let basename = Fpath.(test_file |> rem_ext |> basename) in
+    if String.starts_with ~prefix:"test_" basename then
+      let tested_module = String.sub basename 5 (String.length basename - 5) in
+      match List.assoc_opt tested_module module_to_libraries with
+      | Some libs when List.length libs = 1 ->
+          let lib = List.hd libs in
+          not (List.mem lib resolved_libraries)
+      | _ -> false (* Ambiguous or not found - don't exclude *)
+    else false
+
 (** Check if test.ml includes all test suites *)
 let check (ctx : Context.project) =
   let dune_describe = Context.dune_describe ctx in
@@ -9,18 +63,18 @@ let check (ctx : Context.project) =
 
   (* Check each test stanza separately *)
   List.iter
-    (fun (test_stanza, test_files) ->
+    (fun test_info ->
       (* Debug logging *)
       Logs.debug (fun m ->
-          m "E615: Checking test stanza '%s' with %d files" test_stanza
-            (List.length test_files));
+          m "E615: Checking test stanza '%s' with %d files" test_info.Dune.name
+            (List.length test_info.Dune.files));
 
       (* Find test.ml in this test stanza *)
       let test_ml =
         List.find_opt
           (fun f ->
             Fpath.has_ext ".ml" f && Fpath.(f |> rem_ext |> basename) = "test")
-          test_files
+          test_info.Dune.files
       in
 
       match test_ml with
@@ -45,21 +99,41 @@ let check (ctx : Context.project) =
             in
 
             (* Find test modules in this test stanza *)
-            let test_modules =
+            let all_test_modules =
               List.filter_map
                 (fun f ->
                   if Fpath.has_ext ".ml" f && f <> test_file then
                     let basename = Fpath.(f |> rem_ext |> basename) in
                     if String.starts_with ~prefix:"test_" basename then
-                      Some basename
+                      Some (basename, f)
                     else None
                   else None)
-                test_files
+                test_info.Dune.files
+            in
+
+            (* Filter out test modules that would be flagged by E606 *)
+            let test_modules =
+              List.filter_map
+                (fun (basename, f) ->
+                  if
+                    should_exclude_test_file dune_describe f
+                      test_info.Dune.libraries
+                  then (
+                    Logs.debug (fun m ->
+                        m
+                          "E615: Excluding test module '%s' (would be flagged \
+                           by E606)"
+                          basename);
+                    None)
+                  else Some basename)
+                all_test_modules
             in
 
             Logs.debug (fun m ->
-                m "E615: Found %d test modules in stanza '%s': %a"
-                  (List.length test_modules) test_stanza
+                m
+                  "E615: Found %d test modules in stanza '%s' (after E606 \
+                   filtering): %a"
+                  (List.length test_modules) test_info.Dune.name
                   Fmt.(list ~sep:comma string)
                   test_modules);
 

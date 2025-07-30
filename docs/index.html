@@ -983,10 +983,9 @@ pre code {
     <div class="error-hint"><p>Test files for different libraries should not be mixed in the same test directory. Organize test files so that each test directory contains tests for only one library to maintain clear test organization.</p><div class="examples-grid">
 <div class="example bad">
   <h4>BAD</h4>
-  <pre><code><span class="cm">(** Bad: test_utils tests utils_lib but is in test_parser stanza *)</span>
-<span class="kw">let</span> test_identity () = <span class="kw">assert</span> (<span class="cn">Utils_lib</span>.<span class="cn">Utils</span>.identity <span class="nu">1</span> = <span class="nu">1</span>)
+  <pre><code><span class="kw">let</span> test_utils () = <span class="kw">assert</span> <span class="kw">true</span>
 
-<span class="kw">let</span> () = test_identity ()</code></pre>
+<span class="kw">let</span> () = test_utils ()</code></pre>
 </div>
 <div class="example good">
   <h4>GOOD</h4>

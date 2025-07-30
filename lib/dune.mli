@@ -40,8 +40,24 @@ val create_synthetic : string list -> describe
 (** [create_synthetic files] creates a synthetic describe for individual files
     passed on command line. *)
 
-val get_libraries : describe -> (string * Fpath.t list) list
-(** [get_libraries describe] returns the list of libraries with their files. *)
+type library_info = {
+  name : string; (* Internal library name *)
+  public_name : string option; (* Public library name *)
+  files : Fpath.t list;
+}
+(** Information about a library stanza *)
 
-val get_tests : describe -> (string * Fpath.t list) list
-(** [get_tests describe] returns the list of test stanzas with their files. *)
+val get_libraries : describe -> library_info list
+(** [get_libraries describe] returns the list of libraries with their
+    information. *)
+
+type test_info = {
+  name : string;
+  files : Fpath.t list;
+  libraries : string list;
+}
+(** Information about a test stanza *)
+
+val get_tests : describe -> test_info list
+(** [get_tests describe] returns the list of test stanzas with their files and
+    library dependencies. *)

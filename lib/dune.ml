@@ -8,10 +8,22 @@ open Sexplib0
 (* Error helper function *)
 let err_build_failed msg = Error (Fmt.str "Failed to build project: %s" msg)
 
+type test_info = {
+  name : string;
+  files : Fpath.t list;
+  libraries : string list; (* Library dependencies *)
+}
+
+type library_info = {
+  name : string; (* Internal library name *)
+  public_name : string option; (* Public library name *)
+  files : Fpath.t list;
+}
+
 type describe = {
-  libraries : (string * Fpath.t list) list;
+  libraries : library_info list;
   executables : (string * Fpath.t list) list;
-  tests : (string * Fpath.t list) list;
+  tests : test_info list;
 }
 (** Abstract type for dune describe results *)
 
@@ -98,9 +110,19 @@ let extract_modules_field = function
   | _ -> []
 
 type project_item =
-  | Library of { name : string; dir : Fpath.t; modules : string list }
+  | Library of {
+      name : string;
+      public_name : string option;
+      dir : Fpath.t;
+      modules : string list;
+    }
   | Executable of { names : string list; dir : Fpath.t; modules : string list }
-  | Test of { names : string list; dir : Fpath.t; modules : string list }
+  | Test of {
+      names : string list;
+      dir : Fpath.t;
+      modules : string list;
+      libraries : string list;
+    }
   | Cram_test of { dir : Fpath.t }
 
 (** Check if a directory should be included based on dune directives *)
@@ -121,14 +143,19 @@ let extract_project_item dir = function
       let name =
         List.find_map
           (function
-            | Sexp.List [ Sexp.Atom "name"; Sexp.Atom n ] -> Some n
+            | Sexp.List [ Sexp.Atom "name"; Sexp.Atom n ] -> Some n | _ -> None)
+          fields
+      in
+      let public_name =
+        List.find_map
+          (function
             | Sexp.List [ Sexp.Atom "public_name"; Sexp.Atom n ] -> Some n
             | _ -> None)
           fields
       in
       let modules = List.concat_map extract_modules_field fields in
       match name with
-      | Some n -> Some (Library { name = n; dir; modules })
+      | Some n -> Some (Library { name = n; public_name; dir; modules })
       | None -> None)
   | Sexp.List (Sexp.Atom kind :: fields)
     when kind = "executable" || kind = "executables" ->
@@ -158,15 +185,28 @@ let extract_project_item dir = function
           fields
       in
       let modules = List.concat_map extract_modules_field fields in
+      let libraries =
+        List.concat_map
+          (function
+            | Sexp.List (Sexp.Atom "libraries" :: libs) ->
+                List.filter_map
+                  (function Sexp.Atom l -> Some l | _ -> None)
+                  libs
+            | _ -> [])
+          fields
+      in
       (* Handle test stanzas without explicit names - use "test" as default *)
       let test_names = if names = [] then [ "test" ] else names in
       Log.debug (fun m ->
-          m "Found test stanza in %a: names=%a, modules=%a" Fpath.pp dir
+          m "Found test stanza in %a: names=%a, modules=%a, libraries=%a"
+            Fpath.pp dir
             Fmt.(list ~sep:comma string)
             test_names
             Fmt.(list ~sep:comma string)
-            modules);
-      Some (Test { names = test_names; dir; modules })
+            modules
+            Fmt.(list ~sep:comma string)
+            libraries);
+      Some (Test { names = test_names; dir; modules; libraries })
   | Sexp.List (Sexp.Atom "cram" :: _) -> Some (Cram_test { dir })
   | _ -> None
 
@@ -273,9 +313,15 @@ let get_item_files = function
 (** Get all project source files from describe *)
 let get_project_files dune_describe =
   (* Collect all files from libraries, executables, and tests *)
-  let lib_files = List.concat_map snd dune_describe.libraries in
+  let lib_files =
+    List.concat_map
+      (fun (lib_info : library_info) -> lib_info.files)
+      dune_describe.libraries
+  in
   let exec_files = List.concat_map snd dune_describe.executables in
-  let test_files = List.concat_map snd dune_describe.tests in
+  let test_files =
+    List.concat_map (fun (t : test_info) -> t.files) dune_describe.tests
+  in
 
   Log.debug (fun m -> m "Libraries contribute %d files" (List.length lib_files));
   Log.debug (fun m ->
@@ -301,7 +347,8 @@ let get_executable_modules dune_describe =
 
 (** Get library modules from describe *)
 let get_lib_modules dune_describe =
-  dune_describe.libraries |> List.concat_map snd
+  dune_describe.libraries
+  |> List.concat_map (fun (lib_info : library_info) -> lib_info.files)
   |> List.filter_map (fun file ->
          let file_str = Fpath.to_string file in
          if String.ends_with ~suffix:".ml" file_str then
@@ -311,7 +358,8 @@ let get_lib_modules dune_describe =
 
 (** Get test modules from describe *)
 let get_test_modules dune_describe =
-  dune_describe.tests |> List.concat_map snd
+  dune_describe.tests
+  |> List.concat_map (fun (t : test_info) -> t.files)
   |> List.filter_map (fun file ->
          let file_str = Fpath.to_string file in
          if String.ends_with ~suffix:".ml" file_str then
@@ -398,9 +446,11 @@ let describe_impl project_root =
   let libraries =
     structure
     |> List.filter_map (function
-         | Library { name; dir; modules } ->
-             let files = get_item_files (Library { name; dir; modules }) in
-             Some (name, files)
+         | Library { name; public_name; dir; modules } ->
+             let files =
+               get_item_files (Library { name; public_name; dir; modules })
+             in
+             Some ({ name; public_name; files } : library_info)
          | _ -> None)
   in
   let executables =
@@ -414,9 +464,13 @@ let describe_impl project_root =
   let tests =
     structure
     |> List.filter_map (function
-         | Test { names; dir; modules } -> (
-             let files = get_item_files (Test { names; dir; modules }) in
-             match names with [] -> None | main :: _ -> Some (main, files))
+         | Test { names; dir; modules; libraries } -> (
+             let files =
+               get_item_files (Test { names; dir; modules; libraries })
+             in
+             match names with
+             | [] -> None
+             | main :: _ -> Some { name = main; files; libraries })
          | _ -> None)
   in
   { libraries; executables; tests }
@@ -464,7 +518,8 @@ let exclude patterns describe =
   in
   let libraries =
     List.map
-      (fun (name, files) -> (name, filter_files files))
+      (fun (lib_info : library_info) ->
+        { lib_info with files = filter_files lib_info.files })
       describe.libraries
   in
   let executables =
@@ -473,7 +528,9 @@ let exclude patterns describe =
       describe.executables
   in
   let tests =
-    List.map (fun (name, files) -> (name, filter_files files)) describe.tests
+    List.map
+      (fun (t : test_info) -> { t with files = filter_files t.files })
+      describe.tests
   in
   { libraries; executables; tests }
 
@@ -490,9 +547,20 @@ let create_synthetic files =
   in
   {
     libraries =
-      (if lib_files = [] then [] else [ ("merlint_synthetic", lib_files) ]);
+      (if lib_files = [] then []
+       else
+         [
+           ({
+              name = "merlint_synthetic";
+              public_name = None;
+              files = lib_files;
+            }
+             : library_info);
+         ]);
     executables = [];
-    tests = (if test_files = [] then [] else [ ("test", test_files) ]);
+    tests =
+      (if test_files = [] then []
+       else [ { name = "test"; files = test_files; libraries = [] } ]);
   }
 
 (** Get libraries from describe *)

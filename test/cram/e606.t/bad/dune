@@ -9,4 +9,4 @@
 (test
  (name test_parser)
  (modules test_parser test_utils)
- (libraries parser_lib utils_lib))
+ (libraries parser_lib))
