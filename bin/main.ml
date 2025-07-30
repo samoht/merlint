@@ -246,9 +246,9 @@ let run_analysis project_root dune_describe rule_filter show_profile =
   (* Print profiling summary if enabled *)
   match profiling_state with
   | Some state ->
-      Merlint.Profiling.print_summary state;
-      Merlint.Profiling.print_rule_summary state;
-      Merlint.Profiling.print_file_summary state
+      Merlint.Profiling.print_summary ~width:terminal_width state;
+      Merlint.Profiling.print_rule_summary ~width:terminal_width state;
+      Merlint.Profiling.print_file_summary ~width:terminal_width state
   | None ->
       ();
 

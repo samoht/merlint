@@ -34,11 +34,14 @@ val add_timing : t -> timing -> unit
 val reset_state : t -> unit
 (** [reset_state t] clears all timings in the state. *)
 
-val print_summary : t -> unit
-(** [print_summary t] prints timing summary from the given state. *)
+val print_summary : ?width:int -> t -> unit
+(** [print_summary ?width t] prints timing summary from the given state. If
+    [width] is provided, formats output to fit within that width. *)
 
-val print_file_summary : t -> unit
-(** [print_file_summary t] prints per-file breakdown from the given state. *)
+val print_file_summary : ?width:int -> t -> unit
+(** [print_file_summary ?width t] prints per-file breakdown from the given
+    state. If [width] is provided, formats output to fit within that width. *)
 
-val print_rule_summary : t -> unit
-(** [print_rule_summary t] prints per-rule breakdown from the given state. *)
+val print_rule_summary : ?width:int -> t -> unit
+(** [print_rule_summary ?width t] prints per-rule breakdown from the given
+    state. If [width] is provided, formats output to fit within that width. *)

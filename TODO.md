@@ -26,8 +26,9 @@
 ### Code Complexity Rules
 - [ ] **Code Duplication Detection**
   - Find duplicated code blocks across the codebase
-  - Use AST subtree similarity or token-based analysis
+  - Use AST subtree hashing algorithm (most accurate)
   - Suggest extracting common code into functions
+  - See todo/duplication.md for detailed algorithm specification
 
 ## High Priority - Rule Improvements
 
