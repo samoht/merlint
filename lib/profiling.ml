@@ -37,9 +37,27 @@ let rec take n = function
   | _ when n <= 0 -> []
   | h :: t -> h :: take (n - 1) t
 
+let print_operation_type_row is_wide name count time total_time =
+  let time_ms = time *. 1000.0 in
+  let avg_ms = time_ms /. float_of_int count in
+  let percentage = time /. total_time *. 100.0 in
+
+  if is_wide then
+    Fmt.pr "%-25s %8d %10.2f %8.2f %7.1f%%\n" name count time_ms avg_ms
+      percentage
+  else Fmt.pr "%-20s %6d %9.1f %6.1f%%\n" name count time_ms percentage
+
+let print_total_row is_wide total_count total_time =
+  let time_ms = total_time *. 1000.0 in
+
+  if is_wide then
+    Fmt.pr "%-25s %8d %10.2f %8s %8s\n" "Total" total_count time_ms "" ""
+  else Fmt.pr "%-20s %6d %9.1f %7s\n" "Total" total_count time_ms ""
+
 let print_summary ?(width = 80) t =
   let timings = get_timings_from_state t in
-  if timings <> [] then (
+  if timings = [] then ()
+  else
     (* Calculate totals by operation type *)
     let merlin_time = ref 0.0 in
     let file_rules_time = ref 0.0 in
@@ -67,58 +85,30 @@ let print_summary ?(width = 80) t =
     let total_time =
       !merlin_time +. !file_rules_time +. !project_rules_time +. !other_time
     in
+    let is_wide = width >= 75 in
+    let sep_width = min width 75 in
 
     Fmt.pr "\n[Profiling Summary]\n";
-    let sep_width = min width 75 in
-    if width >= 75 then
+    if is_wide then
       Fmt.pr "%-25s %8s %10s %8s %8s\n" "Operation Type" "Count" "Total (ms)"
         "Avg (ms)" "% Time"
     else Fmt.pr "%-20s %6s %9s %7s\n" "Type" "Count" "Time (ms)" "%";
     Fmt.pr "%s\n" (String.make sep_width '-');
 
     if !merlin_count > 0 then
-      if width >= 75 then
-        Fmt.pr "%-25s %8d %10.2f %8.2f %7.1f%%\n" "Merlin Analysis"
-          !merlin_count (!merlin_time *. 1000.0)
-          (!merlin_time *. 1000.0 /. float_of_int !merlin_count)
-          (!merlin_time /. total_time *. 100.0)
-      else
-        Fmt.pr "%-20s %6d %9.1f %6.1f%%\n" "Merlin" !merlin_count
-          (!merlin_time *. 1000.0)
-          (!merlin_time /. total_time *. 100.0);
-
+      print_operation_type_row is_wide "Merlin Analysis" !merlin_count
+        !merlin_time total_time;
     if !file_rule_count > 0 then
-      if width >= 75 then
-        Fmt.pr "%-25s %8d %10.2f %8.2f %7.1f%%\n" "File Rules" !file_rule_count
-          (!file_rules_time *. 1000.0)
-          (!file_rules_time *. 1000.0 /. float_of_int !file_rule_count)
-          (!file_rules_time /. total_time *. 100.0)
-      else
-        Fmt.pr "%-20s %6d %9.1f %6.1f%%\n" "File Rules" !file_rule_count
-          (!file_rules_time *. 1000.0)
-          (!file_rules_time /. total_time *. 100.0);
-
+      print_operation_type_row is_wide "File Rules" !file_rule_count
+        !file_rules_time total_time;
     if !project_rule_count > 0 then
-      if width >= 75 then
-        Fmt.pr "%-25s %8d %10.2f %8.2f %7.1f%%\n" "Project Rules"
-          !project_rule_count
-          (!project_rules_time *. 1000.0)
-          (!project_rules_time *. 1000.0 /. float_of_int !project_rule_count)
-          (!project_rules_time /. total_time *. 100.0)
-      else
-        Fmt.pr "%-20s %6d %9.1f %6.1f%%\n" "Project Rules" !project_rule_count
-          (!project_rules_time *. 1000.0)
-          (!project_rules_time /. total_time *. 100.0);
+      print_operation_type_row is_wide "Project Rules" !project_rule_count
+        !project_rules_time total_time;
 
     Fmt.pr "%s\n" (String.make sep_width '-');
-    if width >= 75 then
-      Fmt.pr "%-25s %8d %10.2f %8s %8s\n" "Total"
-        (!merlin_count + !file_rule_count + !project_rule_count)
-        (total_time *. 1000.0) "" ""
-    else
-      Fmt.pr "%-20s %6d %9.1f %7s\n" "Total"
-        (!merlin_count + !file_rule_count + !project_rule_count)
-        (total_time *. 1000.0) "")
+    print_total_row is_wide
+      (!merlin_count + !file_rule_count + !project_rule_count)
+      total_time
 
 let extract_file_timings timings =
   List.filter_map
@@ -252,6 +242,33 @@ let group_rule_timings rule_timings =
     rule_timings;
   by_rule
 
+let print_rule_row is_wide code rule_type count total =
+  let total_ms = total *. 1000.0 in
+  let avg_ms = total_ms /. float_of_int count in
+
+  if is_wide then
+    Fmt.pr "%-8s %-10s %8d %10.1f %8.1f\n" code rule_type count total_ms avg_ms
+  else Fmt.pr "%-6s %-8s %8d %9.0f\n" code rule_type count total_ms
+
+let print_remaining_row is_wide remaining =
+  if is_wide then
+    Fmt.pr "%-8s %-10s %8s %10s %8s\n" "..." "" "" ""
+      (Fmt.str "(%d more)" remaining)
+  else Fmt.pr "%-6s %-8s %8s %9s\n" "..." "" "" (Fmt.str "(%d more)" remaining)
+
+let filter_rules_to_show sorted_rules =
+  let significant_rules =
+    sorted_rules |> List.filter (fun (_, _, total, _) -> total *. 1000.0 > 1.0)
+  in
+
+  if significant_rules = [] then
+    (* If no rules > 1ms, show top 5 *)
+    take 5 sorted_rules
+  else if List.length significant_rules > 10 then
+    (* Too many significant rules, limit to top 10 *)
+    take 10 significant_rules
+  else significant_rules
+
 let print_rule_summary ?(width = 80) t =
   let timings = get_timings_from_state t in
   if timings = [] then ()
@@ -272,26 +289,15 @@ let print_rule_summary ?(width = 80) t =
         List.sort (fun (_, _, a, _) (_, _, b, _) -> compare b a) rule_stats
       in
 
-      (* Filter to show only rules that took > 1ms or top 10 *)
-      let significant_rules =
-        sorted_rules
-        |> List.filter (fun (_, _, total, _) -> total *. 1000.0 > 1.0)
-      in
+      let rules_to_show = filter_rules_to_show sorted_rules in
 
-      let rules_to_show =
-        if significant_rules = [] then
-          (* If no rules > 1ms, show top 5 *)
-          take 5 sorted_rules
-        else if List.length significant_rules > 10 then
-          (* Too many significant rules, limit to top 10 *)
-          take 10 significant_rules
-        else significant_rules
-      in
-
-      if rules_to_show <> [] then (
-        Fmt.pr "\n[Top Slowest Rules]\n";
+      if rules_to_show = [] then ()
+      else
+        let is_wide = width >= 65 in
         let sep_width = min width 65 in
-        if width >= 65 then (
+
+        Fmt.pr "\n[Top Slowest Rules]\n";
+        if is_wide then (
           Fmt.pr "%-8s %-10s %8s %10s %8s\n" "Rule" "Type" "Calls" "Total (ms)"
             "Avg (ms)";
           Fmt.pr "%s\n" (String.make sep_width '-'))
@@ -303,21 +309,9 @@ let print_rule_summary ?(width = 80) t =
         List.iter
           (fun (code, count, total, is_project) ->
             let rule_type = if is_project then "Project" else "File" in
-            let avg = total /. float_of_int count in
-            if width >= 65 then
-              Fmt.pr "%-8s %-10s %8d %10.1f %8.1f\n" code rule_type count
-                (total *. 1000.0) (avg *. 1000.0)
-            else
-              Fmt.pr "%-6s %-8s %8d %9.0f\n" code rule_type count
-                (total *. 1000.0))
+            print_rule_row is_wide code rule_type count total)
           rules_to_show;
 
         (* Show if there are more *)
         let remaining = List.length sorted_rules - List.length rules_to_show in
-        if remaining > 0 then
-          if width >= 65 then
-            Fmt.pr "%-8s %-10s %8s %10s %8s\n" "..." "" "" ""
-              (Fmt.str "(%d more)" remaining)
-          else
-            Fmt.pr "%-6s %-8s %8s %9s\n" "..." "" ""
-              (Fmt.str "(%d more)" remaining))
+        if remaining > 0 then print_remaining_row is_wide remaining
