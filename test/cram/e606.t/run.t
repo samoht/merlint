@@ -26,11 +26,11 @@ Bad test files in wrong test stanza:
   ✓ Project Structure (0 total issues)
   ✗ Test Quality (2 total issues)
     [E606] Test File in Wrong Directory (2 issues)
-    Organize test files to match your library structure. Create separate test
-    directories for each library (e.g., test/core/ for core library, test/views/
-    for views library) and move test files to their corresponding directories.
-    - bad/test_parser.ml:1:0: Test file 'test_parser.ml' should be moved to a 'parser_lib' test directory since it tests the 'parser_lib' library
-    - bad/test_utils.ml:1:0: Test file 'test_utils.ml' should be moved to a 'utils_lib' test directory since it tests the 'utils_lib' library
+    Test files for different libraries should not be mixed in the same test
+    directory. Organize test files so that each test directory contains tests for
+    only one library to maintain clear test organization.
+    - bad/test_parser.ml:1:0: Test file 'test_parser.ml' tests library 'parser_lib' but is mixed with tests for library 'utils_lib'
+    - bad/test_utils.ml:1:0: Test file 'test_utils.ml' tests library 'utils_lib' but is mixed with tests for library 'parser_lib'
   
   Summary: ✗ 2 total issues (applied 1 rule)
   ✗ Some checks failed. See details above.
@@ -49,11 +49,11 @@ Test files in wrong directory (should be in subdirectories):
   ✓ Project Structure (0 total issues)
   ✗ Test Quality (2 total issues)
     [E606] Test File in Wrong Directory (2 issues)
-    Organize test files to match your library structure. Create separate test
-    directories for each library (e.g., test/core/ for core library, test/views/
-    for views library) and move test files to their corresponding directories.
-    - bad2/test/test_feed.ml:1:0: Test file 'test_feed.ml' should be moved to a 'views_lib' test directory since it tests the 'views_lib' library
-    - bad2/test/test_page.ml:1:0: Test file 'test_page.ml' should be moved to a 'core_lib' test directory since it tests the 'core_lib' library
+    Test files for different libraries should not be mixed in the same test
+    directory. Organize test files so that each test directory contains tests for
+    only one library to maintain clear test organization.
+    - bad2/test/test_feed.ml:1:0: Test file 'test_feed.ml' tests library 'views_lib' but is mixed with tests for library 'core_lib'
+    - bad2/test/test_page.ml:1:0: Test file 'test_page.ml' tests library 'core_lib' but is mixed with tests for library 'views_lib'
   
   Summary: ✗ 2 total issues (applied 1 rule)
   ✗ Some checks failed. See details above.

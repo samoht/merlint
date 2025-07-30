@@ -9,15 +9,19 @@ type payload = {
 let check (ctx : Context.project) =
   let dune_describe = Context.dune_describe ctx in
 
-  (* Build a map from module names to their library *)
-  let module_to_library =
+  (* Build a map from module names to all libraries that contain them *)
+  let module_to_libraries =
     List.fold_left
       (fun acc (lib_name, files) ->
         List.fold_left
           (fun acc file ->
             if Fpath.has_ext ".ml" file then
               let module_name = Fpath.(file |> rem_ext |> basename) in
-              (module_name, lib_name) :: acc
+              match List.assoc_opt module_name acc with
+              | Some libs ->
+                  (module_name, lib_name :: libs)
+                  :: List.remove_assoc module_name acc
+              | None -> (module_name, [ lib_name ]) :: acc
             else acc)
           acc files)
       []
@@ -37,8 +41,12 @@ let check (ctx : Context.project) =
                   let tested_module =
                     String.sub basename 5 (String.length basename - 5)
                   in
-                  match List.assoc_opt tested_module module_to_library with
-                  | Some lib -> Some (basename, lib, Fpath.to_string file)
+                  match List.assoc_opt tested_module module_to_libraries with
+                  | Some libs ->
+                      (* Only include if module exists in exactly one library *)
+                      if List.length libs = 1 then
+                        Some (basename, List.hd libs, Fpath.to_string file)
+                      else None (* Skip ambiguous modules *)
                   | None -> None
                 else None
               else None)
@@ -66,7 +74,10 @@ let check (ctx : Context.project) =
         List.iter
           (fun (test_module, lib_name, file_path) ->
             let other_libs =
-              List.filter (fun l -> l <> lib_name) libraries_in_stanza
+              test_files
+              |> List.filter_map (fun (_, lib, _) ->
+                     if lib <> lib_name then Some lib else None)
+              |> List.sort_uniq String.compare
             in
             let loc =
               Location.create ~file:file_path ~start_line:1 ~start_col:0
@@ -85,19 +96,23 @@ let check (ctx : Context.project) =
 
   !issues
 
-let pp ppf { test_module; library_name; mixed_with = _ } =
+let pp ppf { test_module; library_name; mixed_with } =
   Fmt.pf ppf
-    "Test file '%s.ml' should be moved to a '%s' test directory since it tests \
-     the '%s' library"
-    test_module library_name library_name
+    "Test file '%s.ml' tests library '%s' but is mixed with tests for %s"
+    test_module library_name
+    (match mixed_with with
+    | [] -> "other libraries"
+    | [ other ] -> Fmt.str "library '%s'" other
+    | others ->
+        Fmt.str "libraries %s"
+          (String.concat ", " (List.map (fun l -> "'" ^ l ^ "'") others)))
 
 let rule =
   Rule.v ~code:"E606" ~title:"Test File in Wrong Directory" ~category:Testing
     ~hint:
-      "Organize test files to match your library structure. Create separate \
-       test directories for each library (e.g., test/core/ for core library, \
-       test/views/ for views library) and move test files to their \
-       corresponding directories."
+      "Test files for different libraries should not be mixed in the same test \
+       directory. Organize test files so that each test directory contains \
+       tests for only one library to maintain clear test organization."
     ~examples:
       [
         Example.bad Examples.E606.Bad.test_utils_ml;

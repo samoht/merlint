@@ -980,7 +980,7 @@ pre code {
         <span class="error-code">E606</span>
         <span class="error-title">Test File in Wrong Directory</span>
     </div>
-    <div class="error-hint"><p>Organize test files to match your library structure. Create separate test directories for each library (e.g., test/core/ for core library, test/views/ for views library) and move test files to their corresponding directories.</p><div class="examples-grid">
+    <div class="error-hint"><p>Test files for different libraries should not be mixed in the same test directory. Organize test files so that each test directory contains tests for only one library to maintain clear test organization.</p><div class="examples-grid">
 <div class="example bad">
   <h4>BAD</h4>
   <pre><code><span class="cm">(** Bad: test_utils tests utils_lib but is in test_parser stanza *)</span>
