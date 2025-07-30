@@ -1,7 +1,15 @@
 (** Simple profiling module for measuring execution times. *)
 
-type timing = { name : string; duration : float }
-(** A single timing record with operation name and duration in seconds. *)
+(** Type of operation being timed. *)
+type operation_type =
+  | Merlin of string  (** Merlin analysis of a file *)
+  | File_rule of { rule_code : string; filename : string }
+      (** File-scoped rule *)
+  | Project_rule of string  (** Project-scoped rule code *)
+  | Other of string  (** Other operations *)
+
+type timing = { operation : operation_type; duration : float }
+(** A single timing record with operation type and duration in seconds. *)
 
 type t
 (** Profiling state. *)
@@ -31,3 +39,6 @@ val print_summary : t -> unit
 
 val print_file_summary : t -> unit
 (** [print_file_summary t] prints per-file breakdown from the given state. *)
+
+val print_rule_summary : t -> unit
+(** [print_rule_summary t] prints per-rule breakdown from the given state. *)

@@ -215,11 +215,15 @@ let run_analysis project_root dune_describe rule_filter show_profile =
   (* Run the engine to get all issues *)
   let all_issues =
     match rule_filter with
-    | Some filter -> Merlint.Engine.run ~filter ~dune_describe project_root
+    | Some filter ->
+        Merlint.Engine.run ~filter ~dune_describe ?profiling:profiling_state
+          project_root
     | None -> (
         (* Create a default filter that enables all rules *)
         match Merlint.Filter.parse "all" with
-        | Ok filter -> Merlint.Engine.run ~filter ~dune_describe project_root
+        | Ok filter ->
+            Merlint.Engine.run ~filter ~dune_describe ?profiling:profiling_state
+              project_root
         | Error _ -> [] (* Should not happen *))
   in
 
@@ -243,6 +247,7 @@ let run_analysis project_root dune_describe rule_filter show_profile =
   match profiling_state with
   | Some state ->
       Merlint.Profiling.print_summary state;
+      Merlint.Profiling.print_rule_summary state;
       Merlint.Profiling.print_file_summary state
   | None ->
       ();

@@ -21,28 +21,53 @@ let get_project_root path =
   else Sys.getcwd ()
 
 (** Run a single rule on a file *)
-let run_file_rule ctx rule =
+let run_file_rule ?profiling ctx rule =
   let code = Rule.code rule in
   Log.debug (fun m -> m "Running rule %s on %s" code ctx.Context.filename);
-  try Rule.Run.file rule ctx
-  with exn ->
-    Log.err (fun m ->
-        m "Rule %s failed on %s: %s" code ctx.Context.filename
-          (Printexc.to_string exn));
-    []
+  let start_time = Unix.gettimeofday () in
+  let result =
+    try Rule.Run.file rule ctx
+    with exn ->
+      Log.err (fun m ->
+          m "Rule %s failed on %s: %s" code ctx.Context.filename
+            (Printexc.to_string exn));
+      []
+  in
+  let duration = Unix.gettimeofday () -. start_time in
+  (match profiling with
+  | Some prof ->
+      Profiling.add_timing prof
+        {
+          operation =
+            Profiling.File_rule
+              { rule_code = code; filename = ctx.Context.filename };
+          duration;
+        }
+  | None -> ());
+  result
 
 (** Run a single rule on a project *)
-let run_project_rule ctx rule =
+let run_project_rule ?profiling ctx rule =
   let code = Rule.code rule in
   Log.debug (fun m -> m "Running project rule %s" code);
-  try Rule.Run.project rule ctx
-  with exn ->
-    Log.err (fun m ->
-        m "Project rule %s failed: %s" code (Printexc.to_string exn));
-    []
+  let start_time = Unix.gettimeofday () in
+  let result =
+    try Rule.Run.project rule ctx
+    with exn ->
+      Log.err (fun m ->
+          m "Project rule %s failed: %s" code (Printexc.to_string exn));
+      []
+  in
+  let duration = Unix.gettimeofday () -. start_time in
+  (match profiling with
+  | Some prof ->
+      Profiling.add_timing prof
+        { operation = Profiling.Project_rule code; duration }
+  | None -> ());
+  result
 
 (** Run all checks on a project *)
-let run ~filter ~dune_describe project_root =
+let run ~filter ~dune_describe ?profiling project_root =
   Log.info (fun m -> m "Starting analysis of %s" project_root);
 
   (* Load configuration *)
@@ -70,7 +95,7 @@ let run ~filter ~dune_describe project_root =
   let project_issues =
     enabled_rules
     |> List.filter Rule.is_project_scoped
-    |> List.concat_map (run_project_rule project_ctx)
+    |> List.concat_map (run_project_rule ?profiling project_ctx)
   in
 
   (* Run file-scoped rules on each file *)
@@ -81,11 +106,21 @@ let run ~filter ~dune_describe project_root =
         let filename = Fpath.to_string filepath in
         try
           (* Run Merlin on the file *)
+          let merlin_start = Unix.gettimeofday () in
           let merlin_result = Merlin.analyze_file filename in
+          let merlin_duration = Unix.gettimeofday () -. merlin_start in
+          (match profiling with
+          | Some prof ->
+              Profiling.add_timing prof
+                {
+                  operation = Profiling.Merlin filename;
+                  duration = merlin_duration;
+                }
+          | None -> ());
           let file_ctx =
             Context.create_file ~filename ~config ~project_root ~merlin_result
           in
-          List.concat_map (run_file_rule file_ctx) file_rules
+          List.concat_map (run_file_rule ?profiling file_ctx) file_rules
         with exn ->
           Log.err (fun m ->
               m "Failed to analyze %s: %s" filename (Printexc.to_string exn));
