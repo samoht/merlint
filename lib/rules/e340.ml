@@ -6,6 +6,7 @@ type payload = { error_message : string; suggested_function : string }
 let check ctx =
   let content = Context.content ctx in
   let filename = ctx.filename in
+  let outline = Context.outline ctx in
 
   (* Pattern to match Error (Fmt.str ...) constructs *)
   let error_fmt_str_pattern =
@@ -37,17 +38,33 @@ let check ctx =
          ])
   in
 
-  (* Pattern to match error helper function definitions *)
-  let err_helper_pattern =
-    Re.compile (Re.seq [ Re.str "let"; Re.rep1 Re.space; Re.str "err_" ])
+  (* Get all error helper functions from the outline *)
+  let error_helpers =
+    Outline.get_values outline
+    |> List.filter_map (fun (item : Outline.item) ->
+           if String.starts_with ~prefix:"err_" item.name then
+             match item.range with
+             | Some range -> Some (item.name, range)
+             | None -> None
+           else None)
+  in
+
+  (* Check if a line number is inside any error helper function *)
+  let is_inside_error_helper line_num =
+    List.exists
+      (fun (_name, (range : Outline.range)) ->
+        line_num >= range.start.line && line_num <= range.end_.line)
+      error_helpers
   in
 
   (* Check each line using the traverse helper *)
   File.process_lines_with_location filename content
     (fun line_idx line location ->
       ignore line_idx;
-      (* Don't flag error helper definitions themselves *)
-      if not (Re.execp err_helper_pattern line) then
+      let line_num = location.Location.start_line in
+
+      (* Only flag if we're not inside an error helper *)
+      if not (is_inside_error_helper line_num) then
         if Re.execp error_fmt_str_pattern line then
           Some
             (Issue.v ~loc:location
