@@ -32,128 +32,187 @@ let pp ppf t =
   Fmt.pf ppf "Profiling state with %d timing%s" (List.length t.timings)
     (if List.length t.timings = 1 then "" else "s")
 
-let operation_name = function
-  | Merlin filename -> Fmt.str "Merlin: %s" filename
-  | File_rule { rule_code; filename } ->
-      Fmt.str "Rule %s: %s" rule_code filename
-  | Project_rule rule_code -> Fmt.str "Project rule %s" rule_code
-  | Other name -> name
+let rec take n = function
+  | [] -> []
+  | _ when n <= 0 -> []
+  | h :: t -> h :: take (n - 1) t
 
 let print_summary t =
   let timings = get_timings_from_state t in
   if timings <> [] then (
-    Fmt.pr "\n[Profiling Summary]\n";
-    Fmt.pr "%-40s %10s\n" "Operation" "Time (ms)";
-    Fmt.pr "%s\n" (String.make 52 '-');
-
-    (* Group timings by operation name and sum durations *)
-    let grouped =
-      List.fold_left
-        (fun acc { operation; duration } ->
-          let name = operation_name operation in
-          let current = try List.assoc name acc with Not_found -> 0.0 in
-          (name, current +. duration) :: List.remove_assoc name acc)
-        [] timings
-    in
-
-    (* Sort by duration descending *)
-    let sorted = List.sort (fun (_, a) (_, b) -> compare b a) grouped in
+    (* Calculate totals by operation type *)
+    let merlin_time = ref 0.0 in
+    let file_rules_time = ref 0.0 in
+    let project_rules_time = ref 0.0 in
+    let other_time = ref 0.0 in
+    let merlin_count = ref 0 in
+    let file_rule_count = ref 0 in
+    let project_rule_count = ref 0 in
 
     List.iter
-      (fun (name, duration) ->
-        Fmt.pr "%-40s %10.2f\n" name (duration *. 1000.0))
-      sorted;
+      (fun { operation; duration } ->
+        match operation with
+        | Merlin _ ->
+            merlin_time := !merlin_time +. duration;
+            incr merlin_count
+        | File_rule _ ->
+            file_rules_time := !file_rules_time +. duration;
+            incr file_rule_count
+        | Project_rule _ ->
+            project_rules_time := !project_rules_time +. duration;
+            incr project_rule_count
+        | Other _ -> other_time := !other_time +. duration)
+      timings;
 
-    (* Total time *)
-    let total = List.fold_left (fun acc (_, d) -> acc +. d) 0.0 sorted in
-    Fmt.pr "%s\n" (String.make 52 '-');
-    Fmt.pr "%-40s %10.2f\n" "Total" (total *. 1000.0))
+    let total_time =
+      !merlin_time +. !file_rules_time +. !project_rules_time +. !other_time
+    in
+
+    Fmt.pr "\n[Profiling Summary]\n";
+    Fmt.pr "%-30s %10s %10s %10s %10s\n" "Operation Type" "Count" "Total (ms)"
+      "Avg (ms)" "% Time";
+    Fmt.pr "%s\n" (String.make 75 '-');
+
+    if !merlin_count > 0 then
+      Fmt.pr "%-30s %10d %10.2f %10.2f %9.1f%%\n" "Merlin Analysis"
+        !merlin_count (!merlin_time *. 1000.0)
+        (!merlin_time *. 1000.0 /. float_of_int !merlin_count)
+        (!merlin_time /. total_time *. 100.0);
+
+    if !file_rule_count > 0 then
+      Fmt.pr "%-30s %10d %10.2f %10.2f %9.1f%%\n" "File Rules" !file_rule_count
+        (!file_rules_time *. 1000.0)
+        (!file_rules_time *. 1000.0 /. float_of_int !file_rule_count)
+        (!file_rules_time /. total_time *. 100.0);
+
+    if !project_rule_count > 0 then
+      Fmt.pr "%-30s %10d %10.2f %10.2f %9.1f%%\n" "Project Rules"
+        !project_rule_count
+        (!project_rules_time *. 1000.0)
+        (!project_rules_time *. 1000.0 /. float_of_int !project_rule_count)
+        (!project_rules_time /. total_time *. 100.0);
+
+    Fmt.pr "%s\n" (String.make 75 '-');
+    Fmt.pr "%-30s %10d %10.2f %10s %9s\n" "Total"
+      (!merlin_count + !file_rule_count + !project_rule_count)
+      (total_time *. 1000.0) "" "")
+
+let extract_file_timings timings =
+  List.filter_map
+    (fun { operation; duration } ->
+      match operation with
+      | Merlin filename -> Some (filename, "Merlin", duration)
+      | File_rule { rule_code; filename } ->
+          Some (filename, Fmt.str "Rule %s" rule_code, duration)
+      | _ -> None)
+    timings
+
+let group_file_timings file_timings =
+  let by_file = Hashtbl.create 32 in
+  List.iter
+    (fun (file, op, dur) ->
+      let stats =
+        try Hashtbl.find by_file file with Not_found -> (0.0, 0.0, 0)
+      in
+      let merlin_time, rules_time, rule_count = stats in
+      if op = "Merlin" then
+        Hashtbl.replace by_file file (merlin_time +. dur, rules_time, rule_count)
+      else
+        Hashtbl.replace by_file file
+          (merlin_time, rules_time +. dur, rule_count + 1))
+    file_timings;
+  by_file
 
 let print_file_summary t =
   let timings = get_timings_from_state t in
-  if timings <> [] then
-    (* Extract file-specific timings *)
-    let file_timings =
-      List.filter_map
-        (fun { operation; duration } ->
-          match operation with
-          | Merlin filename -> Some (filename, "Merlin", duration)
-          | File_rule { rule_code; filename } ->
-              Some (filename, Fmt.str "Rule %s" rule_code, duration)
-          | _ -> None)
-        timings
-    in
-
-    if file_timings <> [] then (
-      Fmt.pr "\n[Per-File Profiling]\n";
-      Fmt.pr "%-50s %-20s %10s\n" "File" "Operation" "Time (ms)";
-      Fmt.pr "%s\n" (String.make 82 '-');
-
-      (* Group by file first *)
-      let by_file = Hashtbl.create 32 in
-      List.iter
-        (fun (file, op, dur) ->
-          let ops = try Hashtbl.find by_file file with Not_found -> [] in
-          Hashtbl.replace by_file file ((op, dur) :: ops))
-        file_timings;
+  if timings = [] then ()
+  else
+    let file_timings = extract_file_timings timings in
+    if file_timings = [] then ()
+    else
+      let by_file = group_file_timings file_timings in
 
       (* Convert to list and sort by total time per file *)
-      let file_totals =
+      let file_stats =
         Hashtbl.fold
-          (fun file ops acc ->
-            let total =
-              List.fold_left (fun sum (_, dur) -> sum +. dur) 0.0 ops
-            in
-            (file, ops, total) :: acc)
+          (fun file (merlin, rules, count) acc ->
+            (file, merlin, rules, count, merlin +. rules) :: acc)
           by_file []
       in
       let sorted_files =
-        List.sort (fun (_, _, a) (_, _, b) -> compare b a) file_totals
+        List.sort
+          (fun (_, _, _, _, a) (_, _, _, _, b) -> compare b a)
+          file_stats
       in
 
-      (* Print each file *)
+      (* Show only top 10 slowest files *)
+      let top_files =
+        match sorted_files with
+        | [] -> []
+        | files ->
+            let top = take 10 files in
+            if List.length files > 10 then top @ [ ("...", 0.0, 0.0, 0, 0.0) ]
+            else top
+      in
+
+      Fmt.pr "\n[Top Slowest Files]\n";
+      Fmt.pr "%-40s %12s %12s %8s %12s\n" "File" "Merlin (ms)" "Rules (ms)"
+        "# Rules" "Total (ms)";
+      Fmt.pr "%s\n" (String.make 88 '-');
+
       List.iter
-        (fun (file, ops, total) ->
-          let sorted_ops = List.sort (fun (_, a) (_, b) -> compare b a) ops in
-          List.iter
-            (fun (op, dur) ->
-              Fmt.pr "%-50s %-20s %10.2f\n" file op (dur *. 1000.0))
-            sorted_ops;
-          Fmt.pr "%-50s %-20s %10.2f\n" "" "[File Total]" (total *. 1000.0);
-          Fmt.pr "\n")
-        sorted_files)
+        (fun (file, merlin, rules, count, total) ->
+          if file = "..." then
+            Fmt.pr "%-40s %12s %12s %8s %12s\n" "..." "" "" ""
+              (Fmt.str "(%d more files)" (List.length sorted_files - 10))
+          else
+            Fmt.pr "%-40s %12.2f %12.2f %8d %12.2f\n" file (merlin *. 1000.0)
+              (rules *. 1000.0) count (total *. 1000.0))
+        top_files;
+
+      (* Summary stats *)
+      let total_merlin =
+        List.fold_left (fun acc (_, m, _, _, _) -> acc +. m) 0.0 sorted_files
+      in
+      let total_rules =
+        List.fold_left (fun acc (_, _, r, _, _) -> acc +. r) 0.0 sorted_files
+      in
+      let total_files = List.length sorted_files in
+      Fmt.pr "%s\n" (String.make 88 '-');
+      Fmt.pr "%-40s %12.2f %12.2f %8d %12.2f\n"
+        (Fmt.str "Total (%d files)" total_files)
+        (total_merlin *. 1000.0) (total_rules *. 1000.0) total_files
+        ((total_merlin +. total_rules) *. 1000.0)
+
+let extract_rule_timings timings =
+  List.filter_map
+    (fun { operation; duration } ->
+      match operation with
+      | File_rule { rule_code; _ } -> Some (rule_code, duration, false)
+      | Project_rule rule_code -> Some (rule_code, duration, true)
+      | _ -> None)
+    timings
+
+let group_rule_timings rule_timings =
+  let by_rule = Hashtbl.create 32 in
+  List.iter
+    (fun (code, dur, is_project) ->
+      let stats =
+        try Hashtbl.find by_rule code with Not_found -> (0, 0.0, is_project)
+      in
+      let count, total, _ = stats in
+      Hashtbl.replace by_rule code (count + 1, total +. dur, is_project))
+    rule_timings;
+  by_rule
 
 let print_rule_summary t =
   let timings = get_timings_from_state t in
-  if timings <> [] then
-    (* Extract rule-specific timings *)
-    let rule_timings =
-      List.filter_map
-        (fun { operation; duration } ->
-          match operation with
-          | File_rule { rule_code; _ } -> Some (rule_code, duration, false)
-          | Project_rule rule_code -> Some (rule_code, duration, true)
-          | _ -> None)
-        timings
-    in
-
-    if rule_timings <> [] then (
-      Fmt.pr "\n[Per-Rule Profiling]\n";
-      Fmt.pr "%-10s %-15s %10s %10s %10s\n" "Rule" "Type" "Calls" "Total (ms)"
-        "Avg (ms)";
-      Fmt.pr "%s\n" (String.make 65 '-');
-
-      (* Group by rule code *)
-      let by_rule = Hashtbl.create 32 in
-      List.iter
-        (fun (code, dur, is_project) ->
-          let stats =
-            try Hashtbl.find by_rule code
-            with Not_found -> (0, 0.0, is_project)
-          in
-          let count, total, _ = stats in
-          Hashtbl.replace by_rule code (count + 1, total +. dur, is_project))
-        rule_timings;
+  if timings = [] then ()
+  else
+    let rule_timings = extract_rule_timings timings in
+    if rule_timings = [] then ()
+    else
+      let by_rule = group_rule_timings rule_timings in
 
       (* Convert to list and sort by total time *)
       let rule_stats =
@@ -166,23 +225,39 @@ let print_rule_summary t =
         List.sort (fun (_, _, a, _) (_, _, b, _) -> compare b a) rule_stats
       in
 
-      (* Print each rule *)
-      List.iter
-        (fun (code, count, total, is_project) ->
-          let rule_type = if is_project then "Project" else "File" in
-          let avg = total /. float_of_int count in
-          Fmt.pr "%-10s %-15s %10d %10.2f %10.2f\n" code rule_type count
-            (total *. 1000.0) (avg *. 1000.0))
-        sorted_rules;
+      (* Filter to show only rules that took > 1ms or top 10 *)
+      let significant_rules =
+        sorted_rules
+        |> List.filter (fun (_, _, total, _) -> total *. 1000.0 > 1.0)
+      in
 
-      (* Total *)
-      let total_time =
-        List.fold_left (fun acc (_, _, t, _) -> acc +. t) 0.0 sorted_rules
+      let rules_to_show =
+        if significant_rules = [] then
+          (* If no rules > 1ms, show top 5 *)
+          take 5 sorted_rules
+        else if List.length significant_rules > 10 then
+          (* Too many significant rules, limit to top 10 *)
+          take 10 significant_rules
+        else significant_rules
       in
-      let total_calls =
-        List.fold_left (fun acc (_, c, _, _) -> acc + c) 0 sorted_rules
-      in
-      Fmt.pr "%s\n" (String.make 65 '-');
-      Fmt.pr "%-10s %-15s %10d %10.2f %10.2f\n" "Total" "" total_calls
-        (total_time *. 1000.0)
-        (total_time *. 1000.0 /. float_of_int total_calls))
+
+      if rules_to_show <> [] then (
+        Fmt.pr "\n[Top Slowest Rules]\n";
+        Fmt.pr "%-10s %-15s %10s %10s %10s\n" "Rule" "Type" "Calls" "Total (ms)"
+          "Avg (ms)";
+        Fmt.pr "%s\n" (String.make 65 '-');
+
+        (* Print each rule *)
+        List.iter
+          (fun (code, count, total, is_project) ->
+            let rule_type = if is_project then "Project" else "File" in
+            let avg = total /. float_of_int count in
+            Fmt.pr "%-10s %-15s %10d %10.2f %10.2f\n" code rule_type count
+              (total *. 1000.0) (avg *. 1000.0))
+          rules_to_show;
+
+        (* Show if there are more *)
+        let remaining = List.length sorted_rules - List.length rules_to_show in
+        if remaining > 0 then
+          Fmt.pr "%-10s %-15s %10s %10s %10s\n" "..." "" "" ""
+            (Fmt.str "(%d more)" remaining))
