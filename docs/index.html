@@ -741,7 +741,7 @@ pre code {
         <span class="error-code">E340</span>
         <span class="error-title">Error Pattern Detection</span>
     </div>
-    <div class="error-hint"><p>Using raw Error constructors with Fmt.str can lead to inconsistent error messages. Consider creating error helper functions (prefixed with 'err_') that encapsulate common error patterns and provide consistent formatting.</p><div class="examples-grid">
+    <div class="error-hint"><p>Using raw Error constructors with Fmt.str (including polymorphic variants like `Msg) can lead to inconsistent error messages. Consider creating error helper functions (prefixed with 'err_') that encapsulate common error patterns and provide consistent formatting. Place these error helpers at the top of the file to make it easier to see all the different error cases in one place.</p><div class="examples-grid">
 <div class="example bad">
   <h4>BAD</h4>
   <pre><code><span class="kw">let</span> process_data x =
@@ -750,13 +750,23 @@ pre code {
   | n -&gt; 
       <span class="kw">if</span> n &gt; <span class="nu">100</span> <span class="kw">then</span>
         <span class="cn">Error</span> (<span class="cn">Fmt</span>.str &quot;<span class="cn">Data</span> too large: %d&quot; n)
-      <span class="kw">else</span> <span class="cn">Ok</span> n</code></pre>
+      <span class="kw">else</span> <span class="cn">Ok</span> n
+
+<span class="kw">let</span> process_string s =
+  <span class="kw">if</span> s = &quot;&quot; <span class="kw">then</span>
+    <span class="cn">Error</span> (`<span class="cn">Msg</span> (<span class="cn">Fmt</span>.str &quot;<span class="cn">Invalid</span> string: '%s' is empty&quot; s))
+  <span class="kw">else</span> <span class="kw">if</span> <span class="cn">String</span>.length s &gt; <span class="nu">100</span> <span class="kw">then</span>
+    <span class="cn">Error</span> (`<span class="cn">Msg</span> (<span class="cn">Fmt</span>.str &quot;<span class="cn">String</span> too long: %d characters&quot; (<span class="cn">String</span>.length s)))
+  <span class="kw">else</span>
+    <span class="cn">Ok</span> s</code></pre>
 </div>
 <div class="example good">
   <h4>GOOD</h4>
   <pre><code><span class="cm">(* Define error helpers at the top of the file *)</span>
 <span class="kw">let</span> err_invalid x = <span class="cn">Error</span> (<span class="cn">Fmt</span>.str &quot;<span class="cn">Invalid</span> data: %d&quot; x)
 <span class="kw">let</span> err_too_large n = <span class="cn">Error</span> (<span class="cn">Fmt</span>.str &quot;<span class="cn">Data</span> too large: %d&quot; n)
+<span class="kw">let</span> err_invalid_string s = <span class="cn">Error</span> (`<span class="cn">Msg</span> (<span class="cn">Fmt</span>.str &quot;<span class="cn">Invalid</span> string: '%s' is empty&quot; s))
+<span class="kw">let</span> err_string_too_long len = <span class="cn">Error</span> (`<span class="cn">Msg</span> (<span class="cn">Fmt</span>.str &quot;<span class="cn">String</span> too long: %d characters&quot; len))
 
 <span class="kw">let</span> process_data x =
   <span class="kw">match</span> x <span class="kw">with</span>
@@ -764,7 +774,15 @@ pre code {
   | n -&gt; 
       <span class="kw">if</span> n &gt; <span class="nu">100</span> <span class="kw">then</span>
         err_too_large n
-      <span class="kw">else</span> <span class="cn">Ok</span> n</code></pre>
+      <span class="kw">else</span> <span class="cn">Ok</span> n
+
+<span class="kw">let</span> process_string s =
+  <span class="kw">if</span> s = &quot;&quot; <span class="kw">then</span>
+    err_invalid_string s
+  <span class="kw">else</span> <span class="kw">if</span> <span class="cn">String</span>.length s &gt; <span class="nu">100</span> <span class="kw">then</span>
+    err_string_too_long (<span class="cn">String</span>.length s)
+  <span class="kw">else</span>
+    <span class="cn">Ok</span> s</code></pre>
 </div>
 </div></div>
 </div>

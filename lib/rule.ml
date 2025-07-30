@@ -53,6 +53,7 @@ let is_project_scoped (T desc) =
   match desc.check with Project _ -> true | File _ -> false
 
 let equal (T desc1) (T desc2) = desc1.code = desc2.code
+let pp ppf (T desc) = Fmt.pf ppf "[%s] %s" desc.code desc.title
 
 (* Module for handling rule execution results *)
 module Run = struct
