@@ -5,7 +5,9 @@ type payload = { type_name : string; missing_functions : string list }
 
 (** Check if a type has deriving show attribute in the content *)
 let has_deriving_show content line_num =
-  (* This is a simplified check - we look for deriving show near the type declaration *)
+  (* Merlin's outline doesn't include PPX-generated functions, so we need to
+     check the source for [@@deriving show] which generates pp automatically. 
+     This is a workaround for a Merlin limitation. *)
   try
     let lines = String.split_on_char '\n' content in
     (* Look at a few lines around the type declaration *)
