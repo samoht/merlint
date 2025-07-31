@@ -13,7 +13,7 @@ let re_merlint_r_cmd =
        ])
 
 (* Build regex for bad test: $ ... merlint ... -r RULE ... (bad.ml|bad/) *)
-let make_bad_test_re rule_code =
+let bad_test_re rule_code =
   Re.compile
     (Re.seq
        [
@@ -29,7 +29,7 @@ let make_bad_test_re rule_code =
        ])
 
 (* Build regex for good test: $ ... merlint ... -r RULE ... (good.ml|good/) *)
-let make_good_test_re rule_code =
+let good_test_re rule_code =
   Re.compile
     (Re.seq
        [
@@ -66,7 +66,7 @@ let re_good_test_name =
   Re.compile (Re.alt [ Re.str "good.ml"; Re.str "good.mli"; Re.str "good/" ])
 
 (* Get all error codes from rules *)
-let get_all_error_codes () =
+let all_error_codes () =
   Merlint.Data.all_rules |> List.map Merlint.Rule.code
   |> List.map String.lowercase_ascii
 
@@ -78,7 +78,7 @@ let extract_error_code dir_name =
   else None
 
 (* Get all test directories *)
-let get_test_directories cram_dir =
+let test_directories cram_dir =
   if Sys.file_exists cram_dir && Sys.is_directory cram_dir then
     Sys.readdir cram_dir |> Array.to_list
     |> List.filter (fun name ->
@@ -195,8 +195,8 @@ let check_run_t_format cram_dir error_code =
   let test_dir = Filename.concat cram_dir (error_code ^ ".t") in
   let run_file = Filename.concat test_dir "run.t" in
   let rule_code = String.uppercase_ascii error_code in
-  let bad_test_re = make_bad_test_re rule_code in
-  let good_test_re = make_good_test_re rule_code in
+  let bad_test_re = bad_test_re rule_code in
+  let good_test_re = good_test_re rule_code in
 
   if not (Sys.file_exists run_file) then (false, false, [])
   else
@@ -471,8 +471,8 @@ let main () =
   let errors = ref [] in
 
   (* Get all defined rules and test directories *)
-  let defined_rules = get_all_error_codes () in
-  let test_dirs = get_test_directories cram_dir in
+  let defined_rules = all_error_codes () in
+  let test_dirs = test_directories cram_dir in
 
   Fmt.pr "Checking test integrity...@.";
   Fmt.pr "Found %d defined rules@." (List.length defined_rules);
