@@ -38,27 +38,31 @@ let check_global_mutable_state ~filename outline =
       | _ -> None)
     outline
 
-let check ctx =
-  let outline_data = Context.outline ctx in
-  let filename = ctx.filename in
-  check_global_mutable_state ~filename outline_data
+let check (ctx : Context.file) =
+  (* Only check .mli files - mutable state in .ml files is fine if not exposed *)
+  if not (String.ends_with ~suffix:".mli" ctx.filename) then []
+  else
+    let outline_data = Context.outline ctx in
+    let filename = ctx.filename in
+    check_global_mutable_state ~filename outline_data
 
 let pp ppf { kind; name } =
   Fmt.pf ppf
-    "Global mutable state '%s' of type '%s' detected - instead of accessing a \
-     global ref, consider creating an init value and passing it through \
-     function parameters"
+    "Exposed global mutable state '%s' of type '%s' in interface - instead of \
+     exposing mutable state, consider providing functions that encapsulate the \
+     state manipulation"
     name kind
 
 let rule =
-  Rule.v ~code:"E351" ~title:"Global Mutable State" ~category:Security_safety
+  Rule.v ~code:"E351" ~title:"Exposed Global Mutable State"
+    ~category:Security_safety
     ~hint:
-      "Global mutable state makes programs harder to reason about and test. A \
-       good design pattern is to create an init value and pass it around as a \
-       parameter instead of accessing global refs. This makes data flow \
-       explicit and functions easier to test. If mutation is necessary, \
-       consider using local state within functions or returning updated \
-       values."
+      "Exposing global mutable state in interfaces (.mli files) breaks \
+       encapsulation and makes programs harder to reason about. Instead of \
+       exposing refs or mutable arrays directly, provide functions that \
+       encapsulate state manipulation. This preserves module abstraction and \
+       makes the API clearer. Internal mutable state in .ml files is fine as \
+       long as it's not exposed in the interface."
     ~examples:
       [ Example.bad Examples.E351.bad_ml; Example.good Examples.E351.good_ml ]
     ~pp (File check)

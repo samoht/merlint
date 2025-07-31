@@ -1,18 +1,22 @@
-Test bad example - should find global mutable state:
-  $ merlint -r E351 bad.ml
+Test bad example - should find exposed global mutable state in interface:
+  $ merlint -r E351 bad.mli
+  merlint: [ERROR] Command failed with exit code 1
+  Warning: Failed to build project: Command failed with exit code 1
+  Function type analysis may not work properly.
+  Continuing with analysis...
   Running merlint analysis...
   
   Analyzing 1 files
   
   ✗ Code Quality (2 total issues)
-    [E351] Global Mutable State (2 issues)
-    Global mutable state makes programs harder to reason about and test. A good
-    design pattern is to create an init value and pass it around as a parameter
-    instead of accessing global refs. This makes data flow explicit and functions
-    easier to test. If mutation is necessary, consider using local state within
-    functions or returning updated values.
-    - bad.ml:2:0: Global mutable state 'counter' of type 'ref' detected - instead of accessing a global ref, consider creating an init value and passing it through function parameters
-    - bad.ml:5:0: Global mutable state 'global_cache' of type 'array' detected - instead of accessing a global ref, consider creating an init value and passing it through function parameters
+    [E351] Exposed Global Mutable State (2 issues)
+    Exposing global mutable state in interfaces (.mli files) breaks encapsulation
+    and makes programs harder to reason about. Instead of exposing refs or mutable
+    arrays directly, provide functions that encapsulate state manipulation. This
+    preserves module abstraction and makes the API clearer. Internal mutable state
+    in .ml files is fine as long as it's not exposed in the interface.
+    - bad.mli:1:0: Exposed global mutable state 'counter' of type 'ref' in interface - instead of exposing mutable state, consider providing functions that encapsulate the state manipulation
+    - bad.mli:2:0: Exposed global mutable state 'global_cache' of type 'array' in interface - instead of exposing mutable state, consider providing functions that encapsulate the state manipulation
   ✓ Code Style (0 total issues)
   ✓ Naming Conventions (0 total issues)
   ✓ Documentation (0 total issues)
@@ -23,8 +27,12 @@ Test bad example - should find global mutable state:
   ✗ Some checks failed. See details above.
   [1]
 
-Test good example - should find no issues:
-  $ merlint -r E351 good.ml
+Test good example - should find no issues (properly encapsulated state):
+  $ merlint -r E351 good.mli
+  merlint: [ERROR] Command failed with exit code 1
+  Warning: Failed to build project: Command failed with exit code 1
+  Function type analysis may not work properly.
+  Continuing with analysis...
   Running merlint analysis...
   
   Analyzing 1 files
