@@ -10,8 +10,8 @@ Test bad example - should find double underscore patterns:
     Avoid using double underscore module access like 'Module__Submodule'. Use dot
     notation 'Module.Submodule' instead. Double underscore notation is internal to
     the OCaml module system and should not be used in application code.
-    - bad.ml:1:15: Use 'Test_e618.Printf.sprintf' instead of 'Test_e618.Printf__.sprintf' - avoid double underscore module access
-    - bad.ml:2:15: Use 'Test_e618.String.length' instead of 'Test_e618.String__.length' - avoid double underscore module access
+    - bad.ml:1:15: Use 'Printf.sprintf.sprintf' instead of 'Printf__sprintf.sprintf' - avoid double underscore module access
+    - bad.ml:2:15: Use 'String.length.length' instead of 'String__length.length' - avoid double underscore module access
   ✓ Naming Conventions (0 total issues)
   ✓ Documentation (0 total issues)
   ✓ Project Structure (0 total issues)
