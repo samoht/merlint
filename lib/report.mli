@@ -40,4 +40,4 @@ val print_summary : t list -> unit
 (** [print_summary reports] prints summary. *)
 
 val all_issues : t list -> Rule.Run.result list
-(** [get_all_issues reports] extracts all issues. *)
+(** [all_issues reports] extracts all issues. *)

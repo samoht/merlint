@@ -44,10 +44,10 @@ val of_json : Yojson.Safe.t -> t
 (** [of_json json] parses outline. *)
 
 val values : t -> item list
-(** [get_values outline] returns all values. *)
+(** [values outline] returns all values. *)
 
 val by_name : string -> t -> item option
-(** [find_by_name name outline] finds item. *)
+(** [by_name name outline] finds item. *)
 
 val pp : t Fmt.t
 (** [pp formatter outline] pretty prints. *)

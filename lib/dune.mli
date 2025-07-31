@@ -16,17 +16,17 @@ val is_executable : describe -> Fpath.t -> bool
     or test) - no .mli needed. *)
 
 val project_files : describe -> Fpath.t list
-(** [get_project_files describe] returns all project source files. *)
+(** [project_files describe] returns all project source files. *)
 
 val executable_modules : describe -> string list
-(** [get_executable_modules describe] gets executable module names from dune
+(** [executable_modules describe] gets executable module names from dune
     describe. *)
 
 val lib_modules : describe -> string list
-(** [get_lib_modules describe] gets library module names from dune describe. *)
+(** [lib_modules describe] gets library module names from dune describe. *)
 
 val test_modules : describe -> string list
-(** [get_test_modules describe] gets test module names from dune describe. *)
+(** [test_modules describe] gets test module names from dune describe. *)
 
 val merge : describe list -> describe
 (** [merge describes] merges multiple describe values into one, deduplicating
@@ -37,8 +37,8 @@ val exclude : string list -> describe -> describe
     from a describe. Patterns can be simple strings or use * for wildcards. *)
 
 val synthetic : string list -> describe
-(** [create_synthetic files] creates a synthetic describe for individual files
-    passed on command line. *)
+(** [synthetic files] creates a synthetic describe for individual files passed
+    on command line. *)
 
 type library_info = {
   name : string; (* Internal library name *)
@@ -48,8 +48,8 @@ type library_info = {
 (** Information about a library stanza *)
 
 val libraries : describe -> library_info list
-(** [get_libraries describe] returns the list of libraries with their
-    information. *)
+(** [libraries describe] returns the list of libraries with their information.
+*)
 
 type test_info = {
   name : string;
@@ -59,5 +59,5 @@ type test_info = {
 (** Information about a test stanza *)
 
 val tests : describe -> test_info list
-(** [get_tests describe] returns the list of test stanzas with their files and
+(** [tests describe] returns the list of test stanzas with their files and
     library dependencies. *)
