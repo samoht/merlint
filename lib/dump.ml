@@ -481,6 +481,60 @@ let check_function_usage identifiers module_name function_name issue_constructor
       | _ -> false)
     issue_constructor
 
+let check_function_call_pattern content function_name arg_pattern
+    issue_constructor _filename =
+  let lines = String.split_on_char '\n' content in
+  let issues = ref [] in
+
+  (* Create patterns for both qualified and unqualified calls, avoiding comments *)
+  let qualified_pattern =
+    Re.compile
+      (Re.seq
+         [
+           Re.str "Alcotest.";
+           Re.str function_name;
+           Re.rep Re.space;
+           Re.str "(";
+           Re.rep Re.space;
+           Re.str arg_pattern;
+         ])
+  in
+
+  let unqualified_pattern =
+    Re.compile
+      (Re.seq
+         [
+           Re.bow;
+           Re.str function_name;
+           Re.rep Re.space;
+           Re.str "(";
+           Re.rep Re.space;
+           Re.str arg_pattern;
+         ])
+  in
+
+  (* Pattern to detect if we're inside a comment *)
+  let comment_pattern =
+    Re.compile (Re.seq [ Re.str "(*"; Re.rep Re.any; Re.str "*)" ])
+  in
+
+  List.iteri
+    (fun line_idx line ->
+      let line_num = line_idx + 1 in
+
+      (* Skip lines that are entirely comments *)
+      if not (Re.execp comment_pattern line) then
+        if
+          (* Check for qualified call first (e.g., Alcotest.fail) *)
+          Re.execp qualified_pattern line
+        then issues := issue_constructor (line, line_num, true) :: !issues
+          (* Only check for unqualified call if qualified didn't match *)
+        else if Re.execp unqualified_pattern line then
+          issues := issue_constructor (line, line_num, false) :: !issues)
+    lines;
+
+  !issues
+
 let check_elements elements check_fn create_issue_fn =
   List.filter_map
     (fun (elt : elt) ->

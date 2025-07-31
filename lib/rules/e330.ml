@@ -17,8 +17,11 @@ let kind_to_string = function
 
 (** Check if an item name has redundant module prefix *)
 let has_redundant_prefix item_name_lower module_name =
-  (* Special case: pp function in pp module is idiomatic *)
-  if item_name_lower = "pp" && module_name = "pp" then false
+  (* Special cases that are idiomatic and should not be flagged *)
+  if
+    (item_name_lower = "pp" && module_name = "pp")
+    || (item_name_lower = "main" && module_name = "main")
+  then false
   else
     String.starts_with ~prefix:(module_name ^ "_") item_name_lower
     || item_name_lower = module_name

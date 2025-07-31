@@ -1,0 +1,4 @@
+(library
+ (name test_e617_good)
+ (modules test_config test_parser test_user_auth)
+ (libraries alcotest))

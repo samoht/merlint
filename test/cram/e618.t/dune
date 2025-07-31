@@ -1,0 +1,5 @@
+(library
+ (name test_e618)
+ (modules bad good printf__ string__)
+ (libraries alcotest fmt)
+ (flags :standard -w -32))

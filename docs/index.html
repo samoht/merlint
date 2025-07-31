@@ -1037,17 +1037,32 @@ pre code {
 </div>
 <div class="example good">
   <h4>GOOD</h4>
-  <pre><code><span class="cm">(* Local mutable state is fine *)</span>
-<span class="kw">let</span> compute_sum lst =
-  <span class="kw">let</span> sum = <span class="kw">ref</span> <span class="nu">0</span> <span class="kw">in</span>
-  <span class="cn">List</span>.iter (<span class="kw">fun</span> x -&gt; sum := !sum + x) lst;
-  !sum
+  <pre><code><span class="cm">(* Good example - encapsulated state *)</span>
 
-<span class="cm">(* Or better, use functional approach *)</span>
-<span class="kw">let</span> compute_sum lst = <span class="cn">List</span>.fold_left (+) <span class="nu">0</span> lst
+<span class="cm">(* Internal state - not exposed in interface *)</span>
+<span class="kw">let</span> counter = <span class="kw">ref</span> <span class="nu">0</span>
+<span class="kw">let</span> cache = <span class="cn">Hashtbl</span>.create <span class="nu">100</span>
 
-<span class="cm">(* Pass state explicitly *)</span>
-<span class="kw">let</span> incr_counter counter = counter + <span class="nu">1</span></code></pre>
+<span class="cm">(* Functions that encapsulate state access *)</span>
+<span class="kw">let</span> init () = 
+  counter := <span class="nu">0</span>;
+  <span class="cn">Hashtbl</span>.clear cache
+
+<span class="kw">let</span> increment () = 
+  incr counter;
+  !counter
+
+<span class="kw">let</span> get_count () = !counter
+
+<span class="kw">let</span> cache_get key = 
+  <span class="kw">try</span> <span class="cn">Some</span> (<span class="cn">Hashtbl</span>.find cache key)
+  <span class="kw">with</span> <span class="cn">Not_found</span> -&gt; <span class="cn">None</span>
+
+<span class="kw">let</span> cache_set key value = 
+  <span class="cn">Hashtbl</span>.replace cache key value
+
+<span class="kw">let</span> cache_clear () = 
+  <span class="cn">Hashtbl</span>.clear cache</code></pre>
 </div>
 </div></div>
 </div>
@@ -1196,7 +1211,7 @@ pre code {
         <span class="error-code">E600</span>
         <span class="error-title">Test Module Convention</span>
     </div>
-    <div class="error-hint"><p>Test executables (test.ml) should use test suites exported by test modules (test_*.ml) rather than defining their own test lists. Test module interfaces (test_*.mli) should only export a 'suite' value with the correct type to ensure proper test organization.</p></div>
+    <div class="error-hint"><p>Enforces proper test organization: (1) Test executables (test.ml) should use test suites from test modules (e.g., Test_user.suite) rather than defining their own test lists directly. (2) Test module interfaces (test_*.mli) should only export a 'suite' value with type 'string * unit Alcotest.test_case list' and no other values.</p></div>
 </div>
 <div class="error-card" id="E605">
     <div>
@@ -1237,6 +1252,112 @@ pre code {
         <span class="error-title">Test Suite Not Included</span>
     </div>
     <div class="error-hint"><p>All test modules should be included in the main test runner (test.ml). Add the missing test suite to ensure all tests are run.</p></div>
+</div>
+<div class="error-card" id="E616">
+    <div>
+        <span class="error-code">E616</span>
+        <span class="error-title">Use failf Instead of fail (Fmt.str)</span>
+    </div>
+    <div class="error-hint"><p>In test files, use Alcotest.failf or failf instead of Alcotest.fail (Fmt.str ...) or fail (Fmt.str ...). The failf function provides printf-style formatting directly, making the code more concise and readable.</p><div class="examples-grid">
+<div class="example bad">
+  <h4>BAD</h4>
+  <pre><code><span class="kw">let</span> test_parse () =
+  <span class="kw">match</span> parse input <span class="kw">with</span>
+  | <span class="cn">Error</span> e -&gt; <span class="cn">Alcotest</span>.fail (<span class="cn">Fmt</span>.str &quot;<span class="cn">Parse</span> error: %s&quot; e)
+  | <span class="cn">Ok</span> _ -&gt; ()
+
+<span class="kw">let</span> test_invalid () =
+  <span class="kw">if</span> <span class="kw">not</span> (is_valid data) <span class="kw">then</span>
+    fail (<span class="cn">Fmt</span>.str &quot;<span class="cn">Invalid</span> data: %a&quot; pp_data data)</code></pre>
+</div>
+<div class="example good">
+  <h4>GOOD</h4>
+  <pre><code><span class="kw">let</span> test_parse () =
+  <span class="kw">match</span> parse input <span class="kw">with</span>
+  | <span class="cn">Error</span> e -&gt; <span class="cn">Alcotest</span>.failf &quot;<span class="cn">Parse</span> error: %s&quot; e
+  | <span class="cn">Ok</span> _ -&gt; ()
+
+<span class="kw">let</span> test_invalid () =
+  <span class="kw">if</span> <span class="kw">not</span> (is_valid data) <span class="kw">then</span>
+    failf &quot;<span class="cn">Invalid</span> data: %a&quot; pp_data data</code></pre>
+</div>
+</div></div>
+</div>
+<div class="error-card" id="E617">
+    <div>
+        <span class="error-code">E617</span>
+        <span class="error-title">Test Suite Naming Convention</span>
+    </div>
+    <div class="error-hint"><p>Test suite names should follow these conventions: (1) Use lowercase snake_case for the suite name. (2) The suite name should match the test file name - for example, test_foo.ml should have suite name 'foo'. This makes it easier to identify which test file contains which suite.</p><div class="examples-grid">
+<div class="example bad">
+  <h4>BAD</h4>
+  <pre><code><span class="cm">(* In test_config.ml *)</span>
+<span class="kw">let</span> suite = (&quot;<span class="cn">Config</span>&quot;, tests)  <span class="cm">(* Wrong: uppercase *)</span>
+
+<span class="cm">(* In test_user_auth.ml *)</span>
+<span class="kw">let</span> suite = (&quot;auth&quot;, tests)  <span class="cm">(* Wrong: doesn't match filename *)</span>
+
+<span class="cm">(* In test_parser.ml *)</span>
+<span class="kw">let</span> suite = (&quot;parser-tests&quot;, tests)  <span class="cm">(* Wrong: not snake_case *)</span></code></pre>
+</div>
+<div class="example good">
+  <h4>GOOD</h4>
+  <pre><code><span class="cm">(* In test_config.ml *)</span>
+<span class="kw">let</span> suite = (&quot;config&quot;, tests)
+
+<span class="cm">(* In test_user_auth.ml *)</span>
+<span class="kw">let</span> suite = (&quot;user_auth&quot;, tests)
+
+<span class="cm">(* In test_parser.ml *)</span>
+<span class="kw">let</span> suite = (&quot;parser&quot;, tests)</code></pre>
+</div>
+</div></div>
+</div>
+<div class="error-card" id="E618">
+    <div>
+        <span class="error-code">E618</span>
+        <span class="error-title">Avoid X__Y Module Access</span>
+    </div>
+    <div class="error-hint"><p>Avoid using double underscore module access like 'Module__Submodule'. Use dot notation 'Module.Submodule' instead. Double underscore notation is internal to the OCaml module system and should not be used in application code.</p><div class="examples-grid">
+<div class="example bad">
+  <h4>BAD</h4>
+  <pre><code><span class="kw">let</span> result = <span class="cn">Merlint__Location</span>.v ~file:&quot;test.ml&quot; 
+                   ~start_line:<span class="nu">1</span> ~start_col:<span class="nu">0</span> ~end_line:<span class="nu">1</span> ~end_col:<span class="nu">10</span></code></pre>
+</div>
+<div class="example good">
+  <h4>GOOD</h4>
+  <pre><code><span class="kw">let</span> result = <span class="cn">Merlint</span>.<span class="cn">Location</span>.v ~file:&quot;test.ml&quot; 
+                   ~start_line:<span class="nu">1</span> ~start_col:<span class="nu">0</span> ~end_line:<span class="nu">1</span> ~end_col:<span class="nu">10</span></code></pre>
+</div>
+</div></div>
+</div>
+<div class="error-card" id="E619">
+    <div>
+        <span class="error-code">E619</span>
+        <span class="error-title">Use Fmt.failwith Instead of failwith (Fmt.str)</span>
+    </div>
+    <div class="error-hint"><p>Use Fmt.failwith instead of failwith (Fmt.str ...). Fmt.failwith provides printf-style formatting directly, making the code more concise and readable.</p><div class="examples-grid">
+<div class="example bad">
+  <h4>BAD</h4>
+  <pre><code><span class="kw">let</span> validate_input input =
+  <span class="kw">if</span> <span class="cn">String</span>.length input = <span class="nu">0</span> <span class="kw">then</span>
+    failwith (<span class="cn">Fmt</span>.str &quot;<span class="cn">Empty</span> input provided&quot;)
+  <span class="kw">else</span> <span class="kw">if</span> <span class="cn">String</span>.length input &gt; <span class="nu">100</span> <span class="kw">then</span>
+    failwith (<span class="cn">Fmt</span>.str &quot;<span class="cn">Input</span> too long: %d characters&quot; (<span class="cn">String</span>.length input))
+  <span class="kw">else</span>
+    input</code></pre>
+</div>
+<div class="example good">
+  <h4>GOOD</h4>
+  <pre><code><span class="kw">let</span> validate_input input =
+  <span class="kw">if</span> <span class="cn">String</span>.length input = <span class="nu">0</span> <span class="kw">then</span>
+    <span class="cn">Fmt</span>.failwith &quot;<span class="cn">Empty</span> input provided&quot;
+  <span class="kw">else</span> <span class="kw">if</span> <span class="cn">String</span>.length input &gt; <span class="nu">100</span> <span class="kw">then</span>
+    <span class="cn">Fmt</span>.failwith &quot;<span class="cn">Input</span> too long: %d characters&quot; (<span class="cn">String</span>.length input)
+  <span class="kw">else</span>
+    input</code></pre>
+</div>
+</div></div>
 </div>
 
     <a href="#top" class="back-to-top">↑ Top</a>

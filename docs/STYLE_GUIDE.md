@@ -763,7 +763,7 @@ Log.info (fun m ->
 
 ### [E600] Test Module Convention
 
-Test executables (test.ml) should use test suites exported by test modules (test_*.ml) rather than defining their own test lists. Test module interfaces (test_*.mli) should only export a 'suite' value with the correct type to ensure proper test organization.
+Enforces proper test organization: (1) Test executables (test.ml) should use test suites from test modules (e.g., Test_user.suite) rather than defining their own test lists directly. (2) Test module interfaces (test_*.mli) should only export a 'suite' value with type 'string * unit Alcotest.test_case list' and no other values.
 
 ### [E605] Missing Test File
 

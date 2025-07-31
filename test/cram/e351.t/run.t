@@ -1,9 +1,5 @@
 Test bad example - should find exposed global mutable state in interface:
   $ merlint -r E351 bad.mli
-  merlint: [ERROR] Command failed with exit code 1
-  Warning: Failed to build project: Command failed with exit code 1
-  Function type analysis may not work properly.
-  Continuing with analysis...
   Running merlint analysis...
   
   Analyzing 1 files
@@ -29,10 +25,6 @@ Test bad example - should find exposed global mutable state in interface:
 
 Test good example - should find no issues (properly encapsulated state):
   $ merlint -r E351 good.mli
-  merlint: [ERROR] Command failed with exit code 1
-  Warning: Failed to build project: Command failed with exit code 1
-  Function type analysis may not work properly.
-  Continuing with analysis...
   Running merlint analysis...
   
   Analyzing 1 files

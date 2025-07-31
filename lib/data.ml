@@ -36,4 +36,8 @@ let all_rules =
     E606.rule;
     E610.rule;
     E615.rule;
+    E616.rule;
+    E617.rule;
+    E618.rule;
+    E619.rule;
   ]

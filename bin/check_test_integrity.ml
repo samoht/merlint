@@ -419,8 +419,8 @@ let check_expected_outputs cram_dir defined_rules test_dirs errors =
               errors :=
                 Fmt.str
                   "Error: %s/%s.t/run.t: %s test shows build errors/warnings - \
-                   fix the test project setup"
-                  cram_dir rule_code test_name
+                   fix the build (debug with: dune build --root %s/%s.t)"
+                  cram_dir rule_code test_name cram_dir rule_code
                 :: !errors
             else if test_name = "bad" then
               (* bad.ml should exit with code [1] *)

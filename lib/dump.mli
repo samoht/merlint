@@ -65,6 +65,14 @@ val check_function_usage :
 (** [check_function_usage identifiers module_name function_name
      issue_constructor] checks for specific function usage. *)
 
+val check_function_call_pattern :
+  string -> string -> string -> (string * int * bool -> 'a) -> string -> 'a list
+(** [check_function_call_pattern content function_name arg_pattern
+     issue_constructor filename] checks for function calls with specific
+    argument patterns. For example, to find 'fail (Fmt.str' patterns, use:
+    check_function_call_pattern content "fail" "Fmt.str" issue_constructor
+    filename. *)
+
 val check_elements :
   elt list ->
   (string -> 'a option) ->

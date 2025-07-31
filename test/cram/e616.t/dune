@@ -1,0 +1,5 @@
+(library
+ (name test_e616)
+ (modules test_bad test_good)
+ (libraries alcotest fmt)
+ (flags :standard -w -32))
