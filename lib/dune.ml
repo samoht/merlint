@@ -58,7 +58,7 @@ let is_executable dune_describe ml_file =
     dune_describe.executables
 
 (** Find all dune files in a directory tree *)
-let rec get_dune_files dir =
+let rec dune_files dir =
   let dir_path = dir in
   let entries =
     try Sys.readdir (Fpath.to_string dir) with Sys_error _ -> [||]
@@ -74,7 +74,7 @@ let rec get_dune_files dir =
          else if
            Sys.is_directory path_str && entry <> "_build" && entry <> ".git"
            && entry <> "_opam"
-         then get_dune_files path
+         then dune_files path
          else [])
 
 (** Parse a dune file and extract module information *)
@@ -211,7 +211,7 @@ let extract_project_item dir = function
   | _ -> None
 
 (** Get source files for a project item *)
-let get_item_files = function
+let item_files = function
   | Library { dir; modules; _ } ->
       let dir_path = dir in
       if modules = [] then (
@@ -311,7 +311,7 @@ let get_item_files = function
   | Cram_test _ -> []
 
 (** Get all project source files from describe *)
-let get_project_files dune_describe =
+let project_files dune_describe =
   (* Collect all files from libraries, executables, and tests *)
   let lib_files =
     List.concat_map
@@ -336,7 +336,7 @@ let get_project_files dune_describe =
   all_files
 
 (** Get executable modules from describe *)
-let get_executable_modules dune_describe =
+let executable_modules dune_describe =
   dune_describe.executables |> List.concat_map snd
   |> List.filter_map (fun file ->
          let file_str = Fpath.to_string file in
@@ -346,7 +346,7 @@ let get_executable_modules dune_describe =
   |> List.sort_uniq String.compare
 
 (** Get library modules from describe *)
-let get_lib_modules dune_describe =
+let lib_modules dune_describe =
   dune_describe.libraries
   |> List.concat_map (fun (lib_info : library_info) -> lib_info.files)
   |> List.filter_map (fun file ->
@@ -357,7 +357,7 @@ let get_lib_modules dune_describe =
   |> List.sort_uniq String.compare
 
 (** Get test modules from describe *)
-let get_test_modules dune_describe =
+let test_modules dune_describe =
   dune_describe.tests
   |> List.concat_map (fun (t : test_info) -> t.files)
   |> List.filter_map (fun file ->
@@ -368,9 +368,9 @@ let get_test_modules dune_describe =
   |> List.sort_uniq String.compare
 
 (** Get project structure from dune files *)
-let get_project_structure project_root =
+let project_structure project_root =
   (* Find all dune files *)
-  let dune_files = get_dune_files project_root in
+  let dune_files = dune_files project_root in
   Log.debug (fun m ->
       m "Found %d dune files in %a" (List.length dune_files) Fpath.pp
         project_root);
@@ -442,13 +442,13 @@ let get_project_structure project_root =
 
 (** Real describe implementation *)
 let describe_impl project_root =
-  let structure = get_project_structure project_root in
+  let structure = project_structure project_root in
   let libraries =
     structure
     |> List.filter_map (function
          | Library { name; public_name; dir; modules } ->
              let files =
-               get_item_files (Library { name; public_name; dir; modules })
+               item_files (Library { name; public_name; dir; modules })
              in
              Some ({ name; public_name; files } : library_info)
          | _ -> None)
@@ -457,7 +457,7 @@ let describe_impl project_root =
     structure
     |> List.filter_map (function
          | Executable { names; dir; modules } -> (
-             let files = get_item_files (Executable { names; dir; modules }) in
+             let files = item_files (Executable { names; dir; modules }) in
              match names with [] -> None | main :: _ -> Some (main, files))
          | _ -> None)
   in
@@ -465,9 +465,7 @@ let describe_impl project_root =
     structure
     |> List.filter_map (function
          | Test { names; dir; modules; libraries } -> (
-             let files =
-               get_item_files (Test { names; dir; modules; libraries })
-             in
+             let files = item_files (Test { names; dir; modules; libraries }) in
              match names with
              | [] -> None
              | main :: _ -> Some { name = main; files; libraries })
@@ -535,7 +533,7 @@ let exclude patterns describe =
   { libraries; executables; tests }
 
 (** Create a synthetic describe for individual files *)
-let create_synthetic files =
+let synthetic files =
   let fpath_files = List.map Fpath.v files in
   (* Separate test files from library files based on module name *)
   let lib_files, test_files =
@@ -564,7 +562,7 @@ let create_synthetic files =
   }
 
 (** Get libraries from describe *)
-let get_libraries describe = describe.libraries
+let libraries describe = describe.libraries
 
 (** Get tests from describe *)
-let get_tests describe = describe.tests
+let tests describe = describe.tests

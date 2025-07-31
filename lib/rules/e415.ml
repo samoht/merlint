@@ -68,7 +68,7 @@ let check (ctx : Context.file) =
         if has_pp || has_deriving then []
         else
           let loc =
-            Location.create ~file:ctx.filename ~start_line:line_num ~start_col:0
+            Location.v ~file:ctx.filename ~start_line:line_num ~start_col:0
               ~end_line:line_num ~end_col:0
           in
           [ Issue.v ~loc { type_name = "t"; missing_functions = [ "pp" ] } ]

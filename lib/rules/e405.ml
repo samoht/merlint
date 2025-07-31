@@ -65,15 +65,15 @@ let check (ctx : Context.file) =
                 in
                 if (not has_doc_before) && not has_doc_after then
                   let loc =
-                    Location.create ~file:ctx.filename
-                      ~start_line:range.start.line ~start_col:range.start.col
-                      ~end_line:range.end_.line ~end_col:range.end_.col
+                    Location.v ~file:ctx.filename ~start_line:range.start.line
+                      ~start_col:range.start.col ~end_line:range.end_.line
+                      ~end_col:range.end_.col
                   in
                   Some (Issue.v ~loc { value_name = item.name; location = loc })
                 else None
             | None -> None)
         | _ -> None)
-      (Outline.get_values outline)
+      (Outline.values outline)
 
 let pp ppf { value_name; location = _ } =
   Fmt.pf ppf "Public value '%s' is missing documentation" value_name

@@ -83,9 +83,9 @@ let check (ctx : Context.file) =
 
                 if length > threshold then
                   let loc =
-                    Location.create ~file:ctx.filename
-                      ~start_line:range.start.line ~start_col:range.start.col
-                      ~end_line:range.end_.line ~end_col:range.end_.col
+                    Location.v ~file:ctx.filename ~start_line:range.start.line
+                      ~start_col:range.start.col ~end_line:range.end_.line
+                      ~end_col:range.end_.col
                   in
                   Some (Issue.v ~loc { name = item.name; length; threshold })
                 else None

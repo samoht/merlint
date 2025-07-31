@@ -21,7 +21,7 @@ let check (ctx : Context.project) =
             else acc)
           acc lib_info.files)
       []
-      (Dune.get_libraries dune_describe)
+      (Dune.libraries dune_describe)
   in
 
   (* Build a map from public names to internal names for declared library resolution *)
@@ -32,7 +32,7 @@ let check (ctx : Context.project) =
         | Some pub_name -> (pub_name, lib_info.name) :: acc
         | None -> acc)
       []
-      (Dune.get_libraries dune_describe)
+      (Dune.libraries dune_describe)
   in
 
   (* For each test stanza, find which libraries are tested *)
@@ -61,8 +61,7 @@ let check (ctx : Context.project) =
             test_info.Dune.files
         in
         (test_info.Dune.name, test_file_libs, test_info.Dune.libraries) :: acc)
-      []
-      (Dune.get_tests dune_describe)
+      [] (Dune.tests dune_describe)
   in
 
   (* Check each test stanza to see if it mixes tests from different libraries *)
@@ -85,7 +84,7 @@ let check (ctx : Context.project) =
           (fun (test_module, lib_name, file_path) ->
             if not (List.mem lib_name resolved_libraries) then
               let loc =
-                Location.create ~file:file_path ~start_line:1 ~start_col:0
+                Location.v ~file:file_path ~start_line:1 ~start_col:0
                   ~end_line:1 ~end_col:0
               in
               issues :=

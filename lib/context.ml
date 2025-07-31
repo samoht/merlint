@@ -27,7 +27,7 @@ type project = {
   test_modules : string list Lazy.t;
 }
 
-let create_file ~filename ~config ~project_root ~merlin_result =
+let file ~filename ~config ~project_root ~merlin_result =
   {
     filename;
     config;
@@ -59,7 +59,7 @@ let create_file ~filename ~config ~project_root ~merlin_result =
          ast);
   }
 
-let create_project ~config ~project_root ~all_files ~dune_describe =
+let project ~config ~project_root ~all_files ~dune_describe =
   let dune_desc_lazy = lazy dune_describe in
   {
     config;
@@ -87,13 +87,13 @@ let create_project ~config ~project_root ~all_files ~dune_describe =
          all_files);
     dune_describe = dune_desc_lazy;
     executable_modules =
-      lazy (Dune.get_executable_modules (Lazy.force dune_desc_lazy));
-    lib_modules = lazy (Dune.get_lib_modules (Lazy.force dune_desc_lazy));
+      lazy (Dune.executable_modules (Lazy.force dune_desc_lazy));
+    lib_modules = lazy (Dune.lib_modules (Lazy.force dune_desc_lazy));
     test_modules =
       lazy
         ((* Get test modules from dune describe *)
          let dune_test_modules =
-           Dune.get_test_modules (Lazy.force dune_desc_lazy)
+           Dune.test_modules (Lazy.force dune_desc_lazy)
          in
          (* Also discover test_*.ml files from all_files that might not be in dune *)
          let file_test_modules =

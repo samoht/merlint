@@ -8,7 +8,7 @@ type t = {
   end_col : int;
 }
 
-let create ~file ~start_line ~start_col ~end_line ~end_col =
+let v ~file ~start_line ~start_col ~end_line ~end_col =
   { file; start_line; start_col; end_line; end_col }
 
 let pp ppf loc = Fmt.pf ppf "%s:%d:%d" loc.file loc.start_line loc.start_col

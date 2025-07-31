@@ -716,6 +716,218 @@ pre code {
 </div>
 </div></div>
 </div>
+<div class="error-card" id="E331">
+    <div>
+        <span class="error-code">E331</span>
+        <span class="error-title">Redundant Function Prefixes</span>
+    </div>
+    <div class="error-hint"><p>Functions prefixed with 'create_', 'make_', 'get_', or 'find_' can often omit the prefix when the remaining name is descriptive enough. For example, 'create_user' can be just 'user', 'make_widget' can be 'widget', 'get_name' can be 'name', and 'find_user' can be 'user' (returning option). Keep the prefix only when it adds meaningful distinction or when the bare name would be ambiguous. In modules, 'Module.create_module' should be 'Module.v'.</p><div class="examples-grid">
+<div class="example bad">
+  <h4>BAD</h4>
+  <pre><code><span class="cm">(* Bad examples - functions with redundant prefixes *)</span>
+
+<span class="cm">(* Define necessary types *)</span>
+<span class="kw">type</span> user = { name : string; email : string; id : int }
+<span class="kw">type</span> project = { name : string; title : string; description : string; status : string }
+
+<span class="kw">module</span> <span class="cn">Widget</span> = <span class="kw">struct</span>
+  <span class="kw">let</span> make ~visible ~bordered = (visible, bordered)
+  <span class="kw">let</span> construct config = config
+<span class="kw">end</span>
+
+<span class="cm">(* create_ prefix examples *)</span>
+<span class="kw">let</span> create_user name email = { name; email; id = <span class="nu">0</span> }
+<span class="kw">let</span> create_project title = { name = &quot;&quot;; title; description = &quot;&quot;; status = &quot;&quot; }
+<span class="kw">let</span> create_widget ~visible ~bordered = <span class="cn">Widget</span>.make ~visible ~bordered
+
+<span class="cm">(* get_ prefix examples *)</span>
+<span class="kw">let</span> get_name user = user.name
+<span class="kw">let</span> get_email user = user.email 
+<span class="kw">let</span> get_status project = project.status
+
+<span class="cm">(* find_ prefix examples *)</span>
+<span class="kw">let</span> find_user_by_id users id = <span class="cn">List</span>.find_opt (<span class="kw">fun</span> u -&gt; u.id = id) users
+<span class="kw">let</span> find_project_by_name projects name = <span class="cn">List</span>.find_opt (<span class="kw">fun</span> p -&gt; p.name = name) projects
+
+<span class="cm">(* Module.create_module pattern *)</span>
+<span class="kw">module</span> <span class="cn">Progress</span> = <span class="kw">struct</span>
+  <span class="kw">type</span> t = { current : int; total : int }
+  
+  <span class="kw">let</span> create_progress current total = { current; total }
+<span class="kw">end</span>
+
+<span class="kw">module</span> <span class="cn">User</span> = <span class="kw">struct</span>
+  <span class="kw">type</span> t = { name : string; email : string }
+  
+  <span class="kw">let</span> create_user name email = { name; email }
+<span class="kw">end</span>
+
+<span class="cm">(* More aggressive cases that should be flagged *)</span>
+<span class="kw">let</span> create_temp_file prefix = <span class="cn">Filename</span>.temp_file prefix &quot;.tmp&quot;
+<span class="kw">let</span> make_widget config = <span class="cn">Widget</span>.construct config
+<span class="kw">let</span> get_current_time () = <span class="cn">Unix</span>.gettimeofday ()
+<span class="kw">let</span> find_free_port start_port = start_port + <span class="nu">1</span>  <span class="cm">(* dummy implementation *)</span>
+<span class="kw">let</span> find_next_available_port start_port = find_free_port start_port</code></pre>
+</div>
+<div class="example good">
+  <h4>GOOD</h4>
+  <pre><code><span class="cm">(* Good examples - functions without redundant prefixes *)</span>
+
+<span class="cm">(* Define necessary types *)</span>
+<span class="kw">type</span> user = { name : string; email : string; id : int }
+<span class="kw">type</span> project = { name : string; title : string; description : string; status : string }
+
+<span class="kw">module</span> <span class="cn">Widget</span> = <span class="kw">struct</span>
+  <span class="kw">let</span> make ~visible ~bordered = (visible, bordered)
+  <span class="kw">let</span> construct config = config
+<span class="kw">end</span>
+
+<span class="kw">module</span> <span class="cn">Filesystem</span> = <span class="kw">struct</span>
+  <span class="kw">let</span> find path = path
+<span class="kw">end</span>
+
+<span class="kw">module</span> <span class="cn">Http</span> = <span class="kw">struct</span>
+  <span class="kw">let</span> get remote = remote
+<span class="kw">end</span>
+
+<span class="kw">module</span> <span class="cn">Db</span> = <span class="kw">struct</span>
+  <span class="kw">let</span> query db query = (db, query)
+<span class="kw">end</span>
+
+<span class="cm">(* Direct constructor-style functions *)</span>
+<span class="kw">let</span> user name email = { name; email; id = <span class="nu">0</span> }
+<span class="kw">let</span> project title = { name = &quot;&quot;; title; description = &quot;&quot;; status = &quot;&quot; }
+<span class="kw">let</span> widget ~visible ~bordered = <span class="cn">Widget</span>.make ~visible ~bordered
+
+<span class="cm">(* Property accessors *)</span>
+<span class="kw">let</span> name user = user.name
+<span class="kw">let</span> email user = user.email 
+<span class="kw">let</span> status project = project.status
+
+<span class="cm">(* Finders returning options *)</span>
+<span class="kw">let</span> user_by_id users id = <span class="cn">List</span>.find_opt (<span class="kw">fun</span> u -&gt; u.id = id) users
+<span class="kw">let</span> project_by_name projects name = <span class="cn">List</span>.find_opt (<span class="kw">fun</span> p -&gt; p.name = name) projects
+
+<span class="cm">(* Good module patterns *)</span>
+<span class="kw">module</span> <span class="cn">Progress</span> = <span class="kw">struct</span>
+  <span class="kw">type</span> t = { current : int; total : int }
+  
+  <span class="kw">let</span> v current total = { current; total }
+  <span class="kw">let</span> create current total = { current; total }
+<span class="kw">end</span>
+
+<span class="kw">module</span> <span class="cn">User</span> = <span class="kw">struct</span>
+  <span class="kw">type</span> t = { name : string; email : string }
+  
+  <span class="kw">let</span> v name email = { name; email }
+  <span class="kw">let</span> create name email = { name; email }
+<span class="kw">end</span>
+
+<span class="cm">(* Helper function *)</span>
+<span class="kw">let</span> construct_user data = data
+
+<span class="cm">(* These are fine - different semantic meanings *)</span>
+<span class="kw">let</span> build_user data = construct_user data  <span class="cm">(* build vs create *)</span>
+<span class="kw">let</span> build_widget config = <span class="cn">Widget</span>.construct config  <span class="cm">(* build vs make *)</span>
+<span class="kw">let</span> fetch_name remote = <span class="cn">Http</span>.get remote     <span class="cm">(* fetch vs get *)</span>
+<span class="kw">let</span> retrieve_email user = user.email       <span class="cm">(* retrieve vs get *)</span>
+<span class="kw">let</span> search_user db query = <span class="cn">Db</span>.query db query <span class="cm">(* search vs find *)</span>
+<span class="kw">let</span> locate_file path = <span class="cn">Filesystem</span>.find path  <span class="cm">(* locate vs find *)</span></code></pre>
+</div>
+</div></div>
+</div>
+<div class="error-card" id="E332">
+    <div>
+        <span class="error-code">E332</span>
+        <span class="error-title">Prefer 'v' Constructor</span>
+    </div>
+    <div class="error-hint"><p>In OCaml modules, the idiomatic name for the primary constructor is 'v' rather than 'create' or 'make'. This follows the convention used by many standard libraries. For example, 'Module.create' should be 'Module.v'. This makes the API more consistent and idiomatic.</p><div class="examples-grid">
+<div class="example bad">
+  <h4>BAD</h4>
+  <pre><code><span class="cm">(* Bad examples - using create/make instead of v *)</span>
+
+<span class="kw">module</span> <span class="cn">User</span> = <span class="kw">struct</span>
+  <span class="kw">type</span> t = { name : string; email : string }
+  
+  <span class="cm">(* Should be 'v' *)</span>
+  <span class="kw">let</span> create name email = { name; email }
+<span class="kw">end</span>
+
+<span class="kw">module</span> <span class="cn">Widget</span> = <span class="kw">struct</span>
+  <span class="kw">type</span> t = { id : int; label : string }
+  
+  <span class="cm">(* Should be 'v' *)</span>
+  <span class="kw">let</span> make id label = { id; label }
+<span class="kw">end</span>
+
+<span class="kw">module</span> <span class="cn">Config</span> = <span class="kw">struct</span>
+  <span class="kw">type</span> t = { host : string; port : int }
+  
+  <span class="cm">(* Should be 'v' *)</span>
+  <span class="kw">let</span> create ~host ~port = { host; port }
+<span class="kw">end</span>
+
+<span class="cm">(* At top-level, the rule flags create/make *)</span>
+<span class="kw">module</span> <span class="cn">Unix</span> = <span class="kw">struct</span>
+  <span class="kw">type</span> file_descr = int
+<span class="kw">end</span>
+
+<span class="kw">type</span> connection = { socket : <span class="cn">Unix</span>.file_descr }
+
+<span class="kw">let</span> create socket = { socket }
+<span class="kw">let</span> make socket = { socket }
+
+(* <span class="cn">Note</span>: <span class="cn">The</span> rule currently only catches top-level create/make functions.
+   <span class="cn">Module</span>-level detection would require more context about <span class="kw">module</span> boundaries. *)</code></pre>
+</div>
+<div class="example good">
+  <h4>GOOD</h4>
+  <pre><code><span class="cm">(* Good examples - using idiomatic 'v' constructor *)</span>
+
+<span class="kw">module</span> <span class="cn">User</span> = <span class="kw">struct</span>
+  <span class="kw">type</span> t = { name : string; email : string }
+  
+  <span class="cm">(* Idiomatic constructor *)</span>
+  <span class="kw">let</span> v name email = { name; email }
+<span class="kw">end</span>
+
+<span class="kw">module</span> <span class="cn">Widget</span> = <span class="kw">struct</span>
+  <span class="kw">type</span> t = { id : int; label : string }
+  
+  <span class="cm">(* Idiomatic constructor *)</span>
+  <span class="kw">let</span> v id label = { id; label }
+  
+  <span class="cm">(* Other constructors can have descriptive names *)</span>
+  <span class="kw">let</span> parse_widget json = { id = <span class="nu">0</span>; label = &quot;&quot; }  <span class="cm">(* dummy *)</span>
+  <span class="kw">let</span> from_json json = parse_widget json
+  <span class="kw">let</span> empty = { id = <span class="nu">0</span>; label = &quot;&quot; }
+<span class="kw">end</span>
+
+<span class="kw">module</span> <span class="cn">Config</span> = <span class="kw">struct</span>
+  <span class="kw">type</span> t = { host : string; port : int }
+  
+  <span class="cm">(* Idiomatic constructor *)</span>
+  <span class="kw">let</span> v ~host ~port = { host; port }
+  
+  <span class="cm">(* Specialized constructors are fine *)</span>
+  <span class="kw">let</span> default = { host = &quot;localhost&quot;; port = <span class="nu">8080</span> }
+  <span class="kw">let</span> getenv _ = &quot;dummy&quot;
+  <span class="kw">let</span> from_env () = { host = getenv &quot;<span class="cn">HOST</span>&quot;; port = int_of_string (getenv &quot;<span class="cn">PORT</span>&quot;) }
+<span class="kw">end</span>
+
+<span class="cm">(* At top-level, descriptive names are often better than 'v' *)</span>
+<span class="kw">module</span> <span class="cn">Unix</span> = <span class="kw">struct</span>
+  <span class="kw">type</span> file_descr = int
+  <span class="kw">let</span> socket = <span class="nu">0</span>
+<span class="kw">end</span>
+
+<span class="kw">type</span> connection = { socket : <span class="cn">Unix</span>.file_descr }
+
+<span class="kw">let</span> connection socket = { socket }
+<span class="kw">let</span> connect ~host ~port = { socket = <span class="cn">Unix</span>.socket }</code></pre>
+</div>
+</div></div>
+</div>
 <div class="error-card" id="E335">
     <div>
         <span class="error-code">E335</span>

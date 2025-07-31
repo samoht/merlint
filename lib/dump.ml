@@ -114,7 +114,7 @@ let parse_location str =
     let start_col = int_of_string (Re.Group.get m 3) in
     let end_line = int_of_string (Re.Group.get m 4) in
     let end_col = int_of_string (Re.Group.get m 5) in
-    Some (Location.create ~file ~start_line ~start_col ~end_line ~end_col)
+    Some (Location.v ~file ~start_line ~start_col ~end_line ~end_col)
   with Not_found -> None
 
 (** Lookup table for AST node kinds *)
@@ -146,14 +146,14 @@ let ast_node_map =
 
 (** Get AST node token kind if word is a recognized AST node in the given
     context *)
-let find_ast_node_kind word =
+let ast_node_kind word =
   (* Since we handle both Typedtree and Parsetree nodes in both contexts,
      we can use a single lookup table *)
   List.assoc_opt word ast_node_map
 
 (** Classify a word as either an AST node or just a word *)
 let classify_word word =
-  match find_ast_node_kind word with Some k -> k | None -> Word word
+  match ast_node_kind word with Some k -> k | None -> Word word
 
 (** Check if we're at the start of a location pattern *)
 let is_location_start text pos =

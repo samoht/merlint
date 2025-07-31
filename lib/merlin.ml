@@ -29,7 +29,7 @@ let pp ppf t =
   Fmt.pf ppf "@[<v>Merlin result:@,  outline: %a@,  dump: %a@]"
     (pp_result Outline.pp) t.outline (pp_result Dump.pp) t.dump
 
-let get_outline file =
+let outline file =
   (* Ensure file exists before trying to analyze it *)
   if not (Sys.file_exists file) then err_file_not_found file
   else
@@ -97,7 +97,7 @@ let dump_value format file =
       | _ -> Error "Invalid Merlin JSON format")
   | Error msg -> Error msg
 
-let get_dump file =
+let dump file =
   match dump_value "typedtree" file with
   | Ok json -> (
       match json with
@@ -117,4 +117,4 @@ let get_dump file =
 let analyze_file file =
   (* Run merlin commands for the file *)
   Log.info (fun m -> m "Analyzing file %s with merlin" file);
-  { outline = get_outline file; dump = get_dump file }
+  { outline = outline file; dump = dump file }

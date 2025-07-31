@@ -1,4 +1,4 @@
-let get_body_styles () =
+let body_styles () =
   {|body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     line-height: 1.6;
@@ -9,7 +9,7 @@ let get_body_styles () =
     background: #f8f9fa;
 }|}
 
-let get_heading_styles () =
+let heading_styles () =
   {|h1 {
     color: #2c3e50;
     border-bottom: 3px solid #3498db;
@@ -24,7 +24,7 @@ h2 {
     padding-bottom: 8px;
 }|}
 
-let get_text_styles () =
+let text_styles () =
   {|p {
     margin: 1em 0;
     line-height: 1.7;
@@ -56,7 +56,7 @@ pre code {
     white-space: pre;
 }|}
 
-let get_card_styles () =
+let card_styles () =
   {|.error-card {
     background: white;
     border: 1px solid #e5e7eb;
@@ -97,7 +97,7 @@ let get_card_styles () =
     color: #1e40af;
 }|}
 
-let get_example_grid_styles () =
+let example_grid_styles () =
   {|.examples-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -110,7 +110,7 @@ let get_example_grid_styles () =
     }
 }|}
 
-let get_example_box_styles () =
+let example_box_styles () =
   {|.example {
     border-radius: 6px;
     overflow: hidden;
@@ -141,7 +141,7 @@ let get_example_box_styles () =
     color: #14532d;
 }|}
 
-let get_example_content_styles () =
+let example_content_styles () =
   {|.example-description {
     padding: 8px 12px;
     margin: 0;
@@ -175,7 +175,7 @@ let get_example_content_styles () =
     margin-bottom: 20px;
 }|}
 
-let get_nav_styles () =
+let nav_styles () =
   {|.toc {
     background: white;
     border: 1px solid #ddd;
@@ -388,7 +388,7 @@ let highlight_ocaml_code code =
   code |> String.split_on_char '\n' |> List.map process_line
   |> String.concat "\n"
 
-let get_syntax_highlighting_styles () =
+let syntax_highlighting_styles () =
   {|/* Additional styling */
 .error-code {
     font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
@@ -431,18 +431,18 @@ let get_syntax_highlighting_styles () =
     }
 }|}
 
-let get_html_style () =
+let html_style () =
   String.concat "\n"
     [
-      get_body_styles ();
-      get_heading_styles ();
-      get_text_styles ();
-      get_card_styles ();
-      get_example_grid_styles ();
-      get_example_box_styles ();
-      get_example_content_styles ();
-      get_nav_styles ();
-      get_syntax_highlighting_styles ();
+      body_styles ();
+      heading_styles ();
+      text_styles ();
+      card_styles ();
+      example_grid_styles ();
+      example_box_styles ();
+      example_content_styles ();
+      nav_styles ();
+      syntax_highlighting_styles ();
     ]
 
 let html_header =
@@ -459,7 +459,7 @@ let html_header =
 </head>
 <body>
 |}
-    (get_html_style ())
+    (html_style ())
 
 let html_footer =
   {|
@@ -491,7 +491,7 @@ let categories =
 (* Get all rules from the single source of truth *)
 let all_rules = Merlint.Data.all_rules
 
-let get_category code =
+let category code =
   let code_num = int_of_string (String.sub code 1 (String.length code - 1)) in
   if code_num < 100 then "Complexity"
   else if code_num < 200 then "Security/Safety"
@@ -586,7 +586,7 @@ let generate_category_section (name, range, description) =
   in
   let errors =
     all_rules
-    |> List.filter (fun rule -> get_category (Merlint.Rule.code rule) = name)
+    |> List.filter (fun rule -> category (Merlint.Rule.code rule) = name)
     |> List.map generate_error_section
     |> String.concat "\n"
   in

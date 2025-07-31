@@ -117,7 +117,7 @@ let is_function_signature signature =
   Re.execp (Re.compile (Re.str "->")) signature
 
 (** Extract the doc attribute from an attribute list *)
-let find_doc_attribute attrs =
+let doc_attribute attrs =
   let open Ppxlib in
   List.find_opt
     (fun attr ->
@@ -164,7 +164,7 @@ let rec core_type_to_string (typ : Ppxlib.core_type) =
   | _ -> "<complex type>"
 
 (** Find regular comments that precede value declarations *)
-let get_regular_comments lines =
+let regular_comments lines =
   let regular_comments = ref [] in
   List.iteri
     (fun i line ->
@@ -207,7 +207,7 @@ let process_value_declaration vd ~regular_comments ~last_floating_doc =
     }
   else
     (* First check for attached doc attribute *)
-    let attached_doc = find_doc_attribute vd.pval_attributes in
+    let attached_doc = doc_attribute vd.pval_attributes in
 
     (* Use attached doc if available, otherwise use floating doc *)
     let doc_info =
@@ -237,7 +237,7 @@ let extract_doc_comments content =
     (* We need to also check for regular comments in the original content
        since ppxlib doesn't preserve them in the AST *)
     let lines = String.split_on_char '\n' content in
-    let regular_comments = get_regular_comments lines in
+    let regular_comments = regular_comments lines in
 
     (* Extract doc comments from signature items *)
     let doc_comments = ref [] in

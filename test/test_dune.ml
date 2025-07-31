@@ -3,16 +3,14 @@ open Merlint
 (* Test merge function *)
 let test_merge () =
   (* For testing merge, we need to use create_synthetic to create test describes *)
-  let desc1 =
-    Dune.create_synthetic [ "lib1/a.ml"; "lib1/b.ml"; "bin/main.ml" ]
-  in
-  let desc2 = Dune.create_synthetic [ "lib2/c.ml"; "test/test.ml" ] in
+  let desc1 = Dune.synthetic [ "lib1/a.ml"; "lib1/b.ml"; "bin/main.ml" ] in
+  let desc2 = Dune.synthetic [ "lib2/c.ml"; "test/test.ml" ] in
 
   (* Merge describes *)
   let merged = Dune.merge [ desc1; desc2 ] in
 
   (* Check that all items are present *)
-  let merged_files = Dune.get_project_files merged in
+  let merged_files = Dune.project_files merged in
   (* The merge function should combine both synthetic describes *)
   Alcotest.(check bool)
     "Merged describe should have files from both" true
@@ -22,7 +20,7 @@ let test_merge () =
 let test_exclude () =
   (* Create a describe value for current project *)
   let desc = Dune.describe (Fpath.v ".") in
-  let original_files = Dune.get_project_files desc in
+  let original_files = Dune.project_files desc in
 
   (* Skip if no files found (e.g., in test environment) *)
   if List.length original_files = 0 then
@@ -30,7 +28,7 @@ let test_exclude () =
   else
     (* Exclude test directories *)
     let excluded = Dune.exclude [ "test/" ] desc in
-    let excluded_files = Dune.get_project_files excluded in
+    let excluded_files = Dune.project_files excluded in
 
     (* Check that test files are excluded *)
     let has_test_files =
@@ -48,14 +46,14 @@ let test_exclude () =
 let test_exclude_patterns () =
   (* Create a describe value *)
   let desc = Dune.describe (Fpath.v ".") in
-  let original_files = Dune.get_project_files desc in
+  let original_files = Dune.project_files desc in
 
   if List.length original_files = 0 then
     Alcotest.(check pass) "No files to test pattern exclusion" () ()
   else
     (* Exclude multiple patterns *)
     let excluded = Dune.exclude [ "_build"; "test/"; ".git" ] desc in
-    let excluded_files = Dune.get_project_files excluded in
+    let excluded_files = Dune.project_files excluded in
 
     (* Verify patterns are excluded *)
     List.iter
@@ -77,7 +75,7 @@ let test_exclude_cram () =
 
   (* Exclude cram test directories *)
   let excluded = Dune.exclude [ "test/cram/" ] desc in
-  let excluded_files = Dune.get_project_files excluded in
+  let excluded_files = Dune.project_files excluded in
 
   (* Check that no cram test files are included *)
   List.iter
@@ -113,7 +111,7 @@ let test_is_executable () =
 (* Test get_lib_modules *)
 let test_get_lib_modules () =
   let desc = Dune.describe (Fpath.v ".") in
-  let lib_modules = Dune.get_lib_modules desc in
+  let lib_modules = Dune.lib_modules desc in
 
   (* In test environment, might have no libraries *)
   Alcotest.(check pass)
@@ -123,7 +121,7 @@ let test_get_lib_modules () =
 (* Test get_test_modules *)
 let test_get_test_modules () =
   let desc = Dune.describe (Fpath.v ".") in
-  let test_modules = Dune.get_test_modules desc in
+  let test_modules = Dune.test_modules desc in
 
   (* In test environment, might have no tests *)
   Alcotest.(check pass)
@@ -139,7 +137,7 @@ let test_ensure_project_built () =
 (* Test cram directory exclusion *)
 let test_cram_exclusion () =
   let desc = Dune.describe (Fpath.v ".") in
-  let files = Dune.get_project_files desc in
+  let files = Dune.project_files desc in
 
   (* Check that no cram test files are included *)
   let cram_files =
@@ -163,7 +161,7 @@ let test_exclude_substring () =
 
   (* Exclude files containing "example" *)
   let excluded = Dune.exclude [ "example" ] desc in
-  let files = Dune.get_project_files excluded in
+  let files = Dune.project_files excluded in
 
   (* Check no files contain "example" *)
   List.iter

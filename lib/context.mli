@@ -27,23 +27,23 @@ type project = {
   test_modules : string list Lazy.t;  (** List of test module names (lazy). *)
 }
 
-val create_file :
+val file :
   filename:string ->
   config:Config.t ->
   project_root:string ->
   merlin_result:Merlin.t ->
   file
-(** [create_file ~filename ~config ~project_root ~merlin_result] creates a file
+(** [file ~filename ~config ~project_root ~merlin_result] creates a file
     context. *)
 
-val create_project :
+val project :
   config:Config.t ->
   project_root:string ->
   all_files:string list ->
   dune_describe:Dune.describe ->
   project
-(** [create_project ~config ~project_root ~all_files ~dune_describe] creates a
-    project context. *)
+(** [project ~config ~project_root ~all_files ~dune_describe] creates a project
+    context. *)
 
 (** {2 File context accessors} *)
 

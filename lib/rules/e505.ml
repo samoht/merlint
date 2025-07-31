@@ -43,8 +43,8 @@ let check (ctx : Context.project) =
           (* Check if the MLI file exists in the list of project files *)
           if not (List.mem mli_path files) then
             let loc =
-              Location.create ~file:ml_file ~start_line:1 ~start_col:0
-                ~end_line:1 ~end_col:0
+              Location.v ~file:ml_file ~start_line:1 ~start_col:0 ~end_line:1
+                ~end_col:0
             in
             Some (Issue.v ~loc { ml_file; expected_mli = mli_path })
           else None

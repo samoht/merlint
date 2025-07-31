@@ -1,6 +1,6 @@
 (** Linting engine. *)
 
-val get_project_root : string -> string
+val project_root : string -> string
 (** [get_project_root path] finds the project root by looking for dune-project
     file. *)
 

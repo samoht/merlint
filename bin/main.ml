@@ -14,7 +14,7 @@ let check_ocamlmerlin () =
   let cmd = "which ocamlmerlin > /dev/null 2>&1" in
   match Unix.system cmd with Unix.WEXITED 0 -> true | _ -> false
 
-let get_terminal_width () =
+let terminal_width () =
   try
     let ic = Unix.open_process_in "tput cols 2>/dev/null" in
     let width = int_of_string (input_line ic) in
@@ -24,7 +24,7 @@ let get_terminal_width () =
     120 (* fallback to 120 columns for tests *)
 
 let wrap_text ?(indent = 2) ?(max_width = 120) text =
-  let terminal_width = get_terminal_width () in
+  let terminal_width = terminal_width () in
   let effective_width = min max_width terminal_width in
   let continuation_prefix = String.make indent ' ' in
 
@@ -169,7 +169,7 @@ let print_categorized_issues issues_by_category =
     issues_by_category
 
 (* Get enabled rules based on filter *)
-let get_enabled_rules rule_filter =
+let enabled_rules rule_filter =
   match rule_filter with
   | Some filter ->
       List.filter
@@ -199,17 +199,15 @@ let print_summary all_issues enabled_rule_count =
 
 let run_analysis project_root dune_describe rule_filter show_profile =
   (* Set formatter margin based on terminal width *)
-  let terminal_width = get_terminal_width () in
+  let terminal_width = terminal_width () in
   Format.set_margin terminal_width;
 
   (* Create profiling state if enabled *)
   let profiling_state =
-    if show_profile then Some (Merlint.Profiling.create ()) else None
+    if show_profile then Some (Merlint.Profiling.v ()) else None
   in
 
-  let files_count =
-    List.length (Merlint.Dune.get_project_files dune_describe)
-  in
+  let files_count = List.length (Merlint.Dune.project_files dune_describe) in
   Log.info (fun m -> m "Starting visual analysis on %d files" files_count);
 
   (* Run the engine to get all issues *)
@@ -237,7 +235,7 @@ let run_analysis project_root dune_describe rule_filter show_profile =
   print_categorized_issues issues_by_category;
 
   (* Calculate the actual number of rules that were applied *)
-  let enabled_rules = get_enabled_rules rule_filter in
+  let enabled_rules = enabled_rules rule_filter in
   let enabled_rule_count = List.length enabled_rules in
 
   (* Print custom summary *)
@@ -266,9 +264,7 @@ let analyze_files ?(exclude_patterns = []) ?rule_filter ?(show_profile = false)
     files =
   (* Find project root *)
   let project_root =
-    match files with
-    | file :: _ -> Merlint.Engine.get_project_root file
-    | [] -> "."
+    match files with file :: _ -> Merlint.Engine.project_root file | [] -> "."
   in
 
   Log.info (fun m -> m "Project root: %s" project_root);
@@ -305,7 +301,7 @@ let analyze_files ?(exclude_patterns = []) ?rule_filter ?(show_profile = false)
         (* If we have explicit files but no describes, create a synthetic describe *)
         if !describes = [] && !explicit_files <> [] then
           (* Create a synthetic describe with the files as executables *)
-          Merlint.Dune.create_synthetic (List.rev !explicit_files)
+          Merlint.Dune.synthetic (List.rev !explicit_files)
         else
           (* Merge all describes *)
           Merlint.Dune.merge (List.rev !describes)

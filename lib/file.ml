@@ -22,7 +22,7 @@ let process_lines_with_location filename content f =
   List.concat_map
     (fun (line_idx, line) ->
       let location =
-        Location.create ~file:filename ~start_line:(line_idx + 1) ~start_col:0
+        Location.v ~file:filename ~start_line:(line_idx + 1) ~start_col:0
           ~end_line:(line_idx + 1) ~end_col:(String.length line)
       in
       match f line_idx line location with

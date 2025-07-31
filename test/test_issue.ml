@@ -2,8 +2,7 @@ open Merlint
 
 let test_creation () =
   let location =
-    Location.create ~file:"test.ml" ~start_line:1 ~start_col:0 ~end_line:1
-      ~end_col:0
+    Location.v ~file:"test.ml" ~start_line:1 ~start_col:0 ~end_line:1 ~end_col:0
   in
 
   (* Test creating issues with and without location *)
@@ -23,11 +22,11 @@ let test_creation () =
 
 let test_compare () =
   let location1 =
-    Location.create ~file:"test.ml" ~start_line:5 ~start_col:10 ~end_line:5
+    Location.v ~file:"test.ml" ~start_line:5 ~start_col:10 ~end_line:5
       ~end_col:10
   in
   let location2 =
-    Location.create ~file:"test.ml" ~start_line:10 ~start_col:5 ~end_line:10
+    Location.v ~file:"test.ml" ~start_line:10 ~start_col:5 ~end_line:10
       ~end_col:5
   in
 
@@ -41,8 +40,7 @@ let test_compare () =
 
 let test_pp () =
   let location =
-    Location.create ~file:"test.ml" ~start_line:1 ~start_col:0 ~end_line:1
-      ~end_col:0
+    Location.v ~file:"test.ml" ~start_line:1 ~start_col:0 ~end_line:1 ~end_col:0
   in
 
   let issue = Issue.v ~loc:location "test message" in

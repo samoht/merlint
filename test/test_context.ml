@@ -7,8 +7,7 @@ let test_create_project () =
   let all_files = [ "foo.ml"; "bar.ml" ] in
   let dune_describe = Merlint.Dune.describe (Fpath.v ".") in
   let ctx =
-    Merlint.Context.create_project ~config ~project_root ~all_files
-      ~dune_describe
+    Merlint.Context.project ~config ~project_root ~all_files ~dune_describe
   in
   (* Test that we can access fields *)
   Alcotest.(check string) "project root" "." ctx.project_root;

@@ -46,9 +46,9 @@ let create_missing_test_issue module_name files =
         files
     with
     | Some file ->
-        Location.create ~file ~start_line:1 ~start_col:0 ~end_line:1 ~end_col:0
+        Location.v ~file ~start_line:1 ~start_col:0 ~end_line:1 ~end_col:0
     | None ->
-        Location.create ~file:"dune" ~start_line:1 ~start_col:0 ~end_line:1
+        Location.v ~file:"dune" ~start_line:1 ~start_col:0 ~end_line:1
           ~end_col:0
   in
   Issue.v ~loc

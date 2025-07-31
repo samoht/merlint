@@ -15,17 +15,17 @@ val is_executable : describe -> Fpath.t -> bool
 (** [is_executable describe file_path] checks if a file is an executable (binary
     or test) - no .mli needed. *)
 
-val get_project_files : describe -> Fpath.t list
+val project_files : describe -> Fpath.t list
 (** [get_project_files describe] returns all project source files. *)
 
-val get_executable_modules : describe -> string list
+val executable_modules : describe -> string list
 (** [get_executable_modules describe] gets executable module names from dune
     describe. *)
 
-val get_lib_modules : describe -> string list
+val lib_modules : describe -> string list
 (** [get_lib_modules describe] gets library module names from dune describe. *)
 
-val get_test_modules : describe -> string list
+val test_modules : describe -> string list
 (** [get_test_modules describe] gets test module names from dune describe. *)
 
 val merge : describe list -> describe
@@ -36,7 +36,7 @@ val exclude : string list -> describe -> describe
 (** [exclude patterns describe] filters out files matching the given patterns
     from a describe. Patterns can be simple strings or use * for wildcards. *)
 
-val create_synthetic : string list -> describe
+val synthetic : string list -> describe
 (** [create_synthetic files] creates a synthetic describe for individual files
     passed on command line. *)
 
@@ -47,7 +47,7 @@ type library_info = {
 }
 (** Information about a library stanza *)
 
-val get_libraries : describe -> library_info list
+val libraries : describe -> library_info list
 (** [get_libraries describe] returns the list of libraries with their
     information. *)
 
@@ -58,6 +58,6 @@ type test_info = {
 }
 (** Information about a test stanza *)
 
-val get_tests : describe -> test_info list
+val tests : describe -> test_info list
 (** [get_tests describe] returns the list of test stanzas with their files and
     library dependencies. *)

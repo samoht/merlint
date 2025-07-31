@@ -6,7 +6,7 @@ let test_create_report () =
   (* Empty for now since we can't easily create Rule.Run.result in tests *)
 
   let report =
-    Report.create ~rule_name:"Test Rule" ~passed:false ~issues ~file_count:1
+    Report.v ~rule_name:"Test Rule" ~passed:false ~issues ~file_count:1
   in
 
   Alcotest.(check string) "rule name" "Test Rule" report.rule_name;
@@ -24,13 +24,13 @@ let test_print_status () =
 let test_get_all_issues () =
   (* Create multiple reports *)
   let report1 =
-    Report.create ~rule_name:"Rule 1" ~passed:true ~issues:[] ~file_count:1
+    Report.v ~rule_name:"Rule 1" ~passed:true ~issues:[] ~file_count:1
   in
   let report2 =
-    Report.create ~rule_name:"Rule 2" ~passed:true ~issues:[] ~file_count:2
+    Report.v ~rule_name:"Rule 2" ~passed:true ~issues:[] ~file_count:2
   in
 
-  let all_issues = Report.get_all_issues [ report1; report2 ] in
+  let all_issues = Report.all_issues [ report1; report2 ] in
   Alcotest.(check int) "total issues" 0 (List.length all_issues)
 
 let test_print_color () =

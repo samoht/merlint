@@ -16,8 +16,8 @@ let check (ctx : Context.file) =
       if depth > config.max_nesting then
         (* Create a dummy location for now - we'll improve this later *)
         let loc =
-          Location.create ~file:ctx.filename ~start_line:1 ~start_col:0
-            ~end_line:1 ~end_col:0
+          Location.v ~file:ctx.filename ~start_line:1 ~start_col:0 ~end_line:1
+            ~end_col:0
         in
         Some (Issue.v ~loc { name; depth; threshold = config.max_nesting })
       else None)

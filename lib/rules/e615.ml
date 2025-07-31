@@ -23,7 +23,7 @@ let should_exclude_test_file dune_describe test_file declared_libraries =
               else acc)
             acc lib_info.files)
         []
-        (Dune.get_libraries dune_describe)
+        (Dune.libraries dune_describe)
     in
 
     let public_to_internal =
@@ -33,7 +33,7 @@ let should_exclude_test_file dune_describe test_file declared_libraries =
           | Some pub_name -> (pub_name, lib_info.name) :: acc
           | None -> acc)
         []
-        (Dune.get_libraries dune_describe)
+        (Dune.libraries dune_describe)
     in
 
     let resolved_libraries =
@@ -161,7 +161,7 @@ let check (ctx : Context.project) =
             List.iter
               (fun test_mod ->
                 let loc =
-                  Location.create
+                  Location.v
                     ~file:(Fpath.to_string test_file)
                     ~start_line:1 ~start_col:0 ~end_line:1 ~end_col:0
                 in
@@ -174,7 +174,7 @@ let check (ctx : Context.project) =
                   :: !issues)
               !missing_includes
           with _ -> ()))
-    (Dune.get_tests dune_describe);
+    (Dune.tests dune_describe);
 
   List.rev !issues
 

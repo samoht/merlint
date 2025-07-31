@@ -10,7 +10,7 @@ let equal = ( = )
 
 let compare = compare
 
-let create ~rule_name ~passed ~issues ~file_count =
+let v ~rule_name ~passed ~issues ~file_count =
   { rule_name; passed; issues; file_count }
 
 let print_status passed = if passed then "✓" else "✗"
@@ -47,5 +47,5 @@ let pp_summary ppf reports =
 
 let print_summary reports = Fmt.pr "%a" pp_summary reports
 
-let get_all_issues reports =
+let all_issues reports =
   List.fold_left (fun acc report -> report.issues @ acc) [] reports

@@ -3,7 +3,7 @@ open Merlint
 let test_get_project_root () =
   (* Test finding project root *)
   let cwd = Sys.getcwd () in
-  let project_root = Engine.get_project_root cwd in
+  let project_root = Engine.project_root cwd in
   (* Should find a dune-project file somewhere up the tree *)
   Alcotest.(check bool)
     "found project root" true

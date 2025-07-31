@@ -5,7 +5,7 @@ let src = Logs.Src.create "merlint.engine" ~doc:"Linting engine"
 module Log = (val Logs.src_log src : Logs.LOG)
 
 (** Find the project root by looking for dune-project file *)
-let get_project_root path =
+let project_root path =
   let rec find_root current =
     let dune_project = Filename.concat current "dune-project" in
     if Sys.file_exists dune_project then current
@@ -74,12 +74,12 @@ let run ~filter ~dune_describe ?profiling project_root =
   let config = Config.load_from_path project_root in
 
   (* Get all project files from dune describe *)
-  let files_to_analyze = Dune.get_project_files dune_describe in
+  let files_to_analyze = Dune.project_files dune_describe in
   let files_to_analyze_str = List.map Fpath.to_string files_to_analyze in
 
   (* Create project context *)
   let project_ctx =
-    Context.create_project ~config ~project_root ~all_files:files_to_analyze_str
+    Context.project ~config ~project_root ~all_files:files_to_analyze_str
       ~dune_describe
   in
 
@@ -118,7 +118,7 @@ let run ~filter ~dune_describe ?profiling project_root =
                 }
           | None -> ());
           let file_ctx =
-            Context.create_file ~filename ~config ~project_root ~merlin_result
+            Context.file ~filename ~config ~project_root ~merlin_result
           in
           List.concat_map (run_file_rule ?profiling file_ctx) file_rules
         with exn ->

@@ -1,0 +1,7 @@
+(executable
+ (public_name bad)
+ (name bad))
+
+(executable
+ (public_name good)
+ (name good))

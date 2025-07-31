@@ -14,7 +14,7 @@ let check (ctx : Context.file) =
         if doc = "BAD_COMMENT" then
           (* Using regular comment instead of doc comment *)
           let loc =
-            Location.create ~file:ctx.filename ~start_line:doc_line ~start_col:0
+            Location.v ~file:ctx.filename ~start_line:doc_line ~start_col:0
               ~end_line:doc_line ~end_col:0
           in
           Some
@@ -37,8 +37,8 @@ let check (ctx : Context.file) =
           | [] -> None
           | issues ->
               let loc =
-                Location.create ~file:ctx.filename ~start_line:doc_line
-                  ~start_col:0 ~end_line:doc_line ~end_col:0
+                Location.v ~file:ctx.filename ~start_line:doc_line ~start_col:0
+                  ~end_line:doc_line ~end_col:0
               in
               let issue_texts =
                 List.map (Format.asprintf "%a" Docs.pp_style_issue) issues

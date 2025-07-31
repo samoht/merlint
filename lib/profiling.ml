@@ -12,13 +12,13 @@ type t = { mutable timings : timing list }
 (** Profiling state that encapsulates mutable timings *)
 
 (** Create an empty profiling state *)
-let create () = { timings = [] }
+let v () = { timings = [] }
 
 (** Add a timing to the profiling state *)
 let add_timing t timing = t.timings <- timing :: t.timings
 
 (** Get all timings in chronological order *)
-let get_timings_from_state t = List.rev t.timings
+let timings_from_state t = List.rev t.timings
 
 (** Reset timings in the state *)
 let reset_state t = t.timings <- []
@@ -55,7 +55,7 @@ let print_total_row is_wide total_count total_time =
   else Fmt.pr "%-20s %6d %9.1f %7s\n" "Total" total_count time_ms ""
 
 let print_summary ?(width = 80) t =
-  let timings = get_timings_from_state t in
+  let timings = timings_from_state t in
   if timings = [] then ()
   else
     (* Calculate totals by operation type *)
@@ -137,7 +137,7 @@ let group_file_timings file_timings =
   by_file
 
 let print_file_summary ?(width = 80) t =
-  let timings = get_timings_from_state t in
+  let timings = timings_from_state t in
   if timings = [] then ()
   else
     let file_timings = extract_file_timings timings in
@@ -270,7 +270,7 @@ let filter_rules_to_show sorted_rules =
   else significant_rules
 
 let print_rule_summary ?(width = 80) t =
-  let timings = get_timings_from_state t in
+  let timings = timings_from_state t in
   if timings = [] then ()
   else
     let rule_timings = extract_rule_timings timings in

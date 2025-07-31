@@ -25,8 +25,8 @@ val compare : t -> t -> int
 val pp : t Fmt.t
 (** [pp fmt t] pretty-prints the profiling state. *)
 
-val create : unit -> t
-(** [create ()] creates a new profiling state. *)
+val v : unit -> t
+(** [v ()] creates a new profiling state. *)
 
 val add_timing : t -> timing -> unit
 (** [add_timing t timing] adds a timing record to the profiling state. *)

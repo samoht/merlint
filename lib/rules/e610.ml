@@ -19,7 +19,7 @@ let check ctx =
         in
         (lib_info.name, modules) :: acc)
       []
-      (Dune.get_libraries dune_describe)
+      (Dune.libraries dune_describe)
   in
 
   (* Check each test file *)
@@ -55,7 +55,7 @@ let check ctx =
               in
               if not found then
                 let loc =
-                  Location.create ~file:(Fpath.to_string file) ~start_line:1
+                  Location.v ~file:(Fpath.to_string file) ~start_line:1
                     ~start_col:0 ~end_line:1 ~end_col:0
                 in
                 issues :=
@@ -66,7 +66,7 @@ let check ctx =
                     }
                   :: !issues)
         test_info.Dune.files)
-    (Dune.get_tests dune_describe);
+    (Dune.tests dune_describe);
   List.rev !issues
 
 let pp ppf { test_file = _; expected_module } =

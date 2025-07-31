@@ -61,7 +61,7 @@ let parse_rule_spec spec =
   else err_invalid_spec spec
 
 (** Get the next operator (+/-) position in a string *)
-let get_next_operator str start =
+let next_operator str start =
   let rec find i =
     if i >= String.length str then i
     else match str.[i] with '+' | '-' -> i | _ -> find (i + 1)
@@ -74,7 +74,7 @@ let extract_token str =
   else if str.[0] = '+' || str.[0] = '-' then
     Some (String.make 1 str.[0], String.sub str 1 (String.length str - 1))
   else
-    let end_idx = get_next_operator str 0 in
+    let end_idx = next_operator str 0 in
     let token = String.sub str 0 end_idx in
     let rest = String.sub str end_idx (String.length str - end_idx) in
     Some (token, rest)

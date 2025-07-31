@@ -51,7 +51,7 @@ let test_get_values () =
     ]
   in
 
-  let values = get_values items in
+  let values = values items in
   Alcotest.(check int) "two values" 2 (List.length values);
   Alcotest.(check string) "first value" "foo" (List.hd values).name;
   Alcotest.(check string) "second value" "baz" (List.nth values 1).name
@@ -64,11 +64,11 @@ let test_find_by_name () =
     ]
   in
 
-  let found = find_by_name "foo" items in
+  let found = by_name "foo" items in
   Alcotest.(check bool) "found foo" true (found <> None);
   Alcotest.(check string) "correct item" "foo" (Option.get found).name;
 
-  let not_found = find_by_name "baz" items in
+  let not_found = by_name "baz" items in
   Alcotest.(check bool) "not found baz" true (not_found = None)
 
 let test_parse_kinds () =

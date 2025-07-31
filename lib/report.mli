@@ -18,14 +18,14 @@ val compare : t -> t -> int
 (** [compare a b] returns a comparison result between [a] and [b]. Uses
     polymorphic comparison. *)
 
-val create :
+val v :
   rule_name:string ->
   passed:bool ->
   issues:Rule.Run.result list ->
   file_count:int ->
   t
-(** [create ~rule_name ~passed ~issues ~file_count] creates a report with the
-    given parameters. *)
+(** [v ~rule_name ~passed ~issues ~file_count] creates a report with the given
+    parameters. *)
 
 val pp : t Fmt.t
 (** [pp fmt t] pretty prints report. *)
@@ -39,5 +39,5 @@ val print_color : bool -> string -> string
 val print_summary : t list -> unit
 (** [print_summary reports] prints summary. *)
 
-val get_all_issues : t list -> Rule.Run.result list
+val all_issues : t list -> Rule.Run.result list
 (** [get_all_issues reports] extracts all issues. *)

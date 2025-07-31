@@ -6,7 +6,7 @@ let location : Location.t Alcotest.testable =
 
 let test_create () =
   let loc =
-    Location.create ~file:"test.ml" ~start_line:10 ~start_col:5 ~end_line:10
+    Location.v ~file:"test.ml" ~start_line:10 ~start_col:5 ~end_line:10
       ~end_col:5
   in
   Alcotest.(check string) "file" "test.ml" loc.file;
@@ -15,7 +15,7 @@ let test_create () =
 
 let test_pp () =
   let loc =
-    Location.create ~file:"foo.ml" ~start_line:42 ~start_col:7 ~end_line:42
+    Location.v ~file:"foo.ml" ~start_line:42 ~start_col:7 ~end_line:42
       ~end_col:7
   in
   let str = Fmt.to_to_string Location.pp loc in
@@ -23,20 +23,16 @@ let test_pp () =
 
 let test_compare () =
   let loc1 =
-    Location.create ~file:"a.ml" ~start_line:10 ~start_col:5 ~end_line:10
-      ~end_col:5
+    Location.v ~file:"a.ml" ~start_line:10 ~start_col:5 ~end_line:10 ~end_col:5
   in
   let loc2 =
-    Location.create ~file:"a.ml" ~start_line:10 ~start_col:5 ~end_line:10
-      ~end_col:5
+    Location.v ~file:"a.ml" ~start_line:10 ~start_col:5 ~end_line:10 ~end_col:5
   in
   let loc3 =
-    Location.create ~file:"a.ml" ~start_line:20 ~start_col:5 ~end_line:10
-      ~end_col:5
+    Location.v ~file:"a.ml" ~start_line:20 ~start_col:5 ~end_line:10 ~end_col:5
   in
   let loc4 =
-    Location.create ~file:"b.ml" ~start_line:10 ~start_col:5 ~end_line:10
-      ~end_col:5
+    Location.v ~file:"b.ml" ~start_line:10 ~start_col:5 ~end_line:10 ~end_col:5
   in
 
   Alcotest.(check location) "same location" loc1 loc2;
@@ -47,7 +43,7 @@ let test_compare () =
 
 let test_create_extended () =
   let ext =
-    Location.create ~file:"test.ml" ~start_line:10 ~start_col:5 ~end_line:15
+    Location.v ~file:"test.ml" ~start_line:10 ~start_col:5 ~end_line:15
       ~end_col:20
   in
   Alcotest.(check string) "file" "test.ml" ext.file;

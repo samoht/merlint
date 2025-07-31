@@ -61,8 +61,8 @@ let check_test_file_uses_modules filename content =
       [
         Issue.v
           ~loc:
-            (Location.create ~file:filename ~start_line:1 ~start_col:0
-               ~end_line:1 ~end_col:0)
+            (Location.v ~file:filename ~start_line:1 ~start_col:0 ~end_line:1
+               ~end_col:0)
           { filename; module_name = "test" };
       ])
     else (
@@ -133,8 +133,8 @@ let check_test_mli_file filename content =
       [
         Issue.v
           ~loc:
-            (Location.create ~file:filename ~start_line:1 ~start_col:0
-               ~end_line:1 ~end_col:0)
+            (Location.v ~file:filename ~start_line:1 ~start_col:0 ~end_line:1
+               ~end_col:0)
           { filename; module_name = basename |> Filename.chop_extension };
       ]
     else []

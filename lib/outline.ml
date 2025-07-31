@@ -101,11 +101,10 @@ let of_json json =
   match json with `List items -> List.filter_map parse_item items | _ -> []
 
 (** Get all values from outline *)
-let get_values outline = List.filter (fun item -> item.kind = Value) outline
+let values outline = List.filter (fun item -> item.kind = Value) outline
 
 (** Find item by name *)
-let find_by_name name outline =
-  List.find_opt (fun item -> item.name = name) outline
+let by_name name outline = List.find_opt (fun item -> item.name = name) outline
 
 (** Pretty print kind *)
 let pp_kind ppf = function
@@ -146,7 +145,7 @@ let location filename (item : item) =
   match item.range with
   | Some range ->
       Some
-        (Location.create ~file:filename ~start_line:range.start.line
+        (Location.v ~file:filename ~start_line:range.start.line
            ~start_col:range.start.col ~end_line:range.end_.line
            ~end_col:range.end_.col)
   | None -> None

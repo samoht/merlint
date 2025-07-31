@@ -40,7 +40,7 @@ let check ctx =
 
   (* Get all error helper functions from the outline *)
   let error_helpers =
-    Outline.get_values outline
+    Outline.values outline
     |> List.filter_map (fun (item : Outline.item) ->
            if String.starts_with ~prefix:"err_" item.name then
              match item.range with

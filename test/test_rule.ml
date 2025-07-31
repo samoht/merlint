@@ -38,8 +38,8 @@ let test_accessors () =
 let test_issue_creation () =
   (* Test creating issues - Issue is internal to Rule module *)
   let loc =
-    Merlint.Location.create ~file:"test.ml" ~start_line:1 ~start_col:0
-      ~end_line:1 ~end_col:10
+    Merlint.Location.v ~file:"test.ml" ~start_line:1 ~start_col:0 ~end_line:1
+      ~end_col:10
   in
   (* We can't create issues directly, but we can test location creation *)
   Alcotest.(check bool) "location created" true (loc = loc)
