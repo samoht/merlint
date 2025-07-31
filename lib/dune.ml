@@ -58,7 +58,7 @@ let is_executable dune_describe ml_file =
     dune_describe.executables
 
 (** Find all dune files in a directory tree *)
-let rec dune_files dir =
+let rec files dir =
   let dir_path = dir in
   let entries =
     try Sys.readdir (Fpath.to_string dir) with Sys_error _ -> [||]
@@ -74,7 +74,7 @@ let rec dune_files dir =
          else if
            Sys.is_directory path_str && entry <> "_build" && entry <> ".git"
            && entry <> "_opam"
-         then dune_files path
+         then files path
          else [])
 
 (** Parse a dune file and extract module information *)
@@ -370,7 +370,7 @@ let test_modules dune_describe =
 (** Get project structure from dune files *)
 let project_structure project_root =
   (* Find all dune files *)
-  let dune_files = dune_files project_root in
+  let dune_files = files project_root in
   Log.debug (fun m ->
       m "Found %d dune files in %a" (List.length dune_files) Fpath.pp
         project_root);

@@ -1,9 +1,5 @@
 Test bad example - should find redundant function prefixes:
   $ merlint -r E331 bad.ml
-  merlint: [ERROR] Command failed with exit code 1
-  Warning: Failed to build project: Command failed with exit code 1
-  Function type analysis may not work properly.
-  Continuing with analysis...
   Running merlint analysis...
   
   Analyzing 1 files
@@ -41,10 +37,6 @@ Test bad example - should find redundant function prefixes:
 
 Test good example - should find no issues:
   $ merlint -r E331 good.ml
-  merlint: [ERROR] Command failed with exit code 1
-  Warning: Failed to build project: Command failed with exit code 1
-  Function type analysis may not work properly.
-  Continuing with analysis...
   Running merlint analysis...
   
   Analyzing 1 files

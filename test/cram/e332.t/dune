@@ -1,7 +1,9 @@
 (executable
- (public_name bad)
- (name bad))
+ (name bad)
+ (modules bad)
+ (flags -w -32-69))
 
 (executable
- (public_name good)
- (name good))
+ (name good)
+ (modules good)
+ (flags -w -32-69))

@@ -39,7 +39,7 @@ let default =
 
 let filename = ".merlintrc"
 
-let config_file path =
+let file path =
   let project_root =
     if Sys.is_directory path then path else Filename.dirname path
   in
@@ -127,9 +127,7 @@ let load path =
       default
 
 let load_from_path path =
-  match config_file path with
-  | Some config_path -> load config_path
-  | None -> default
+  match file path with Some config_path -> load config_path | None -> default
 
 (** Standard functions for type t *)
 let equal a b =

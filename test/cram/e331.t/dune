@@ -1,7 +1,11 @@
 (executable
- (public_name bad)
- (name bad))
+ (name bad)
+ (libraries unix)
+ (modules bad)
+ (flags -w -32-69))
 
 (executable
- (public_name good)
- (name good))
+ (name good)
+ (libraries unix)
+ (modules good)
+ (flags -w -32-69))
