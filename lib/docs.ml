@@ -51,9 +51,12 @@ let check_function_doc ~name ~doc =
     || String.starts_with ~prefix:"this method" lower
   then issues := Redundant_phrase "This function" :: !issues;
 
-  (* Check ends with period *)
+  (* Check ends with period (but not if it ends with a code block ]} *)
   let trimmed = String.trim doc in
-  if String.length trimmed > 0 && not (String.ends_with ~suffix:"." trimmed)
+  if
+    String.length trimmed > 0
+    && (not (String.ends_with ~suffix:"." trimmed))
+    && not (String.ends_with ~suffix:"]}" trimmed)
   then issues := Missing_period :: !issues;
 
   !issues
@@ -62,9 +65,12 @@ let check_type_doc ~doc =
   (* Type docs should be brief and end with period *)
   let issues = ref [] in
 
-  (* Check ends with period *)
+  (* Check ends with period (but not if it ends with a code block ]} *)
   let trimmed = String.trim doc in
-  if String.length trimmed > 0 && not (String.ends_with ~suffix:"." trimmed)
+  if
+    String.length trimmed > 0
+    && (not (String.ends_with ~suffix:"." trimmed))
+    && not (String.ends_with ~suffix:"]}" trimmed)
   then issues := Missing_period :: !issues;
 
   (* Check for redundant phrases *)
@@ -78,9 +84,12 @@ let check_value_doc ~name:_ ~doc =
   (* Non-function values should have simple descriptions ending with period *)
   let issues = ref [] in
 
-  (* Check ends with period *)
+  (* Check ends with period (but not if it ends with a code block ]} *)
   let trimmed = String.trim doc in
-  if String.length trimmed > 0 && not (String.ends_with ~suffix:"." trimmed)
+  if
+    String.length trimmed > 0
+    && (not (String.ends_with ~suffix:"." trimmed))
+    && not (String.ends_with ~suffix:"]}" trimmed)
   then issues := Missing_period :: !issues;
 
   (* Check for redundant phrases *)

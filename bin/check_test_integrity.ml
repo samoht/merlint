@@ -59,8 +59,11 @@ let re_merlint_cmd = Re.compile (Re.seq [ Re.bos; Re.str "  $ merlint" ])
 let re_two_spaces = Re.compile (Re.seq [ Re.bos; Re.str "  " ])
 
 (* Extract test name regex *)
-let re_bad_test_name = Re.compile (Re.alt [ Re.str "bad.ml"; Re.str "bad/" ])
-let re_good_test_name = Re.compile (Re.alt [ Re.str "good.ml"; Re.str "good/" ])
+let re_bad_test_name =
+  Re.compile (Re.alt [ Re.str "bad.ml"; Re.str "bad.mli"; Re.str "bad/" ])
+
+let re_good_test_name =
+  Re.compile (Re.alt [ Re.str "good.ml"; Re.str "good.mli"; Re.str "good/" ])
 
 (* Get all error codes from rules *)
 let get_all_error_codes () =
@@ -415,8 +418,8 @@ let check_expected_outputs cram_dir defined_rules test_dirs errors =
             if has_build_error then
               errors :=
                 Fmt.str
-                  "Error: %s/%s.t/run.t: %s.ml test shows build \
-                   errors/warnings - fix the test project setup"
+                  "Error: %s/%s.t/run.t: %s test shows build errors/warnings - \
+                   fix the test project setup"
                   cram_dir rule_code test_name
                 :: !errors
             else if test_name = "bad" then
