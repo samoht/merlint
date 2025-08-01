@@ -1,3 +1,4 @@
 (library
  (name test_e415)
- (modules bad good))
+ (modules bad good function_good)
+ (modules_without_implementation function_good))

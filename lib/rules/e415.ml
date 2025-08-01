@@ -1,7 +1,28 @@
 open Examples
+
 (** E415: Missing Pretty Printer *)
 
 type payload = { type_name : string; missing_functions : string list }
+
+(** Check if a type definition is a function type *)
+let is_function_type content line_num =
+  try
+    let lines = String.split_on_char '\n' content in
+    (* Look at a few lines around the type declaration *)
+    let start_idx = max 0 (line_num - 1) in
+    let end_idx = min (List.length lines) (line_num + 3) in
+    let context_lines =
+      let rec collect idx acc =
+        if idx >= end_idx then acc
+        else try collect (idx + 1) (List.nth lines idx :: acc) with _ -> acc
+      in
+      List.rev (collect start_idx [])
+    in
+    let context = String.concat " " context_lines in
+    (* Check for function type patterns using Re *)
+    let arrow_pattern = Re.compile (Re.str "->") in
+    Re.execp arrow_pattern context
+  with _ -> false
 
 (** Check if a type has deriving show attribute in the content *)
 let has_deriving_show content line_num =
@@ -65,7 +86,10 @@ let check (ctx : Context.file) =
         (* Check for deriving show *)
         let has_deriving = has_deriving_show content line_num in
 
-        if has_pp || has_deriving then []
+        (* Check if it's a function type - don't require pp for function types *)
+        let is_function = is_function_type content line_num in
+
+        if has_pp || has_deriving || is_function then []
         else
           let loc =
             Location.v ~file:ctx.filename ~start_line:line_num ~start_col:0
