@@ -140,6 +140,32 @@ let check_test_mli_file filename content =
     else []
   else []
 
+(** Check if test_*.ml files have corresponding .mli files *)
+let check_missing_test_mli files =
+  List.filter_map
+    (fun ml_file ->
+      if String.ends_with ~suffix:".ml" ml_file then
+        let basename = Filename.basename ml_file in
+        if String.starts_with ~prefix:"test_" basename && basename <> "test.ml"
+        then
+          let base_name = Filename.remove_extension ml_file in
+          let mli_path = base_name ^ ".mli" in
+          if not (List.mem mli_path files) then
+            let loc =
+              Location.v ~file:ml_file ~start_line:1 ~start_col:0 ~end_line:1
+                ~end_col:0
+            in
+            Some
+              (Issue.v ~loc
+                 {
+                   filename = ml_file;
+                   module_name = basename |> Filename.chop_extension;
+                 })
+          else None
+        else None
+      else None)
+    files
+
 (** Check all files for test convention issues *)
 let check ctx =
   let files = Context.all_files ctx in
@@ -147,27 +173,43 @@ let check ctx =
   Logs.debug (fun m -> m "E600: Analyzing %d files:" (List.length files));
   List.iter (fun f -> Logs.debug (fun m -> m "E600:   - %s" f)) files;
 
-  List.concat_map
-    (fun filename ->
-      if
-        String.ends_with ~suffix:".ml" filename
-        || String.ends_with ~suffix:".mli" filename
-      then
-        try
-          let content =
-            In_channel.with_open_text filename In_channel.input_all
-          in
-          check_test_file_uses_modules filename content
-          @ check_test_mli_file filename content
-        with _ -> []
-      else [])
-    files
+  (* Check for missing .mli files for test modules *)
+  let missing_mli_issues = check_missing_test_mli files in
+
+  let content_issues =
+    List.concat_map
+      (fun filename ->
+        if
+          String.ends_with ~suffix:".ml" filename
+          || String.ends_with ~suffix:".mli" filename
+        then
+          try
+            let content =
+              In_channel.with_open_text filename In_channel.input_all
+            in
+            check_test_file_uses_modules filename content
+            @ check_test_mli_file filename content
+          with _ -> []
+        else [])
+      files
+  in
+
+  missing_mli_issues @ content_issues
 
 let pp ppf { filename; module_name = _ } =
   if String.ends_with ~suffix:".mli" filename then
     Fmt.pf ppf
       "Test module interface should only export 'suite' with type string * \
        unit Alcotest.test_case list"
+  else if String.ends_with ~suffix:".ml" filename then
+    let basename = Filename.basename filename in
+    if String.starts_with ~prefix:"test_" basename && basename <> "test.ml" then
+      Fmt.pf ppf "Test module %s is missing interface file %s" filename
+        (Filename.remove_extension filename ^ ".mli")
+    else
+      Fmt.pf ppf
+        "Test file should use test module suites (e.g., Test_user.suite) \
+         instead of defining its own test list"
   else
     Fmt.pf ppf
       "Test file should use test module suites (e.g., Test_user.suite) instead \
