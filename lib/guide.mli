@@ -9,4 +9,4 @@ type element =
   | Rule of string  (** Reference to a linting rule by error code. *)
 
 val content : element list
-(** Complete definition of the style guide's structure. *)
+(** [content] is the complete definition of the style guide's structure. *)

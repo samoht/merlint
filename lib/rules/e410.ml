@@ -56,9 +56,10 @@ let rule =
   Rule.v ~code:"E410" ~title:"Bad Documentation Style" ~category:Documentation
     ~hint:
       "Follow OCaml documentation conventions: Functions should use '[name \
-       args] description.' format. Operators should use infix notation like \
-       '[x op y] description.' All documentation should end with a period. \
-       Avoid redundant phrases like 'This function...'."
+       args] description.' format. Values should use '[name] description.' \
+       format. Operators should use infix notation like '[x op y] \
+       description.' All documentation should end with a period. Avoid \
+       redundant phrases like 'This function...'."
     ~examples:
       [
         {
@@ -71,6 +72,17 @@ let rule =
           is_good = true;
           code = {|type id = string
 (** A user identifier. *)|};
+        };
+        {
+          is_good = true;
+          code =
+            {|val default : t
+(** [default] is the default configuration. *)|};
+        };
+        {
+          is_good = false;
+          code = {|val default : t
+(** The default configuration. *)|};
         };
       ]
     ~pp (File check)

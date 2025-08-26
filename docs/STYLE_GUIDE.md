@@ -158,7 +158,7 @@ val process : int -> int
 
 ### [E410] Bad Documentation Style
 
-Follow OCaml documentation conventions: Functions should use '[name args] description.' format. Operators should use infix notation like '[x op y] description.' All documentation should end with a period. Avoid redundant phrases like 'This function...'.
+Follow OCaml documentation conventions: Functions should use '[name args] description.' format. Values should use '[name] description.' format. Operators should use infix notation like '[x op y] description.' All documentation should end with a period. Avoid redundant phrases like 'This function...'.
 
 **Examples:**
 
@@ -172,6 +172,18 @@ val is_bot : t -> bool
 ```ocaml
 type id = string
 (** A user identifier. *)
+```
+
+**Good:**
+```ocaml
+val default : t
+(** [default] is the default configuration. *)
+```
+
+**Bad:**
+```ocaml
+val default : t
+(** The default configuration. *)
 ```
 
 

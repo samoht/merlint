@@ -13,7 +13,7 @@ val compare : t -> t -> int
 (** [compare a b] returns a comparison result between [a] and [b]. *)
 
 val pp : t Fmt.t
-(** [pp fmt t] pretty-prints the merlin result. *)
+(** [pp] is a pretty-printer for the merlin result. *)
 
 val analyze_file : string -> t
 (** [analyze_file filename] analyzes a file with merlin commands. *)

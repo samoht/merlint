@@ -1,4 +1,4 @@
 (** Configuration module tests. *)
 
 val suite : string * unit Alcotest.test_case list
-(** Test suite for config module. *)
+(** [suite] is the test suite for config module. *)

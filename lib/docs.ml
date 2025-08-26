@@ -3,6 +3,7 @@
 type style_issue =
   | Missing_period
   | Bad_function_format
+  | Bad_value_format
   | Bad_operator_format
   | Redundant_phrase of string
   | Regular_comment_instead_of_doc
@@ -92,9 +93,18 @@ let check_type_doc ~doc =
 
   !issues
 
-let check_value_doc ~name:_ ~doc =
-  (* Non-function values should have simple descriptions ending with period *)
+let check_value_doc ~name ~doc =
+  (* Non-function values should use [name] format and have simple descriptions ending with period *)
   let issues = ref [] in
+
+  (* Check if the documentation starts with [name] *)
+  let has_bracket_format =
+    let pattern = Re.compile (Re.seq [ Re.str "["; Re.str name; Re.str "]" ]) in
+    Re.execp pattern doc
+  in
+
+  (* Only suggest [name] format if the doc doesn't already use it *)
+  if not has_bracket_format then issues := Bad_value_format :: !issues;
 
   (* Check ends with period (but not if it ends with a code block ]} or if it's a list ending with ) *)
   let trimmed = String.trim doc in
@@ -123,6 +133,8 @@ let pp_style_issue ppf = function
   | Missing_period -> Fmt.string ppf "should end with a period"
   | Bad_function_format ->
       Fmt.string ppf "should use '[function_name args] description.' format"
+  | Bad_value_format ->
+      Fmt.string ppf "should use '[value_name] description.' format"
   | Bad_operator_format ->
       Fmt.string ppf "should use '[x op y] description.' format for operators"
   | Redundant_phrase phrase -> Fmt.pf ppf "avoid redundant phrase '%s'" phrase

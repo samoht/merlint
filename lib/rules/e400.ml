@@ -24,11 +24,14 @@ let check (ctx : Context.project) =
         let module_name =
           Filename.basename filename |> Filename.remove_extension
         in
-        match
-          check_mli_documentation_content ~module_name ~filename content
-        with
-        | Some issue -> [ issue ]
-        | None -> []
+        (* Skip test modules - they don't need comprehensive documentation *)
+        if String.starts_with ~prefix:"test_" module_name then []
+        else
+          match
+            check_mli_documentation_content ~module_name ~filename content
+          with
+          | Some issue -> [ issue ]
+          | None -> []
       else [])
 
 let pp ppf { module_name; file } =
@@ -39,7 +42,7 @@ let rule =
     ~hint:
       "MLI files should start with a documentation comment (** ... *) that \
        describes the module's purpose and API. This helps users understand how \
-       to use the module."
+       to use the module. Test modules (test_*) are excluded from this check."
     ~examples:
       [ Example.bad Examples.E400.bad_mli; Example.good Examples.E400.good_mli ]
     ~pp (Project check)

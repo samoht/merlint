@@ -23,7 +23,7 @@ val compare : t -> t -> int
     polymorphic comparison. *)
 
 val pp : t Fmt.t
-(** [pp fmt t] pretty-prints the profiling state. *)
+(** [pp] is a pretty-printer for the profiling state. *)
 
 val v : unit -> t
 (** [v ()] creates a new profiling state. *)

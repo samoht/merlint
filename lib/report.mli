@@ -28,7 +28,7 @@ val v :
     parameters. *)
 
 val pp : t Fmt.t
-(** [pp fmt t] pretty prints report. *)
+(** [pp] is a pretty-printer for report. *)
 
 val print_status : bool -> string
 (** [print_status passed] returns status string. *)

@@ -19,7 +19,7 @@ val v :
 (** [v ~file ~start_line ~start_col ~end_line ~end_col] creates a location. *)
 
 val pp : t Fmt.t
-(** [pp formatter location] pretty prints location. *)
+(** [pp] is a pretty-printer for location. *)
 
 val compare : t -> t -> int
 (** [compare a b] compares two locations. *)

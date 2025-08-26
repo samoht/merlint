@@ -34,7 +34,7 @@ val compare : t -> t -> int
 (** [compare a b] returns a comparison result between [a] and [b]. *)
 
 val pp : t Fmt.t
-(** [pp fmt t] pretty-prints the AST representation. *)
+(** [pp] is a pretty-printer for the AST representation. *)
 
 (** Cyclomatic complexity analysis. *)
 module Complexity : sig

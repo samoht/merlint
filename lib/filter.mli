@@ -10,7 +10,7 @@ val compare : t -> t -> int
 (** [compare a b] returns a comparison result between [a] and [b]. *)
 
 val pp : t Fmt.t
-(** [pp fmt t] pretty-prints the filter configuration. *)
+(** [pp] is a pretty-printer for the filter configuration. *)
 
 val parse : string -> (t, string) result
 (** [parse spec] parses rule specification using simple format without quotes.

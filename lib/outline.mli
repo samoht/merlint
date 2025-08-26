@@ -50,7 +50,7 @@ val by_name : string -> t -> item option
 (** [by_name name outline] finds item. *)
 
 val pp : t Fmt.t
-(** [pp formatter outline] pretty prints. *)
+(** [pp] is a pretty-printer for outline. *)
 
 val location : string -> item -> Location.t option
 (** [location filename item] extracts location. *)

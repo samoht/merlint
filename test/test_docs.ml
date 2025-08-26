@@ -34,12 +34,21 @@ let test_check_function_doc () =
 
 let test_check_value_doc () =
   let open Merlint.Docs in
-  (* Good value doc *)
-  let issues = check_value_doc ~name:"version" ~doc:"The current version." in
+  (* Good value doc with [name] format *)
+  let issues =
+    check_value_doc ~name:"version" ~doc:"[version] is the current version."
+  in
   Alcotest.(check (list style_issue)) "good value doc" [] issues;
 
+  (* Missing [name] format *)
+  let issues = check_value_doc ~name:"version" ~doc:"The current version." in
+  Alcotest.(check (list style_issue))
+    "missing bracket format" [ Bad_value_format ] issues;
+
   (* Missing period *)
-  let issues = check_value_doc ~name:"count" ~doc:"The total count" in
+  let issues =
+    check_value_doc ~name:"count" ~doc:"[count] is the total count"
+  in
   Alcotest.(check (list style_issue)) "missing period" [ Missing_period ] issues;
 
   (* Redundant phrase *)
@@ -48,7 +57,7 @@ let test_check_value_doc () =
   in
   Alcotest.(check (list style_issue))
     "redundant phrase"
-    [ Redundant_phrase "This value" ]
+    [ Redundant_phrase "This value"; Bad_value_format ]
     issues
 
 let test_check_type_doc () =

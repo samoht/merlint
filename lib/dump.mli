@@ -28,7 +28,7 @@ val compare : t -> t -> int
 (** [compare a b] returns a comparison result between [a] and [b]. *)
 
 val pp : t Fmt.t
-(** [pp fmt t] pretty-prints the dump data. *)
+(** [pp] is a pretty-printer for the dump data. *)
 
 exception Parse_error of string
 (** Parse error exception. *)

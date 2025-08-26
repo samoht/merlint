@@ -28,7 +28,7 @@ val compare : t -> t -> int
 (** [compare a b] returns a comparison result between [a] and [b]. *)
 
 val pp : t Fmt.t
-(** [pp fmt t] pretty-prints the configuration. *)
+(** [pp] is a pretty-printer for the configuration. *)
 
 (** Configuration file loading. *)
 

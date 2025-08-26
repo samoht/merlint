@@ -8,3 +8,6 @@ val ( @> ) : t -> t -> t
 
 (** Missing period at the end *)
 val ( <@ ) : t -> t -> t
+
+(** The default configuration. *)
+val default : t

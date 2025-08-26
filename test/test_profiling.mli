@@ -1,4 +1,4 @@
 (** Tests for the Profiling module. *)
 
 val suite : string * unit Alcotest.test_case list
-(** Test suite for profiling functionality. *)
+(** [suite] is the test suite for profiling functionality. *)

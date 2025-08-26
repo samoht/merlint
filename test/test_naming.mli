@@ -5,4 +5,4 @@
 *)
 
 val suite : string * unit Alcotest.test_case list
-(** [suite] the test suite for Naming module. *)
+(** [suite] is the test suite for Naming module. *)

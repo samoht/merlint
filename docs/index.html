@@ -1073,7 +1073,7 @@ pre code {
         <span class="error-code">E400</span>
         <span class="error-title">Missing MLI Documentation</span>
     </div>
-    <div class="error-hint"><p>MLI files should start with a documentation comment (** ... *) that describes the module's purpose and API. This helps users understand how to use the module.</p><div class="examples-grid">
+    <div class="error-hint"><p>MLI files should start with a documentation comment (** ... *) that describes the module's purpose and API. This helps users understand how to use the module. Test modules (test_*) are excluded from this check.</p><div class="examples-grid">
 <div class="example bad">
   <h4>BAD</h4>
   <pre><code><span class="cm">(* user.mli - no module doc *)</span>
@@ -1127,7 +1127,12 @@ pre code {
         <span class="error-code">E410</span>
         <span class="error-title">Bad Documentation Style</span>
     </div>
-    <div class="error-hint"><p>Follow OCaml documentation conventions: Functions should use '[name args] description.' format. Operators should use infix notation like '[x op y] description.' All documentation should end with a period. Avoid redundant phrases like 'This function...'.</p>
+    <div class="error-hint"><p>Follow OCaml documentation conventions: Functions should use '[name args] description.' format. Values should use '[name] description.' format. Operators should use infix notation like '[x op y] description.' All documentation should end with a period. Avoid redundant phrases like 'This function...'.</p><div class="examples-grid">
+<div class="example bad">
+  <h4>BAD</h4>
+  <pre><code><span class="kw">val</span> default : t
+<span class="cm">(** The default configuration. *)</span></code></pre>
+</div>
 <div class="example good">
   <h4>GOOD</h4>
   <pre><code><span class="kw">val</span> is_bot : t -&gt; bool
@@ -1137,6 +1142,12 @@ pre code {
   <h4>GOOD</h4>
   <pre><code><span class="kw">type</span> id = string
 <span class="cm">(** A user identifier. *)</span></code></pre>
+</div>
+<div class="example good">
+  <h4>GOOD</h4>
+  <pre><code><span class="kw">val</span> default : t
+<span class="cm">(** [default] is the default configuration. *)</span></code></pre>
+</div>
 </div></div>
 </div>
 <div class="error-card" id="E415">

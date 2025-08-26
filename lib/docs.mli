@@ -8,6 +8,7 @@
 type style_issue =
   | Missing_period
   | Bad_function_format
+  | Bad_value_format
   | Bad_operator_format
   | Redundant_phrase of string
   | Regular_comment_instead_of_doc  (** Documentation style issues. *)
@@ -22,7 +23,7 @@ val check_type_doc : doc:string -> style_issue list
 
 val check_value_doc : name:string -> doc:string -> style_issue list
 (** [check_value_doc ~name ~doc] checks value documentation style. Values should
-    have simple descriptions ending with a period. *)
+    use the format: [[value_name] description.]. *)
 
 val pp_style_issue : style_issue Fmt.t
 (** [pp_style_issue] pretty-prints a style issue. *)
