@@ -44,9 +44,7 @@ let matches_pattern pattern file =
     let regex_pattern = glob_to_regex pattern in
     let regex = Re.compile (Re.Perl.re regex_pattern) in
     Re.execp regex file
-  with
-  | Re.Perl.Parse_error _
-  | Re.Perl.Not_supported ->
+  with Re.Perl.Parse_error | Re.Perl.Not_supported ->
     (* If pattern compilation fails, fall back to simple string matching *)
     String.starts_with ~prefix:pattern file
     || String.ends_with ~suffix:pattern file
