@@ -1,14 +1,5 @@
 open Merlint
 
-let test_get_project_root () =
-  (* Test finding project root *)
-  let cwd = Sys.getcwd () in
-  let project_root = Engine.project_root cwd in
-  (* Should find a dune-project file somewhere up the tree *)
-  Alcotest.(check bool)
-    "found project root" true
-    (Sys.file_exists (Filename.concat project_root "dune-project"))
-
 let test_run_empty_filter () =
   (* Test running with all rules disabled using "none" keyword *)
   match Filter.parse "none" with
@@ -21,7 +12,5 @@ let test_run_empty_filter () =
 
 let suite =
   ( "engine",
-    [
-      Alcotest.test_case "get project root" `Quick test_get_project_root;
-      Alcotest.test_case "run with empty filter" `Quick test_run_empty_filter;
-    ] )
+    [ Alcotest.test_case "run with empty filter" `Quick test_run_empty_filter ]
+  )

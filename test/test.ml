@@ -9,6 +9,7 @@ let () =
   let suites =
     [
       Test_config.suite;
+      Test_project.suite;
       Test_outline.suite;
       Test_ast.suite;
       Test_dump.suite;

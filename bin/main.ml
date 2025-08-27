@@ -264,7 +264,7 @@ let analyze_files ?(exclude_patterns = []) ?rule_filter ?(show_profile = false)
     files =
   (* Find project root *)
   let project_root =
-    match files with file :: _ -> Merlint.Engine.project_root file | [] -> "."
+    match files with file :: _ -> Merlint.Project.root file | [] -> "."
   in
 
   Log.info (fun m -> m "Project root: %s" project_root);
@@ -388,9 +388,8 @@ let cmd =
           if show_config then (
             let project_root =
               match files with
-              | [] -> Sys.getcwd ()
-              | path :: _ ->
-                  if Sys.is_directory path then path else Filename.dirname path
+              | [] -> Merlint.Project.root (Sys.getcwd ())
+              | path :: _ -> Merlint.Project.root path
             in
             let config = Merlint.Config.load_from_path project_root in
             Fmt.pr "=== Merlint Configuration ===@.";

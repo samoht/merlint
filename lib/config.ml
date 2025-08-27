@@ -44,9 +44,7 @@ let default =
 let filename = ".merlint"
 
 let file path =
-  let project_root =
-    if Sys.is_directory path then path else Filename.dirname path
-  in
+  let project_root = Project.root path in
   let config_path = Filename.concat project_root filename in
   if Sys.file_exists config_path then Some config_path else None
 

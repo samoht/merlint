@@ -1,9 +1,5 @@
 (** Linting engine. *)
 
-val project_root : string -> string
-(** [project_root path] finds the project root by looking for dune-project file.
-*)
-
 val run :
   filter:Filter.t ->
   dune_describe:Dune.describe ->
