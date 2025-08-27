@@ -16,6 +16,8 @@ type t = {
   (* Format rules *)
   require_ocamlformat_file : bool;
   require_mli_files : bool;
+  (* Rule exclusions *)
+  exclusions : Exclusions.t;
 }
 
 let default =
@@ -35,9 +37,11 @@ let default =
     (* Format defaults *)
     require_ocamlformat_file = true;
     require_mli_files = true;
+    (* Rule exclusions *)
+    exclusions = Exclusions.empty;
   }
 
-let filename = ".merlintrc"
+let filename = ".merlint"
 
 let file path =
   let project_root =
@@ -45,18 +49,6 @@ let file path =
   in
   let config_path = Filename.concat project_root filename in
   if Sys.file_exists config_path then Some config_path else None
-
-(** Parse a single configuration line *)
-let parse_line line =
-  let line = String.trim line in
-  if String.length line = 0 || String.get line 0 = '#' then None
-  else
-    match String.split_on_char '=' line with
-    | [ key; value ] ->
-        let key = String.trim key in
-        let value = String.trim value in
-        Some (key, value)
-    | _ -> None
 
 (** Parse boolean value *)
 let parse_bool value =
@@ -70,9 +62,12 @@ let parse_int value =
   try int_of_string value
   with Failure _ -> Fmt.failwith "Invalid integer value: %s" value
 
+(** Normalize config key from kebab-case to snake_case *)
+let normalize_key key = String.map (function '-' -> '_' | c -> c) key
+
 (** Apply a configuration key-value pair to the config *)
 let apply_config config key value : t =
-  match key with
+  match normalize_key key with
   (* Complexity rules *)
   | "max_complexity" -> { config with max_complexity = parse_int value }
   | "max_function_length" ->
@@ -100,31 +95,19 @@ let apply_config config key value : t =
 
 let load path =
   try
-    let ic = open_in path in
-    let rec read_lines config =
-      try
-        let line = input_line ic in
-        let config' =
-          match parse_line line with
-          | Some (key, value) -> (
-              try apply_config config key value
-              with Failure msg ->
-                Fmt.epr "Warning: %s (line: %s)\n" msg line;
-                config)
-          | None -> config
-        in
-        read_lines config'
-      with End_of_file ->
-        close_in ic;
-        config
-    in
-    read_lines default
-  with
-  | Sys_error _ -> default
-  | exn ->
-      Fmt.epr "Warning: Error loading config from %s: %s\n" path
-        (Printexc.to_string exn);
-      default
+    match Config_parser.parse_file path with
+    | Some parsed ->
+        (* Apply settings to the default config *)
+        let config = ref default in
+        List.iter
+          (fun (key, value) -> config := apply_config !config key value)
+          parsed.Config_parser.settings;
+        { !config with exclusions = parsed.Config_parser.exclusions }
+    | None -> default
+  with exn ->
+    Fmt.epr "Warning: Error loading config from %s: %s\n" path
+      (Printexc.to_string exn);
+    default
 
 let load_from_path path =
   match file path with Some config_path -> load config_path | None -> default

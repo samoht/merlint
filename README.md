@@ -82,6 +82,23 @@ merlint --exclude test/
 merlint --rules A-E110
 ```
 
+## Configuration
+
+Merlint can be configured using a `.merlint` file in your project root. See [MERLINT_CONFIG.md](docs/MERLINT_CONFIG.md) for details.
+
+Example `.merlint`:
+```yaml
+settings:
+  max-complexity: 15
+  max-function-length: 100
+
+exclusions:
+  - pattern: lib/prose*.ml
+    rules: [E330]
+  - pattern: test/**/*.ml
+    rules: [E400, E410]
+```
+
 ## Rules Overview
 
 Merlint groups rules by category and priority:

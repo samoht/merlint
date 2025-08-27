@@ -120,7 +120,16 @@ let run ~filter ~dune_describe ?profiling project_root =
           let file_ctx =
             Context.file ~filename ~config ~project_root ~merlin_result
           in
-          List.concat_map (run_file_rule ?profiling file_ctx) file_rules
+          (* Filter rules based on exclusions for this file *)
+          let applicable_rules =
+            List.filter
+              (fun rule ->
+                not
+                  (Exclusions.should_exclude config.exclusions
+                     ~rule:(Rule.code rule) ~file:filename))
+              file_rules
+          in
+          List.concat_map (run_file_rule ?profiling file_ctx) applicable_rules
         with exn ->
           Log.err (fun m ->
               m "Failed to analyze %s: %s" filename (Printexc.to_string exn));

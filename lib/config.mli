@@ -16,6 +16,8 @@ type t = {
   (* Format rules *)
   require_ocamlformat_file : bool;
   require_mli_files : bool;
+  (* Rule exclusions *)
+  exclusions : Exclusions.t;
 }
 
 val default : t
