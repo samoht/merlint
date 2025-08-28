@@ -4,7 +4,7 @@ type rule_pattern = { pattern : string; rules : string list }
 type t = rule_pattern list
 
 let empty = []
-let add exclusions pattern = pattern :: exclusions
+let add pattern exclusions = pattern :: exclusions
 
 (** Convert glob pattern to regex pattern *)
 let glob_to_regex pattern =
@@ -18,7 +18,8 @@ let glob_to_regex pattern =
         convert ('*' :: '.' :: acc) rest
     | '*' :: rest ->
         (* * matches anything except / *)
-        convert (']' :: '/' :: '^' :: '[' :: acc) rest
+        (* Building in reverse order, so [^/]* becomes *]/^[ *)
+        convert ('*' :: ']' :: '/' :: '^' :: '[' :: acc) rest
     | '?' :: rest ->
         (* ? matches any single character except / *)
         convert (']' :: '/' :: '^' :: '[' :: acc) rest
@@ -79,3 +80,8 @@ let pp ppf exclusions =
       p.rules
   in
   Fmt.pf ppf "%a" Fmt.(list ~sep:(const string "; ") pp_pattern) exclusions
+
+let equal exclusions1 exclusions2 =
+  List.equal
+    (fun p1 p2 -> p1.pattern = p2.pattern && p1.rules = p2.rules)
+    exclusions1 exclusions2

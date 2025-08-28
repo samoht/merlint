@@ -17,7 +17,7 @@ type t = {
   require_ocamlformat_file : bool;
   require_mli_files : bool;
   (* Rule exclusions *)
-  exclusions : Exclusions.t;
+  exclusions : Rule_config.t;
 }
 
 let default =
@@ -38,7 +38,7 @@ let default =
     require_ocamlformat_file = true;
     require_mli_files = true;
     (* Rule exclusions *)
-    exclusions = Exclusions.empty;
+    exclusions = Rule_config.empty;
   }
 
 let filename = ".merlint"

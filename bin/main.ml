@@ -417,9 +417,9 @@ let cmd =
               config.require_ocamlformat_file;
             Fmt.pr "  require-mli-files: %b@." config.require_mli_files;
             Fmt.pr "@.Exclusions:@.";
-            if config.exclusions = Merlint.Exclusions.empty then
+            if config.exclusions = Merlint.Rule_config.empty then
               Fmt.pr "  (none)@."
-            else Fmt.pr "  %a@." Merlint.Exclusions.pp config.exclusions;
+            else Fmt.pr "  %a@." Merlint.Rule_config.pp config.exclusions;
             Stdlib.exit 0)
           else if not (check_ocamlmerlin ()) then (
             Log.err (fun m -> m "ocamlmerlin not found in PATH");

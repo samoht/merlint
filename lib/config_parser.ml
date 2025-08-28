@@ -2,7 +2,7 @@
 
 type parsed_config = {
   settings : (string * string) list;
-  exclusions : Exclusions.t;
+  exclusions : Rule_config.t;
 }
 
 type section = Rules | Exclusions | Settings
@@ -15,12 +15,18 @@ let parse_section_header line =
   else if line = "settings:" then Some Settings
   else None
 
+(** Strip inline comments from a value *)
+let strip_inline_comment value =
+  match String.split_on_char '#' value with
+  | [] -> value
+  | first :: _ -> String.trim first
+
 (** Parse a settings line *)
 let parse_setting line =
   match String.split_on_char ':' line with
   | [ key; value ] ->
       let key = String.trim key in
-      let value = String.trim value in
+      let value = String.trim value |> strip_inline_comment in
       Some (key, value)
   | _ -> None
 
@@ -57,7 +63,7 @@ let parse content =
         let exclusions =
           match current_pattern with
           | Some (pattern, rules) when List.length rules > 0 ->
-              Exclusions.add exclusions { pattern; rules }
+              Rule_config.add { pattern; rules } exclusions
           | _ -> exclusions
         in
         { settings; exclusions }
@@ -73,7 +79,7 @@ let parse content =
               let exclusions =
                 match current_pattern with
                 | Some (pattern, rules) when List.length rules > 0 ->
-                    Exclusions.add exclusions { pattern; rules }
+                    Rule_config.add { pattern; rules } exclusions
                 | _ -> exclusions
               in
               process_lines section None exclusions settings rest
@@ -96,8 +102,9 @@ let parse content =
                         match current_pattern with
                         | Some (prev_pattern, rules) when List.length rules > 0
                           ->
-                            Exclusions.add exclusions
+                            Rule_config.add
                               { pattern = prev_pattern; rules }
+                              exclusions
                         | _ -> exclusions
                       in
                       process_lines current_section
@@ -119,7 +126,7 @@ let parse content =
                   process_lines current_section current_pattern exclusions
                     settings rest))
   in
-  process_lines Settings None Exclusions.empty [] lines
+  process_lines Settings None Rule_config.empty [] lines
 
 let parse_file path =
   if Sys.file_exists path then

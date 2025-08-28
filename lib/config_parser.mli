@@ -2,7 +2,7 @@
 
 type parsed_config = {
   settings : (string * string) list;
-  exclusions : Exclusions.t;
+  exclusions : Rule_config.t;
 }
 (** [parsed_config] represents parsed configuration data. *)
 

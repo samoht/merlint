@@ -109,7 +109,7 @@ let run ~filter ~dune_describe ?profiling project_root =
             List.filter
               (fun rule ->
                 not
-                  (Exclusions.should_exclude config.exclusions
+                  (Rule_config.should_exclude config.exclusions
                      ~rule:(Rule.code rule) ~file:filename))
               file_rules
           in

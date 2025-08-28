@@ -15,8 +15,8 @@ type t
 val empty : t
 (** [empty] is an empty exclusion configuration. *)
 
-val add : t -> rule_pattern -> t
-(** [add exclusions pattern] adds a new exclusion pattern to the configuration.
+val add : rule_pattern -> t -> t
+(** [add pattern exclusions] adds a new exclusion pattern to the configuration.
 *)
 
 val should_exclude : t -> rule:string -> file:string -> bool
@@ -29,3 +29,6 @@ val parse_exclusion_line : string -> rule_pattern option
 
 val pp : t Fmt.t
 (** [pp] is a pretty-printer for exclusions. *)
+
+val equal : t -> t -> bool
+(** [equal a b] returns true if [a] and [b] contain the same exclusions. *)
