@@ -5,13 +5,12 @@ type parsed_config = {
   exclusions : Rule_config.t;
 }
 
-type section = Rules | Exclusions | Settings
+type section = Rules | Settings
 
 (** Determine section from header line *)
 let parse_section_header line =
   let line = String.trim line in
   if line = "rules:" then Some Rules
-  else if line = "exclusions:" then Some Exclusions
   else if line = "settings:" then Some Settings
   else None
 
@@ -30,15 +29,17 @@ let parse_setting line =
       Some (key, value)
   | _ -> None
 
-(** Parse an exclusion line in YAML format *)
-let parse_exclusion_yaml line =
-  (* Format: "  - pattern: lib/prose*.ml" or "    rules: [E330, E410]" *)
+(** Parse a rule entry in YAML list format *)
+let parse_rule_yaml line =
+  (* Format: "  - files: lib/prose*.ml" or "    exclude: [E330, E410]" *)
   let line = String.trim line in
-  if String.starts_with ~prefix:"- pattern:" line then
-    let pattern = String.sub line 10 (String.length line - 10) |> String.trim in
-    Some (`Pattern pattern)
-  else if String.starts_with ~prefix:"rules:" line then
-    let rules_str = String.sub line 6 (String.length line - 6) |> String.trim in
+  if String.starts_with ~prefix:"- files:" line then
+    let files_pattern =
+      String.sub line 8 (String.length line - 8) |> String.trim
+    in
+    Some (`Files files_pattern)
+  else if String.starts_with ~prefix:"exclude:" line then
+    let rules_str = String.sub line 8 (String.length line - 8) |> String.trim in
     (* Remove brackets if present *)
     let rules_str =
       if
@@ -51,19 +52,19 @@ let parse_exclusion_yaml line =
       rules_str |> String.split_on_char ',' |> List.map String.trim
       |> List.filter (fun s -> String.length s > 0)
     in
-    Some (`Rules rules)
+    Some (`Exclude rules)
   else None
 
 (** Parse configuration content *)
 let parse content =
   let lines = String.split_on_char '\n' content in
-  let rec process_lines current_section current_pattern exclusions settings =
+  let rec process_lines current_section current_rule exclusions settings =
     function
     | [] ->
         let exclusions =
-          match current_pattern with
-          | Some (pattern, rules) when List.length rules > 0 ->
-              Rule_config.add { pattern; rules } exclusions
+          match current_rule with
+          | Some (files, rules) when List.length rules > 0 ->
+              Rule_config.add { pattern = files; rules } exclusions
           | _ -> exclusions
         in
         { settings; exclusions }
@@ -71,15 +72,15 @@ let parse content =
         let trimmed = String.trim line in
         (* Skip empty lines and comments *)
         if String.length trimmed = 0 || String.get trimmed 0 = '#' then
-          process_lines current_section current_pattern exclusions settings rest
+          process_lines current_section current_rule exclusions settings rest
         (* Check for section headers *)
           else
           match parse_section_header trimmed with
           | Some section ->
               let exclusions =
-                match current_pattern with
-                | Some (pattern, rules) when List.length rules > 0 ->
-                    Rule_config.add { pattern; rules } exclusions
+                match current_rule with
+                | Some (files, rules) when List.length rules > 0 ->
+                    Rule_config.add { pattern = files; rules } exclusions
                 | _ -> exclusions
               in
               process_lines section None exclusions settings rest
@@ -92,39 +93,35 @@ let parse content =
                     | Some kv -> kv :: settings
                     | None -> settings
                   in
-                  process_lines current_section current_pattern exclusions
+                  process_lines current_section current_rule exclusions
                     new_settings rest
-              | Exclusions -> (
-                  match parse_exclusion_yaml trimmed with
-                  | Some (`Pattern pattern) ->
-                      (* Save previous exclusion if any *)
+              | Rules -> (
+                  match parse_rule_yaml trimmed with
+                  | Some (`Files files_pattern) ->
+                      (* Save previous rule if any *)
                       let exclusions =
-                        match current_pattern with
-                        | Some (prev_pattern, rules) when List.length rules > 0
-                          ->
+                        match current_rule with
+                        | Some (prev_files, prev_rules)
+                          when List.length prev_rules > 0 ->
                             Rule_config.add
-                              { pattern = prev_pattern; rules }
+                              { pattern = prev_files; rules = prev_rules }
                               exclusions
                         | _ -> exclusions
                       in
                       process_lines current_section
-                        (Some (pattern, []))
+                        (Some (files_pattern, []))
                         exclusions settings rest
-                  | Some (`Rules rules) ->
-                      let current_pattern =
-                        match current_pattern with
-                        | Some (pattern, _) -> Some (pattern, rules)
+                  | Some (`Exclude rule_list) ->
+                      let current_rule =
+                        match current_rule with
+                        | Some (files, _) -> Some (files, rule_list)
                         | None -> None
                       in
-                      process_lines current_section current_pattern exclusions
+                      process_lines current_section current_rule exclusions
                         settings rest
                   | None ->
-                      process_lines current_section current_pattern exclusions
-                        settings rest)
-              | Rules ->
-                  (* Legacy format support or future rules configuration *)
-                  process_lines current_section current_pattern exclusions
-                    settings rest))
+                      process_lines current_section current_rule exclusions
+                        settings rest)))
   in
   process_lines Settings None Rule_config.empty [] lines
 

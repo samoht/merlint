@@ -28,12 +28,10 @@ let test_parse_settings_only () =
     (config.exclusions = Rule_config.empty)
 
 let test_parse_exclusions_only () =
-  let input =
-    {|exclusions:
-  - pattern: "*.test.ml"
-    rules: [E100, E200]
-|}
-  in
+  let input = {|rules:
+  - files: "*.test.ml"
+    exclude: [E100, E200]
+|} in
   let config = Config_parser.parse input in
   Alcotest.(check int) "no settings" 0 (List.length config.settings);
   Alcotest.(check bool)
@@ -47,11 +45,11 @@ settings:
   max-complexity: 20
   allow-obj-magic: true
 
-exclusions:
-  - pattern: test/**/*.ml
-    rules: [E400]
-  - pattern: lib/generated/*.ml
-    rules: [E100, E200, E300]
+rules:
+  - files: test/**/*.ml
+    exclude: [E400]
+  - files: lib/generated/*.ml
+    exclude: [E100, E200, E300]
 |}
   in
   let config = Config_parser.parse input in
@@ -89,9 +87,9 @@ let test_parse_file () =
   let content =
     {|settings:
   max-complexity: 25
-exclusions:
-  - pattern: "*.generated.ml"
-    rules: [E001]
+rules:
+  - files: "*.generated.ml"
+    exclude: [E001]
 |}
   in
   let oc = open_out temp_file in

@@ -92,11 +92,11 @@ settings:
   max-complexity: 15
   max-function-length: 100
 
-exclusions:
-  - pattern: lib/prose*.ml
-    rules: [E330]
-  - pattern: test/**/*.ml
-    rules: [E400, E410]
+rules:
+  - files: lib/prose*.ml
+    exclude: [E330]
+  - files: test/**/*.ml
+    exclude: [E400, E410]
 ```
 
 ## Rules Overview

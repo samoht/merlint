@@ -51,10 +51,19 @@ let matches_pattern pattern file =
     || String.ends_with ~suffix:pattern file
 
 let should_exclude exclusions ~rule ~file =
-  List.exists
-    (fun pattern ->
-      matches_pattern pattern.pattern file && List.mem rule pattern.rules)
-    exclusions
+  let result =
+    List.exists
+      (fun pattern ->
+        let pattern_matches = matches_pattern pattern.pattern file in
+        let rule_matches = List.mem rule pattern.rules in
+        if pattern_matches && rule_matches then
+          Logs.debug (fun m ->
+              m "Exclusion: file %s matches pattern %s for rule %s" file
+                pattern.pattern rule);
+        pattern_matches && rule_matches)
+      exclusions
+  in
+  result
 
 let parse_exclusion_line line =
   let line = String.trim line in

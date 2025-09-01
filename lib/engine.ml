@@ -108,9 +108,15 @@ let run ~filter ~dune_describe ?profiling project_root =
           let applicable_rules =
             List.filter
               (fun rule ->
-                not
-                  (Rule_config.should_exclude config.exclusions
-                     ~rule:(Rule.code rule) ~file:filename))
+                let code = Rule.code rule in
+                let excluded =
+                  Rule_config.should_exclude config.exclusions ~rule:code
+                    ~file:filename
+                in
+                if excluded then
+                  Log.debug (fun m ->
+                      m "Excluding rule %s for file %s" code filename);
+                not excluded)
               file_rules
           in
           List.concat_map (run_file_rule ?profiling file_ctx) applicable_rules

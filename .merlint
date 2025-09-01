@@ -3,7 +3,7 @@ settings:
   max-complexity: 12
   max-function-length: 80
   
-exclusions:
+rules:
   # Test example for demonstration
-  - pattern: lib/rules/test*.ml
-    rules: [E100]
+  - files: lib/rules/test*.ml
+    exclude: [E100]

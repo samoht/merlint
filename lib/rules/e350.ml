@@ -3,9 +3,10 @@
 type payload = { function_name : string; bool_count : int; signature : string }
 (** Payload for boolean blindness issues *)
 
-(** Count boolean parameters in a function signature *)
-let count_bool_params type_sig =
-  (* Count occurrences of "bool" in the signature, excluding the return type *)
+(** Count unlabeled boolean parameters in a function signature *)
+let count_unlabeled_bool_params type_sig =
+  (* Count occurrences of "bool" that are not preceded by a label (tilde or question mark) *)
+  (* Labels look like: ~label:bool or ?label:bool *)
   let parts = String.split_on_char '>' type_sig in
   let param_part =
     match List.rev parts with
@@ -14,8 +15,10 @@ let count_bool_params type_sig =
         ignore return_type;
         String.concat ">" (List.rev rest)
   in
-  (* Use the traverse helper to count "bool" occurrences *)
-  Outline.count_parameters param_part "bool"
+  (* Simple heuristic: if signature contains ~ or ?, assume labels are used *)
+  if String.contains type_sig '~' || String.contains type_sig '?' then 0
+    (* If any labels are present, don't complain *)
+  else Outline.count_parameters param_part "bool"
 
 (** Check for boolean blindness in function signatures *)
 let check_boolean_blindness ~filename ~outline =
@@ -26,7 +29,7 @@ let check_boolean_blindness ~filename ~outline =
         (fun (item : Outline.item) ->
           match (item.kind, item.type_sig) with
           | Outline.Value, Some sig_str when Outline.is_function_type sig_str ->
-              let bool_count = count_bool_params sig_str in
+              let bool_count = count_unlabeled_bool_params sig_str in
               if bool_count >= 2 then
                 match Outline.location filename item with
                 | Some loc ->

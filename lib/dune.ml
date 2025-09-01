@@ -211,103 +211,61 @@ let extract_project_item dir = function
   | _ -> None
 
 (** Get source files for a project item *)
+let is_ocaml_source_file entry =
+  (* Skip temporary files (e.g., .#main.ml) *)
+  (not
+     (String.length entry > 0 && entry.[0] = '.' && String.contains entry '#'))
+  && (String.ends_with ~suffix:".ml" entry
+     || String.ends_with ~suffix:".mli" entry)
+
+let scan_directory_for_ml_files item_type dir =
+  Log.debug (fun m ->
+      m "%s in %a has no explicit modules, scanning directory" item_type
+        Fpath.pp dir);
+  let files = ref [] in
+  (try
+     let entries = Sys.readdir (Fpath.to_string dir) in
+     Array.iter
+       (fun entry ->
+         if is_ocaml_source_file entry then (
+           let file_path = Fpath.(dir / entry) |> Fpath.normalize in
+           Log.debug (fun m ->
+               m "  Found %s file: %a" item_type Fpath.pp file_path);
+           files := file_path :: !files))
+       entries
+   with Sys_error _ -> ());
+  Log.debug (fun m ->
+      m "%s in %a found %d files" item_type Fpath.pp dir (List.length !files));
+  !files
+
+let modules_to_files dir modules =
+  List.concat_map
+    (fun m ->
+      let ml = Fpath.(dir / (m ^ ".ml")) |> Fpath.normalize in
+      let mli = Fpath.(dir / (m ^ ".mli")) |> Fpath.normalize in
+      List.filter (fun p -> Sys.file_exists (Fpath.to_string p)) [ ml; mli ])
+    modules
+
 let item_files = function
   | Library { dir; modules; _ } ->
-      let dir_path = dir in
-      if modules = [] then (
-        (* No explicit modules, find all .ml/.mli files in dir *)
-        Log.debug (fun m ->
-            m "Library in %a has no explicit modules, scanning directory"
-              Fpath.pp dir);
-        let files = ref [] in
-        (try
-           let entries = Sys.readdir (Fpath.to_string dir) in
-           Array.iter
-             (fun entry ->
-               (* Skip temporary files (e.g., .#main.ml) *)
-               if
-                 (not
-                    (String.length entry > 0
-                    && entry.[0] = '.'
-                    && String.contains entry '#'))
-                 && (String.ends_with ~suffix:".ml" entry
-                    || String.ends_with ~suffix:".mli" entry)
-               then (
-                 let file_path = Fpath.(dir_path / entry) |> Fpath.normalize in
-                 Log.debug (fun m -> m "  Found file: %a" Fpath.pp file_path);
-                 files := file_path :: !files))
-             entries
-         with Sys_error _ -> ());
-        Log.debug (fun m ->
-            m "Library in %a found %d files" Fpath.pp dir (List.length !files));
-        !files)
+      if modules = [] then scan_directory_for_ml_files "Library" dir
       else (
-        (* Explicit modules *)
         Log.debug (fun m ->
             m "Library in %a has explicit modules: %a" Fpath.pp dir
               Fmt.(list ~sep:comma string)
               modules);
-        List.concat_map
-          (fun m ->
-            let ml = Fpath.(dir_path / (m ^ ".ml")) |> Fpath.normalize in
-            let mli = Fpath.(dir_path / (m ^ ".mli")) |> Fpath.normalize in
-            List.filter
-              (fun p -> Sys.file_exists (Fpath.to_string p))
-              [ ml; mli ])
-          modules)
+        modules_to_files dir modules)
   | Executable { names; dir; modules } ->
-      let dir_path = dir in
       let base_modules = if modules = [] then names else modules in
-      List.concat_map
-        (fun m ->
-          let ml = Fpath.(dir_path / (m ^ ".ml")) |> Fpath.normalize in
-          let mli = Fpath.(dir_path / (m ^ ".mli")) |> Fpath.normalize in
-          List.filter (fun p -> Sys.file_exists (Fpath.to_string p)) [ ml; mli ])
-        base_modules
+      modules_to_files dir base_modules
   | Test { dir; modules; _ } ->
-      let dir_path = dir in
-      if modules = [] then (
-        (* No explicit modules, find all .ml/.mli files in dir *)
-        Log.debug (fun m ->
-            m "Test in %a has no explicit modules, scanning directory" Fpath.pp
-              dir);
-        let files = ref [] in
-        (try
-           let entries = Sys.readdir (Fpath.to_string dir) in
-           Array.iter
-             (fun entry ->
-               (* Skip temporary files (e.g., .#main.ml) *)
-               if
-                 (not
-                    (String.length entry > 0
-                    && entry.[0] = '.'
-                    && String.contains entry '#'))
-                 && (String.ends_with ~suffix:".ml" entry
-                    || String.ends_with ~suffix:".mli" entry)
-               then (
-                 let file_path = Fpath.(dir_path / entry) |> Fpath.normalize in
-                 Log.debug (fun m ->
-                     m "  Found test file: %a" Fpath.pp file_path);
-                 files := file_path :: !files))
-             entries
-         with Sys_error _ -> ());
-        Log.debug (fun m ->
-            m "Test in %a found %d files" Fpath.pp dir (List.length !files));
-        !files)
+      if modules = [] then scan_directory_for_ml_files "Test" dir
       else (
-        (* Explicit modules *)
         Log.debug (fun m ->
             m "Test in %a has explicit modules: %a" Fpath.pp dir
               Fmt.(list ~sep:comma string)
               modules);
-        List.concat_map
-          (fun m ->
-            let ml = Fpath.(dir_path / (m ^ ".ml")) |> Fpath.normalize in
-            let mli = Fpath.(dir_path / (m ^ ".mli")) |> Fpath.normalize in
-            List.filter
-              (fun p -> Sys.file_exists (Fpath.to_string p))
-              [ ml; mli ])
-          modules)
+        modules_to_files dir modules)
   | Cram_test _ -> []
 
 (** Get all project source files from describe *)

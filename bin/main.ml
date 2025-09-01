@@ -352,6 +352,64 @@ let show_config_flag =
   in
   Arg.(value & flag & info [ "show-config" ] ~doc)
 
+let show_configuration files =
+  let project_root =
+    match files with
+    | [] -> Merlint.Project.root (Sys.getcwd ())
+    | path :: _ -> Merlint.Project.root path
+  in
+  let config = Merlint.Config.load_from_path project_root in
+  Fmt.pr "=== Merlint Configuration ===@.";
+  Fmt.pr "Project root: %s@." project_root;
+  let config_file = Merlint.Config.file project_root in
+  (match config_file with
+  | Some path -> Fmt.pr "Config file: %s (found)@." path
+  | None -> Fmt.pr "Config file: .merlint (not found, using defaults)@.");
+  Fmt.pr "@.Settings:@.";
+  Fmt.pr "  max-complexity: %d@." config.max_complexity;
+  Fmt.pr "  max-function-length: %d@." config.max_function_length;
+  Fmt.pr "  max-nesting: %d@." config.max_nesting;
+  Fmt.pr "  exempt-data-definitions: %b@." config.exempt_data_definitions;
+  Fmt.pr "  max-underscores-in-name: %d@." config.max_underscores_in_name;
+  Fmt.pr "  min-name-length-underscore: %d@." config.min_name_length_underscore;
+  Fmt.pr "  allow-obj-magic: %b@." config.allow_obj_magic;
+  Fmt.pr "  allow-str-module: %b@." config.allow_str_module;
+  Fmt.pr "  allow-catch-all-exceptions: %b@." config.allow_catch_all_exceptions;
+  Fmt.pr "  require-ocamlformat-file: %b@." config.require_ocamlformat_file;
+  Fmt.pr "  require-mli-files: %b@." config.require_mli_files;
+  Fmt.pr "@.Exclusions:@.";
+  if config.exclusions = Merlint.Rule_config.empty then Fmt.pr "  (none)@."
+  else Fmt.pr "  %a@." Merlint.Rule_config.pp config.exclusions;
+  Stdlib.exit 0
+
+let check_merlin_installed () =
+  if not (check_ocamlmerlin ()) then (
+    Log.err (fun m -> m "ocamlmerlin not found in PATH");
+    Log.err (fun m -> m "To fix this, run one of the following:");
+    Log.err (fun m -> m "  1. eval $(opam env)  # If using opam");
+    Log.err (fun m ->
+        m "  2. opam install merlin  # If merlin is not installed");
+    Stdlib.exit 1)
+
+let parse_rule_filter rules_spec =
+  match rules_spec with
+  | None -> None
+  | Some spec -> (
+      match Merlint.Filter.parse spec with
+      | Ok filter -> Some filter
+      | Error msg ->
+          Log.err (fun m -> m "Invalid rules specification: %s" msg);
+          Stdlib.exit 1)
+
+let main style_renderer log_level exclude_patterns rules_spec show_profile
+    show_config files =
+  setup_log ?style_renderer log_level;
+  if show_config then show_configuration files
+  else (
+    check_merlin_installed ();
+    let rule_filter = parse_rule_filter rules_spec in
+    analyze_files ~exclude_patterns ?rule_filter ~show_profile files)
+
 let cmd =
   let doc = "Analyze OCaml code for style issues" in
   let man =
@@ -372,76 +430,7 @@ let cmd =
   let info = Cmd.info "merlint" ~version:"0.1.0" ~doc ~man in
   Cmd.v info
     Term.(
-      const
-        (fun
-          style_renderer
-          log_level
-          exclude_patterns
-          rules_spec
-          show_profile
-          show_config
-          files
-        ->
-          setup_log ?style_renderer log_level;
-
-          (* Handle --show-config flag *)
-          if show_config then (
-            let project_root =
-              match files with
-              | [] -> Merlint.Project.root (Sys.getcwd ())
-              | path :: _ -> Merlint.Project.root path
-            in
-            let config = Merlint.Config.load_from_path project_root in
-            Fmt.pr "=== Merlint Configuration ===@.";
-            Fmt.pr "Project root: %s@." project_root;
-            let config_file = Merlint.Config.file project_root in
-            (match config_file with
-            | Some path -> Fmt.pr "Config file: %s (found)@." path
-            | None ->
-                Fmt.pr "Config file: .merlint (not found, using defaults)@.");
-            Fmt.pr "@.Settings:@.";
-            Fmt.pr "  max-complexity: %d@." config.max_complexity;
-            Fmt.pr "  max-function-length: %d@." config.max_function_length;
-            Fmt.pr "  max-nesting: %d@." config.max_nesting;
-            Fmt.pr "  exempt-data-definitions: %b@."
-              config.exempt_data_definitions;
-            Fmt.pr "  max-underscores-in-name: %d@."
-              config.max_underscores_in_name;
-            Fmt.pr "  min-name-length-underscore: %d@."
-              config.min_name_length_underscore;
-            Fmt.pr "  allow-obj-magic: %b@." config.allow_obj_magic;
-            Fmt.pr "  allow-str-module: %b@." config.allow_str_module;
-            Fmt.pr "  allow-catch-all-exceptions: %b@."
-              config.allow_catch_all_exceptions;
-            Fmt.pr "  require-ocamlformat-file: %b@."
-              config.require_ocamlformat_file;
-            Fmt.pr "  require-mli-files: %b@." config.require_mli_files;
-            Fmt.pr "@.Exclusions:@.";
-            if config.exclusions = Merlint.Rule_config.empty then
-              Fmt.pr "  (none)@."
-            else Fmt.pr "  %a@." Merlint.Rule_config.pp config.exclusions;
-            Stdlib.exit 0)
-          else if not (check_ocamlmerlin ()) then (
-            Log.err (fun m -> m "ocamlmerlin not found in PATH");
-            Log.err (fun m -> m "To fix this, run one of the following:");
-            Log.err (fun m -> m "  1. eval $(opam env)  # If using opam");
-            Log.err (fun m ->
-                m "  2. opam install merlin  # If merlin is not installed");
-            Stdlib.exit 1)
-          else
-            (* Parse rule filter if provided *)
-            let rule_filter =
-              match rules_spec with
-              | None -> None
-              | Some spec -> (
-                  match Merlint.Filter.parse spec with
-                  | Ok filter -> Some filter
-                  | Error msg ->
-                      Log.err (fun m -> m "Invalid rules specification: %s" msg);
-                      Stdlib.exit 1)
-            in
-            analyze_files ~exclude_patterns ?rule_filter ~show_profile files)
-      $ Fmt_cli.style_renderer () $ log_level $ exclude_flag $ rules_flag
-      $ profile_flag $ show_config_flag $ files)
+      const main $ Fmt_cli.style_renderer () $ log_level $ exclude_flag
+      $ rules_flag $ profile_flag $ show_config_flag $ files)
 
 let () = Stdlib.exit (Cmd.eval cmd)

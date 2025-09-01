@@ -34,24 +34,24 @@ settings:
   require-mli-files: true          # Require .mli files for .ml files (default: true)
 ```
 
-### Exclusions
+### Rules
 
 Exclude specific rules for files matching glob patterns. This is useful when certain rules don't make sense for specific modules or when you have intentional patterns that trigger false positives.
 
 ```yaml
-exclusions:
+rules:
   # Exclude specific rules for files matching patterns
-  - pattern: lib/prose*.ml
-    rules: [E330]              # Exclude redundant module name check
+  - files: lib/prose*.ml
+    exclude: [E330]              # Exclude redundant module name check
   
-  - pattern: lib/color.ml*     # Matches lib/color.ml and lib/color.mli
-    rules: [E330]
+  - files: lib/color.ml*       # Matches lib/color.ml and lib/color.mli
+    exclude: [E330]
   
-  - pattern: test/**/*.ml      # All ML files in test directory and subdirectories
-    rules: [E400, E410]        # Exclude documentation rules for tests
+  - files: test/**/*.ml        # All ML files in test directory and subdirectories
+    exclude: [E400, E410]       # Exclude documentation rules for tests
   
-  - pattern: **/*_gen.ml       # Generated files
-    rules: [E100, E105, E330]  # Exclude multiple rules
+  - files: **/*_gen.ml         # Generated files
+    exclude: [E100, E105, E330] # Exclude multiple rules
 ```
 
 ## Pattern Syntax
@@ -77,28 +77,28 @@ settings:
   # Stricter naming conventions
   max-underscores-in-name: 1
   
-  # Allow Obj.magic in specific cases (use exclusions for specific files)
+  # Allow Obj.magic in specific cases (use rules for specific files)
   allow-obj-magic: false
 
-exclusions:
+rules:
   # CSS-like utility modules use intentional prefixes
-  - pattern: lib/prose*.ml
-    rules: [E330]
+  - files: lib/prose*.ml
+    exclude: [E330]
   
-  - pattern: lib/tailwind*.ml
-    rules: [E330]
+  - files: lib/tailwind*.ml
+    exclude: [E330]
   
   # Test files don't need comprehensive documentation
-  - pattern: test/**/*.ml*
-    rules: [E400, E410]
+  - files: test/**/*.ml*
+    exclude: [E400, E410]
   
   # Generated code is exempt from style rules
-  - pattern: **/*_gen.ml
-    rules: [E100, E105, E110, E200, E205, E330]
+  - files: **/*_gen.ml
+    exclude: [E100, E105, E110, E200, E205, E330]
   
   # FFI bindings may need Obj.magic
-  - pattern: lib/ffi/*.ml
-    rules: [E310]
+  - files: lib/ffi/*.ml
+    exclude: [E310]
 ```
 
 ## Command Line Override
