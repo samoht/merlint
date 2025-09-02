@@ -23,10 +23,6 @@ val should_exclude : t -> rule:string -> file:string -> bool
 (** [should_exclude exclusions ~rule ~file] returns true if the rule should be
     excluded for the given file path. *)
 
-val parse_exclusion_line : string -> rule_pattern option
-(** [parse_exclusion_line line] parses a configuration line like "lib/prose*.ml
-    = E330,E410" into a rule_pattern. *)
-
 val pp : t Fmt.t
 (** [pp] is a pretty-printer for exclusions. *)
 

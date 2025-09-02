@@ -70,23 +70,6 @@ let should_exclude exclusions ~rule ~file =
   in
   result
 
-let parse_exclusion_line line =
-  let line = String.trim line in
-  if String.length line = 0 || String.get line 0 = '#' then None
-  else
-    match String.split_on_char '=' line with
-    | [ pattern_str; rules_str ] ->
-        let pattern = String.trim pattern_str in
-        let rules_str = String.trim rules_str in
-        let rules =
-          rules_str |> String.split_on_char ',' |> List.map String.trim
-          |> List.filter (fun s -> String.length s > 0)
-        in
-        if String.length pattern > 0 && List.length rules > 0 then
-          Some { pattern; rules }
-        else None
-    | _ -> None
-
 let pp ppf exclusions =
   let pp_pattern ppf p =
     Fmt.pf ppf "%s = %a" p.pattern
