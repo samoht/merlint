@@ -15,9 +15,16 @@ let count_unlabeled_bool_params type_sig =
         ignore return_type;
         String.concat ">" (List.rev rest)
   in
-  (* Simple heuristic: if signature contains ~ or ?, assume labels are used *)
-  if String.contains type_sig '~' || String.contains type_sig '?' then 0
-    (* If any labels are present, don't complain *)
+  (* Check for labeled arguments: look for patterns like "label:bool" *)
+  let contains_labeled_bool =
+    let parts = String.split_on_char ' ' param_part in
+    List.exists
+      (fun part ->
+        String.contains part ':' && String.ends_with ~suffix:"bool" part)
+      parts
+  in
+  if contains_labeled_bool then 0
+    (* If labeled boolean arguments are present, don't complain *)
   else Outline.count_parameters param_part "bool"
 
 (** Check for boolean blindness in function signatures *)

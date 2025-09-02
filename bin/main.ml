@@ -401,8 +401,8 @@ let parse_rule_filter rules_spec =
           Log.err (fun m -> m "Invalid rules specification: %s" msg);
           Stdlib.exit 1)
 
-let main style_renderer log_level exclude_patterns rules_spec show_profile
-    show_config files =
+let main style_renderer log_level exclude_patterns rules_spec ~show_profile
+    ~show_config files =
   setup_log ?style_renderer log_level;
   if show_config then show_configuration files
   else (
@@ -430,7 +430,19 @@ let cmd =
   let info = Cmd.info "merlint" ~version:"0.1.0" ~doc ~man in
   Cmd.v info
     Term.(
-      const main $ Fmt_cli.style_renderer () $ log_level $ exclude_flag
-      $ rules_flag $ profile_flag $ show_config_flag $ files)
+      const
+        (fun
+          style_renderer
+          log_level
+          exclude_patterns
+          rules_spec
+          show_profile
+          show_config
+          files
+        ->
+          main style_renderer log_level exclude_patterns rules_spec
+            ~show_profile ~show_config files)
+      $ Fmt_cli.style_renderer () $ log_level $ exclude_flag $ rules_flag
+      $ profile_flag $ show_config_flag $ files)
 
 let () = Stdlib.exit (Cmd.eval cmd)

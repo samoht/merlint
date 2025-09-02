@@ -62,7 +62,7 @@ let rec collect_files_recursively base_dir current_path =
     |> List.sort (fun (a, _) (b, _) -> String.compare a b)
   else []
 
-let get_test_directories cram_dir =
+let test_directories cram_dir =
   Sys.readdir cram_dir |> Array.to_list
   |> List.filter (fun e ->
          Filename.check_suffix e ".t"
@@ -130,7 +130,7 @@ let process_test_directory cram_dir dir_name =
 
 let generate () =
   let cram_dir = "test/cram" in
-  let test_dirs = get_test_directories cram_dir in
+  let test_dirs = test_directories cram_dir in
 
   Fmt.pr "(** Auto-generated examples from test/cram/*.t/\n";
   Fmt.pr "    DO NOT EDIT - Run 'dune build @gen' to regenerate *)\n\n";

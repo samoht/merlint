@@ -1,5 +1,10 @@
 (** Rule exclusion management with file pattern matching *)
 
+let src =
+  Logs.Src.create "merlint.rule_config" ~doc:"Rule exclusion configuration"
+
+module Log = (val Logs.src_log src : Logs.LOG)
+
 type rule_pattern = { pattern : string; rules : string list }
 type t = rule_pattern list
 
@@ -57,7 +62,7 @@ let should_exclude exclusions ~rule ~file =
         let pattern_matches = matches_pattern pattern.pattern file in
         let rule_matches = List.mem rule pattern.rules in
         if pattern_matches && rule_matches then
-          Logs.debug (fun m ->
+          Log.debug (fun m ->
               m "Exclusion: file %s matches pattern %s for rule %s" file
                 pattern.pattern rule);
         pattern_matches && rule_matches)
