@@ -35,3 +35,19 @@ Test good example - should find no issues:
   
   Summary: ✓ 0 total issues (applied 1 rule)
   ✓ All checks passed!
+
+Test interface definition file - should not require .mli:
+  $ merlint -r E505 test_intf.ml
+  Running merlint analysis...
+  
+  Analyzing 1 files
+  
+  ✓ Code Quality (0 total issues)
+  ✓ Code Style (0 total issues)
+  ✓ Naming Conventions (0 total issues)
+  ✓ Documentation (0 total issues)
+  ✓ Project Structure (0 total issues)
+  ✓ Test Quality (0 total issues)
+  
+  Summary: ✓ 0 total issues (applied 1 rule)
+  ✓ All checks passed!

@@ -22,14 +22,19 @@ let check (ctx : Context.project) =
       || String.starts_with ~prefix:"test_" module_name
     in
 
+    (* Skip if it's an interface definition file *_intf.ml *)
+    let is_intf = String.ends_with ~suffix:"_intf" module_name in
+
     if is_exe then
       Logs.debug (fun m ->
           m "File %s is executable (module %s)" ml_file module_name_capitalized);
     if is_test then
       Logs.debug (fun m ->
           m "File %s is test module (module %s)" ml_file module_name);
+    if is_intf then
+      Logs.debug (fun m -> m "File %s is interface definition file" ml_file);
 
-    is_exe || is_test
+    is_exe || is_test || is_intf
   in
 
   (* For each ML file being analyzed, check if it has a corresponding MLI file *)
