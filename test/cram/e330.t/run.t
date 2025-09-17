@@ -53,3 +53,19 @@ Test pp module - pp function should be allowed:
   
   Summary: ✓ 0 total issues (applied 1 rule)
   ✓ All checks passed!
+
+Test test functions - test_* functions in test_*.ml files should be allowed:
+  $ merlint -r E330 good/test_example.ml
+  Running merlint analysis...
+  
+  Analyzing 1 files
+  
+  ✓ Code Quality (0 total issues)
+  ✓ Code Style (0 total issues)
+  ✓ Naming Conventions (0 total issues)
+  ✓ Documentation (0 total issues)
+  ✓ Project Structure (0 total issues)
+  ✓ Test Quality (0 total issues)
+  
+  Summary: ✓ 0 total issues (applied 1 rule)
+  ✓ All checks passed!

@@ -16,11 +16,16 @@ let kind_to_string = function
   | Outline.Other s -> s
 
 (** Check if an item name has redundant module prefix *)
-let has_redundant_prefix item_name_lower module_name =
+let has_redundant_prefix item_name_lower module_name filename =
   (* Special cases that are idiomatic and should not be flagged *)
   if
     (item_name_lower = "pp" && module_name = "pp")
     || (item_name_lower = "main" && module_name = "main")
+    ||
+    (* Test functions in test files are entry points and idiomatic *)
+    String.starts_with ~prefix:"test_" module_name
+    && String.starts_with ~prefix:"test_" item_name_lower
+    && String.ends_with ~suffix:".ml" filename
   then false
   else
     String.starts_with ~prefix:(module_name ^ "_") item_name_lower
@@ -46,7 +51,7 @@ let check (ctx : Context.file) =
       let name = item.name in
       let location = Outline.location filename item in
       let item_name_lower = String.lowercase_ascii name in
-      if has_redundant_prefix item_name_lower module_name then
+      if has_redundant_prefix item_name_lower module_name filename then
         match (kind_to_string item.kind, item.type_sig, location) with
         | "Value", Some ts, Some loc when is_function_type ts ->
             Some (create_redundant_name_issue name module_name loc "function")
