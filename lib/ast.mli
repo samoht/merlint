@@ -18,6 +18,7 @@ type expr =
   | Let of { bindings : (string * expr) list; body : expr }  (** Let binding. *)
   | Sequence of expr list  (** Sequence of expressions. *)
   | List  (** List literals and array literals. *)
+  | Record of { fields : int }  (** Record literals with field count. *)
   | Other  (** Catch-all for expressions we don't need to analyze. *)
 
 type t = {

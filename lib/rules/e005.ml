@@ -15,10 +15,13 @@ let check (ctx : Context.file) =
   (* Helper to check if an expression is a pure data structure *)
   let rec is_pure_data_structure = function
     | Ast.List -> true (* List and array literals *)
+    | Ast.Record { fields } when fields >= 3 -> true (* Large record literals *)
     | Ast.Sequence exprs -> List.for_all is_pure_data_structure exprs
-    | Ast.Other | Ast.Let _ | Ast.Function _ | Ast.If_then_else _ | Ast.Match _
-    | Ast.Try _ ->
-        false
+    | Ast.Other -> false (* Conservative: don't assume Other is pure data *)
+    | Ast.Let _ | Ast.Function _ | Ast.If_then_else _ | Ast.Match _ | Ast.Try _
+      ->
+        false (* Functions definitely have logic *)
+    | Ast.Record { fields = _ } -> false (* Small records might have logic *)
   in
 
   (* Count total match cases in an expression *)
@@ -41,7 +44,7 @@ let check (ctx : Context.file) =
     | Ast.Sequence exprs ->
         List.fold_left (fun acc expr -> acc + count_match_cases expr) 0 exprs
     | Ast.Try { expr; _ } -> count_match_cases expr
-    | Ast.List | Ast.Other -> 0
+    | Ast.List | Ast.Record _ | Ast.Other -> 0
   in
 
   (* Analyze each function from the outline *)
@@ -63,7 +66,10 @@ let check (ctx : Context.file) =
               in
 
               (* Skip length check for pure data structures *)
-              if is_data_def then None
+              if is_data_def then (
+                Logs.debug (fun m ->
+                    m "Skipping pure data structure: %s" item.name);
+                None)
               else
                 (* Find the function's AST to count match cases *)
                 let match_cases =
