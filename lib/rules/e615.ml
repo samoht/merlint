@@ -104,7 +104,11 @@ let check (ctx : Context.project) =
                 (fun f ->
                   if Fpath.has_ext ".ml" f && f <> test_file then
                     let basename = Fpath.(f |> rem_ext |> basename) in
-                    if String.starts_with ~prefix:"test_" basename then
+                    if
+                      String.starts_with ~prefix:"test_" basename
+                      && basename <> "test_helpers"
+                    then
+                      (* Skip test_helpers - it's a utility module, not a test suite *)
                       Some (basename, f)
                     else None
                   else None)

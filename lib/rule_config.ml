@@ -56,11 +56,25 @@ let matches_pattern pattern file =
     || String.ends_with ~suffix:pattern file
 
 let should_exclude exclusions ~rule ~file =
+  let rule_matches_pattern rule_pattern rule_code =
+    (* Check if rule pattern matches the rule code *)
+    if String.contains rule_pattern '*' then
+      (* Wildcard pattern - convert to simple glob matching *)
+      let pattern_prefix = String.split_on_char '*' rule_pattern |> List.hd in
+      String.starts_with ~prefix:pattern_prefix rule_code
+    else
+      (* Exact match *)
+      rule_pattern = rule_code
+  in
   let result =
     List.exists
       (fun pattern ->
         let pattern_matches = matches_pattern pattern.pattern file in
-        let rule_matches = List.mem rule pattern.rules in
+        let rule_matches =
+          List.exists
+            (fun rule_pattern -> rule_matches_pattern rule_pattern rule)
+            pattern.rules
+        in
         if pattern_matches && rule_matches then
           Log.debug (fun m ->
               m "Exclusion: file %s matches pattern %s for rule %s" file

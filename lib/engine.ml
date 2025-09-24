@@ -66,11 +66,31 @@ let setup_analysis ~filter ~dune_describe project_root =
   in
   (config, files_to_analyze, project_ctx, enabled_rules)
 
-(** Run project-scoped rules *)
+(** Run project-scoped rules and filter issues based on exclusions *)
 let run_project_rules ?profiling enabled_rules project_ctx =
+  let config = project_ctx.Context.config in
   enabled_rules
   |> List.filter Rule.is_project_scoped
-  |> List.concat_map (run_project_rule ?profiling project_ctx)
+  |> List.concat_map (fun rule ->
+         let code = Rule.code rule in
+         let issues = run_project_rule ?profiling project_ctx rule in
+         (* Filter out issues for files that are excluded from this rule *)
+         List.filter
+           (fun result ->
+             match Rule.Run.location result with
+             | Some loc ->
+                 let file = loc.Location.file in
+                 let excluded =
+                   Rule_config.should_exclude config.exclusions ~rule:code ~file
+                 in
+                 if excluded then
+                   Log.debug (fun m ->
+                       m "Excluding %s issue for file %s" code file);
+                 not excluded
+             | None ->
+                 (* Issues without locations can't be excluded by file *)
+                 true)
+           issues)
 
 (** Analyze a single file with applicable rules *)
 let analyze_single_file ?profiling ~config ~project_root ~file_rules filepath =
