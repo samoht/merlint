@@ -322,7 +322,7 @@ pre code {
         <span class="error-code">E005</span>
         <span class="error-title">Long Functions</span>
     </div>
-    <div class="error-hint"><p>This issue means your functions are too long and hard to read. Fix them by extracting logical sections into separate functions with descriptive names. Note: Functions with pattern matching get additional allowance (2 lines per case). Pure data structures (lists, records) are also exempt from length checks. For better readability, consider using helper functions for complex logic. Aim for functions under 50 lines of actual logic.</p><div class="examples-grid">
+    <div class="error-hint"><p>This issue means your functions are too long and hard to read. Fix them by extracting logical sections into separate functions with descriptive names. Note: Functions with pattern matching get additional allowance (2 lines per case). Pure data structures (lists, records) are exempt from length checks. For better readability, consider using helper functions for complex logic. Aim for functions under 50 lines of actual logic.</p><div class="examples-grid">
 <div class="example bad">
   <h4>BAD</h4>
   <pre><code><span class="kw">let</span> process_all_data x y z =
@@ -390,7 +390,55 @@ pre code {
 <span class="kw">let</span> process_all x y =
   <span class="kw">let</span> (a, b) = step1 x y <span class="kw">in</span>
   <span class="kw">let</span> (c, d) = step2 (a, b) <span class="kw">in</span>
-  combine (c, d)</code></pre>
+  combine (c, d)
+
+<span class="cm">(* Functions with large pattern matches get 2 lines per case + 10% allowance *)</span>
+<span class="kw">type</span> property =
+  | <span class="cn">Color</span> | <span class="cn">Background_color</span> | <span class="cn">Border_color</span> | <span class="cn">Outline_color</span> | <span class="cn">Border_top_color</span>
+  | <span class="cn">Border_right_color</span> | <span class="cn">Border_bottom_color</span> | <span class="cn">Border_left_color</span> | <span class="cn">Text_color</span>
+
+<span class="kw">let</span> with_context f = f ()
+
+<span class="cm">(* Test the pattern: fun xxx -&gt; fun () -&gt; match ... *)</span>
+<span class="kw">let</span> read_value prop =
+  with_context @@ <span class="kw">fun</span> () -&gt;
+  <span class="kw">match</span> prop <span class="kw">with</span>
+  | <span class="cn">Color</span> -&gt;
+      <span class="kw">let</span> x = <span class="nu">1</span> <span class="kw">in</span>
+      <span class="kw">let</span> y = <span class="nu">2</span> <span class="kw">in</span>
+      x + y
+  | <span class="cn">Background_color</span> -&gt;
+      <span class="kw">let</span> x = <span class="nu">3</span> <span class="kw">in</span>
+      <span class="kw">let</span> y = <span class="nu">4</span> <span class="kw">in</span>
+      x + y
+  | <span class="cn">Border_color</span> -&gt;
+      <span class="kw">let</span> x = <span class="nu">5</span> <span class="kw">in</span>
+      <span class="kw">let</span> y = <span class="nu">6</span> <span class="kw">in</span>
+      x + y
+  | <span class="cn">Outline_color</span> -&gt;
+      <span class="kw">let</span> x = <span class="nu">7</span> <span class="kw">in</span>
+      <span class="kw">let</span> y = <span class="nu">8</span> <span class="kw">in</span>
+      x + y
+  | <span class="cn">Border_top_color</span> -&gt;
+      <span class="kw">let</span> x = <span class="nu">9</span> <span class="kw">in</span>
+      <span class="kw">let</span> y = <span class="nu">10</span> <span class="kw">in</span>
+      x + y
+  | <span class="cn">Border_right_color</span> -&gt;
+      <span class="kw">let</span> x = <span class="nu">11</span> <span class="kw">in</span>
+      <span class="kw">let</span> y = <span class="nu">12</span> <span class="kw">in</span>
+      x + y
+  | <span class="cn">Border_bottom_color</span> -&gt;
+      <span class="kw">let</span> x = <span class="nu">13</span> <span class="kw">in</span>
+      <span class="kw">let</span> y = <span class="nu">14</span> <span class="kw">in</span>
+      x + y
+  | <span class="cn">Border_left_color</span> -&gt;
+      <span class="kw">let</span> x = <span class="nu">15</span> <span class="kw">in</span>
+      <span class="kw">let</span> y = <span class="nu">16</span> <span class="kw">in</span>
+      x + y
+  | <span class="cn">Text_color</span> -&gt;
+      <span class="kw">let</span> x = <span class="nu">17</span> <span class="kw">in</span>
+      <span class="kw">let</span> y = <span class="nu">18</span> <span class="kw">in</span>
+      x + y</code></pre>
 </div>
 </div></div>
 </div>

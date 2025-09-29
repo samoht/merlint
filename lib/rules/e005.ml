@@ -111,10 +111,10 @@ let rule =
       "This issue means your functions are too long and hard to read. Fix them \
        by extracting logical sections into separate functions with descriptive \
        names. Note: Functions with pattern matching get additional allowance \
-       (2 lines per case). Pure data structures (lists, records) are also \
-       exempt from length checks. For better readability, consider using \
-       helper functions for complex logic. Aim for functions under 50 lines of \
-       actual logic."
+       (2 lines per case). Pure data structures (lists, records) are exempt \
+       from length checks. For better readability, consider using helper \
+       functions for complex logic. Aim for functions under 50 lines of actual \
+       logic."
     ~examples:
       [ Example.bad Examples.E005.bad_ml; Example.good Examples.E005.good_ml ]
     ~pp (File check)

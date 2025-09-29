@@ -195,6 +195,13 @@ let rec ppxlib_expr_to_ast (expr : Ppxlib.expression) : expr =
   | Ppxlib.Pexp_array _ -> List (* Array literal *)
   | Ppxlib.Pexp_record (fields, _) ->
       Record { fields = List.length fields } (* Record literal *)
+  | Ppxlib.Pexp_apply (func, args) ->
+      (* Parse function applications to find nested pattern matches *)
+      Log.debug (fun m -> m "Pexp_apply with %d args" (List.length args));
+      let func_ast = ppxlib_expr_to_ast func in
+      let args_asts = List.map (fun (_, arg) -> ppxlib_expr_to_ast arg) args in
+      (* Treat the whole apply as a sequence containing func and all args *)
+      Sequence (func_ast :: args_asts)
   | _ -> Other
 
 (** Extract function definitions from structure items *)
