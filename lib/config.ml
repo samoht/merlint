@@ -25,7 +25,7 @@ let default =
     (* Complexity defaults *)
     max_complexity = 10;
     max_function_length = 50;
-    max_nesting = 3;
+    max_nesting = 4;
     exempt_data_definitions = true;
     (* Naming defaults *)
     max_underscores_in_name = 3;
