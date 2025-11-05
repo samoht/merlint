@@ -12,9 +12,15 @@ let check_function_doc ~name ~doc =
   (* Function docs should follow: [function_name args] description. *)
   let issues = ref [] in
 
-  (* Check if this is an operator (contains special operator characters) *)
+  (* Check if this is an operator (contains special operator characters or is an operator keyword) *)
+  let operator_keywords =
+    [ "mod"; "land"; "lor"; "lxor"; "lsl"; "lsr"; "asr"; "or"; "and" ]
+  in
   let is_operator =
-    (* Check if name contains operator characters and doesn't start with a letter *)
+    (* Check if it's an operator keyword *)
+    List.mem name operator_keywords
+    ||
+    (* Or if name contains operator characters and doesn't start with a letter *)
     String.length name > 0
     && not
          (match name.[0] with
