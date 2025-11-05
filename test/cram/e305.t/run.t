@@ -8,9 +8,9 @@ Test bad example - should find bad module naming:
   ✓ Code Style (0 total issues)
   ✗ Naming Conventions (1 total issues)
     [E305] Module Naming Convention (1 issue)
-    Module names should use Snake_case (e.g., My_module, User_profile). File names
-    use lowercase_with_underscores which OCaml automatically converts to module
-    names.
+    Module names should use Snake_case (e.g., My_module, User_profile) or
+    all-uppercase for acronyms (e.g., HTML, JSON, ONF). File names use
+    lowercase_with_underscores which OCaml automatically converts to module names.
     - bad.ml:1:0: Module 'UserProfile' should use Snake_case: 'User_profile'
   ✓ Documentation (0 total issues)
   ✓ Project Structure (0 total issues)

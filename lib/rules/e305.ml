@@ -8,10 +8,13 @@ let is_snake_case_module name =
   String.length name > 0
   && Char.uppercase_ascii name.[0] = name.[0]
   &&
-  (* Rest should be lowercase or underscores *)
+  (* Allow all-uppercase names (for acronyms like HTML, JSON, ONF, CNF) *)
+  (String.for_all (fun ch -> Char.uppercase_ascii ch = ch || ch = '_') name
+  ||
+  (* Or rest should be lowercase or underscores (Snake_case) *)
   String.for_all
     (fun ch -> Char.lowercase_ascii ch = ch || ch = '_')
-    (String.sub name 1 (String.length name - 1))
+    (String.sub name 1 (String.length name - 1)))
 
 let check (ctx : Context.file) =
   let ast_data = Context.dump ctx in
@@ -35,9 +38,10 @@ let rule =
   Rule.v ~code:"E305" ~title:"Module Naming Convention"
     ~category:Naming_conventions
     ~hint:
-      "Module names should use Snake_case (e.g., My_module, User_profile). \
-       File names use lowercase_with_underscores which OCaml automatically \
-       converts to module names."
+      "Module names should use Snake_case (e.g., My_module, User_profile) or \
+       all-uppercase for acronyms (e.g., HTML, JSON, ONF). File names use \
+       lowercase_with_underscores which OCaml automatically converts to module \
+       names."
     ~examples:
       [ Example.bad Examples.E305.bad_ml; Example.good Examples.E305.good_ml ]
     ~pp (File check)
