@@ -407,7 +407,7 @@ let tls_config =
 
 ### [E305] Module Naming Convention
 
-Module names should use Snake_case (e.g., My_module, User_profile). File names use lowercase_with_underscores which OCaml automatically converts to module names.
+Module names should use Snake_case (e.g., My_module, User_profile) or all-uppercase for acronyms (e.g., HTML, JSON, ONF). File names use lowercase_with_underscores which OCaml automatically converts to module names.
 
 **Examples:**
 
