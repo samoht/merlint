@@ -255,9 +255,14 @@ let item_files = function
               Fmt.(list ~sep:comma string)
               modules);
         modules_to_files dir modules)
-  | Executable { names; dir; modules } ->
-      let base_modules = if modules = [] then names else modules in
-      modules_to_files dir base_modules
+  | Executable { names = _; dir; modules } ->
+      if modules = [] then scan_directory_for_ml_files "Executable" dir
+      else (
+        Log.debug (fun m ->
+            m "Executable in %a has explicit modules: %a" Fpath.pp dir
+              Fmt.(list ~sep:comma string)
+              modules);
+        modules_to_files dir modules)
   | Test { dir; modules; _ } ->
       if modules = [] then scan_directory_for_ml_files "Test" dir
       else (

@@ -17,7 +17,22 @@ let check (ctx : Context.file) =
     Filename.basename ctx.filename
     |> Filename.remove_extension |> String.lowercase_ascii
   in
-  if String.starts_with ~prefix:"test_" module_name then []
+  let is_test_file =
+    String.starts_with ~prefix:"test_" module_name
+    ||
+    (* Also check if file is in a test directory *)
+    String.contains ctx.filename '/'
+    && String.contains (Filename.dirname ctx.filename) '/'
+    && List.exists
+         (fun part -> part = "test")
+         (String.split_on_char '/' ctx.filename)
+  in
+
+  Logs.debug (fun m ->
+      m "E005: Checking %s (module_name=%s, is_test=%b)" ctx.filename
+        module_name is_test_file);
+
+  if is_test_file then []
   else
     (* Helper to check if an expression is a pure data structure *)
     let rec is_pure_data_structure = function
