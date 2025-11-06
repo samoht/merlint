@@ -10,7 +10,7 @@ Test bad example - should find deep nesting issues:
     follow. Fix it by extracting nested logic into helper functions, using early
     returns to reduce nesting, or combining conditions when appropriate. Aim for
     maximum nesting depth of 4.
-    - bad.ml:1:0: Function 'process' has nesting depth of 5 (threshold: 3)
+    - bad.ml:1:0: Function 'process' has nesting depth of 5 (threshold: 4)
   ✓ Code Style (0 total issues)
   ✓ Naming Conventions (0 total issues)
   ✓ Documentation (0 total issues)
