@@ -56,14 +56,22 @@ val iter_identifiers_with_location : t -> (elt -> Location.t -> unit) -> unit
 val location : elt -> Location.t option
 (** [location elt] extracts location from element. *)
 
-val check_module_usage : elt list -> string -> (loc:Location.t -> 'a) -> 'a list
-(** [check_module_usage identifiers module_name issue_constructor] checks for
-    specific module usage. *)
+val check_module_usage :
+  full_path:string -> elt list -> string -> (loc:Location.t -> 'a) -> 'a list
+(** [check_module_usage ~full_path identifiers module_name issue_constructor]
+    checks for specific module usage. Automatically fixes location paths to use
+    full_path instead of basename. *)
 
 val check_function_usage :
-  elt list -> string -> string -> (loc:Location.t -> 'a) -> 'a list
-(** [check_function_usage identifiers module_name function_name
-     issue_constructor] checks for specific function usage. *)
+  full_path:string ->
+  elt list ->
+  string ->
+  string ->
+  (loc:Location.t -> 'a) ->
+  'a list
+(** [check_function_usage ~full_path identifiers module_name function_name
+     issue_constructor] checks for specific function usage. Automatically fixes
+    location paths to use full_path instead of basename. *)
 
 val check_function_call_pattern :
   string -> string -> string -> (string * int * bool -> 'a) -> string -> 'a list
@@ -74,9 +82,11 @@ val check_function_call_pattern :
     filename. *)
 
 val check_elements :
+  full_path:string ->
   elt list ->
   (string -> 'a option) ->
   (string -> Location.t -> 'a -> 'b) ->
   'b list
-(** [check_elements elements check_fn create_issue_fn] generic element checking.
-*)
+(** [check_elements ~full_path elements check_fn create_issue_fn] generic
+    element checking. Automatically fixes location paths to use full_path
+    instead of basename. *)

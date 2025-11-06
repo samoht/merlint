@@ -8,10 +8,11 @@ let check_value_name name =
   if name <> expected && name <> String.lowercase_ascii name then Some expected
   else None
 
-let check ctx =
+let check (ctx : Context.file) =
+  let filename = ctx.filename in
   (* Check value names *)
-  Dump.check_elements (Context.dump ctx).patterns check_value_name
-    (fun name_str loc expected ->
+  Dump.check_elements ~full_path:filename (Context.dump ctx).patterns
+    check_value_name (fun name_str loc expected ->
       Issue.v ~loc { value_name = name_str; expected })
 
 let pp ppf { value_name; expected } =

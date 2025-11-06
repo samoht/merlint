@@ -2,10 +2,11 @@
 
 let check ctx =
   let dump_data = Context.dump ctx in
+  let filename = ctx.filename in
 
   (* Check identifiers for Obj.magic usage *)
-  Dump.check_function_usage dump_data.identifiers "Obj" "magic" (fun ~loc ->
-      Issue.v ~loc ())
+  Dump.check_function_usage ~full_path:filename dump_data.identifiers "Obj"
+    "magic" (fun ~loc -> Issue.v ~loc ())
 
 let pp ppf () =
   Fmt.pf ppf "Usage of Obj.magic detected - this is extremely unsafe"

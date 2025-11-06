@@ -3,7 +3,8 @@
 type payload = { variant : string; expected : string }
 
 let check (ctx : Context.file) =
-  Dump.check_elements (Context.dump ctx).variants
+  let filename = ctx.filename in
+  Dump.check_elements ~full_path:filename (Context.dump ctx).variants
     (fun name ->
       (* For qualified names, only check the basename *)
       let name_to_check =

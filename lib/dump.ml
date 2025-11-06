@@ -451,18 +451,28 @@ let iter_identifiers_with_location dump_data f =
 
 let location (elt : elt) = elt.location
 
-let check_identifier_pattern identifiers pattern_match issue_constructor =
+(** Fix location to use full path instead of basename *)
+let fix_location_path ~full_path loc =
+  Location.v ~file:full_path ~start_line:loc.Location.start_line
+    ~start_col:loc.Location.start_col ~end_line:loc.Location.end_line
+    ~end_col:loc.Location.end_col
+
+let check_identifier_pattern ~full_path identifiers pattern_match
+    issue_constructor =
   List.filter_map
     (fun (id : elt) ->
       match id.location with
       | Some loc ->
           let name = id.name in
-          if pattern_match name then Some (issue_constructor ~loc) else None
+          if pattern_match name then
+            let loc = fix_location_path ~full_path loc in
+            Some (issue_constructor ~loc)
+          else None
       | None -> None)
     identifiers
 
-let check_module_usage identifiers module_name issue_constructor =
-  check_identifier_pattern identifiers
+let check_module_usage ~full_path identifiers module_name issue_constructor =
+  check_identifier_pattern ~full_path identifiers
     (fun name ->
       match name.prefix with
       | [ "Stdlib"; m ] when m = module_name -> true
@@ -470,9 +480,9 @@ let check_module_usage identifiers module_name issue_constructor =
       | _ -> false)
     issue_constructor
 
-let check_function_usage identifiers module_name function_name issue_constructor
-    =
-  check_identifier_pattern identifiers
+let check_function_usage ~full_path identifiers module_name function_name
+    issue_constructor =
+  check_identifier_pattern ~full_path identifiers
     (fun name ->
       match (name.prefix, name.base) with
       | [ "Stdlib"; m ], base when m = module_name && base = function_name ->
@@ -535,12 +545,14 @@ let check_function_call_pattern content function_name arg_pattern
 
   !issues
 
-let check_elements elements check_fn create_issue_fn =
+let check_elements ~full_path elements check_fn create_issue_fn =
   List.filter_map
     (fun (elt : elt) ->
       let name_str = name_to_string elt.name in
       match (check_fn name_str, elt.location) with
-      | Some result, Some loc -> Some (create_issue_fn name_str loc result)
+      | Some result, Some loc ->
+          let loc = fix_location_path ~full_path loc in
+          Some (create_issue_fn name_str loc result)
       | _ -> None)
     elements
 
