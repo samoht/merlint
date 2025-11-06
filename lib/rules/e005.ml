@@ -118,7 +118,11 @@ let check (ctx : Context.file) =
                         ~start_col:range.start.col ~end_line:range.end_.line
                         ~end_col:range.end_.col
                     in
-                    Some (Issue.v ~loc { name = item.name; length; threshold })
+                    (* Severity = how much the function exceeds the threshold *)
+                    let severity = length - threshold in
+                    Some
+                      (Issue.v ~loc ~severity
+                         { name = item.name; length; threshold })
                   else None
             | None -> None)
         | Type | Module | Class | Exception | Constructor | Field | Method

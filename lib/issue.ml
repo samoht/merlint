@@ -1,17 +1,25 @@
 (** Issue types and formatting *)
 
-type 'a t = { location : Location.t option; data : 'a }
+type 'a t = {
+  location : Location.t option;
+  data : 'a;
+  severity : int; (* Higher = more severe, 0 = default *)
+}
 
-let v ?loc data = { location = loc; data }
+let v ?loc ?(severity = 0) data = { location = loc; data; severity }
 let location t = t.location
+let severity t = t.severity
 
 let compare a b =
-  (* Compare by location only since we can't access rule details *)
-  match (a.location, b.location) with
-  | Some la, Some lb -> Location.compare la lb
-  | None, Some _ -> -1
-  | Some _, None -> 1
-  | None, None -> 0
+  (* Compare by severity first (descending), then by location *)
+  match Int.compare b.severity a.severity with
+  | 0 -> (
+      match (a.location, b.location) with
+      | Some la, Some lb -> Location.compare la lb
+      | None, Some _ -> -1
+      | Some _, None -> 1
+      | None, None -> 0)
+  | c -> c
 
 (* Pretty-printer - basic version without rule dependency *)
 let pp pp_data ppf t =
