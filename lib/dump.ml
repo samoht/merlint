@@ -457,6 +457,27 @@ let fix_location_path ~full_path loc =
     ~start_col:loc.Location.start_col ~end_line:loc.Location.end_line
     ~end_col:loc.Location.end_col
 
+(** Fix all locations in a dump structure to use full path *)
+let fix_all_paths ~full_path dump =
+  let fix_elt (elt : elt) =
+    {
+      elt with
+      location =
+        (match elt.location with
+        | Some loc -> Some (fix_location_path ~full_path loc)
+        | None -> None);
+    }
+  in
+  {
+    modules = List.map fix_elt dump.modules;
+    types = List.map fix_elt dump.types;
+    exceptions = List.map fix_elt dump.exceptions;
+    variants = List.map fix_elt dump.variants;
+    identifiers = List.map fix_elt dump.identifiers;
+    patterns = List.map fix_elt dump.patterns;
+    values = List.map fix_elt dump.values;
+  }
+
 let check_identifier_pattern ~full_path identifiers pattern_match
     issue_constructor =
   List.filter_map

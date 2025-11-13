@@ -133,7 +133,12 @@ let project ~config ~project_root ~all_files ~dune_describe =
 
 (* File context accessors *)
 let ast ctx = Lazy.force ctx.ast
-let dump ctx = Lazy.force ctx.dump
+
+let dump ctx =
+  let dump_data = Lazy.force ctx.dump in
+  (* Automatically fix all paths to use full path instead of basename *)
+  Dump.fix_all_paths ~full_path:ctx.filename dump_data
+
 let outline ctx = Lazy.force ctx.outline
 let content ctx = Lazy.force ctx.content
 let functions ctx = Lazy.force ctx.functions

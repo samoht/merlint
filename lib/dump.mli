@@ -90,3 +90,8 @@ val check_elements :
 (** [check_elements ~full_path elements check_fn create_issue_fn] generic
     element checking. Automatically fixes location paths to use full_path
     instead of basename. *)
+
+val fix_all_paths : full_path:string -> t -> t
+(** [fix_all_paths ~full_path dump] fixes all locations in dump structure to use
+    full_path instead of basename. This is automatically called by Context.dump,
+    so rules don't need to call it directly. *)
