@@ -25,9 +25,12 @@ let check (ctx : Context.file) =
       let module_name = Dump.name_to_string module_elt.name in
       if not (is_snake_case_module module_name) then
         let expected = Naming.to_capitalized_snake_case module_name in
-        match Dump.location module_elt with
-        | Some loc -> Some (Issue.v ~loc { module_name; expected })
-        | None -> None
+        (* Only report if the conversion actually changes the name *)
+        if expected <> module_name then
+          match Dump.location module_elt with
+          | Some loc -> Some (Issue.v ~loc { module_name; expected })
+          | None -> None
+        else None
       else None)
     ast_data.modules
 
