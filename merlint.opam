@@ -3,11 +3,11 @@ opam-version: "2.0"
 synopsis: "OCaml linter enforcing modern coding conventions"
 description:
   "An opinionated OCaml linter that enforces modern OCaml coding conventions and best practices"
-maintainer: ["Thomas Gazagnaire"]
-authors: ["Merlint Contributors"]
+maintainer: ["Thomas Gazagnaire <thomas@gazagnaire.org>"]
+authors: ["Thomas Gazagnaire <thomas@gazagnaire.org>"]
 license: "ISC"
-homepage: "https://github.com/samoht/merlint"
-bug-reports: "https://github.com/samoht/merlint/issues"
+homepage: "https://tangled.org/gazagnaire.org/merlint"
+bug-reports: "https://tangled.org/gazagnaire.org/merlint/issues"
 depends: [
   "ocaml"
   "dune" {>= "3.0"}
@@ -39,3 +39,4 @@ build: [
     "@doc" {with-doc}
   ]
 ]
+dev-repo: "https://tangled.org/gazagnaire.org/merlint"
