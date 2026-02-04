@@ -1,0 +1,4 @@
+(library
+ (name test_e205)
+ (modules bad good)
+ (libraries fmt))

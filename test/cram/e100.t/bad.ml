@@ -1,0 +1,1 @@
+let coerce x = Stdlib.Obj.magic x

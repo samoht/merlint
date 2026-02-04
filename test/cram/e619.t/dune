@@ -1,0 +1,5 @@
+(library
+ (name test_e619)
+ (modules bad good)
+ (libraries fmt)
+ (flags :standard -w -32))

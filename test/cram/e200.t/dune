@@ -1,0 +1,4 @@
+(library
+ (name test_e200)
+ (modules bad good)
+ (libraries str re))

@@ -1,0 +1,1 @@
+module User_profile = struct end

@@ -1,0 +1,205 @@
+[
+  structure_item (bad.ml[1,0+0]..bad.ml[14,299+16])
+    Tstr_value Nonrec
+    [
+      <def>
+        pattern (bad.ml[1,0+4]..bad.ml[1,0+15])
+          Tpat_var "check_input/276"
+        expression (bad.ml[1,0+16]..bad.ml[14,299+16]) ghost
+          Texp_function
+          [
+            Nolabel
+            Param_pat
+              pattern (bad.ml[1,0+16]..bad.ml[1,0+17])
+                Tpat_var "x/278"
+            Nolabel
+            Param_pat
+              pattern (bad.ml[1,0+18]..bad.ml[1,0+19])
+                Tpat_var "y/279"
+            Nolabel
+            Param_pat
+              pattern (bad.ml[1,0+20]..bad.ml[1,0+21])
+                Tpat_var "z/280"
+          ]
+          Tfunction_body
+            expression (bad.ml[2,24+2]..bad.ml[14,299+16])
+              Texp_ifthenelse
+              expression (bad.ml[2,24+5]..bad.ml[2,24+10])
+                Texp_apply
+                expression (bad.ml[2,24+7]..bad.ml[2,24+8])
+                  Texp_ident "Stdlib!.>"
+                [
+                  <arg>
+                    Nolabel
+                    expression (bad.ml[2,24+5]..bad.ml[2,24+6])
+                      Texp_ident "x/278"
+                  <arg>
+                    Nolabel
+                    expression (bad.ml[2,24+9]..bad.ml[2,24+10])
+                      Texp_constant Const_int 0
+                ]
+              expression (bad.ml[3,40+4]..bad.ml[13,280+18])
+                attribute "merlin.loc"
+                  []
+                Texp_ifthenelse
+                expression (bad.ml[3,40+7]..bad.ml[3,40+12])
+                  Texp_apply
+                  expression (bad.ml[3,40+9]..bad.ml[3,40+10])
+                    Texp_ident "Stdlib!.>"
+                  [
+                    <arg>
+                      Nolabel
+                      expression (bad.ml[3,40+7]..bad.ml[3,40+8])
+                        Texp_ident "y/279"
+                    <arg>
+                      Nolabel
+                      expression (bad.ml[3,40+11]..bad.ml[3,40+12])
+                        Texp_constant Const_int 0
+                  ]
+                expression (bad.ml[4,58+6]..bad.ml[12,259+20])
+                  attribute "merlin.loc"
+                    []
+                  Texp_ifthenelse
+                  expression (bad.ml[4,58+9]..bad.ml[4,58+14])
+                    Texp_apply
+                    expression (bad.ml[4,58+11]..bad.ml[4,58+12])
+                      Texp_ident "Stdlib!.>"
+                    [
+                      <arg>
+                        Nolabel
+                        expression (bad.ml[4,58+9]..bad.ml[4,58+10])
+                          Texp_ident "z/280"
+                      <arg>
+                        Nolabel
+                        expression (bad.ml[4,58+13]..bad.ml[4,58+14])
+                          Texp_constant Const_int 0
+                    ]
+                  expression (bad.ml[5,78+8]..bad.ml[11,236+22])
+                    attribute "merlin.loc"
+                      []
+                    Texp_ifthenelse
+                    expression (bad.ml[5,78+11]..bad.ml[5,78+20])
+                      Texp_apply
+                      expression (bad.ml[5,78+17]..bad.ml[5,78+18])
+                        Texp_ident "Stdlib!.>"
+                      [
+                        <arg>
+                          Nolabel
+                          expression (bad.ml[5,78+11]..bad.ml[5,78+16])
+                            Texp_apply
+                            expression (bad.ml[5,78+13]..bad.ml[5,78+14])
+                              Texp_ident "Stdlib!.+"
+                            [
+                              <arg>
+                                Nolabel
+                                expression (bad.ml[5,78+11]..bad.ml[5,78+12])
+                                  Texp_ident "x/278"
+                              <arg>
+                                Nolabel
+                                expression (bad.ml[5,78+15]..bad.ml[5,78+16])
+                                  Texp_ident "y/279"
+                            ]
+                        <arg>
+                          Nolabel
+                          expression (bad.ml[5,78+19]..bad.ml[5,78+20])
+                            Texp_ident "z/280"
+                      ]
+                    expression (bad.ml[6,104+10]..bad.ml[10,211+24])
+                      attribute "merlin.loc"
+                        []
+                      Texp_ifthenelse
+                      expression (bad.ml[6,104+13]..bad.ml[6,104+22])
+                        Texp_apply
+                        expression (bad.ml[6,104+19]..bad.ml[6,104+20])
+                          Texp_ident "Stdlib!.>"
+                        [
+                          <arg>
+                            Nolabel
+                            expression (bad.ml[6,104+13]..bad.ml[6,104+18])
+                              Texp_apply
+                              expression (bad.ml[6,104+15]..bad.ml[6,104+16])
+                                Texp_ident "Stdlib!.+"
+                              [
+                                <arg>
+                                  Nolabel
+                                  expression (bad.ml[6,104+13]..bad.ml[6,104+14])
+                                    Texp_ident "y/279"
+                                <arg>
+                                  Nolabel
+                                  expression (bad.ml[6,104+17]..bad.ml[6,104+18])
+                                    Texp_ident "z/280"
+                              ]
+                          <arg>
+                            Nolabel
+                            expression (bad.ml[6,104+21]..bad.ml[6,104+22])
+                              Texp_ident "x/278"
+                        ]
+                      expression (bad.ml[7,132+12]..bad.ml[9,184+26])
+                        attribute "merlin.loc"
+                          []
+                        Texp_ifthenelse
+                        expression (bad.ml[7,132+15]..bad.ml[7,132+24])
+                          Texp_apply
+                          expression (bad.ml[7,132+21]..bad.ml[7,132+22])
+                            Texp_ident "Stdlib!.>"
+                          [
+                            <arg>
+                              Nolabel
+                              expression (bad.ml[7,132+15]..bad.ml[7,132+20])
+                                Texp_apply
+                                expression (bad.ml[7,132+17]..bad.ml[7,132+18])
+                                  Texp_ident "Stdlib!.+"
+                                [
+                                  <arg>
+                                    Nolabel
+                                    expression (bad.ml[7,132+15]..bad.ml[7,132+16])
+                                      Texp_ident "x/278"
+                                  <arg>
+                                    Nolabel
+                                    expression (bad.ml[7,132+19]..bad.ml[7,132+20])
+                                      Texp_ident "z/280"
+                                ]
+                            <arg>
+                              Nolabel
+                              expression (bad.ml[7,132+23]..bad.ml[7,132+24])
+                                Texp_ident "y/279"
+                          ]
+                        expression (bad.ml[8,162+14]..bad.ml[8,162+21])
+                          attribute "merlin.loc"
+                            []
+                          Texp_constant Const_string("valid",(bad.ml[8,162+15]..bad.ml[8,162+20]),None)
+                        Some
+                          expression (bad.ml[9,184+17]..bad.ml[9,184+26])
+                            attribute "merlin.loc"
+                              []
+                            Texp_constant Const_string("invalid",(bad.ml[9,184+18]..bad.ml[9,184+25]),None)
+                      Some
+                        expression (bad.ml[10,211+15]..bad.ml[10,211+24])
+                          attribute "merlin.loc"
+                            []
+                          Texp_constant Const_string("invalid",(bad.ml[10,211+16]..bad.ml[10,211+23]),None)
+                    Some
+                      expression (bad.ml[11,236+13]..bad.ml[11,236+22])
+                        attribute "merlin.loc"
+                          []
+                        Texp_constant Const_string("invalid",(bad.ml[11,236+14]..bad.ml[11,236+21]),None)
+                  Some
+                    expression (bad.ml[12,259+11]..bad.ml[12,259+20])
+                      attribute "merlin.loc"
+                        []
+                      Texp_constant Const_string("invalid",(bad.ml[12,259+12]..bad.ml[12,259+19]),None)
+                Some
+                  expression (bad.ml[13,280+9]..bad.ml[13,280+18])
+                    attribute "merlin.loc"
+                      []
+                    Texp_constant Const_string("invalid",(bad.ml[13,280+10]..bad.ml[13,280+17]),None)
+              Some
+                expression (bad.ml[14,299+7]..bad.ml[14,299+16])
+                  attribute "merlin.loc"
+                    []
+                  Texp_constant Const_string("invalid",(bad.ml[14,299+8]..bad.ml[14,299+15]),None)
+    ]
+]
+
+
+
