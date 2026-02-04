@@ -27,7 +27,7 @@ type project = {
   test_modules : string list Lazy.t;
 }
 
-let file ~filename ~config ~project_root ~merlin_result =
+let file ~filename ~config ~project_root ~outline ~dump =
   {
     filename;
     config;
@@ -35,12 +35,12 @@ let file ~filename ~config ~project_root ~merlin_result =
     ast = lazy { Ast.functions = Ast.extract_functions filename };
     dump =
       lazy
-        (match merlin_result.Merlin.dump with
-        | Ok dump -> dump
+        (match dump with
+        | Ok d -> d
         | Error msg -> raise (Analysis_error msg));
     outline =
       lazy
-        (match merlin_result.Merlin.outline with
+        (match outline with
         | Ok o -> o
         | Error msg -> raise (Analysis_error msg));
     content =

@@ -72,9 +72,7 @@ let check (ctx : Context.file) =
     | None -> [] (* No type t, nothing to check *)
     | Some t_item ->
         (* Get line number for the type *)
-        let line_num =
-          match t_item.range with Some r -> r.start.line | None -> 1
-        in
+        let line_num = t_item.location.start.line in
 
         (* Check if pp function exists in the outline *)
         let has_pp =

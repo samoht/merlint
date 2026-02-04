@@ -1,67 +1,62 @@
-(** OCamlmerlin outline output - structured representation. *)
+(** OCamlmerlin outline output - structured representation.
 
-(** Outline item kinds we care about *)
-type kind =
+    This module re-exports types from ocaml-merlin with merlint-specific helpers. *)
+
+(** {2 Re-exported types from Merlin} *)
+
+type kind = Merlin.symbol_kind =
   | Value
   | Type
   | Module
+  | Module_type
   | Class
-  | Exception
+  | Class_type
   | Constructor
+  | Exception
   | Field
   | Method
-  | Other of string
+  | Label
 
-type position = { line : int; col : int }
+type position = Merlin.position = { line : int; col : int }
 (** Position in file. *)
 
-type range = { start : position; end_ : position }
-(** Range in file. *)
-
-type item = {
-  name : string;
-  kind : kind;
-  type_sig : string option; (* Type signature for values *)
-  range : range option;
-}
+type item = Merlin.outline_item
 (** Outline item. *)
 
-type t = item list
+type t = Merlin.outline
 (** Outline result. *)
 
-val equal : t -> t -> bool
-(** [equal a b] returns true if [a] and [b] are equal. Uses polymorphic
-    equality. *)
+(** {2 Re-exported functions from Merlin} *)
 
-val compare : t -> t -> int
-(** [compare a b] returns a comparison result between [a] and [b]. Uses
-    polymorphic comparison. *)
-
-val empty : unit -> t
-(** [empty] creates empty outline. *)
-
-val of_json : Yojson.Safe.t -> t
-(** [of_json json] parses outline. *)
+val flatten : t -> item list
+(** [flatten outline] returns all items including nested children, flattened. *)
 
 val values : t -> item list
-(** [values outline] returns all values. *)
+(** [values outline] returns all items with kind [Value]. *)
 
 val by_name : string -> t -> item option
-(** [by_name name outline] finds item. *)
+(** [by_name name outline] finds the first item with the given name. *)
+
+val is_function_type : string -> bool
+(** [is_function_type signature] returns true if the signature contains [->]. *)
+
+val extract_return_type : string -> string
+(** [extract_return_type signature] extracts the rightmost type after [->]. *)
+
+val count_parameters : string -> string -> int
+(** [count_parameters signature param_type] counts occurrences of [param_type]
+    in the [signature]. *)
+
+(** {2 Merlint-specific helpers} *)
 
 val pp : t Fmt.t
 (** [pp] is a pretty-printer for outline. *)
 
+val pp_item : item Fmt.t
+(** [pp_item] is a pretty-printer for outline item. *)
+
+val pp_kind : kind Fmt.t
+(** [pp_kind] is a pretty-printer for symbol kind. *)
+
 val location : string -> item -> Location.t option
-(** [location filename item] extracts location. *)
-
-(** {2 Type signature analysis} *)
-
-val is_function_type : string -> bool
-(** [is_function_type signature] checks if function type. *)
-
-val extract_return_type : string -> string
-(** [extract_return_type signature] extracts return type. *)
-
-val count_parameters : string -> string -> int
-(** [count_parameters signature param_type] counts parameters. *)
+(** [location filename item] extracts location for merlint's Location.t. *)

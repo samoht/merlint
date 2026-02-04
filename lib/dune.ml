@@ -3,7 +3,6 @@
 let src = Logs.Src.create "merlint.dune" ~doc:"Dune interface"
 
 module Log = (val Logs.src_log src : Logs.LOG)
-open Sexplib0
 
 (* Error helper function *)
 let err_build_failed msg = Error (Fmt.str "Failed to build project: %s" msg)
@@ -85,9 +84,7 @@ let parse_dune_file filename =
     close_in ic;
 
     (* Parse all S-expressions in the file *)
-    let stanzas =
-      Parsexp.Many.parse_string content |> Result.value ~default:[]
-    in
+    let stanzas = Sexp.parse_string content in
     Log.debug (fun m ->
         m "Parsed dune file %a: found %d stanzas" Fpath.pp filename
           (List.length stanzas));

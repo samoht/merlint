@@ -54,24 +54,22 @@ let check (ctx : Context.file) =
 
     (* Check all public values in the outline *)
     List.filter_map
-      (fun item ->
-        match item.Outline.kind with
-        | Outline.Value -> (
-            match item.range with
-            | Some range ->
-                let has_doc_before = has_doc_comment content range.start.line in
-                let has_doc_after =
-                  has_doc_comment_after content range.end_.line
-                in
-                if (not has_doc_before) && not has_doc_after then
-                  let loc =
-                    Location.v ~file:ctx.filename ~start_line:range.start.line
-                      ~start_col:range.start.col ~end_line:range.end_.line
-                      ~end_col:range.end_.col
-                  in
-                  Some (Issue.v ~loc { value_name = item.name; location = loc })
-                else None
-            | None -> None)
+      (fun (item : Outline.item) ->
+        match item.kind with
+        | Outline.Value ->
+            let item_loc = item.location in
+            let has_doc_before = has_doc_comment content item_loc.start.line in
+            let has_doc_after =
+              has_doc_comment_after content item_loc.end_.line
+            in
+            if (not has_doc_before) && not has_doc_after then
+              let loc =
+                Location.v ~file:ctx.filename ~start_line:item_loc.start.line
+                  ~start_col:item_loc.start.col ~end_line:item_loc.end_.line
+                  ~end_col:item_loc.end_.col
+              in
+              Some (Issue.v ~loc { value_name = item.name; location = loc })
+            else None
         | _ -> None)
       (Outline.values outline)
 

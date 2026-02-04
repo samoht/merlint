@@ -43,17 +43,15 @@ let check ctx =
     Outline.values outline
     |> List.filter_map (fun (item : Outline.item) ->
            if String.starts_with ~prefix:"err_" item.name then
-             match item.range with
-             | Some range -> Some (item.name, range)
-             | None -> None
+             Some (item.name, item.location)
            else None)
   in
 
   (* Check if a line number is inside any error helper function *)
   let is_inside_error_helper line_num =
     List.exists
-      (fun (_name, (range : Outline.range)) ->
-        line_num >= range.start.line && line_num <= range.end_.line)
+      (fun (_name, (loc : Merlin.location)) ->
+        line_num >= loc.start.line && line_num <= loc.end_.line)
       error_helpers
   in
 

@@ -76,57 +76,55 @@ let check (ctx : Context.file) =
     List.filter_map
       (fun (item : Outline.item) ->
         match item.kind with
-        | Value -> (
+        | Value ->
             (* Calculate function length from outline location *)
-            match item.range with
-            | Some range ->
-                let length = range.end_.line - range.start.line + 1 in
+            let loc = item.location in
+            let length = loc.end_.line - loc.start.line + 1 in
 
-                (* Check if this is a pure data structure *)
-                let is_data_def =
-                  List.exists
-                    (fun (name, expr) ->
-                      name = item.name && is_pure_data_structure expr)
+            (* Check if this is a pure data structure *)
+            let is_data_def =
+              List.exists
+                (fun (name, expr) ->
+                  name = item.name && is_pure_data_structure expr)
+                ast.functions
+            in
+
+            (* Skip length check for pure data structures *)
+            if is_data_def then (
+              Logs.debug (fun m ->
+                  m "Skipping pure data structure: %s" item.name);
+              None)
+            else
+              (* Find the function's AST to count match cases *)
+              let match_cases =
+                match
+                  List.find_opt
+                    (fun (name, _) -> name = item.name)
                     ast.functions
+                with
+                | Some (_, expr) -> count_match_cases expr
+                | None -> 0
+              in
+
+              (* Apply additional allowance for pattern matching (2 lines per case) *)
+              let threshold =
+                config.max_function_length + (match_cases * 2)
+              in
+
+              if length > threshold then
+                let issue_loc =
+                  Location.v ~file:ctx.filename ~start_line:loc.start.line
+                    ~start_col:loc.start.col ~end_line:loc.end_.line
+                    ~end_col:loc.end_.col
                 in
-
-                (* Skip length check for pure data structures *)
-                if is_data_def then (
-                  Logs.debug (fun m ->
-                      m "Skipping pure data structure: %s" item.name);
-                  None)
-                else
-                  (* Find the function's AST to count match cases *)
-                  let match_cases =
-                    match
-                      List.find_opt
-                        (fun (name, _) -> name = item.name)
-                        ast.functions
-                    with
-                    | Some (_, expr) -> count_match_cases expr
-                    | None -> 0
-                  in
-
-                  (* Apply additional allowance for pattern matching (2 lines per case) *)
-                  let threshold =
-                    config.max_function_length + (match_cases * 2)
-                  in
-
-                  if length > threshold then
-                    let loc =
-                      Location.v ~file:ctx.filename ~start_line:range.start.line
-                        ~start_col:range.start.col ~end_line:range.end_.line
-                        ~end_col:range.end_.col
-                    in
-                    (* Severity = how much the function exceeds the threshold *)
-                    let severity = length - threshold in
-                    Some
-                      (Issue.v ~loc ~severity
-                         { name = item.name; length; threshold })
-                  else None
-            | None -> None)
-        | Type | Module | Class | Exception | Constructor | Field | Method
-        | Other _ ->
+                (* Severity = how much the function exceeds the threshold *)
+                let severity = length - threshold in
+                Some
+                  (Issue.v ~loc:issue_loc ~severity
+                     { name = item.name; length; threshold })
+              else None
+        | Type | Module | Module_type | Class | Class_type | Exception
+        | Constructor | Field | Method | Label ->
             None)
       outline
 

@@ -97,7 +97,12 @@ let analyze_single_file ?profiling ~config ~project_root ~file_rules filepath =
   let filename = Fpath.to_string filepath in
   try
     let merlin_start = Unix.gettimeofday () in
-    let merlin_result = Merlin.analyze_file filename in
+    (* Use ocaml-merlin library for outline *)
+    let backend = Merlin.create () in
+    let outline = Merlin.outline backend ~file:filename in
+    Merlin.close backend;
+    (* Use merlint-specific dump functionality *)
+    let dump = Merlin_dump.dump filename in
     let merlin_duration = Unix.gettimeofday () -. merlin_start in
     (match profiling with
     | Some prof ->
@@ -105,7 +110,7 @@ let analyze_single_file ?profiling ~config ~project_root ~file_rules filepath =
           { operation = Profiling.Merlin filename; duration = merlin_duration }
     | None -> ());
     let file_ctx =
-      Context.file ~filename ~config ~project_root ~merlin_result
+      Context.file ~filename ~config ~project_root ~outline ~dump
     in
     let applicable_rules =
       List.filter
