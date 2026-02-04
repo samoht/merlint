@@ -11,7 +11,8 @@ bug-reports: "https://tangled.org/gazagnaire.org/merlint/issues"
 depends: [
   "ocaml"
   "dune" {>= "3.0"}
-  "yojson"
+  "jsont"
+  "jsont-bytesrw"
   "cmdliner"
   "merlin"
   "re"

@@ -18,7 +18,8 @@
  (depends
   ocaml
   dune
-  yojson
+  jsont
+  jsont-bytesrw
   cmdliner
   merlin
   re

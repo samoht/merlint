@@ -8,12 +8,14 @@ let kind_to_string = function
   | Outline.Value -> "Value"
   | Outline.Type -> "Type"
   | Outline.Module -> "Module"
+  | Outline.Module_type -> "Module_type"
   | Outline.Class -> "Class"
+  | Outline.Class_type -> "Class_type"
   | Outline.Exception -> "Exception"
   | Outline.Constructor -> "Constructor"
   | Outline.Field -> "Field"
   | Outline.Method -> "Method"
-  | Outline.Other s -> s
+  | Outline.Label -> "Label"
 
 (** Check if an item name has redundant module prefix *)
 let has_redundant_prefix item_name_lower module_name filename =

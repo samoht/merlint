@@ -23,8 +23,8 @@ let is_mutable_type type_sig =
 (** Check outline for global mutable state *)
 let check_global_mutable_state ~filename outline =
   List.filter_map
-    (fun item ->
-      match item.Outline.kind with
+    (fun (item : Outline.item) ->
+      match item.kind with
       | Outline.Value -> (
           match (item.type_sig, Outline.location filename item) with
           | Some type_sig, Some location when is_mutable_type type_sig ->
