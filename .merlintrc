@@ -1,0 +1,12 @@
+# Merlint configuration for cyclomatic project
+
+# Complexity rules
+max_complexity = 15
+max_function_length = 100
+
+# Style rules - be lenient for Printf and mutable state
+allow_obj_magic = false
+allow_str_module = false
+
+# Disable E351 until it can distinguish global vs local refs
+# TODO: re-enable when E351 is more precise

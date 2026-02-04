@@ -1,0 +1,21 @@
+# Merlint configuration file
+# Copy to .merlintrc and adjust settings as needed
+
+# Complexity rules
+max_complexity = 10
+max_function_length = 50
+max_nesting = 3
+exempt_data_definitions = true
+
+# Naming rules
+max_underscores_in_name = 3
+min_name_length_underscore = 10
+
+# Style rules
+allow_obj_magic = false
+allow_str_module = false
+allow_catch_all_exceptions = false
+
+# Format rules
+require_ocamlformat_file = true
+require_mli_files = true

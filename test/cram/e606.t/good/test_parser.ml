@@ -1,0 +1,1 @@
+let test_parse () = assert (Parser.parse "42" = 42)

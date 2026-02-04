@@ -1,0 +1,9 @@
+# Merlint configuration for the merlint project itself
+settings:
+  max-complexity: 12
+  max-function-length: 80
+  
+rules:
+  # Test example for demonstration
+  - files: lib/rules/test*.ml
+    exclude: [E100]

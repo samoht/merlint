@@ -1,0 +1,1 @@
+try int_of_string "abc" with _ -> 0

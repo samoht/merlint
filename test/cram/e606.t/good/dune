@@ -1,0 +1,7 @@
+(library
+ (name mylib)
+ (modules parser))
+
+(test
+ (name test)
+ (modules test_parser))

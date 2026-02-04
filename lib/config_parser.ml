@@ -1,0 +1,132 @@
+(** Configuration file parser for .merlint files with YAML-like syntax *)
+
+type parsed_config = {
+  settings : (string * string) list;
+  exclusions : Rule_config.t;
+}
+
+type section = Rules | Settings
+
+(** Determine section from header line *)
+let parse_section_header line =
+  let line = String.trim line in
+  if line = "rules:" then Some Rules
+  else if line = "settings:" then Some Settings
+  else None
+
+(** Strip inline comments from a value *)
+let strip_inline_comment value =
+  match String.split_on_char '#' value with
+  | [] -> value
+  | first :: _ -> String.trim first
+
+(** Parse a settings line *)
+let parse_setting line =
+  match String.split_on_char ':' line with
+  | [ key; value ] ->
+      let key = String.trim key in
+      let value = String.trim value |> strip_inline_comment in
+      Some (key, value)
+  | _ -> None
+
+(** Parse a rule entry in YAML list format *)
+let parse_rule_yaml line =
+  (* Format: "  - files: lib/prose*.ml" or "    exclude: [E330, E410]" *)
+  let line = String.trim line in
+  if String.starts_with ~prefix:"- files:" line then
+    let files_pattern =
+      String.sub line 8 (String.length line - 8) |> String.trim
+    in
+    Some (`Files files_pattern)
+  else if String.starts_with ~prefix:"exclude:" line then
+    let rules_str = String.sub line 8 (String.length line - 8) |> String.trim in
+    (* Remove brackets if present *)
+    let rules_str =
+      if
+        String.starts_with ~prefix:"[" rules_str
+        && String.ends_with ~suffix:"]" rules_str
+      then String.sub rules_str 1 (String.length rules_str - 2)
+      else rules_str
+    in
+    let rules =
+      rules_str |> String.split_on_char ',' |> List.map String.trim
+      |> List.filter (fun s -> String.length s > 0)
+    in
+    Some (`Exclude rules)
+  else None
+
+(** Parse configuration content *)
+let parse content =
+  let lines = String.split_on_char '\n' content in
+  let rec process_lines current_section current_rule exclusions settings =
+    function
+    | [] ->
+        let exclusions =
+          match current_rule with
+          | Some (files, rules) when List.length rules > 0 ->
+              Rule_config.add { pattern = files; rules } exclusions
+          | _ -> exclusions
+        in
+        { settings; exclusions }
+    | line :: rest -> (
+        let trimmed = String.trim line in
+        (* Skip empty lines and comments *)
+        if String.length trimmed = 0 || String.get trimmed 0 = '#' then
+          process_lines current_section current_rule exclusions settings rest
+        (* Check for section headers *)
+          else
+          match parse_section_header trimmed with
+          | Some section ->
+              let exclusions =
+                match current_rule with
+                | Some (files, rules) when List.length rules > 0 ->
+                    Rule_config.add { pattern = files; rules } exclusions
+                | _ -> exclusions
+              in
+              process_lines section None exclusions settings rest
+          | None -> (
+              (* Process based on current section *)
+              match current_section with
+              | Settings ->
+                  let new_settings =
+                    match parse_setting trimmed with
+                    | Some kv -> kv :: settings
+                    | None -> settings
+                  in
+                  process_lines current_section current_rule exclusions
+                    new_settings rest
+              | Rules -> (
+                  match parse_rule_yaml trimmed with
+                  | Some (`Files files_pattern) ->
+                      (* Save previous rule if any *)
+                      let exclusions =
+                        match current_rule with
+                        | Some (prev_files, prev_rules)
+                          when List.length prev_rules > 0 ->
+                            Rule_config.add
+                              { pattern = prev_files; rules = prev_rules }
+                              exclusions
+                        | _ -> exclusions
+                      in
+                      process_lines current_section
+                        (Some (files_pattern, []))
+                        exclusions settings rest
+                  | Some (`Exclude rule_list) ->
+                      let current_rule =
+                        match current_rule with
+                        | Some (files, _) -> Some (files, rule_list)
+                        | None -> None
+                      in
+                      process_lines current_section current_rule exclusions
+                        settings rest
+                  | None ->
+                      process_lines current_section current_rule exclusions
+                        settings rest)))
+  in
+  process_lines Settings None Rule_config.empty [] lines
+
+let parse_file path =
+  if Sys.file_exists path then
+    let content = In_channel.with_open_text path In_channel.input_all in
+    Some (parse content)
+  else None
