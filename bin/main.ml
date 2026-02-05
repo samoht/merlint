@@ -4,56 +4,8 @@ let logs_src = Logs.Src.create "merlint" ~doc:"Merlint OCaml linter"
 
 module Log = (val Logs.src_log logs_src : Logs.LOG)
 
-let setup_log ?style_renderer log_level =
-  (* Setup logging with colors *)
-  Fmt_tty.setup_std_outputs ?style_renderer ();
-  Logs.set_level log_level;
-  Logs.set_reporter (Logs_fmt.reporter ~dst:Fmt.stderr ~app:Fmt.stdout ())
-
-let terminal_width () =
-  try
-    let ic = Unix.open_process_in "tput cols 2>/dev/null" in
-    let width = int_of_string (input_line ic) in
-    let _ = Unix.close_process_in ic in
-    width
-  with End_of_file | Failure _ | Sys_error _ ->
-    120 (* fallback to 120 columns for tests *)
-
-let wrap_text ?(indent = 2) ?(max_width = 120) text =
-  let terminal_width = terminal_width () in
-  let effective_width = min max_width terminal_width in
-  let continuation_prefix = String.make indent ' ' in
-
-  (* First normalize the text by joining all lines with spaces *)
-  let normalized_text =
-    text |> String.split_on_char '\n' |> List.map String.trim
-    |> String.concat " "
-  in
-
-  let words = String.split_on_char ' ' normalized_text in
-  let rec build_lines acc current_line current_length = function
-    | [] -> if current_line = "" then acc else current_line :: acc
-    | word :: rest ->
-        let word_len = String.length word in
-        let space_len = if current_line = "" then 0 else 1 in
-        let new_length = current_length + space_len + word_len in
-        if new_length + indent <= effective_width then
-          let new_line =
-            if current_line = "" then word else current_line ^ " " ^ word
-          in
-          build_lines acc new_line new_length rest
-        else
-          let completed_line =
-            if current_line = "" then word else current_line
-          in
-          build_lines (completed_line :: acc) word word_len rest
-  in
-  let lines = List.rev (build_lines [] "" 0 words) in
-  match lines with
-  | [] -> ""
-  | lines ->
-      String.concat "\n"
-        (List.map (fun line -> continuation_prefix ^ line) lines)
+let wrap_text ?(indent = 2) text =
+  Tty.Width.wrap ~indent (Tty.Width.terminal_width ()) text
 
 let print_issue_group (error_code, issues) =
   (* Sort issues within each group by location *)
@@ -66,9 +18,9 @@ let print_issue_group (error_code, issues) =
       let issue_count = List.length sorted_issues in
       let issue_word = if issue_count = 1 then "issue" else "issues" in
       Fmt.pr "  %a %a (%d %s)@."
-        (Fmt.styled `Yellow Fmt.string)
+        (Tty.Style.styled Tty.Style.(fg Tty.Color.yellow) Fmt.string)
         (Fmt.str "[%s]" error_code)
-        (Fmt.styled `Bold Fmt.string)
+        (Tty.Style.styled Tty.Style.bold Fmt.string)
         title issue_count issue_word;
 
       (* Find the rule to get the hint *)
@@ -84,7 +36,7 @@ let print_issue_group (error_code, issues) =
           (* Print each line of the hint in gray *)
           String.split_on_char '\n' wrapped_hint
           |> List.iter (fun line ->
-              Fmt.pr "%a@." (Fmt.styled `Faint Fmt.string) line)
+              Fmt.pr "%a@." (Tty.Style.styled Tty.Style.faint Fmt.string) line)
       | None -> ());
 
       (* Print each issue with location and description *)
@@ -194,10 +146,6 @@ let print_summary all_issues enabled_rule_count =
       (Merlint.Report.print_color false "✗")
 
 let run_analysis project_root dune_describe rule_filter show_profile =
-  (* Set formatter margin based on terminal width *)
-  let terminal_width = terminal_width () in
-  Format.set_margin terminal_width;
-
   (* Create profiling state if enabled *)
   let profiling_state =
     if show_profile then Some (Merlint.Profiling.v ()) else None
@@ -240,9 +188,9 @@ let run_analysis project_root dune_describe rule_filter show_profile =
   (* Print profiling summary if enabled *)
   match profiling_state with
   | Some state ->
-      Merlint.Profiling.print_summary ~width:terminal_width state;
-      Merlint.Profiling.print_rule_summary ~width:terminal_width state;
-      Merlint.Profiling.print_file_summary ~width:terminal_width state
+      Merlint.Profiling.print_summary state;
+      Merlint.Profiling.print_rule_summary state;
+      Merlint.Profiling.print_file_summary state
   | None ->
       ();
 
@@ -333,10 +281,6 @@ let rules_flag =
   in
   Arg.(value & opt (some string) None & info [ "rules"; "r" ] ~docv:"SPEC" ~doc)
 
-let log_level =
-  let env = Cmd.Env.info "MERLINT_VERBOSE" in
-  Logs_cli.level ~env ()
-
 let profile_flag =
   let doc = "Show profiling statistics for analysis operations" in
   Arg.(value & flag & info [ "profile"; "p" ] ~doc)
@@ -388,9 +332,7 @@ let parse_rule_filter rules_spec =
           Log.err (fun m -> m "Invalid rules specification: %s" msg);
           Stdlib.exit 1)
 
-let main style_renderer log_level exclude_patterns rules_spec ~show_profile
-    ~show_config files =
-  setup_log ?style_renderer log_level;
+let main exclude_patterns rules_spec show_profile show_config files () =
   if show_config then show_configuration files
   else
     let rule_filter = parse_rule_filter rules_spec in
@@ -416,19 +358,7 @@ let cmd =
   let info = Cmd.info "merlint" ~version:"0.1.0" ~doc ~man in
   Cmd.v info
     Term.(
-      const
-        (fun
-          style_renderer
-          log_level
-          exclude_patterns
-          rules_spec
-          show_profile
-          show_config
-          files
-        ->
-          main style_renderer log_level exclude_patterns rules_spec
-            ~show_profile ~show_config files)
-      $ Fmt_cli.style_renderer () $ log_level $ exclude_flag $ rules_flag
-      $ profile_flag $ show_config_flag $ files)
+      const main $ exclude_flag $ rules_flag $ profile_flag $ show_config_flag
+      $ files $ Vlog.setup "merlint")
 
 let () = Stdlib.exit (Cmd.eval cmd)

@@ -37,28 +37,12 @@ let rec take n = function
   | _ when n <= 0 -> []
   | h :: t -> h :: take (n - 1) t
 
-let print_operation_type_row is_wide name count time total_time =
-  let time_ms = time *. 1000.0 in
-  let avg_ms = time_ms /. float_of_int count in
-  let percentage = time /. total_time *. 100.0 in
+let ms f = Fmt.str "%.1f" (f *. 1000.0)
 
-  if is_wide then
-    Fmt.pr "%-25s %8d %10.2f %8.2f %7.1f%%\n" name count time_ms avg_ms
-      percentage
-  else Fmt.pr "%-20s %6d %9.1f %6.1f%%\n" name count time_ms percentage
-
-let print_total_row is_wide total_count total_time =
-  let time_ms = total_time *. 1000.0 in
-
-  if is_wide then
-    Fmt.pr "%-25s %8d %10.2f %8s %8s\n" "Total" total_count time_ms "" ""
-  else Fmt.pr "%-20s %6d %9.1f %7s\n" "Total" total_count time_ms ""
-
-let print_summary ?(width = 80) t =
+let print_summary t =
   let timings = timings_from_state t in
   if timings = [] then ()
   else
-    (* Calculate totals by operation type *)
     let merlin_time = ref 0.0 in
     let file_rules_time = ref 0.0 in
     let project_rules_time = ref 0.0 in
@@ -85,233 +69,217 @@ let print_summary ?(width = 80) t =
     let total_time =
       !merlin_time +. !file_rules_time +. !project_rules_time +. !other_time
     in
-    let is_wide = width >= 75 in
-    let sep_width = min width 75 in
+    let pct t =
+      if total_time > 0.0 then Fmt.str "%.1f%%" (t /. total_time *. 100.0)
+      else ""
+    in
+    let avg t c =
+      if c > 0 then Fmt.str "%.1f" (t *. 1000.0 /. float_of_int c) else ""
+    in
+    let total_count = !merlin_count + !file_rule_count + !project_rule_count in
 
-    Fmt.pr "\n[Profiling Summary]\n";
-    if is_wide then
-      Fmt.pr "%-25s %8s %10s %8s %8s\n" "Operation Type" "Count" "Total (ms)"
-        "Avg (ms)" "% Time"
-    else Fmt.pr "%-20s %6s %9s %7s\n" "Type" "Count" "Time (ms)" "%";
-    Fmt.pr "%s\n" (String.make sep_width '-');
+    let columns =
+      Tty.Table.
+        [
+          column "Operation";
+          column ~align:`Right "Count";
+          column ~align:`Right "Total (ms)";
+          column ~align:`Right "Avg (ms)";
+          column ~align:`Right "% Time";
+        ]
+    in
+    let rows = ref [] in
+    let add name count time =
+      if count > 0 then
+        rows :=
+          [ name; string_of_int count; ms time; avg time count; pct time ]
+          :: !rows
+    in
+    add "Merlin Analysis" !merlin_count !merlin_time;
+    add "File Rules" !file_rule_count !file_rules_time;
+    add "Project Rules" !project_rule_count !project_rules_time;
+    rows :=
+      [ "Total"; string_of_int total_count; ms total_time; ""; "" ] :: !rows;
 
-    if !merlin_count > 0 then
-      print_operation_type_row is_wide "Merlin Analysis" !merlin_count
-        !merlin_time total_time;
-    if !file_rule_count > 0 then
-      print_operation_type_row is_wide "File Rules" !file_rule_count
-        !file_rules_time total_time;
-    if !project_rule_count > 0 then
-      print_operation_type_row is_wide "Project Rules" !project_rule_count
-        !project_rules_time total_time;
+    Fmt.pr "@.[Profiling Summary]@.";
+    let table =
+      Tty.Table.of_string_rows ~border:Tty.Border.none columns (List.rev !rows)
+    in
+    Tty.Table.pp Format.std_formatter table
 
-    Fmt.pr "%s\n" (String.make sep_width '-');
-    print_total_row is_wide
-      (!merlin_count + !file_rule_count + !project_rule_count)
-      total_time
-
-let extract_file_timings timings =
-  List.filter_map
-    (fun { operation; duration } ->
-      match operation with
-      | Merlin filename -> Some (filename, "Merlin", duration)
-      | File_rule { rule_code; filename } ->
-          Some (filename, Fmt.str "Rule %s" rule_code, duration)
-      | _ -> None)
-    timings
-
-let group_file_timings file_timings =
-  let by_file = Hashtbl.create 32 in
-  List.iter
-    (fun (file, op, dur) ->
-      let stats =
-        try Hashtbl.find by_file file with Not_found -> (0.0, 0.0, 0)
-      in
-      let merlin_time, rules_time, rule_count = stats in
-      if op = "Merlin" then
-        Hashtbl.replace by_file file (merlin_time +. dur, rules_time, rule_count)
-      else
-        Hashtbl.replace by_file file
-          (merlin_time, rules_time +. dur, rule_count + 1))
-    file_timings;
-  by_file
-
-let print_file_summary ?(width = 80) t =
+let print_file_summary t =
   let timings = timings_from_state t in
   if timings = [] then ()
   else
-    let file_timings = extract_file_timings timings in
+    let file_timings =
+      List.filter_map
+        (fun { operation; duration } ->
+          match operation with
+          | Merlin filename -> Some (filename, true, duration)
+          | File_rule { filename; _ } -> Some (filename, false, duration)
+          | _ -> None)
+        timings
+    in
     if file_timings = [] then ()
     else
-      let by_file = group_file_timings file_timings in
+      let by_file = Hashtbl.create 32 in
+      List.iter
+        (fun (file, is_merlin, dur) ->
+          let m, r, c =
+            try Hashtbl.find by_file file with Not_found -> (0.0, 0.0, 0)
+          in
+          if is_merlin then Hashtbl.replace by_file file (m +. dur, r, c)
+          else Hashtbl.replace by_file file (m, r +. dur, c + 1))
+        file_timings;
 
-      (* Convert to list and sort by total time per file *)
       let file_stats =
         Hashtbl.fold
           (fun file (merlin, rules, count) acc ->
-            (file, merlin, rules, count, merlin +. rules) :: acc)
+            (file, merlin, rules, count) :: acc)
           by_file []
       in
-      let sorted_files =
+      let sorted =
         List.sort
-          (fun (_, _, _, _, a) (_, _, _, _, b) -> compare b a)
+          (fun (_, m1, r1, _) (_, m2, r2, _) -> compare (m2 +. r2) (m1 +. r1))
           file_stats
       in
+      let top = take 10 sorted in
+      let remaining = List.length sorted - List.length top in
 
-      (* Show only top 10 slowest files *)
-      let top_files =
-        match sorted_files with
-        | [] -> []
-        | files ->
-            let top = take 10 files in
-            if List.length files > 10 then top @ [ ("...", 0.0, 0.0, 0, 0.0) ]
-            else top
-      in
-
-      Fmt.pr "\n[Top Slowest Files]\n";
-      let sep_width = min width 80 in
-      if width >= 80 then (
-        Fmt.pr "%-30s %10s %10s %6s %10s\n" "File" "Merlin (ms)" "Rules (ms)"
-          "#Rules" "Total (ms)";
-        Fmt.pr "%s\n" (String.make sep_width '-'))
-      else (
-        Fmt.pr "%-25s %9s %9s %9s\n" "File" "Merlin" "Rules" "Total";
-        Fmt.pr "%s\n" (String.make sep_width '-'));
-
-      List.iter
-        (fun (file, merlin, rules, count, total) ->
-          if file = "..." then
-            if width >= 80 then
-              Fmt.pr "%-30s %10s %10s %6s %10s\n" "..." "" "" ""
-                (Fmt.str "(%d more)" (List.length sorted_files - 10))
-            else
-              Fmt.pr "%-25s %9s %9s %9s\n" "..." "" ""
-                (Fmt.str "(%d more)" (List.length sorted_files - 10))
-          else
-            let truncated_file =
-              if width >= 80 then file
-              else if String.length file > 25 then String.sub file 0 22 ^ "..."
-              else file
-            in
-            if width >= 80 then
-              Fmt.pr "%-30s %10.1f %10.1f %6d %10.1f\n" truncated_file
-                (merlin *. 1000.0) (rules *. 1000.0) count (total *. 1000.0)
-            else
-              Fmt.pr "%-25s %9.0f %9.0f %9.0f\n" truncated_file
-                (merlin *. 1000.0) (rules *. 1000.0) (total *. 1000.0))
-        top_files;
-
-      (* Summary stats *)
       let total_merlin =
-        List.fold_left (fun acc (_, m, _, _, _) -> acc +. m) 0.0 sorted_files
+        List.fold_left (fun acc (_, m, _, _) -> acc +. m) 0.0 sorted
       in
       let total_rules =
-        List.fold_left (fun acc (_, _, r, _, _) -> acc +. r) 0.0 sorted_files
+        List.fold_left (fun acc (_, _, r, _) -> acc +. r) 0.0 sorted
       in
-      let total_files = List.length sorted_files in
-      Fmt.pr "%s\n" (String.make sep_width '-');
-      if width >= 80 then
-        Fmt.pr "%-30s %10.1f %10.1f %6d %10.1f\n"
-          (Fmt.str "Total (%d files)" total_files)
-          (total_merlin *. 1000.0) (total_rules *. 1000.0) total_files
-          ((total_merlin +. total_rules) *. 1000.0)
-      else
-        Fmt.pr "%-25s %9.0f %9.0f %9.0f\n"
-          (Fmt.str "Total (%d)" total_files)
-          (total_merlin *. 1000.0) (total_rules *. 1000.0)
-          ((total_merlin +. total_rules) *. 1000.0)
 
-let extract_rule_timings timings =
-  List.filter_map
-    (fun { operation; duration } ->
-      match operation with
-      | File_rule { rule_code; _ } -> Some (rule_code, duration, false)
-      | Project_rule rule_code -> Some (rule_code, duration, true)
-      | _ -> None)
-    timings
-
-let group_rule_timings rule_timings =
-  let by_rule = Hashtbl.create 32 in
-  List.iter
-    (fun (code, dur, is_project) ->
-      let stats =
-        try Hashtbl.find by_rule code with Not_found -> (0, 0.0, is_project)
+      let columns =
+        Tty.Table.
+          [
+            column "File";
+            column ~align:`Right "Merlin (ms)";
+            column ~align:`Right "Rules (ms)";
+            column ~align:`Right "#Rules";
+            column ~align:`Right "Total (ms)";
+          ]
       in
-      let count, total, _ = stats in
-      Hashtbl.replace by_rule code (count + 1, total +. dur, is_project))
-    rule_timings;
-  by_rule
+      let rows =
+        List.map
+          (fun (file, merlin, rules, count) ->
+            [
+              file;
+              ms merlin;
+              ms rules;
+              string_of_int count;
+              ms (merlin +. rules);
+            ])
+          top
+      in
+      let rows =
+        if remaining > 0 then
+          rows @ [ [ Fmt.str "... (%d more)" remaining; ""; ""; ""; "" ] ]
+        else rows
+      in
+      let rows =
+        rows
+        @ [
+            [
+              Fmt.str "Total (%d files)" (List.length sorted);
+              ms total_merlin;
+              ms total_rules;
+              string_of_int (List.length sorted);
+              ms (total_merlin +. total_rules);
+            ];
+          ]
+      in
 
-let print_rule_row is_wide code rule_type count total =
-  let total_ms = total *. 1000.0 in
-  let avg_ms = total_ms /. float_of_int count in
+      Fmt.pr "@.[Top Slowest Files]@.";
+      let table =
+        Tty.Table.of_string_rows ~border:Tty.Border.none columns rows
+      in
+      Tty.Table.pp Format.std_formatter table
 
-  if is_wide then
-    Fmt.pr "%-8s %-10s %8d %10.1f %8.1f\n" code rule_type count total_ms avg_ms
-  else Fmt.pr "%-6s %-8s %8d %9.0f\n" code rule_type count total_ms
-
-let print_remaining_row is_wide remaining =
-  if is_wide then
-    Fmt.pr "%-8s %-10s %8s %10s %8s\n" "..." "" "" ""
-      (Fmt.str "(%d more)" remaining)
-  else Fmt.pr "%-6s %-8s %8s %9s\n" "..." "" "" (Fmt.str "(%d more)" remaining)
-
-let filter_rules_to_show sorted_rules =
-  let significant_rules =
-    sorted_rules |> List.filter (fun (_, _, total, _) -> total *. 1000.0 > 1.0)
-  in
-
-  if significant_rules = [] then
-    (* If no rules > 1ms, show top 5 *)
-    take 5 sorted_rules
-  else if List.length significant_rules > 10 then
-    (* Too many significant rules, limit to top 10 *)
-    take 10 significant_rules
-  else significant_rules
-
-let print_rule_summary ?(width = 80) t =
+let print_rule_summary t =
   let timings = timings_from_state t in
   if timings = [] then ()
   else
-    let rule_timings = extract_rule_timings timings in
+    let rule_timings =
+      List.filter_map
+        (fun { operation; duration } ->
+          match operation with
+          | File_rule { rule_code; _ } -> Some (rule_code, duration, false)
+          | Project_rule rule_code -> Some (rule_code, duration, true)
+          | _ -> None)
+        timings
+    in
     if rule_timings = [] then ()
     else
-      let by_rule = group_rule_timings rule_timings in
+      let by_rule = Hashtbl.create 32 in
+      List.iter
+        (fun (code, dur, is_project) ->
+          let count, total, _ =
+            try Hashtbl.find by_rule code
+            with Not_found -> (0, 0.0, is_project)
+          in
+          Hashtbl.replace by_rule code (count + 1, total +. dur, is_project))
+        rule_timings;
 
-      (* Convert to list and sort by total time *)
       let rule_stats =
         Hashtbl.fold
           (fun code (count, total, is_project) acc ->
             (code, count, total, is_project) :: acc)
           by_rule []
       in
-      let sorted_rules =
+      let sorted =
         List.sort (fun (_, _, a, _) (_, _, b, _) -> compare b a) rule_stats
       in
 
-      let rules_to_show = filter_rules_to_show sorted_rules in
+      (* Show rules > 1ms, or top 5 if none, capped at 10 *)
+      let significant =
+        List.filter (fun (_, _, total, _) -> total *. 1000.0 > 1.0) sorted
+      in
+      let to_show =
+        if significant = [] then take 5 sorted
+        else if List.length significant > 10 then take 10 significant
+        else significant
+      in
 
-      if rules_to_show = [] then ()
+      if to_show = [] then ()
       else
-        let is_wide = width >= 65 in
-        let sep_width = min width 65 in
+        let remaining = List.length sorted - List.length to_show in
+        let columns =
+          Tty.Table.
+            [
+              column "Rule";
+              column "Type";
+              column ~align:`Right "Calls";
+              column ~align:`Right "Total (ms)";
+              column ~align:`Right "Avg (ms)";
+            ]
+        in
+        let rows =
+          List.map
+            (fun (code, count, total, is_project) ->
+              let avg =
+                Fmt.str "%.1f" (total *. 1000.0 /. float_of_int count)
+              in
+              [
+                code;
+                (if is_project then "Project" else "File");
+                string_of_int count;
+                ms total;
+                avg;
+              ])
+            to_show
+        in
+        let rows =
+          if remaining > 0 then
+            rows @ [ [ Fmt.str "... (%d more)" remaining; ""; ""; ""; "" ] ]
+          else rows
+        in
 
-        Fmt.pr "\n[Top Slowest Rules]\n";
-        if is_wide then (
-          Fmt.pr "%-8s %-10s %8s %10s %8s\n" "Rule" "Type" "Calls" "Total (ms)"
-            "Avg (ms)";
-          Fmt.pr "%s\n" (String.make sep_width '-'))
-        else (
-          Fmt.pr "%-6s %-8s %8s %9s\n" "Rule" "Type" "Calls" "Time";
-          Fmt.pr "%s\n" (String.make sep_width '-'));
-
-        (* Print each rule *)
-        List.iter
-          (fun (code, count, total, is_project) ->
-            let rule_type = if is_project then "Project" else "File" in
-            print_rule_row is_wide code rule_type count total)
-          rules_to_show;
-
-        (* Show if there are more *)
-        let remaining = List.length sorted_rules - List.length rules_to_show in
-        if remaining > 0 then print_remaining_row is_wide remaining
+        Fmt.pr "@.[Top Slowest Rules]@.";
+        let table =
+          Tty.Table.of_string_rows ~border:Tty.Border.none columns rows
+        in
+        Tty.Table.pp Format.std_formatter table

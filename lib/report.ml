@@ -14,10 +14,11 @@ let v ~rule_name ~passed ~issues ~file_count =
   { rule_name; passed; issues; file_count }
 
 let print_status passed = if passed then "✓" else "✗"
+let style_pass = Tty.Style.(fg Tty.Color.green)
+let style_fail = Tty.Style.(fg Tty.Color.red)
 
-let pp_color passed ppf text =
-  if passed then Fmt.pf ppf "\027[32m%s\027[0m" text (* green *)
-  else Fmt.pf ppf "\027[31m%s\027[0m" text (* red *)
+let pp_color passed =
+  Tty.Style.styled (if passed then style_pass else style_fail) Fmt.string
 
 let print_color passed text = Fmt.str "%a" (pp_color passed) text
 
