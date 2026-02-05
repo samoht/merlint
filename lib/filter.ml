@@ -92,7 +92,7 @@ let rec process_tokens enabled disabled = function
       (* Last token, add to enabled by default *)
       parse_rule_spec spec
       |> Result.map (fun codes ->
-             { enabled = Some (codes @ enabled); disabled })
+          { enabled = Some (codes @ enabled); disabled })
   | spec :: "+" :: rest -> (
       match parse_rule_spec spec with
       | Ok codes -> process_tokens (codes @ enabled) disabled rest

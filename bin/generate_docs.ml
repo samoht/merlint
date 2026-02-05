@@ -285,10 +285,10 @@ let add_pattern_segments pattern class_name escaped segments =
   let re = Re.Perl.compile_pat pattern in
   Re.all re escaped
   |> List.iter (fun g ->
-         let start = Re.Group.start g 0 in
-         let stop = Re.Group.stop g 0 in
-         let text = Re.Group.get g 0 in
-         segments := (start, stop, class_name, text) :: !segments)
+      let start = Re.Group.start g 0 in
+      let stop = Re.Group.stop g 0 in
+      let text = Re.Group.get g 0 in
+      segments := (start, stop, class_name, text) :: !segments)
 
 let add_keyword_segments escaped segments =
   List.iter
@@ -296,9 +296,9 @@ let add_keyword_segments escaped segments =
       let pattern = Re.Perl.compile_pat (Fmt.str {|\b%s\b|} kw) in
       Re.all pattern escaped
       |> List.iter (fun g ->
-             let start = Re.Group.start g 0 in
-             let stop = Re.Group.stop g 0 in
-             segments := (start, stop, "kw", kw) :: !segments))
+          let start = Re.Group.start g 0 in
+          let stop = Re.Group.stop g 0 in
+          segments := (start, stop, "kw", kw) :: !segments))
     ocaml_keywords
 
 let remove_overlapping_segments segments =
@@ -560,10 +560,10 @@ let generate_toc () =
 </div>|}
     (categories
     |> List.map (fun (name, range, _) ->
-           Fmt.str {|<li><a href="#%s">%s (%s)</a></li>|}
-             (String.lowercase_ascii name
-             |> String.map (fun c -> if c = '/' then '-' else c))
-             name range)
+        Fmt.str {|<li><a href="#%s">%s (%s)</a></li>|}
+          (String.lowercase_ascii name
+          |> String.map (fun c -> if c = '/' then '-' else c))
+          name range)
     |> String.concat "\n")
 
 let generate_error_section rule =

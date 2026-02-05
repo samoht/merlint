@@ -107,9 +107,7 @@ let check (ctx : Context.file) =
               in
 
               (* Apply additional allowance for pattern matching (2 lines per case) *)
-              let threshold =
-                config.max_function_length + (match_cases * 2)
-              in
+              let threshold = config.max_function_length + (match_cases * 2) in
 
               if length > threshold then
                 let issue_loc =

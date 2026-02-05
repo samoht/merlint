@@ -7,15 +7,15 @@ let check ctx =
   (* First, collect all underscore-prefixed pattern bindings *)
   let underscore_bindings =
     List.filter_map
-      (fun (elt : Dump.elt) ->
-        let name = Dump.name_to_string elt.name in
+      (fun (elt : Merlin.Dump.elt) ->
+        let name = Merlin.Dump.name_to_string elt.name in
         if
           String.length name > 0
           && name.[0] = '_'
           && not (String.starts_with ~prefix:"__" name)
         (* Ignore PPX-generated code *)
         then
-          match Dump.location elt with
+          match Merlin.Dump.location elt with
           | Some loc -> Some (name, loc)
           | None -> None
         else None)
@@ -28,9 +28,9 @@ let check ctx =
       (* Find all usages of this binding *)
       let usage_locations =
         List.filter_map
-          (fun (elt : Dump.elt) ->
-            let ident_name = Dump.name_to_string elt.name in
-            if ident_name = binding_name then Dump.location elt else None)
+          (fun (elt : Merlin.Dump.elt) ->
+            let ident_name = Merlin.Dump.name_to_string elt.name in
+            if ident_name = binding_name then Merlin.Dump.location elt else None)
           (Context.dump ctx).identifiers
       in
 

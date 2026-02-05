@@ -11,7 +11,7 @@ let check_value_name name =
 let check (ctx : Context.file) =
   let filename = ctx.filename in
   (* Check value names *)
-  Dump.check_elements ~full_path:filename (Context.dump ctx).patterns
+  Merlin.Dump.check_elements ~full_path:filename (Context.dump ctx).patterns
     check_value_name (fun name_str loc expected ->
       Issue.v ~loc { value_name = name_str; expected })
 

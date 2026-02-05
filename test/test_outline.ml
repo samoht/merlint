@@ -25,7 +25,9 @@ let test_flatten_empty () =
 
 let test_flatten_simple () =
   let items =
-    [ make_item ~name:"foo" ~kind:Value (); make_item ~name:"bar" ~kind:Type () ]
+    [
+      make_item ~name:"foo" ~kind:Value (); make_item ~name:"bar" ~kind:Type ();
+    ]
   in
   let result = flatten items in
   Alcotest.(check int) "two items" 2 (List.length result)
@@ -91,9 +93,7 @@ let test_all_kinds () =
   List.iter
     (fun (kind, name) ->
       let item = make_item ~name ~kind () in
-      Alcotest.(check string)
-        (Fmt.str "%s kind" name)
-        name item.name)
+      Alcotest.(check string) (Fmt.str "%s kind" name) name item.name)
     kinds
 
 let test_is_function_type () =
@@ -110,12 +110,10 @@ let test_extract_return_type () =
   Alcotest.(check string)
     "multi-arg return" "bool"
     (extract_return_type "int -> string -> bool");
-  Alcotest.(check string)
-    "no arrow" "int" (extract_return_type "int")
+  Alcotest.(check string) "no arrow" "int" (extract_return_type "int")
 
 let test_count_parameters () =
-  Alcotest.(check int)
-    "one int" 1 (count_parameters "int -> string" "int");
+  Alcotest.(check int) "one int" 1 (count_parameters "int -> string" "int");
   Alcotest.(check int)
     "two ints" 2
     (count_parameters "int -> int -> string" "int");

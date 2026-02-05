@@ -11,7 +11,7 @@ type file = {
   config : Config.t;
   project_root : string;
   ast : Ast.t Lazy.t;
-  dump : Dump.t Lazy.t;
+  dump : Merlin.Dump.t Lazy.t;
   outline : Outline.t Lazy.t;
   content : string Lazy.t;
   functions : (string * Ast.expr) list Lazy.t;
@@ -35,9 +35,7 @@ let file ~filename ~config ~project_root ~outline ~dump =
     ast = lazy { Ast.functions = Ast.extract_functions filename };
     dump =
       lazy
-        (match dump with
-        | Ok d -> d
-        | Error msg -> raise (Analysis_error msg));
+        (match dump with Ok d -> d | Error msg -> raise (Analysis_error msg));
     outline =
       lazy
         (match outline with
@@ -99,20 +97,19 @@ let project ~config ~project_root ~all_files ~dune_describe =
          let file_test_modules =
            all_files
            |> List.filter_map (fun f ->
-                  if String.ends_with ~suffix:".ml" f then
-                    let basename =
-                      Filename.basename f |> Filename.remove_extension
-                    in
-                    if
-                      String.starts_with ~prefix:"test_" basename
-                      || basename = "test"
-                    then (
-                      Log.debug (fun m ->
-                          m "Context: Found test file %s -> module %s" f
-                            basename);
-                      Some basename)
-                    else None
-                  else None)
+               if String.ends_with ~suffix:".ml" f then
+                 let basename =
+                   Filename.basename f |> Filename.remove_extension
+                 in
+                 if
+                   String.starts_with ~prefix:"test_" basename
+                   || basename = "test"
+                 then (
+                   Log.debug (fun m ->
+                       m "Context: Found test file %s -> module %s" f basename);
+                   Some basename)
+                 else None
+               else None)
          in
          (* Combine and deduplicate *)
          let all_test_modules =
@@ -137,7 +134,7 @@ let ast ctx = Lazy.force ctx.ast
 let dump ctx =
   let dump_data = Lazy.force ctx.dump in
   (* Automatically fix all paths to use full path instead of basename *)
-  Dump.fix_all_paths ~full_path:ctx.filename dump_data
+  Merlin.Dump.fix_all_paths ~full_path:ctx.filename dump_data
 
 let outline ctx = Lazy.force ctx.outline
 let content ctx = Lazy.force ctx.content

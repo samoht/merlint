@@ -15,7 +15,7 @@ let check (ctx : Context.file) =
     let content = Lazy.force ctx.content in
 
     (* Use the new dump function to find fail (Fmt.str patterns *)
-    Dump.check_function_call_pattern content "fail" "Fmt.str"
+    Merlin.Dump.check_function_call_pattern content "fail" "Fmt.str"
       (fun (line, line_num, is_qualified) ->
         let loc =
           Location.v ~file:filename ~start_line:line_num ~start_col:0

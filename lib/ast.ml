@@ -129,42 +129,45 @@ module Nesting = struct
     depth_of 0 node
 end
 
-(** Convert ppxlib expression to our AST representation *)
-let rec ppxlib_expr_to_ast (expr : Ppxlib.expression) : expr =
-  Log.debug (fun m ->
-      m "ppxlib_expr_to_ast: %s" (Ppxlib.Pprintast.string_of_expression expr));
+(** Pretty-print expression for debugging *)
+let expr_to_string (expr : Parsetree.expression) =
+  Format.asprintf "%a" Pprintast.expression expr
+
+(** Convert Parsetree expression to our AST representation *)
+let rec parsetree_expr_to_ast (expr : Parsetree.expression) : expr =
+  Log.debug (fun m -> m "parsetree_expr_to_ast: %s" (expr_to_string expr));
   Log.debug (fun m ->
       m "Expression type: %s"
-        (match expr.Ppxlib.pexp_desc with
-        | Ppxlib.Pexp_ifthenelse _ -> "Pexp_ifthenelse"
-        | Ppxlib.Pexp_match _ -> "Pexp_match"
-        | Ppxlib.Pexp_try _ -> "Pexp_try"
-        | Ppxlib.Pexp_function _ -> "Pexp_function"
-        | Ppxlib.Pexp_let _ -> "Pexp_let"
-        | Ppxlib.Pexp_sequence _ -> "Pexp_sequence"
+        (match expr.pexp_desc with
+        | Pexp_ifthenelse _ -> "Pexp_ifthenelse"
+        | Pexp_match _ -> "Pexp_match"
+        | Pexp_try _ -> "Pexp_try"
+        | Pexp_function _ -> "Pexp_function"
+        | Pexp_let _ -> "Pexp_let"
+        | Pexp_sequence _ -> "Pexp_sequence"
         | _ -> "Other"));
-  match expr.Ppxlib.pexp_desc with
-  | Ppxlib.Pexp_ifthenelse (cond, then_expr, else_expr) ->
+  match expr.pexp_desc with
+  | Pexp_ifthenelse (cond, then_expr, else_expr) ->
       If_then_else
         {
-          cond = ppxlib_expr_to_ast cond;
-          then_expr = ppxlib_expr_to_ast then_expr;
-          else_expr = Option.map ppxlib_expr_to_ast else_expr;
+          cond = parsetree_expr_to_ast cond;
+          then_expr = parsetree_expr_to_ast then_expr;
+          else_expr = Option.map parsetree_expr_to_ast else_expr;
         }
-  | Ppxlib.Pexp_match (expr, cases) ->
-      Match { expr = ppxlib_expr_to_ast expr; cases = List.length cases }
-  | Ppxlib.Pexp_try (expr, cases) ->
-      Try { expr = ppxlib_expr_to_ast expr; handlers = List.length cases }
-  | Ppxlib.Pexp_function (params, _, body) ->
+  | Pexp_match (expr, cases) ->
+      Match { expr = parsetree_expr_to_ast expr; cases = List.length cases }
+  | Pexp_try (expr, cases) ->
+      Try { expr = parsetree_expr_to_ast expr; handlers = List.length cases }
+  | Pexp_function (params, _, body) ->
       (* In OCaml 5, multi-parameter functions have all params here *)
       Log.debug (fun m -> m "Pexp_function: %d params" (List.length params));
 
       let body_expr =
         match body with
-        | Ppxlib.Pfunction_body expr ->
+        | Pfunction_body expr ->
             Log.debug (fun m -> m "Found Pfunction_body");
-            ppxlib_expr_to_ast expr
-        | Ppxlib.Pfunction_cases (cases, _, _) ->
+            parsetree_expr_to_ast expr
+        | Pfunction_cases (cases, _, _) ->
             Log.debug (fun m ->
                 m "Found Pfunction_cases with %d cases" (List.length cases));
             (* This is a pattern matching function - treat it as a match expression *)
@@ -175,59 +178,67 @@ let rec ppxlib_expr_to_ast (expr : Ppxlib.expression) : expr =
         (* No parameters - this is just a pattern match *)
         body_expr
       else Function { params = List.length params; body = body_expr }
-  | Ppxlib.Pexp_let (_, bindings, body) ->
+  | Pexp_let (_, bindings, body) ->
       let bindings =
         List.map
-          (fun vb ->
-            match vb.Ppxlib.pvb_pat.Ppxlib.ppat_desc with
-            | Ppxlib.Ppat_var { txt; _ } ->
-                (txt, ppxlib_expr_to_ast vb.Ppxlib.pvb_expr)
-            | _ -> ("_", ppxlib_expr_to_ast vb.Ppxlib.pvb_expr))
+          (fun (vb : Parsetree.value_binding) ->
+            match vb.pvb_pat.ppat_desc with
+            | Ppat_var { txt; _ } -> (txt, parsetree_expr_to_ast vb.pvb_expr)
+            | _ -> ("_", parsetree_expr_to_ast vb.pvb_expr))
           bindings
       in
-      Let { bindings; body = ppxlib_expr_to_ast body }
-  | Ppxlib.Pexp_sequence (e1, e2) ->
-      Sequence [ ppxlib_expr_to_ast e1; ppxlib_expr_to_ast e2 ]
-  | Ppxlib.Pexp_construct ({ txt = Lident "[]"; _ }, None) ->
-      List (* Empty list *)
-  | Ppxlib.Pexp_construct ({ txt = Lident "::"; _ }, Some _) ->
-      List (* List cons *)
-  | Ppxlib.Pexp_array _ -> List (* Array literal *)
-  | Ppxlib.Pexp_record (fields, _) ->
+      Let { bindings; body = parsetree_expr_to_ast body }
+  | Pexp_sequence (e1, e2) ->
+      Sequence [ parsetree_expr_to_ast e1; parsetree_expr_to_ast e2 ]
+  | Pexp_construct ({ txt = Lident "[]"; _ }, None) -> List (* Empty list *)
+  | Pexp_construct ({ txt = Lident "::"; _ }, Some _) -> List (* List cons *)
+  | Pexp_array _ -> List (* Array literal *)
+  | Pexp_record (fields, _) ->
       Record { fields = List.length fields } (* Record literal *)
-  | Ppxlib.Pexp_apply (func, args) ->
+  | Pexp_apply (func, args) ->
       (* Parse function applications to find nested pattern matches *)
       Log.debug (fun m -> m "Pexp_apply with %d args" (List.length args));
-      let func_ast = ppxlib_expr_to_ast func in
-      let args_asts = List.map (fun (_, arg) -> ppxlib_expr_to_ast arg) args in
+      let func_ast = parsetree_expr_to_ast func in
+      let args_asts =
+        List.map (fun (_, arg) -> parsetree_expr_to_ast arg) args
+      in
       (* Treat the whole apply as a sequence containing func and all args *)
       Sequence (func_ast :: args_asts)
   | _ -> Other
 
 (** Extract function definitions from structure items *)
-let extract_functions_from_structure structure =
+let extract_functions_from_structure (structure : Parsetree.structure) =
   let functions = ref [] in
 
-  (* Use a visitor to find all value bindings *)
-  let visitor =
-    object
-      inherit Ppxlib.Ast_traverse.iter
-
-      method! value_binding vb =
-        match vb.Ppxlib.pvb_pat.Ppxlib.ppat_desc with
-        | Ppxlib.Ppat_var { txt = name; _ } ->
-            Log.debug (fun m -> m "Processing binding: %s" name);
-            let expr = ppxlib_expr_to_ast vb.pvb_expr in
-            Log.debug (fun m -> m "Converted %s to AST" name);
-            functions := (name, expr) :: !functions
-        | _ -> ()
-    end
+  let rec process_structure_item (item : Parsetree.structure_item) =
+    match item.pstr_desc with
+    | Pstr_value (_, bindings) ->
+        List.iter
+          (fun (vb : Parsetree.value_binding) ->
+            match vb.pvb_pat.ppat_desc with
+            | Ppat_var { txt = name; _ } ->
+                Log.debug (fun m -> m "Processing binding: %s" name);
+                let expr = parsetree_expr_to_ast vb.pvb_expr in
+                Log.debug (fun m -> m "Converted %s to AST" name);
+                functions := (name, expr) :: !functions
+            | _ -> ())
+          bindings
+    | Pstr_module { pmb_expr; _ } -> process_module_expr pmb_expr
+    | Pstr_recmodule mods ->
+        List.iter
+          (fun { Parsetree.pmb_expr; _ } -> process_module_expr pmb_expr)
+          mods
+    | _ -> ()
+  and process_module_expr (me : Parsetree.module_expr) =
+    match me.pmod_desc with
+    | Pmod_structure structure -> List.iter process_structure_item structure
+    | _ -> ()
   in
 
-  visitor#structure structure;
+  List.iter process_structure_item structure;
   List.rev !functions
 
-(** Extract functions from a source file using ppxlib *)
+(** Extract functions from a source file using compiler-libs *)
 let extract_functions filename =
   try
     Log.debug (fun m -> m "Parsing file: %s" filename);
@@ -241,7 +252,7 @@ let extract_functions filename =
       Log.debug (fun m -> m "Skipping interface file: %s" filename);
       [])
     else
-      let structure = Ppxlib.Parse.implementation lexbuf in
+      let structure = Parse.implementation lexbuf in
       let functions = extract_functions_from_structure structure in
 
       Log.debug (fun m ->

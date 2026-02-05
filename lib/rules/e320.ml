@@ -12,7 +12,7 @@ let check ctx =
     @ ast.variants
   in
   List.filter_map
-    (fun (elt : Dump.elt) ->
+    (fun (elt : Merlin.Dump.elt) ->
       (* Only check the base name, not the full qualified name *)
       let base_name = elt.name.base in
       let underscore_count =
@@ -21,10 +21,10 @@ let check ctx =
           0 base_name
       in
       if underscore_count > max_underscores && String.length base_name > 5 then
-        match Dump.location elt with
+        match Merlin.Dump.location elt with
         | Some loc ->
             (* Use full name for display but count underscores only in base *)
-            let full_name = Dump.name_to_string elt.name in
+            let full_name = Merlin.Dump.name_to_string elt.name in
             Some
               (Issue.v ~loc
                  {

@@ -21,13 +21,13 @@ let check (ctx : Context.file) =
 
   (* Check modules for naming convention *)
   List.filter_map
-    (fun (module_elt : Dump.elt) ->
-      let module_name = Dump.name_to_string module_elt.name in
+    (fun (module_elt : Merlin.Dump.elt) ->
+      let module_name = Merlin.Dump.name_to_string module_elt.name in
       if not (is_snake_case_module module_name) then
         let expected = Naming.to_capitalized_snake_case module_name in
         (* Only report if the conversion actually changes the name *)
         if expected <> module_name then
-          match Dump.location module_elt with
+          match Merlin.Dump.location module_elt with
           | Some loc -> Some (Issue.v ~loc { module_name; expected })
           | None -> None
         else None

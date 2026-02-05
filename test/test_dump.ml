@@ -1,7 +1,7 @@
 (** Tests for simplified AST name extraction from typedtree and parsetree text
 *)
 
-open Merlint
+module Dump = Merlin.Dump
 open Dump
 
 (** Test variant extraction from type declarations *)

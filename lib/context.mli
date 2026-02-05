@@ -2,14 +2,16 @@
 *)
 
 exception Analysis_error of string
-(** Raised when analysis fails (e.g., Merlint_backend error, file read error). *)
+(** Raised when analysis fails (e.g., Merlint_backend error, file read error).
+*)
 
 type file = {
   filename : string;  (** The current file being analyzed. *)
   config : Config.t;  (** The merlint configuration. *)
   project_root : string;  (** The project root directory. *)
   ast : Ast.t Lazy.t;  (** AST control flow from ppxlib (lazy). *)
-  dump : Dump.t Lazy.t;  (** Names/identifiers from Merlint_backend dump (lazy). *)
+  dump : Merlin.Dump.t Lazy.t;
+      (** Names/identifiers from Merlint_backend dump (lazy). *)
   outline : Outline.t Lazy.t;  (** Outline from Merlint_backend (lazy). *)
   content : string Lazy.t;  (** File content (lazy). *)
   functions : (string * Ast.expr) list Lazy.t;
@@ -32,7 +34,7 @@ val file :
   config:Config.t ->
   project_root:string ->
   outline:(Outline.t, string) result ->
-  dump:(Dump.t, string) result ->
+  dump:(Merlin.Dump.t, string) result ->
   file
 (** [file ~filename ~config ~project_root ~outline ~dump] creates a file
     context. *)
@@ -51,7 +53,7 @@ val project :
 val ast : file -> Ast.t
 (** [ast file] returns ast field. *)
 
-val dump : file -> Dump.t
+val dump : file -> Merlin.Dump.t
 (** [dump file] returns dump field. *)
 
 val outline : file -> Outline.t

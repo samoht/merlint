@@ -5,6 +5,7 @@
  (name merlint)
  (libraries
   ocaml-merlin
+  compiler-libs.common
   eio
   re
   logs
@@ -13,7 +14,6 @@
   fpath
   vlog
   tty
-  ppxlib
   jsont
   jsont.bytesrw))
 

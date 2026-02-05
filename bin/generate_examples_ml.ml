@@ -65,8 +65,8 @@ let rec collect_files_recursively base_dir current_path =
 let test_directories cram_dir =
   Sys.readdir cram_dir |> Array.to_list
   |> List.filter (fun e ->
-         Filename.check_suffix e ".t"
-         && Sys.is_directory (Filename.concat cram_dir e))
+      Filename.check_suffix e ".t"
+      && Sys.is_directory (Filename.concat cram_dir e))
   |> List.sort String.compare
 
 let group_files_by_directory files =

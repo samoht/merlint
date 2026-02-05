@@ -12,8 +12,8 @@ let test_creation () =
   (* Check location retrieval *)
   (match Issue.location issue_with_loc with
   | Some loc ->
-      Alcotest.(check string) "location file" "test.ml" loc.Location.file;
-      Alcotest.(check int) "location start line" 1 loc.Location.start_line
+      Alcotest.(check string) "location file" "test.ml" (Location.file loc);
+      Alcotest.(check int) "location start line" 1 (Location.start_line loc)
   | None -> Alcotest.fail "Expected location");
 
   match Issue.location issue_without_loc with
