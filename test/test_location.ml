@@ -9,9 +9,9 @@ let test_create () =
     Location.v ~file:"test.ml" ~start_line:10 ~start_col:5 ~end_line:10
       ~end_col:5
   in
-  Alcotest.(check string) "file" "test.ml" loc.file;
-  Alcotest.(check int) "line" 10 loc.start_line;
-  Alcotest.(check int) "col" 5 loc.start_col
+  Alcotest.(check string) "file" "test.ml" (Location.file loc);
+  Alcotest.(check int) "line" 10 (Location.start_line loc);
+  Alcotest.(check int) "col" 5 (Location.start_col loc)
 
 let test_pp () =
   let loc =
@@ -46,11 +46,11 @@ let test_create_extended () =
     Location.v ~file:"test.ml" ~start_line:10 ~start_col:5 ~end_line:15
       ~end_col:20
   in
-  Alcotest.(check string) "file" "test.ml" ext.file;
-  Alcotest.(check int) "start_line" 10 ext.start_line;
-  Alcotest.(check int) "start_col" 5 ext.start_col;
-  Alcotest.(check int) "end_line" 15 ext.end_line;
-  Alcotest.(check int) "end_col" 20 ext.end_col
+  Alcotest.(check string) "file" "test.ml" (Location.file ext);
+  Alcotest.(check int) "start_line" 10 (Location.start_line ext);
+  Alcotest.(check int) "start_col" 5 (Location.start_col ext);
+  Alcotest.(check int) "end_line" 15 (Location.end_line ext);
+  Alcotest.(check int) "end_col" 20 (Location.end_col ext)
 
 let suite =
   ( "location",

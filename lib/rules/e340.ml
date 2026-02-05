@@ -42,9 +42,9 @@ let check ctx =
   let error_helpers =
     Outline.values outline
     |> List.filter_map (fun (item : Outline.item) ->
-           if String.starts_with ~prefix:"err_" item.name then
-             Some (item.name, item.location)
-           else None)
+        if String.starts_with ~prefix:"err_" item.name then
+          Some (item.name, item.location)
+        else None)
   in
 
   (* Check if a line number is inside any error helper function *)
@@ -59,7 +59,7 @@ let check ctx =
   File.process_lines_with_location filename content
     (fun line_idx line location ->
       ignore line_idx;
-      let line_num = location.Location.start_line in
+      let line_num = Location.start_line location in
 
       (* Only flag if we're not inside an error helper *)
       if not (is_inside_error_helper line_num) then

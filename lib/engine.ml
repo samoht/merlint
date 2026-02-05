@@ -62,7 +62,7 @@ let setup_analysis ~filter ~dune_describe project_root =
   let enabled_rules =
     Data.all_rules
     |> List.filter (fun rule ->
-           Filter.is_enabled_by_code filter (Rule.code rule))
+        Filter.is_enabled_by_code filter (Rule.code rule))
   in
   (config, files_to_analyze, project_ctx, enabled_rules)
 
@@ -72,37 +72,35 @@ let run_project_rules ?profiling enabled_rules project_ctx =
   enabled_rules
   |> List.filter Rule.is_project_scoped
   |> List.concat_map (fun rule ->
-         let code = Rule.code rule in
-         let issues = run_project_rule ?profiling project_ctx rule in
-         (* Filter out issues for files that are excluded from this rule *)
-         List.filter
-           (fun result ->
-             match Rule.Run.location result with
-             | Some loc ->
-                 let file = loc.Location.file in
-                 let excluded =
-                   Rule_config.should_exclude config.exclusions ~rule:code ~file
-                 in
-                 if excluded then
-                   Log.debug (fun m ->
-                       m "Excluding %s issue for file %s" code file);
-                 not excluded
-             | None ->
-                 (* Issues without locations can't be excluded by file *)
-                 true)
-           issues)
+      let code = Rule.code rule in
+      let issues = run_project_rule ?profiling project_ctx rule in
+      (* Filter out issues for files that are excluded from this rule *)
+      List.filter
+        (fun result ->
+          match Rule.Run.location result with
+          | Some loc ->
+              let file = loc.Location.file in
+              let excluded =
+                Rule_config.should_exclude config.exclusions ~rule:code ~file
+              in
+              if excluded then
+                Log.debug (fun m ->
+                    m "Excluding %s issue for file %s" code file);
+              not excluded
+          | None ->
+              (* Issues without locations can't be excluded by file *)
+              true)
+        issues)
 
 (** Analyze a single file with applicable rules *)
 let analyze_single_file ?profiling ~config ~project_root ~file_rules filepath =
   let filename = Fpath.to_string filepath in
   try
     let merlin_start = Unix.gettimeofday () in
-    (* Use ocaml-merlin library for outline *)
     let backend = Merlin.create () in
     let outline = Merlin.outline backend ~file:filename in
+    let dump = Merlin.dump_ast backend ~file:filename in
     Merlin.close backend;
-    (* Use merlint-specific dump functionality *)
-    let dump = Merlin_dump.dump filename in
     let merlin_duration = Unix.gettimeofday () -. merlin_start in
     (match profiling with
     | Some prof ->

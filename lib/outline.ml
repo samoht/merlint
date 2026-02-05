@@ -1,6 +1,7 @@
 (** OCamlmerlin outline output - structured representation.
 
-    This module re-exports types from ocaml-merlin with merlint-specific helpers. *)
+    This module re-exports types from ocaml-merlin with merlint-specific
+    helpers. *)
 
 (* {2 Re-exported types from Merlin} *)
 

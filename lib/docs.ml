@@ -162,49 +162,50 @@ let is_function_signature signature =
   Re.execp (Re.compile (Re.str "->")) signature
 
 (** Extract the doc attribute from an attribute list *)
-let doc_attribute attrs =
-  let open Ppxlib in
+let doc_attribute (attrs : Parsetree.attributes) =
   List.find_opt
-    (fun attr ->
+    (fun (attr : Parsetree.attribute) ->
       match attr.attr_name.txt with "ocaml.doc" -> true | _ -> false)
     attrs
-  |> Option.map (fun attr ->
-         match attr.attr_payload with
-         | PStr
-             [
-               {
-                 pstr_desc =
-                   Pstr_eval
-                     ( {
-                         pexp_desc = Pexp_constant (Pconst_string (doc, _, _));
-                         _;
-                       },
-                       _ );
-                 _;
-               };
-             ] ->
-             String.trim doc
-         | _ -> "")
+  |> Option.map (fun (attr : Parsetree.attribute) ->
+      match attr.attr_payload with
+      | PStr
+          [
+            {
+              pstr_desc =
+                Pstr_eval
+                  ( {
+                      pexp_desc =
+                        Pexp_constant
+                          { pconst_desc = Pconst_string (doc, _, _); _ };
+                      _;
+                    },
+                    _ );
+              _;
+            };
+          ] ->
+          String.trim doc
+      | _ -> "")
 
-(** Extract the location info from a Ppxlib location *)
-let extract_location (loc : Ppxlib.location) =
-  let start_line = loc.loc_start.pos_lnum in
-  let end_line = loc.loc_end.pos_lnum in
+(** Extract the location info from a compiler-libs location *)
+let extract_location_info loc_start loc_end =
+  (* Access Lexing.position fields directly *)
+  let start_line = loc_start.Lexing.pos_lnum in
+  let end_line = loc_end.Lexing.pos_lnum in
   (start_line, end_line)
 
 (** Get the string representation of a core type *)
-let rec core_type_to_string (typ : Ppxlib.core_type) =
-  let open Ppxlib in
+let rec core_type_to_string (typ : Parsetree.core_type) =
   match typ.ptyp_desc with
   | Ptyp_var name -> "'" ^ name
   | Ptyp_constr ({ txt = Lident name; _ }, []) -> name
-  | Ptyp_constr ({ txt = Ldot (_, name); _ }, []) -> name
+  | Ptyp_constr ({ txt = Ldot (_, name); _ }, []) -> name.txt
   | Ptyp_arrow (_, t1, t2) ->
       let arg_str = core_type_to_string t1 in
       let ret_str = core_type_to_string t2 in
       arg_str ^ " -> " ^ ret_str
   | Ptyp_tuple types ->
-      let type_strs = List.map core_type_to_string types in
+      let type_strs = List.map (fun (_, t) -> core_type_to_string t) types in
       String.concat " * " type_strs
   | _ -> "<complex type>"
 
@@ -230,11 +231,13 @@ let regular_comments lines =
   !regular_comments
 
 (** Process a value declaration and extract its documentation *)
-let process_value_declaration vd ~regular_comments ~last_floating_doc =
-  let open Ppxlib in
+let process_value_declaration (vd : Parsetree.value_description)
+    ~regular_comments ~last_floating_doc =
   let value_name = vd.pval_name.txt in
   let signature = core_type_to_string vd.pval_type in
-  let val_line, _ = extract_location vd.pval_loc in
+  let val_line, _ =
+    extract_location_info vd.pval_loc.loc_start vd.pval_loc.loc_end
+  in
 
   (* Check if this value has a regular comment *)
   let has_regular_comment =
@@ -271,16 +274,15 @@ let process_value_declaration vd ~regular_comments ~last_floating_doc =
 
     { value_name; signature; doc; doc_line; val_line }
 
-(** Extract documentation comments using ppxlib *)
+(** Extract documentation comments using compiler-libs *)
 let extract_doc_comments content =
   try
-    let open Ppxlib in
     (* Parse as a signature (interface file) *)
     let lexbuf = Lexing.from_string content in
     let signature = Parse.interface lexbuf in
 
     (* We need to also check for regular comments in the original content
-       since ppxlib doesn't preserve them in the AST *)
+       since the parser doesn't preserve them in the AST *)
     let lines = String.split_on_char '\n' content in
     let regular_comments = regular_comments lines in
 
@@ -289,7 +291,7 @@ let extract_doc_comments content =
     let last_floating_doc = ref None in
 
     List.iter
-      (fun (sig_item : signature_item) ->
+      (fun (sig_item : Parsetree.signature_item) ->
         match sig_item.psig_desc with
         | Psig_attribute attr when attr.attr_name.txt = "ocaml.doc" -> (
             (* Floating doc comment *)
@@ -300,14 +302,19 @@ let extract_doc_comments content =
                     pstr_desc =
                       Pstr_eval
                         ( {
-                            pexp_desc = Pexp_constant (Pconst_string (doc, _, _));
+                            pexp_desc =
+                              Pexp_constant
+                                { pconst_desc = Pconst_string (doc, _, _); _ };
                             _;
                           },
                           _ );
                     _;
                   };
                 ] ->
-                let doc_line, _ = extract_location attr.attr_loc in
+                let doc_line, _ =
+                  extract_location_info attr.attr_loc.loc_start
+                    attr.attr_loc.loc_end
+                in
                 last_floating_doc := Some (doc, doc_line)
             | _ -> ())
         | Psig_value vd ->
@@ -322,5 +329,5 @@ let extract_doc_comments content =
 
     List.rev !doc_comments
   with Parsing.Parse_error | Failure _ ->
-    (* If ppxlib parsing fails, return empty list *)
+    (* If parsing fails, return empty list *)
     []

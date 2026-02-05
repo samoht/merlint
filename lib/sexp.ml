@@ -94,6 +94,8 @@ let parse_string content =
   in
 
   let rec parse_all acc =
-    match parse_sexp () with Some sexp -> parse_all (sexp :: acc) | None -> acc
+    match parse_sexp () with
+    | Some sexp -> parse_all (sexp :: acc)
+    | None -> acc
   in
   List.rev (parse_all [])

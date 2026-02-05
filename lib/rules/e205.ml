@@ -12,7 +12,7 @@ let check (ctx : Context.file) =
   let issues = ref [] in
 
   (* Check identifiers for Printf/Format module usage *)
-  Dump.iter_identifiers_with_location (Context.dump ctx) (fun id loc ->
+  Merlin.Dump.iter_identifiers_with_location (Context.dump ctx) (fun id loc ->
       let name = id.name in
       let prefix = name.prefix in
       let base = name.base in

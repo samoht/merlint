@@ -7,7 +7,7 @@ let check (ctx : Context.file) =
   (* Check identifiers for Str module usage *)
   (* In typedtree, we get ["Stdlib"; "Str"] or ["Str"]
      In parsetree, we get ["Str"] for Str.function_name *)
-  Dump.check_module_usage ~full_path:filename dump_data.identifiers "Str"
+  Merlin.Dump.check_module_usage ~full_path:filename dump_data.identifiers "Str"
     (fun ~loc -> Issue.v ~loc ())
 
 let pp ppf () =

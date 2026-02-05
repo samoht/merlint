@@ -64,17 +64,17 @@ let rec files dir =
   in
   Array.to_list entries
   |> List.concat_map (fun entry ->
-         let path = Fpath.(dir_path / entry) in
-         let path_str = Fpath.to_string path in
-         if
-           entry = "dune" && Sys.file_exists path_str
-           && not (Sys.is_directory path_str)
-         then [ path ]
-         else if
-           Sys.is_directory path_str && entry <> "_build" && entry <> ".git"
-           && entry <> "_opam"
-         then files path
-         else [])
+      let path = Fpath.(dir_path / entry) in
+      let path_str = Fpath.to_string path in
+      if
+        entry = "dune" && Sys.file_exists path_str
+        && not (Sys.is_directory path_str)
+      then [ path ]
+      else if
+        Sys.is_directory path_str && entry <> "_build" && entry <> ".git"
+        && entry <> "_opam"
+      then files path
+      else [])
 
 (** Parse a dune file and extract module information *)
 let parse_dune_file filename =
@@ -299,10 +299,10 @@ let project_files dune_describe =
 let executable_modules dune_describe =
   dune_describe.executables |> List.concat_map snd
   |> List.filter_map (fun file ->
-         let file_str = Fpath.to_string file in
-         if String.ends_with ~suffix:".ml" file_str then
-           Some (String.capitalize_ascii Fpath.(file |> rem_ext |> basename))
-         else None)
+      let file_str = Fpath.to_string file in
+      if String.ends_with ~suffix:".ml" file_str then
+        Some (String.capitalize_ascii Fpath.(file |> rem_ext |> basename))
+      else None)
   |> List.sort_uniq String.compare
 
 (** Get library modules from describe *)
@@ -310,10 +310,10 @@ let lib_modules dune_describe =
   dune_describe.libraries
   |> List.concat_map (fun (lib_info : library_info) -> lib_info.files)
   |> List.filter_map (fun file ->
-         let file_str = Fpath.to_string file in
-         if String.ends_with ~suffix:".ml" file_str then
-           Some Fpath.(file |> rem_ext |> basename)
-         else None)
+      let file_str = Fpath.to_string file in
+      if String.ends_with ~suffix:".ml" file_str then
+        Some Fpath.(file |> rem_ext |> basename)
+      else None)
   |> List.sort_uniq String.compare
 
 (** Get test modules from describe *)
@@ -321,10 +321,10 @@ let test_modules dune_describe =
   dune_describe.tests
   |> List.concat_map (fun (t : test_info) -> t.files)
   |> List.filter_map (fun file ->
-         let file_str = Fpath.to_string file in
-         if String.ends_with ~suffix:".ml" file_str then
-           Some Fpath.(file |> rem_ext |> basename)
-         else None)
+      let file_str = Fpath.to_string file in
+      if String.ends_with ~suffix:".ml" file_str then
+        Some Fpath.(file |> rem_ext |> basename)
+      else None)
   |> List.sort_uniq String.compare
 
 (** Get project structure from dune files *)
@@ -406,30 +406,30 @@ let describe_impl project_root =
   let libraries =
     structure
     |> List.filter_map (function
-         | Library { name; public_name; dir; modules } ->
-             let files =
-               item_files (Library { name; public_name; dir; modules })
-             in
-             Some ({ name; public_name; files } : library_info)
-         | _ -> None)
+      | Library { name; public_name; dir; modules } ->
+          let files =
+            item_files (Library { name; public_name; dir; modules })
+          in
+          Some ({ name; public_name; files } : library_info)
+      | _ -> None)
   in
   let executables =
     structure
     |> List.filter_map (function
-         | Executable { names; dir; modules } -> (
-             let files = item_files (Executable { names; dir; modules }) in
-             match names with [] -> None | main :: _ -> Some (main, files))
-         | _ -> None)
+      | Executable { names; dir; modules } -> (
+          let files = item_files (Executable { names; dir; modules }) in
+          match names with [] -> None | main :: _ -> Some (main, files))
+      | _ -> None)
   in
   let tests =
     structure
     |> List.filter_map (function
-         | Test { names; dir; modules; libraries } -> (
-             let files = item_files (Test { names; dir; modules; libraries }) in
-             match names with
-             | [] -> None
-             | main :: _ -> Some { name = main; files; libraries })
-         | _ -> None)
+      | Test { names; dir; modules; libraries } -> (
+          let files = item_files (Test { names; dir; modules; libraries }) in
+          match names with
+          | [] -> None
+          | main :: _ -> Some { name = main; files; libraries })
+      | _ -> None)
   in
   { libraries; executables; tests }
 

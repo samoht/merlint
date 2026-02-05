@@ -7,10 +7,10 @@ let check ctx =
   (* Check type names *)
   let ast = Context.dump ctx in
   List.filter_map
-    (fun (type_elt : Dump.elt) ->
+    (fun (type_elt : Merlin.Dump.elt) ->
       let name_str = type_elt.name.base in
       if name_str <> Naming.to_lowercase_snake_case name_str then
-        match Dump.location type_elt with
+        match Merlin.Dump.location type_elt with
         | Some loc ->
             Some
               (Issue.v ~loc

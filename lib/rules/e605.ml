@@ -75,10 +75,10 @@ let check (ctx : Context.project) =
   let test_files_in_list =
     files
     |> List.filter (fun f ->
-           String.ends_with ~suffix:".ml" f
-           &&
-           let basename = Filename.basename f |> Filename.remove_extension in
-           String.starts_with ~prefix:"test_" basename || basename = "test")
+        String.ends_with ~suffix:".ml" f
+        &&
+        let basename = Filename.basename f |> Filename.remove_extension in
+        String.starts_with ~prefix:"test_" basename || basename = "test")
   in
   Logs.debug (fun m ->
       m "E605: Test .ml files in analyzed files: %d"

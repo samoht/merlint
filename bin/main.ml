@@ -10,10 +10,6 @@ let setup_log ?style_renderer log_level =
   Logs.set_level log_level;
   Logs.set_reporter (Logs_fmt.reporter ~dst:Fmt.stderr ~app:Fmt.stdout ())
 
-let check_ocamlmerlin () =
-  let cmd = "which ocamlmerlin > /dev/null 2>&1" in
-  match Unix.system cmd with Unix.WEXITED 0 -> true | _ -> false
-
 let terminal_width () =
   try
     let ic = Unix.open_process_in "tput cols 2>/dev/null" in
@@ -88,7 +84,7 @@ let print_issue_group (error_code, issues) =
           (* Print each line of the hint in gray *)
           String.split_on_char '\n' wrapped_hint
           |> List.iter (fun line ->
-                 Fmt.pr "%a@." (Fmt.styled `Faint Fmt.string) line)
+              Fmt.pr "%a@." (Fmt.styled `Faint Fmt.string) line)
       | None -> ());
 
       (* Print each issue with location and description *)
@@ -382,15 +378,6 @@ let show_configuration files =
   else Fmt.pr "  %a@." Merlint.Rule_config.pp config.exclusions;
   Stdlib.exit 0
 
-let check_merlin_installed () =
-  if not (check_ocamlmerlin ()) then (
-    Log.err (fun m -> m "ocamlmerlin not found in PATH");
-    Log.err (fun m -> m "To fix this, run one of the following:");
-    Log.err (fun m -> m "  1. eval $(opam env)  # If using opam");
-    Log.err (fun m ->
-        m "  2. opam install merlin  # If merlin is not installed");
-    Stdlib.exit 1)
-
 let parse_rule_filter rules_spec =
   match rules_spec with
   | None -> None
@@ -405,10 +392,9 @@ let main style_renderer log_level exclude_patterns rules_spec ~show_profile
     ~show_config files =
   setup_log ?style_renderer log_level;
   if show_config then show_configuration files
-  else (
-    check_merlin_installed ();
+  else
     let rule_filter = parse_rule_filter rules_spec in
-    analyze_files ~exclude_patterns ?rule_filter ~show_profile files)
+    analyze_files ~exclude_patterns ?rule_filter ~show_profile files
 
 let cmd =
   let doc = "Analyze OCaml code for style issues" in

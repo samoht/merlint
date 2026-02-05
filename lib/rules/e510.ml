@@ -6,7 +6,7 @@ let check (ctx : Context.file) =
   try
     let dump_data = Context.dump ctx in
     (* Get all identifiers from the typedtree *)
-    let identifiers = dump_data.Dump.identifiers in
+    let identifiers = dump_data.Merlin.Dump.identifiers in
 
     (* Check if any logging functions are used *)
     let log_functions =
@@ -29,7 +29,7 @@ let check (ctx : Context.file) =
         (fun (module_name, func_name) ->
           List.exists
             (fun ident ->
-              match ident.Dump.name.prefix with
+              match ident.Merlin.Dump.name.prefix with
               | prefix_mod :: _ when prefix_mod = module_name ->
                   ident.name.base = func_name
               | _ -> false)
@@ -41,13 +41,13 @@ let check (ctx : Context.file) =
     let has_log_source =
       List.exists
         (fun ident ->
-          match (ident.Dump.name.prefix, ident.name.base) with
+          match (ident.Merlin.Dump.name.prefix, ident.name.base) with
           | [ "Logs"; "Src" ], "create" -> true
           | [ "Logs" ], "src_log" -> true
           | _, ("log_src" | "src") ->
               (* Check if it's a value definition for log source *)
               List.exists
-                (fun value -> value.Dump.name.base = ident.name.base)
+                (fun value -> value.Merlin.Dump.name.base = ident.name.base)
                 dump_data.values
           | _ -> false)
         identifiers

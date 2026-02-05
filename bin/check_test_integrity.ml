@@ -82,8 +82,9 @@ let test_directories cram_dir =
   if Sys.file_exists cram_dir && Sys.is_directory cram_dir then
     Sys.readdir cram_dir |> Array.to_list
     |> List.filter (fun name ->
-           String.ends_with ~suffix:".t" name
-           && Sys.is_directory (Filename.concat cram_dir name))
+        String.ends_with ~suffix:".t" name
+        && (not (String.length name > 0 && name.[0] = '.'))
+        && Sys.is_directory (Filename.concat cram_dir name))
     |> List.filter_map extract_error_code
   else []
 
