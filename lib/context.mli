@@ -9,13 +9,13 @@ type file = {
   filename : string;  (** The current file being analyzed. *)
   config : Config.t;  (** The merlint configuration. *)
   project_root : string;  (** The project root directory. *)
-  ast : Ast.t Lazy.t;  (** AST control flow from ppxlib (lazy). *)
+  ast : Ast.t Lazy.t;  (** AST control flow (lazy). *)
   dump : Merlin.Dump.t Lazy.t;
       (** Names/identifiers from Merlint_backend dump (lazy). *)
   outline : Outline.t Lazy.t;  (** Outline from Merlint_backend (lazy). *)
   content : string Lazy.t;  (** File content (lazy). *)
   functions : (string * Ast.expr) list Lazy.t;
-      (** Functions extracted with ppxlib (lazy). *)
+      (** Functions extracted from parsetree (lazy). *)
 }
 
 type project = {

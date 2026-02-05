@@ -140,8 +140,8 @@ let tests =
     test_case "check_type_doc" `Quick test_check_type_doc;
     test_case "is_function_signature" `Quick test_is_function_signature;
     test_case "extract_doc_comments" `Quick test_extract_doc_comments;
-    (* TODO: Fix this test - the extract_doc_comments function should use ppxlib 
-       instead of string parsing to properly handle multiline comments *)
+    (* TODO: Fix this test - the extract_doc_comments function should use AST
+       parsing instead of string parsing to properly handle multiline comments *)
     (* test_case "extract_multiline_doc" `Quick test_extract_multiline_doc; *)
   ]
 

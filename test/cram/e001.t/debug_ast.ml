@@ -1,4 +1,4 @@
-open Ppxlib
+open Parsetree
 
 let () =
   let content = In_channel.with_open_text "bad.ml" In_channel.input_all in

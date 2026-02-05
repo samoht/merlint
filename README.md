@@ -164,7 +164,7 @@ merlint lib/ bin/
 Merlint uses a multi-strategy approach to analyze OCaml code:
 
 1.  **Merlin outline** for function boundaries and line counts.
-2.  **`ppxlib` on `parsetree`** for cyclomatic complexity, control flow, and name extraction.
+2.  **Merlin AST dump** for name extraction and **compiler-libs parsetree** for cyclomatic complexity and control flow.
 3.  **Pattern matching and regex on source text** for detecting specific code patterns.
 
 This hybrid approach ensures accurate analysis while maintaining simplicity and performance.
