@@ -32,31 +32,15 @@ let describe_ref =
       ignore project_root;
       { libraries = []; executables = []; tests = [] })
 
-(** Find the workspace root by looking for dune-workspace up the tree *)
-let rec find_workspace_root dir =
-  let workspace = Fpath.(dir / "dune-workspace") in
-  if Sys.file_exists (Fpath.to_string workspace) then Some dir
-  else
-    let parent = Fpath.parent dir in
-    if Fpath.equal parent dir then None else find_workspace_root parent
-
 (** Ensure the project is built by running 'dune build' if needed *)
 let ensure_project_built project_root =
   let dune_project = Fpath.(project_root / "dune-project") in
   if not (Sys.file_exists (Fpath.to_string dune_project)) then
     Ok () (* Not a dune project, skip build *)
   else
-    (* In a monorepo, use the workspace root but target the specific directory *)
-    let build_root, target =
-      match find_workspace_root project_root with
-      | Some ws_root ->
-          (* Build just this package's directory, not the whole workspace *)
-          (ws_root, Fpath.to_string project_root)
-      | None -> (project_root, ".")
-    in
     let cmd =
-      Fmt.str "dune build %s --root %s 2>/dev/null" (Filename.quote target)
-        (Filename.quote (Fpath.to_string build_root))
+      Fmt.str "dune build @check --root %s 2>/dev/null"
+        (Filename.quote (Fpath.to_string project_root))
     in
     Log.info (fun m -> m "Ensuring project is built: %s" cmd);
     match Command.run cmd with
