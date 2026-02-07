@@ -126,56 +126,6 @@ let enabled_rules rule_filter =
         Merlint.Data.all_rules
   | None -> Merlint.Data.all_rules
 
-(* Print summary table by category *)
-let print_summary_table issues_by_category =
-  (* Build summary data for each category *)
-  let rows =
-    List.filter_map
-      (fun (category_name, issues) ->
-        let count = List.length issues in
-        if count = 0 then None
-        else
-          (* Group by error code to get breakdown *)
-          let by_code = group_issues_by_code issues in
-          let breakdown =
-            List.map
-              (fun (code, code_issues) ->
-                let n = List.length code_issues in
-                (* Get the title from the rule *)
-                let title =
-                  match
-                    List.find_opt
-                      (fun r -> Merlint.Rule.code r = code)
-                      Merlint.Data.all_rules
-                  with
-                  | Some rule -> Merlint.Rule.title rule
-                  | None -> code
-                in
-                Fmt.str "%d %s" n (String.lowercase_ascii title))
-              by_code
-          in
-          let details =
-            if List.length breakdown <= 2 then String.concat ", " breakdown
-            else
-              let first_two = List.filteri (fun i _ -> i < 2) breakdown in
-              Fmt.str "%s, ..." (String.concat ", " first_two)
-          in
-          Some [ category_name; Fmt.str "%d (%s)" count details ])
-      issues_by_category
-  in
-  if rows <> [] then (
-    Fmt.pr "@.";
-    let columns =
-      [
-        Tty.Table.column ~align:`Left "Category";
-        Tty.Table.column ~align:`Left "Issues";
-      ]
-    in
-    let table =
-      Tty.Table.of_string_rows ~border:Tty.Border.rounded columns rows
-    in
-    Fmt.pr "%a@." Tty.Table.pp table)
-
 (* Print summary and status *)
 let print_summary all_issues enabled_rule_count =
   let total_issues = List.length all_issues in
@@ -227,9 +177,6 @@ let run_analysis project_root dune_describe rule_filter show_profile =
 
   (* Process each category *)
   print_categorized_issues issues_by_category;
-
-  (* Print summary table *)
-  print_summary_table issues_by_category;
 
   (* Calculate the actual number of rules that were applied *)
   let enabled_rules = enabled_rules rule_filter in
