@@ -408,7 +408,7 @@ let cmd =
          dune-project).";
     ]
   in
-  let info = Cmd.info "merlint" ~version:Mono_info.version ~doc ~man in
+  let info = Cmd.info "merlint" ~version:Monopam_info.version ~doc ~man in
   Cmd.v info
     Term.(
       const main $ exclude_flag $ rules_flag $ profile_flag $ show_config_flag
