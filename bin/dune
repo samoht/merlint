@@ -2,7 +2,7 @@
  (public_name merlint)
  (name main)
  (modules main)
- (libraries merlint cmdliner fpath fmt vlog tty))
+ (libraries merlint cmdliner fpath fmt vlog tty ocaml-build-info))
 
 (executable
  (public_name merlint-doc-gen)
