@@ -165,10 +165,15 @@ let print_summary_table issues_by_category =
   in
   if rows <> [] then (
     Fmt.pr "@.";
+    let term_width = Tty.Width.terminal_width () in
+    (* Account for borders and padding: 2 borders + 2 middle + 4 padding = 8 *)
+    let available = term_width - 8 in
+    let cat_width = min 20 (available / 4) in
+    let issues_width = available - cat_width in
     let columns =
       [
-        Tty.Table.column ~align:`Left "Category";
-        Tty.Table.column ~align:`Left "Issues";
+        Tty.Table.column ~align:`Left ~max_width:cat_width "Category";
+        Tty.Table.column ~align:`Left ~max_width:issues_width "Issues";
       ]
     in
     let table =
