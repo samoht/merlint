@@ -19,7 +19,6 @@
   ocaml
   dune
   jsont
-  jsont-bytesrw
   cmdliner
   merlin
   re

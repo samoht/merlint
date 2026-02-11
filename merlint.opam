@@ -12,7 +12,6 @@ depends: [
   "ocaml"
   "dune" {>= "3.0"}
   "jsont"
-  "jsont-bytesrw"
   "cmdliner"
   "merlin"
   "re"
