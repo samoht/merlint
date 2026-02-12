@@ -10,7 +10,7 @@ homepage: "https://tangled.org/gazagnaire.org/merlint"
 bug-reports: "https://tangled.org/gazagnaire.org/merlint/issues"
 depends: [
   "ocaml"
-  "dune" {>= "3.0"}
+  "dune" {>= "3.21"}
   "jsont"
   "cmdliner"
   "merlin"
@@ -38,4 +38,5 @@ build: [
     "@doc" {with-doc}
   ]
 ]
-dev-repo: "https://tangled.org/gazagnaire.org/merlint"
+dev-repo: "git+https://tangled.org/gazagnaire.org/merlint"
+x-maintenance-intent: ["(latest)"]

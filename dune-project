@@ -1,10 +1,10 @@
-(lang dune 3.0)
+(lang dune 3.21)
 (using directory-targets 0.1)
 (name merlint)
 (generate_opam_files true)
 
-(source
- (uri https://tangled.org/gazagnaire.org/merlint))
+
+(source (tangled gazagnaire.org/merlint))
 
 (package
  (name merlint)
@@ -13,8 +13,6 @@
  (maintainers "Thomas Gazagnaire <thomas@gazagnaire.org>")
  (authors "Thomas Gazagnaire <thomas@gazagnaire.org>")
  (license ISC)
- (homepage "https://tangled.org/gazagnaire.org/merlint")
- (bug_reports "https://tangled.org/gazagnaire.org/merlint/issues")
  (depends
   ocaml
   dune
