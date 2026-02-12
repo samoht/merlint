@@ -328,16 +328,24 @@ let find_user_id json =
             ( "Test Structure",
               [
                 Paragraph
-                  "**`test/test.ml`**: A main test runner that aggregates test \
-                   suites from individual `test_*.ml` files.";
+                  "**Directory Layout**: The test directory mirrors the lib \
+                   directory structure. `lib/x.ml` has tests in \
+                   `test/test_x.ml`. `lib/foo/x.ml` has tests in \
+                   `test/foo/test_x.ml`.";
                 Paragraph
-                  "**`test/test_*.ml`**: Each `test_*.ml` file contains the \
-                   tests for a specific module.";
-                Paragraph "**`test/dune`**: Defines the test executable.";
+                  "**`test/test.ml`**: The main test runner that calls \
+                   `Alcotest.run \"name\" [Test_x.suite; Test_y.suite; ...]`.";
+                Paragraph
+                  "**`test/test_x.ml`**: Each `test_x.ml` file contains tests \
+                   for the corresponding `lib/x.ml` and exports a single \
+                   `suite` value.";
+                Paragraph
+                  "**`test/dune`**: Defines the test executable or cram tests.";
               ] );
           Paragraph
             "**Individual Test Files**: Each `test_*.ml` file should export a \
-             `suite` value of type `(string * Alcotest.test_case list) list`.";
+             single `suite` value of type `string * unit Alcotest.test_case \
+             list`. Not a list of suites - just one suite per test module.";
           Paragraph "**Test Naming Convention**:";
           Paragraph
             "- Test suite names should be lowercase, single words (e.g., \

@@ -86,9 +86,9 @@ let check_test_mli_file filename content =
           trimmed <> "" && not (String.starts_with ~prefix:"(*" trimmed))
         lines
     in
-    (* Check if it exports only a suite with the correct type *)
-    let exports_suite =
-      List.exists
+    (* Check if it exports suite *)
+    let suite_line =
+      List.find_opt
         (fun line ->
           Re.execp
             (Re.compile
@@ -103,6 +103,20 @@ let check_test_mli_file filename content =
                   ]))
             line)
         non_comment_lines
+    in
+    let exports_suite = Option.is_some suite_line in
+    (* Check if suite has correct type: string * unit Alcotest.test_case list *)
+    let has_correct_type =
+      match suite_line with
+      | Some line ->
+          (* Normalize whitespace and check exact type *)
+          let normalized =
+            Re.replace_string (Re.compile (Re.rep1 Re.space)) ~by:" " line
+            |> String.trim
+          in
+          String.ends_with ~suffix:"string * unit Alcotest.test_case list"
+            normalized
+      | None -> true
     in
     let exports_other =
       List.exists
@@ -129,7 +143,7 @@ let check_test_mli_file filename content =
           is_val_line && not is_suite_line)
         non_comment_lines
     in
-    if exports_other || not exports_suite then
+    if exports_other || (not exports_suite) || not has_correct_type then
       [
         Issue.v
           ~loc:

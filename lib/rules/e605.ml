@@ -33,26 +33,50 @@ let contains_only_types_and_modules file_path =
       structure
   with _ -> false (* If we can't parse, assume it needs tests *)
 
+(** Compute expected test file path from source file. lib/foo.ml ->
+    test/test_foo.ml lib/sub/bar.ml -> test/sub/test_bar.ml *)
+let expected_test_path source_file =
+  let path = source_file in
+  (* Find /lib/ and replace with /test/, then rename the file *)
+  match Astring.String.find_sub ~sub:"/lib/" path with
+  | Some idx ->
+      let before = String.sub path 0 idx in
+      let after = String.sub path (idx + 5) (String.length path - idx - 5) in
+      let dirname = Filename.dirname after in
+      let basename = Filename.basename after in
+      let test_name = "test_" ^ basename in
+      let test_after =
+        if dirname = "." then test_name else Filename.concat dirname test_name
+      in
+      Fmt.str "%s/test/%s" before test_after
+  | None ->
+      (* Fallback: just prefix with test_ *)
+      let dir = Filename.dirname source_file in
+      let base = Filename.basename source_file in
+      Filename.concat dir ("test_" ^ base)
+
 (** Creates a missing test file issue for a library module without corresponding
     test *)
 let create_missing_test_issue module_name files =
-  (* Find the source file to generate a location *)
-  let loc =
-    match
-      List.find_opt
-        (fun f ->
-          let basename = Filename.basename f |> Filename.remove_extension in
-          String.lowercase_ascii basename = String.lowercase_ascii module_name)
-        files
-    with
-    | Some file ->
-        Location.v ~file ~start_line:1 ~start_col:0 ~end_line:1 ~end_col:0
-    | None ->
-        Location.v ~file:"dune" ~start_line:1 ~start_col:0 ~end_line:1
-          ~end_col:0
+  (* Find the source file to generate a location and compute expected path *)
+  let source_file =
+    List.find_opt
+      (fun f ->
+        let basename = Filename.basename f |> Filename.remove_extension in
+        String.lowercase_ascii basename = String.lowercase_ascii module_name)
+      files
   in
-  Issue.v ~loc
-    { module_name; expected_test_file = Fmt.str "test_%s.ml" module_name }
+  let loc, expected_path =
+    match source_file with
+    | Some file ->
+        ( Location.v ~file ~start_line:1 ~start_col:0 ~end_line:1 ~end_col:0,
+          expected_test_path file )
+    | None ->
+        ( Location.v ~file:"dune" ~start_line:1 ~start_col:0 ~end_line:1
+            ~end_col:0,
+          Fmt.str "test/test_%s.ml" module_name )
+  in
+  Issue.v ~loc { module_name; expected_test_file = expected_path }
 
 let check (ctx : Context.project) =
   let files = Context.all_files ctx in
@@ -141,8 +165,8 @@ let check (ctx : Context.project) =
   List.map (fun m -> create_missing_test_issue m files) missing_tests
 
 let pp ppf { module_name; expected_test_file } =
-  Fmt.pf ppf "Library module %s is missing test file %s" module_name
-    expected_test_file
+  Fmt.pf ppf "Library module '%s' is missing test file (expected: %s)"
+    module_name expected_test_file
 
 let rule =
   Rule.v ~code:"E605" ~title:"Missing Test File" ~category:Testing
