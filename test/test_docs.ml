@@ -6,31 +6,44 @@ let style_issue : Merlint.Docs.style_issue Alcotest.testable =
 
 let test_check_function_doc () =
   let open Merlint.Docs in
-  (* Good function doc *)
+  (* Good function doc with [name args] format *)
   let issues =
-    check_function_doc ~name:"foo" ~doc:"[foo x] computes foo of x."
+    check_function_doc ~name:"foo" ~signature:"int -> int"
+      ~doc:"[foo x] computes foo of x."
   in
   Alcotest.(check (list style_issue)) "good function doc" [] issues;
 
   (* Missing period *)
   let issues =
-    check_function_doc ~name:"bar" ~doc:"[bar x] computes bar of x"
+    check_function_doc ~name:"bar" ~signature:"int -> int"
+      ~doc:"[bar x] computes bar of x"
   in
   Alcotest.(check (list style_issue)) "missing period" [ Missing_period ] issues;
 
-  (* Bad format *)
+  (* Redundant phrase - but no Bad_function_format since we're not using [name] format *)
   let issues =
-    check_function_doc ~name:"baz" ~doc:"This function computes baz."
+    check_function_doc ~name:"baz" ~signature:"unit -> unit"
+      ~doc:"This function computes baz."
   in
   Alcotest.(check (list style_issue))
-    "bad format"
-    [ Redundant_phrase "This function"; Bad_function_format ]
+    "redundant phrase only"
+    [ Redundant_phrase "This function" ]
     issues;
 
-  (* Missing bracket format *)
-  let issues = check_function_doc ~name:"qux" ~doc:"Computes qux of x." in
+  (* No bracket format is OK now - we only flag if [name] is used but wrong *)
+  let issues =
+    check_function_doc ~name:"qux" ~signature:"int -> int"
+      ~doc:"Computes qux of x."
+  in
+  Alcotest.(check (list style_issue)) "no brackets is fine" [] issues;
+
+  (* Wrong name in [name] format *)
+  let issues =
+    check_function_doc ~name:"correct" ~signature:"int -> int"
+      ~doc:"[wrong x] computes something."
+  in
   Alcotest.(check (list style_issue))
-    "missing brackets" [ Bad_function_format ] issues
+    "wrong name in brackets" [ Bad_function_format ] issues
 
 let test_check_value_doc () =
   let open Merlint.Docs in
@@ -40,10 +53,9 @@ let test_check_value_doc () =
   in
   Alcotest.(check (list style_issue)) "good value doc" [] issues;
 
-  (* Missing [name] format *)
+  (* No [name] format is OK now - we only flag if [name] is used but wrong *)
   let issues = check_value_doc ~name:"version" ~doc:"The current version." in
-  Alcotest.(check (list style_issue))
-    "missing bracket format" [ Bad_value_format ] issues;
+  Alcotest.(check (list style_issue)) "no bracket format is fine" [] issues;
 
   (* Missing period *)
   let issues =
@@ -51,14 +63,19 @@ let test_check_value_doc () =
   in
   Alcotest.(check (list style_issue)) "missing period" [ Missing_period ] issues;
 
-  (* Redundant phrase *)
+  (* Redundant phrase - but no Bad_value_format since we're not using [name] format *)
   let issues =
     check_value_doc ~name:"data" ~doc:"This value represents data."
   in
   Alcotest.(check (list style_issue))
-    "redundant phrase"
-    [ Redundant_phrase "This value"; Bad_value_format ]
-    issues
+    "redundant phrase only"
+    [ Redundant_phrase "This value" ]
+    issues;
+
+  (* Wrong name in [name] format *)
+  let issues = check_value_doc ~name:"correct" ~doc:"[wrong] is a bad name." in
+  Alcotest.(check (list style_issue))
+    "wrong name in brackets" [ Bad_value_format ] issues
 
 let test_check_type_doc () =
   let open Merlint.Docs in

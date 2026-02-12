@@ -354,31 +354,45 @@ let project_structure project_root =
     (fun f -> Log.debug (fun m -> m "  Dune file: %a" Fpath.pp f))
     dune_files;
 
-  (* First pass: find all cram directories *)
+  (* First pass: find "cram-only" directories - directories that contain a cram
+     stanza but no test, library, or executable stanzas. Directories like
+     monopam/test that have both (test ...) and (cram ...) should not be
+     treated as cram-only directories. *)
   let cram_dirs =
     List.fold_left
       (fun acc dune_file ->
         let dir = Fpath.(dune_file |> parent |> normalize) in
         let stanzas = parse_dune_file dune_file in
-        if
+        let has_cram =
           List.exists
             (function Sexp.List (Sexp.Atom "cram" :: _) -> true | _ -> false)
             stanzas
-        then (
+        in
+        let has_other_stanzas =
+          List.exists
+            (function
+              | Sexp.List (Sexp.Atom kind :: _)
+                when kind = "test" || kind = "tests" || kind = "library"
+                     || kind = "executable" || kind = "executables" ->
+                  true
+              | _ -> false)
+            stanzas
+        in
+        if has_cram && not has_other_stanzas then (
           Log.debug (fun m ->
-              m "Found cram directory: %s" (Fpath.to_string dir));
+              m "Found cram-only directory: %s" (Fpath.to_string dir));
           dir :: acc)
         else acc)
       [] dune_files
   in
   Log.debug (fun m ->
-      m "Total cram directories found: %d" (List.length cram_dirs));
+      m "Total cram-only directories found: %d" (List.length cram_dirs));
   List.iter
     (fun dir -> Log.debug (fun m -> m "Cram dir: %s" (Fpath.to_string dir)))
     cram_dirs;
 
-  (* Helper to check if a directory is under a cram directory *)
-  let is_under_cram_dir path =
+  (* Helper to check if a directory is under a cram-only directory *)
+  let is_under_cram_only_dir path =
     let path_fp = path |> Fpath.normalize in
     let result =
       List.exists
@@ -389,17 +403,17 @@ let project_structure project_root =
     in
     if result then
       Log.debug (fun m ->
-          m "Path %s is under cram directory" (Fpath.to_string path_fp));
+          m "Path %s is under cram-only directory" (Fpath.to_string path_fp));
     result
   in
 
-  (* Extract project structure, excluding anything under cram directories *)
+  (* Extract project structure, excluding anything under cram-only directories *)
   let project_items =
     List.concat_map
       (fun dune_file ->
         if should_include_dir dune_file then
           let dir = Fpath.(dune_file |> parent |> normalize) in
-          if not (is_under_cram_dir dir) then
+          if not (is_under_cram_only_dir dir) then
             let stanzas = parse_dune_file dune_file in
             List.filter_map (extract_project_item dir) stanzas
           else (
