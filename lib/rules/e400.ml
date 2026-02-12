@@ -5,6 +5,24 @@ type payload = { module_name : string; file : string }
 
 let check_mli_documentation_content ~module_name ~filename content =
   let lines = String.split_on_char '\n' content in
+  let starts_with prefix s =
+    String.length s >= String.length prefix
+    && String.sub s 0 (String.length prefix) = prefix
+  in
+  let ends_with suffix s =
+    String.length s >= String.length suffix
+    && String.sub s
+         (String.length s - String.length suffix)
+         (String.length suffix)
+       = suffix
+  in
+  (* Skip regular comments (including multi-line license comments) *)
+  let rec skip_comment = function
+    | [] -> []
+    | line :: rest ->
+        let trimmed = String.trim line in
+        if ends_with "*)" trimmed then rest else skip_comment rest
+  in
   let rec check_first_non_empty = function
     | [] ->
         (* Empty file - missing documentation *)
@@ -12,8 +30,11 @@ let check_mli_documentation_content ~module_name ~filename content =
     | line :: rest ->
         let trimmed = String.trim line in
         if trimmed = "" then check_first_non_empty rest
-        else if String.length trimmed >= 3 && String.sub trimmed 0 3 = "(**"
-        then None
+        else if starts_with "(**" trimmed then None
+        else if starts_with "(*" trimmed then
+          (* Regular comment - skip it and continue looking *)
+          if ends_with "*)" trimmed then check_first_non_empty rest
+          else check_first_non_empty (skip_comment rest)
         else Some (Issue.v { module_name; file = filename })
   in
   check_first_non_empty lines
