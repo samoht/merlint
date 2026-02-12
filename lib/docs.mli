@@ -10,12 +10,15 @@ type style_issue =
   | Bad_function_format
   | Bad_value_format
   | Bad_operator_format
+  | Wrong_arg_count of { expected : int; found : int }
   | Redundant_phrase of string
   | Regular_comment_instead_of_doc  (** Documentation style issues. *)
 
-val check_function_doc : name:string -> doc:string -> style_issue list
-(** [check_function_doc ~name ~doc] checks function documentation style.
-    Functions should use the format: [[function_name args] description.]. *)
+val check_function_doc :
+  name:string -> signature:string -> doc:string -> style_issue list
+(** [check_function_doc ~name ~signature ~doc] checks function documentation
+    style. If using [name args] format, verifies the name matches and arg count
+    is correct. *)
 
 val check_type_doc : doc:string -> style_issue list
 (** [check_type_doc ~doc] checks type documentation style. Types should have

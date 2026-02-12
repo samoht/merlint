@@ -5,51 +5,102 @@ type style_issue =
   | Bad_function_format
   | Bad_value_format
   | Bad_operator_format
+  | Wrong_arg_count of { expected : int; found : int }
   | Redundant_phrase of string
   | Regular_comment_instead_of_doc
 
-let check_function_doc ~name ~doc =
-  (* Function docs should follow: [function_name args] description. *)
+(** Count required and total arguments in a signature string. e.g., "?foo:int ->
+    string -> int -> bool" has 2 required, 3 total. Returns (required_count,
+    total_count). *)
+let count_args signature =
+  let arrows = String.split_on_char '-' signature in
+  (* Each arrow segment except the last is an argument *)
+  let total_count = max 0 (List.length arrows - 1) in
+  (* Count optional args (those with ? prefix) *)
+  let optional_count =
+    List.fold_left
+      (fun acc s -> if String.contains s '?' then acc + 1 else acc)
+      0 arrows
+  in
+  let required_count = max 0 (total_count - optional_count) in
+  (required_count, total_count)
+
+(** Count arguments in a doc pattern [name arg1 arg2 ...] *)
+let count_doc_args doc_content =
+  (* doc_content is the content inside [...], e.g., "name arg1 arg2" *)
+  let parts =
+    String.split_on_char ' ' doc_content
+    |> List.filter (fun s -> String.trim s <> "")
+  in
+  (* First part is the name, rest are args *)
+  max 0 (List.length parts - 1)
+
+let check_function_doc ~name ~signature ~doc =
+  (* If doc uses [x ...] format, verify x matches the function name
+     and has the right number of arguments. Otherwise, accept any doc format. *)
   let issues = ref [] in
 
-  (* Check if this is an operator (contains special operator characters or is an operator keyword) *)
+  (* Check if this is an operator *)
   let operator_keywords =
     [ "mod"; "land"; "lor"; "lxor"; "lsl"; "lsr"; "asr"; "or"; "and" ]
   in
   let is_operator =
-    (* Check if it's an operator keyword *)
     List.mem name operator_keywords
-    ||
-    (* Or if name contains operator characters and doesn't start with a letter *)
-    String.length name > 0
-    && not
-         (match name.[0] with
-         | 'a' .. 'z' | 'A' .. 'Z' | '_' -> true
-         | _ -> false)
+    || String.length name > 0
+       && not
+            (match name.[0] with
+            | 'a' .. 'z' | 'A' .. 'Z' | '_' -> true
+            | _ -> false)
   in
 
-  let has_bracket_format =
-    if is_operator then
-      (* For operators, only accept infix notation [x op y] *)
-      let infix_pattern =
-        Re.compile
-          (Re.seq
-             [ Re.str "["; Re.rep1 Re.alnum; Re.space; Re.str name; Re.space ])
-      in
-      Re.execp infix_pattern doc
-    else
-      (* Regular function: [name ...] format *)
-      let pattern =
-        Re.compile
-          (Re.seq [ Re.str "["; Re.str name; Re.alt [ Re.space; Re.str "]" ] ])
-      in
-      Re.execp pattern doc
+  (* Extract the content inside [...] if present *)
+  let bracket_pattern =
+    Re.compile
+      (Re.seq
+         [
+           Re.str "[";
+           Re.group (Re.rep1 (Re.diff Re.any (Re.char ']')));
+           Re.str "]";
+         ])
   in
+  (match Re.exec_opt bracket_pattern doc with
+  | Some groups ->
+      let bracket_content = Re.Group.get groups 1 in
+      let parts =
+        String.split_on_char ' ' bracket_content
+        |> List.filter (fun s -> String.trim s <> "")
+      in
+      let doc_name = if List.length parts > 0 then List.hd parts else "" in
+      (* If using bracket format, the name should match *)
+      if is_operator then
+        (* For operators, check infix notation [x op y] *)
+        let infix_pattern =
+          Re.compile
+            (Re.seq
+               [ Re.str "["; Re.rep1 Re.alnum; Re.space; Re.str name; Re.space ])
+        in
+        if not (Re.execp infix_pattern doc) then
+          issues := Bad_operator_format :: !issues
+        else begin
+          if doc_name <> name then issues := Bad_function_format :: !issues;
+          (* Check argument count - [name] alone is always valid,
+           but if args are provided they should be within valid range *)
+          let found_args = count_doc_args bracket_content in
+          if found_args > 0 then begin
+            let min_args, max_args = count_args signature in
+            if found_args < min_args then
+              issues :=
+                Wrong_arg_count { expected = min_args; found = found_args }
+                :: !issues
+            else if found_args > max_args then
+              issues :=
+                Wrong_arg_count { expected = max_args; found = found_args }
+                :: !issues
+          end
+        end
+  | None -> ());
 
-  if not has_bracket_format then
-    issues :=
-      (if is_operator then Bad_operator_format else Bad_function_format)
-      :: !issues;
+  (* No bracket format - that's fine, accept as valid *)
 
   (* Check for redundant phrases *)
   let lower = String.lowercase_ascii doc in
@@ -100,17 +151,28 @@ let check_type_doc ~doc =
   !issues
 
 let check_value_doc ~name ~doc =
-  (* Non-function values should use [name] format and have simple descriptions ending with period *)
+  (* If doc uses [x] format, verify x matches the value name.
+     Otherwise, accept any doc format. *)
   let issues = ref [] in
 
-  (* Check if the documentation starts with [name] *)
-  let has_bracket_format =
-    let pattern = Re.compile (Re.seq [ Re.str "["; Re.str name; Re.str "]" ]) in
-    Re.execp pattern doc
+  (* Extract the name used in [name] format if present *)
+  let bracket_pattern =
+    Re.compile
+      (Re.seq
+         [
+           Re.str "[";
+           Re.group (Re.rep1 (Re.diff Re.any (Re.set " ]")));
+           Re.str "]";
+         ])
   in
+  (match Re.exec_opt bracket_pattern doc with
+  | Some groups ->
+      let doc_name = Re.Group.get groups 1 in
+      (* If using bracket format, the name should match *)
+      if doc_name <> name then issues := Bad_value_format :: !issues
+  | None -> ());
 
-  (* Only suggest [name] format if the doc doesn't already use it *)
-  if not has_bracket_format then issues := Bad_value_format :: !issues;
+  (* No bracket format - that's fine, accept as valid *)
 
   (* Check ends with period (but not if it ends with a code block ]} or if it's a list ending with ) *)
   let trimmed = String.trim doc in
@@ -138,11 +200,14 @@ let check_value_doc ~name ~doc =
 let pp_style_issue ppf = function
   | Missing_period -> Fmt.string ppf "should end with a period"
   | Bad_function_format ->
-      Fmt.string ppf "should use '[function_name args] description.' format"
+      Fmt.string ppf "uses [name] format but name doesn't match"
   | Bad_value_format ->
-      Fmt.string ppf "should use '[value_name] description.' format"
+      Fmt.string ppf "uses [name] format but name doesn't match"
   | Bad_operator_format ->
       Fmt.string ppf "should use '[x op y] description.' format for operators"
+  | Wrong_arg_count { expected; found } ->
+      Fmt.pf ppf "has %d args in doc but function takes %d required args" found
+        expected
   | Redundant_phrase phrase -> Fmt.pf ppf "avoid redundant phrase '%s'" phrase
   | Regular_comment_instead_of_doc ->
       Fmt.string ppf "use doc comment (** ... *) instead of regular comment"

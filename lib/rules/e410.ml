@@ -30,7 +30,7 @@ let check (ctx : Context.file) =
           (* Check doc comment style using the docs module *)
           let style_issues =
             if Docs.is_function_signature signature then
-              Docs.check_function_doc ~name:value_name ~doc
+              Docs.check_function_doc ~name:value_name ~signature ~doc
             else Docs.check_value_doc ~name:value_name ~doc
           in
           match style_issues with
