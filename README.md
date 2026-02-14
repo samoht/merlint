@@ -23,13 +23,13 @@ For a complete reference of all rules, visit the official documentation:
 
 ## Output Example
 
-Merlint provides clear, color-coded output that groups issues by
+Merlint provides clear, colour-coded output that groups issues by
 category and explains how to fix them.
 
 ```
 Running merlint analysis...
 
-Analyzing 15 files
+Analysing 15 files
 
 ✓ Code Quality (0 total issues)
 ✗ Code Style (2 total issues)
@@ -69,10 +69,10 @@ dune install
 
 ### Usage
 ```bash
-# Analyze the entire project
+# Analyse the entire project
 merlint
 
-# Analyze specific files or directories
+# Analyse specific files or directories
 merlint src/ lib/
 
 # Exclude directories
@@ -161,7 +161,7 @@ merlint lib/ bin/
 
 ### Architecture
 
-Merlint uses a multi-strategy approach to analyze OCaml code:
+Merlint uses a multi-strategy approach to analyse OCaml code:
 
 1.  **Merlin outline** for function boundaries and line counts.
 2.  **Merlin AST dump** for name extraction and **compiler-libs parsetree** for cyclomatic complexity and control flow.
@@ -203,7 +203,7 @@ on AI-generated code.
 any code modification tool: use version control, review all changes,
 and test thoroughly.
 
-## License
+## Licence
 
 MIT — see LICENSE.md for details.
 
