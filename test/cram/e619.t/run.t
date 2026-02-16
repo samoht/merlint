@@ -1,5 +1,5 @@
 Test bad example - should find failwith (Fmt.str) patterns:
-  $ merlint -r E619 bad.ml
+  $ merlint -B -r E619 bad.ml
   Running merlint analysis...
   
   Analyzing 1 files
@@ -15,12 +15,19 @@ Test bad example - should find failwith (Fmt.str) patterns:
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   
+  ╭────────────┬──────────────────────────────────────────────────────╮
+  │ Category   │ Issues                                               │
+  ├────────────┼──────────────────────────────────────────────────────┤
+  │ Code Style │ 1 (1 use fmt.failwith instead of failwith (fmt.str)) │
+  ╰────────────┴──────────────────────────────────────────────────────╯
+  
+  
   Summary: ✗ 1 total issue (applied 1 rule)
   ✗ Some checks failed. See details above.
   [1]
 
 Test good example - should find no issues:
-  $ merlint -r E619 good.ml
+  $ merlint -B -r E619 good.ml
   Running merlint analysis...
   
   Analyzing 1 files

@@ -1,6 +1,6 @@
 
 Test bad example - should find test suite not included:
-  $ merlint -r E615 bad/
+  $ merlint -B -r E615 bad/
   Running merlint analysis...
   
   Analyzing 2 files
@@ -16,12 +16,19 @@ Test bad example - should find test suite not included:
     missing test suite to ensure all tests are run.
     - bad/test/test.ml:1:0: Test module test_parser is not included in bad/test/test.ml
   
+  ╭──────────────┬───────────────────────────────╮
+  │ Category     │ Issues                        │
+  ├──────────────┼───────────────────────────────┤
+  │ Test Quality │ 1 (1 test suite not included) │
+  ╰──────────────┴───────────────────────────────╯
+  
+  
   Summary: ✗ 1 total issue (applied 1 rule)
   ✗ Some checks failed. See details above.
   [1]
 
 Test good example - should find no issues:
-  $ merlint -r E615 good/
+  $ merlint -B -r E615 good/
   Running merlint analysis...
   
   Analyzing 2 files

@@ -1,5 +1,5 @@
 Test bad example - should find bad module naming:
-  $ merlint -r E305 bad.ml
+  $ merlint -B -r E305 bad.ml
   Running merlint analysis...
   
   Analyzing 1 files
@@ -16,12 +16,19 @@ Test bad example - should find bad module naming:
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   
+  ╭────────────────────┬────────────────────────────────╮
+  │ Category           │ Issues                         │
+  ├────────────────────┼────────────────────────────────┤
+  │ Naming Conventions │ 1 (1 module naming convention) │
+  ╰────────────────────┴────────────────────────────────╯
+  
+  
   Summary: ✗ 1 total issue (applied 1 rule)
   ✗ Some checks failed. See details above.
   [1]
 
 Test good example - should find no issues:
-  $ merlint -r E305 good.ml
+  $ merlint -B -r E305 good.ml
   Running merlint analysis...
   
   Analyzing 1 files

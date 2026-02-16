@@ -72,7 +72,7 @@ let check_function_doc ~name ~signature ~doc =
       in
       let doc_name = if List.length parts > 0 then List.hd parts else "" in
       (* If using bracket format, the name should match *)
-      if is_operator then
+      if is_operator then begin
         (* For operators, check infix notation [x op y] *)
         let infix_pattern =
           Re.compile
@@ -81,23 +81,25 @@ let check_function_doc ~name ~signature ~doc =
         in
         if not (Re.execp infix_pattern doc) then
           issues := Bad_operator_format :: !issues
-        else begin
-          if doc_name <> name then issues := Bad_function_format :: !issues;
-          (* Check argument count - [name] alone is always valid,
+      end
+      else begin
+        (* For regular functions, check that doc name matches function name *)
+        if doc_name <> name then issues := Bad_function_format :: !issues;
+        (* Check argument count - [name] alone is always valid,
            but if args are provided they should be within valid range *)
-          let found_args = count_doc_args bracket_content in
-          if found_args > 0 then begin
-            let min_args, max_args = count_args signature in
-            if found_args < min_args then
-              issues :=
-                Wrong_arg_count { expected = min_args; found = found_args }
-                :: !issues
-            else if found_args > max_args then
-              issues :=
-                Wrong_arg_count { expected = max_args; found = found_args }
-                :: !issues
-          end
+        let found_args = count_doc_args bracket_content in
+        if found_args > 0 then begin
+          let min_args, max_args = count_args signature in
+          if found_args < min_args then
+            issues :=
+              Wrong_arg_count { expected = min_args; found = found_args }
+              :: !issues
+          else if found_args > max_args then
+            issues :=
+              Wrong_arg_count { expected = max_args; found = found_args }
+              :: !issues
         end
+      end
   | None -> ());
 
   (* No bracket format - that's fine, accept as valid *)

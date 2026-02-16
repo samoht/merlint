@@ -1,5 +1,5 @@
 Test bad example - should find missing ocamlformat file:
-  $ merlint -r E500 bad/
+  $ merlint -B -r E500 bad/
   Running merlint analysis...
   
   Analyzing 1 files
@@ -15,12 +15,19 @@ Test bad example - should find missing ocamlformat file:
     - (global) Project is missing .ocamlformat file for consistent formatting
   ✓ Test Quality (0 total issues)
   
+  ╭───────────────────┬────────────────────────────────╮
+  │ Category          │ Issues                         │
+  ├───────────────────┼────────────────────────────────┤
+  │ Project Structure │ 1 (1 missing ocamlformat file) │
+  ╰───────────────────┴────────────────────────────────╯
+  
+  
   Summary: ✗ 1 total issue (applied 1 rule)
   ✗ Some checks failed. See details above.
   [1]
 
 Test good example - should find no issues:
-  $ merlint -r E500 good/
+  $ merlint -B -r E500 good/
   Running merlint analysis...
   
   Analyzing 1 files

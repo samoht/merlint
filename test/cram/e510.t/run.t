@@ -1,5 +1,5 @@
 Test bad example - should find missing log source:
-  $ merlint -r E510 bad.ml
+  $ merlint -B -r E510 bad.ml
   Running merlint analysis...
   
   Analyzing 1 files
@@ -15,12 +15,19 @@ Test bad example - should find missing log source:
     - (global) Module 'Bad' uses logging but has no log source defined
   ✓ Test Quality (0 total issues)
   
+  ╭───────────────────┬──────────────────────────╮
+  │ Category          │ Issues                   │
+  ├───────────────────┼──────────────────────────┤
+  │ Project Structure │ 1 (1 missing log source) │
+  ╰───────────────────┴──────────────────────────╯
+  
+  
   Summary: ✗ 1 total issue (applied 1 rule)
   ✗ Some checks failed. See details above.
   [1]
 
 Test good example - should find no issues:
-  $ merlint -r E510 good.ml
+  $ merlint -B -r E510 good.ml
   Running merlint analysis...
   
   Analyzing 1 files

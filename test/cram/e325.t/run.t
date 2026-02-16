@@ -1,5 +1,5 @@
 Test bad example - should find bad function naming convention:
-  $ merlint -r E325 bad.ml
+  $ merlint -B -r E325 bad.ml
   Running merlint analysis...
   
   Analyzing 1 files
@@ -17,12 +17,19 @@ Test bad example - should find bad function naming convention:
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   
+  ╭────────────────────┬──────────────────────────────────╮
+  │ Category           │ Issues                           │
+  ├────────────────────┼──────────────────────────────────┤
+  │ Naming Conventions │ 2 (2 function naming convention) │
+  ╰────────────────────┴──────────────────────────────────╯
+  
+  
   Summary: ✗ 2 total issues (applied 1 rule)
   ✗ Some checks failed. See details above.
   [1]
 
 Test good example - should find no issues:
-  $ merlint -r E325 good.ml
+  $ merlint -B -r E325 good.ml
   Running merlint analysis...
   
   Analyzing 1 files

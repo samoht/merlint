@@ -1,5 +1,5 @@
 Test bad example - should find function length issues:
-  $ merlint -r E005 bad.ml
+  $ merlint -B -r E005 bad.ml
   Running merlint analysis...
   
   Analyzing 1 files
@@ -19,12 +19,19 @@ Test bad example - should find function length issues:
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   
+  ╭──────────────┬──────────────────────╮
+  │ Category     │ Issues               │
+  ├──────────────┼──────────────────────┤
+  │ Code Quality │ 1 (1 long functions) │
+  ╰──────────────┴──────────────────────╯
+  
+  
   Summary: ✗ 1 total issue (applied 1 rule)
   ✗ Some checks failed. See details above.
   [1]
 
 Test pattern matching example - should handle additional allowance:
-  $ merlint -r E005 pattern_match.ml
+  $ merlint -B -r E005 pattern_match.ml
   Running merlint analysis...
   
   Analyzing 1 files
@@ -40,7 +47,7 @@ Test pattern matching example - should handle additional allowance:
   ✓ All checks passed!
 
 Test good example - should find no issues:
-  $ merlint -r E005 good.ml
+  $ merlint -B -r E005 good.ml
   Running merlint analysis...
   
   Analyzing 1 files
@@ -56,7 +63,7 @@ Test good example - should find no issues:
   ✓ All checks passed!
 
 Test long record - should not be flagged as long function:
-  $ merlint -r E005 long_record.ml
+  $ merlint -B -r E005 long_record.ml
   Running merlint analysis...
   
   Analyzing 1 files

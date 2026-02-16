@@ -1,5 +1,5 @@
 Test bad example - should find long identifier name:
-  $ merlint -r E320 bad.ml
+  $ merlint -B -r E320 bad.ml
   Running merlint analysis...
   
   Analyzing 1 files
@@ -16,12 +16,19 @@ Test bad example - should find long identifier name:
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   
+  ╭────────────────────┬─────────────────────────────╮
+  │ Category           │ Issues                      │
+  ├────────────────────┼─────────────────────────────┤
+  │ Naming Conventions │ 1 (1 long identifier names) │
+  ╰────────────────────┴─────────────────────────────╯
+  
+  
   Summary: ✗ 1 total issue (applied 1 rule)
   ✗ Some checks failed. See details above.
   [1]
 
 Test good example - should find no issues:
-  $ merlint -r E320 good.ml
+  $ merlint -B -r E320 good.ml
   Running merlint analysis...
   
   Analyzing 1 files

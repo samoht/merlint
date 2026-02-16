@@ -1,5 +1,5 @@
 Test bad example - should find missing test files:
-  $ merlint -r E605 bad/
+  $ merlint -B -r E605 bad/
   Running merlint analysis...
   
   Analyzing 5 files
@@ -14,15 +14,22 @@ Test bad example - should find missing test files:
     Each library module should have a corresponding test file to ensure proper
     testing coverage. Create test files following the naming convention
     test_<module>.ml
-    - bad/lib/config.ml:1:0: Library module config is missing test file test_config.ml
-    - bad/lib/parser.ml:1:0: Library module parser is missing test file test_parser.ml
+    - bad/lib/config.ml:1:0: Library module 'config' is missing test file (expected: bad/test/test_config.ml)
+    - bad/lib/parser.ml:1:0: Library module 'parser' is missing test file (expected: bad/test/test_parser.ml)
+  
+  ╭──────────────┬─────────────────────────╮
+  │ Category     │ Issues                  │
+  ├──────────────┼─────────────────────────┤
+  │ Test Quality │ 2 (2 missing test file) │
+  ╰──────────────┴─────────────────────────╯
+  
   
   Summary: ✗ 2 total issues (applied 1 rule)
   ✗ Some checks failed. See details above.
   [1]
 
 Test good example - should find no issues:
-  $ merlint -r E605 good/
+  $ merlint -B -r E605 good/
   Running merlint analysis...
   
   Analyzing 7 files
@@ -38,6 +45,6 @@ Test good example - should find no issues:
   ✓ All checks passed!
 
 Test multidir - analyzing lib and test together should not report missing tests when they exist:
-  $ merlint -r E605 good/lib good/test 2>&1 | grep -c "missing test file"
+  $ merlint -B -r E605 good/lib good/test 2>&1 | grep -c "missing test file"
   0
   [1]

@@ -1,5 +1,5 @@
 Test bad example - should find redundant module name:
-  $ merlint -r E330 bad/process.ml
+  $ merlint -B -r E330 bad/process.ml
   Running merlint analysis...
   
   Analyzing 1 files
@@ -18,12 +18,19 @@ Test bad example - should find redundant module name:
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   
+  ╭────────────────────┬─────────────────────────────╮
+  │ Category           │ Issues                      │
+  ├────────────────────┼─────────────────────────────┤
+  │ Naming Conventions │ 3 (3 redundant module name) │
+  ╰────────────────────┴─────────────────────────────╯
+  
+  
   Summary: ✗ 3 total issues (applied 1 rule)
   ✗ Some checks failed. See details above.
   [1]
 
 Test good example - should find no issues:
-  $ merlint -r E330 good/process.ml
+  $ merlint -B -r E330 good/process.ml
   Running merlint analysis...
   
   Analyzing 1 files
@@ -39,7 +46,7 @@ Test good example - should find no issues:
   ✓ All checks passed!
 
 Test pp module - pp function should be allowed:
-  $ merlint -r E330 good/pp.ml
+  $ merlint -B -r E330 good/pp.ml
   Running merlint analysis...
   
   Analyzing 1 files
@@ -55,7 +62,7 @@ Test pp module - pp function should be allowed:
   ✓ All checks passed!
 
 Test test functions - test_* functions in test_*.ml files should be allowed:
-  $ merlint -r E330 good/test_example.ml
+  $ merlint -B -r E330 good/test_example.ml
   Running merlint analysis...
   
   Analyzing 1 files

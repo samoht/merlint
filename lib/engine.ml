@@ -93,14 +93,13 @@ let run_project_rules ?profiling enabled_rules project_ctx =
         issues)
 
 (** Analyze a single file with applicable rules *)
-let analyze_single_file ?profiling ~config ~project_root ~file_rules filepath =
+let analyze_single_file ?profiling ~backend ~config ~project_root ~file_rules
+    filepath =
   let filename = Fpath.to_string filepath in
   try
     let merlin_start = Unix.gettimeofday () in
-    let backend = Merlin.create () in
     let outline = Merlin.outline backend ~file:filename in
     let dump = Merlin.dump_ast backend ~file:filename in
-    Merlin.close backend;
     let merlin_duration = Unix.gettimeofday () -. merlin_start in
     (match profiling with
     | Some prof ->
@@ -140,11 +139,12 @@ let run ~filter ~dune_describe ?profiling project_root =
   let project_issues = run_project_rules ?profiling enabled_rules project_ctx in
 
   let file_rules = List.filter Rule.is_file_scoped enabled_rules in
-  let file_issues =
-    List.concat_map
-      (analyze_single_file ?profiling ~config ~project_root ~file_rules)
-      files_to_analyze
+  let backend = Merlin.create () in
+  let analyze_file =
+    analyze_single_file ?profiling ~backend ~config ~project_root ~file_rules
   in
+  let file_issues = List.concat_map analyze_file files_to_analyze in
+  Merlin.close backend;
 
   let all_issues = project_issues @ file_issues in
   List.sort Rule.Run.compare all_issues

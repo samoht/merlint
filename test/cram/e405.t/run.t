@@ -1,5 +1,5 @@
 Test bad example - should find missing value documentation:
-  $ merlint -r E405 bad.mli
+  $ merlint -B -r E405 bad.mli
   Running merlint analysis...
   
   Analyzing 1 files
@@ -17,12 +17,19 @@ Test bad example - should find missing value documentation:
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   
+  ╭───────────────┬───────────────────────────────────╮
+  │ Category      │ Issues                            │
+  ├───────────────┼───────────────────────────────────┤
+  │ Documentation │ 2 (2 missing value documentation) │
+  ╰───────────────┴───────────────────────────────────╯
+  
+  
   Summary: ✗ 2 total issues (applied 1 rule)
   ✗ Some checks failed. See details above.
   [1]
 
 Test good example - should find no issues:
-  $ merlint -r E405 good.mli
+  $ merlint -B -r E405 good.mli
   Running merlint analysis...
   
   Analyzing 1 files

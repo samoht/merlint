@@ -1,5 +1,5 @@
 Test bad example - should find error pattern usage:
-  $ merlint -r E340 bad.ml
+  $ merlint -B -r E340 bad.ml
   Running merlint analysis...
   
   Analyzing 1 files
@@ -21,12 +21,19 @@ Test bad example - should find error pattern usage:
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   
+  ╭────────────┬───────────────────────────────╮
+  │ Category   │ Issues                        │
+  ├────────────┼───────────────────────────────┤
+  │ Code Style │ 4 (4 error pattern detection) │
+  ╰────────────┴───────────────────────────────╯
+  
+  
   Summary: ✗ 4 total issues (applied 1 rule)
   ✗ Some checks failed. See details above.
   [1]
 
 Test good example - should find no issues:
-  $ merlint -r E340 good.ml
+  $ merlint -B -r E340 good.ml
   Running merlint analysis...
   
   Analyzing 1 files

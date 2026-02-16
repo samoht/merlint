@@ -1,5 +1,5 @@
 Test bad example - should find catch-all exception handler:
-  $ merlint -r E105 bad.ml
+  $ merlint -B -r E105 bad.ml
   Running merlint analysis...
   
   Analyzing 1 files
@@ -16,12 +16,19 @@ Test bad example - should find catch-all exception handler:
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   
+  ╭──────────────┬───────────────────────────────────╮
+  │ Category     │ Issues                            │
+  ├──────────────┼───────────────────────────────────┤
+  │ Code Quality │ 1 (1 catch-all exception handler) │
+  ╰──────────────┴───────────────────────────────────╯
+  
+  
   Summary: ✗ 1 total issue (applied 1 rule)
   ✗ Some checks failed. See details above.
   [1]
 
 Test good example - should find no issues:
-  $ merlint -r E105 good.ml
+  $ merlint -B -r E105 good.ml
   Running merlint analysis...
   
   Analyzing 1 files

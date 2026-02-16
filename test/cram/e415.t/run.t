@@ -1,5 +1,5 @@
 Test bad example - should find missing standard functions:
-  $ merlint -r E415 bad.mli
+  $ merlint -B -r E415 bad.mli
   Running merlint analysis...
   
   Analyzing 1 files
@@ -17,12 +17,19 @@ Test bad example - should find missing standard functions:
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   
+  ╭───────────────┬──────────────────────────────╮
+  │ Category      │ Issues                       │
+  ├───────────────┼──────────────────────────────┤
+  │ Documentation │ 1 (1 missing pretty printer) │
+  ╰───────────────┴──────────────────────────────╯
+  
+  
   Summary: ✗ 1 total issue (applied 1 rule)
   ✗ Some checks failed. See details above.
   [1]
 
 Test good example - should find no issues:
-  $ merlint -r E415 good.mli
+  $ merlint -B -r E415 good.mli
   Running merlint analysis...
   
   Analyzing 1 files
@@ -38,7 +45,7 @@ Test good example - should find no issues:
   ✓ All checks passed!
 
 Test function type - should not require pp:
-  $ merlint -r E415 function_good.mli
+  $ merlint -B -r E415 function_good.mli
   Running merlint analysis...
   
   Analyzing 1 files

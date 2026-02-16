@@ -1,5 +1,5 @@
 Test bad example - should find fail (Fmt.str) patterns:
-  $ merlint -r E616 test_bad.ml
+  $ merlint -B -r E616 test_bad.ml
   Running merlint analysis...
   
   Analyzing 1 files
@@ -19,12 +19,19 @@ Test bad example - should find fail (Fmt.str) patterns:
     - test_bad.ml:18:0: Use Alcotest.failf instead of Alcotest.fail (Fmt.str ...) - failf provides printf-style formatting directly
     - test_bad.ml:23:0: Use Alcotest.failf instead of Alcotest.fail (Fmt.str ...) - failf provides printf-style formatting directly
   
+  ╭──────────────┬───────────────────────────────────────────╮
+  │ Category     │ Issues                                    │
+  ├──────────────┼───────────────────────────────────────────┤
+  │ Test Quality │ 4 (4 use failf instead of fail (fmt.str)) │
+  ╰──────────────┴───────────────────────────────────────────╯
+  
+  
   Summary: ✗ 4 total issues (applied 1 rule)
   ✗ Some checks failed. See details above.
   [1]
 
 Test good example - should find no issues:
-  $ merlint -r E616 test_good.ml
+  $ merlint -B -r E616 test_good.ml
   Running merlint analysis...
   
   Analyzing 1 files

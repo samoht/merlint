@@ -1,5 +1,5 @@
 Test bad example - should find bad variant naming:
-  $ merlint -r E300 bad.ml
+  $ merlint -B -r E300 bad.ml
   Running merlint analysis...
   
   Analyzing 1 files
@@ -18,13 +18,20 @@ Test bad example - should find bad variant naming:
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   
+  ╭────────────────────┬─────────────────────────────────╮
+  │ Category           │ Issues                          │
+  ├────────────────────┼─────────────────────────────────┤
+  │ Naming Conventions │ 3 (3 variant naming convention) │
+  ╰────────────────────┴─────────────────────────────────╯
+  
+  
   Summary: ✗ 3 total issues (applied 1 rule)
   ✗ Some checks failed. See details above.
   [1]
 TODO: Variant naming detection not working - Merlin may not provide variant info from type definitions
  
  Test good example - should find no issues:
-  $ merlint -r E300 good.ml
+  $ merlint -B -r E300 good.ml
   Running merlint analysis...
   
   Analyzing 1 files
