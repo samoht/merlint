@@ -1,5 +1,5 @@
 Test bad example - should find deep nesting issues:
-  $ merlint -r E010 bad.ml
+  $ merlint -B -r E010 bad.ml
   Running merlint analysis...
   
   Analyzing 1 files
@@ -17,12 +17,18 @@ Test bad example - should find deep nesting issues:
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   
+  ╭──────────────┬────────────────────╮
+  │ Category     │ Issues             │
+  ├──────────────┼────────────────────┤│ Code Quality │ 1 (1 deep nesting) │
+  ╰──────────────┴────────────────────╯
+  
+  
   Summary: ✗ 1 total issue (applied 1 rule)
   ✗ Some checks failed. See details above.
   [1]
 
 Test good example - should find no issues:
-  $ merlint -r E010 good.ml
+  $ merlint -B -r E010 good.ml
   Running merlint analysis...
   
   Analyzing 1 files

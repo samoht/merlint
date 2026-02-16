@@ -1,5 +1,5 @@
 Test bad example - should find Obj.magic usage:
-  $ merlint -r E100 bad.ml
+  $ merlint -B -r E100 bad.ml
   Running merlint analysis...
   
   Analyzing 1 files
@@ -18,12 +18,18 @@ Test bad example - should find Obj.magic usage:
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   
+  ╭──────────────┬────────────────────╮
+  │ Category     │ Issues             │
+  ├──────────────┼────────────────────┤│ Code Quality │ 1 (1 no obj.magic) │
+  ╰──────────────┴────────────────────╯
+  
+  
   Summary: ✗ 1 total issue (applied 1 rule)
   ✗ Some checks failed. See details above.
   [1]
 
 Test good example - should find no issues:
-  $ merlint -r E100 good.ml
+  $ merlint -B -r E100 good.ml
   Running merlint analysis...
   
   Analyzing 1 files

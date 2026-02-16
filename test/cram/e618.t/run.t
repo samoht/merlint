@@ -1,5 +1,5 @@
 Test bad example - should find double underscore patterns:
-  $ merlint -r E618 bad.ml
+  $ merlint -B -r E618 bad.ml
   Running merlint analysis...
   
   Analyzing 1 files
@@ -17,12 +17,19 @@ Test bad example - should find double underscore patterns:
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   
+  ╭────────────┬────────────────────────────────╮
+  │ Category   │ Issues                         │
+  ├────────────┼────────────────────────────────┤
+  │ Code Style │ 2 (2 avoid x__y module access) │
+  ╰────────────┴────────────────────────────────╯
+  
+  
   Summary: ✗ 2 total issues (applied 1 rule)
   ✗ Some checks failed. See details above.
   [1]
 
 Test good example - should find no issues:
-  $ merlint -r E618 good.ml
+  $ merlint -B -r E618 good.ml
   Running merlint analysis...
   
   Analyzing 1 files

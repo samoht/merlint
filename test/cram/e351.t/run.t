@@ -1,5 +1,5 @@
 Test bad example - should find exposed global mutable state in interface:
-  $ merlint -r E351 bad.mli
+  $ merlint -B -r E351 bad.mli
   Running merlint analysis...
   
   Analyzing 1 files
@@ -19,12 +19,19 @@ Test bad example - should find exposed global mutable state in interface:
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   
+  ╭──────────────┬────────────────────────────────────╮
+  │ Category     │ Issues                             │
+  ├──────────────┼────────────────────────────────────┤
+  │ Code Quality │ 2 (2 exposed global mutable state) │
+  ╰──────────────┴────────────────────────────────────╯
+  
+  
   Summary: ✗ 2 total issues (applied 1 rule)
   ✗ Some checks failed. See details above.
   [1]
 
 Test good example - should find no issues (properly encapsulated state):
-  $ merlint -r E351 good.mli
+  $ merlint -B -r E351 good.mli
   Running merlint analysis...
   
   Analyzing 1 files

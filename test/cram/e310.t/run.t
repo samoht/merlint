@@ -1,5 +1,5 @@
 Test bad example - should find bad value naming:
-  $ merlint -r E310 bad.ml
+  $ merlint -B -r E310 bad.ml
   Running merlint analysis...
   
   Analyzing 1 files
@@ -17,12 +17,19 @@ Test bad example - should find bad value naming:
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   
+  ╭────────────────────┬───────────────────────────────╮
+  │ Category           │ Issues                        │
+  ├────────────────────┼───────────────────────────────┤
+  │ Naming Conventions │ 2 (2 value naming convention) │
+  ╰────────────────────┴───────────────────────────────╯
+  
+  
   Summary: ✗ 2 total issues (applied 1 rule)
   ✗ Some checks failed. See details above.
   [1]
 
 Test good example - should find no issues:
-  $ merlint -r E310 good.ml
+  $ merlint -B -r E310 good.ml
   Running merlint analysis...
   
   Analyzing 1 files

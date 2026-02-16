@@ -1,5 +1,5 @@
 Test bad example - should find missing interface file:
-  $ merlint -r E505 bad.ml
+  $ merlint -B -r E505 bad.ml
   Running merlint analysis...
   
   Analyzing 1 files
@@ -16,12 +16,19 @@ Test bad example - should find missing interface file:
     - bad.ml:1:0: Library module bad.ml is missing interface file bad.mli
   ✓ Test Quality (0 total issues)
   
+  ╭───────────────────┬────────────────────────╮
+  │ Category          │ Issues                 │
+  ├───────────────────┼────────────────────────┤
+  │ Project Structure │ 1 (1 missing mli file) │
+  ╰───────────────────┴────────────────────────╯
+  
+  
   Summary: ✗ 1 total issue (applied 1 rule)
   ✗ Some checks failed. See details above.
   [1]
 
 Test good example - should find no issues:
-  $ merlint -r E505 good.ml good.mli
+  $ merlint -B -r E505 good.ml good.mli
   Running merlint analysis...
   
   Analyzing 2 files
@@ -37,7 +44,7 @@ Test good example - should find no issues:
   ✓ All checks passed!
 
 Test interface definition file - should not require .mli:
-  $ merlint -r E505 test_intf.ml
+  $ merlint -B -r E505 test_intf.ml
   Running merlint analysis...
   
   Analyzing 1 files

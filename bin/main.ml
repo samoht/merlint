@@ -263,7 +263,7 @@ let ensure_project_built project_root =
       Fmt.epr "Continuing with analysis...@."
 
 let analyze_files ?(exclude_patterns = []) ?rule_filter ?(show_profile = false)
-    files =
+    ?(no_build = false) files =
   (* Find project root *)
   let project_root =
     match files with file :: _ -> Merlint.Project.root file | [] -> "."
@@ -272,7 +272,7 @@ let analyze_files ?(exclude_patterns = []) ?rule_filter ?(show_profile = false)
   Log.info (fun m -> m "Project root: %s" project_root);
 
   (* Ensure project is built before running merlin-based analyses *)
-  ensure_project_built project_root;
+  if not no_build then ensure_project_built project_root;
 
   (* Build dune describes from directories/files *)
   let dune_describe =
@@ -350,6 +350,13 @@ let show_config_flag =
   in
   Arg.(value & flag & info [ "show-config" ] ~doc)
 
+let no_build_flag =
+  let doc =
+    "Skip the automatic 'dune build' step. Use when the project is already \
+     built or for faster repeated runs."
+  in
+  Arg.(value & flag & info [ "no-build"; "B" ] ~doc)
+
 let show_configuration files =
   let project_root =
     match files with
@@ -390,11 +397,12 @@ let parse_rule_filter rules_spec =
           Log.err (fun m -> m "Invalid rules specification: %s" msg);
           Stdlib.exit 1)
 
-let main exclude_patterns rules_spec show_profile show_config files () =
+let main exclude_patterns rules_spec show_profile show_config no_build files ()
+    =
   if show_config then show_configuration files
   else
     let rule_filter = parse_rule_filter rules_spec in
-    analyze_files ~exclude_patterns ?rule_filter ~show_profile files
+    analyze_files ~exclude_patterns ?rule_filter ~show_profile ~no_build files
 
 let cmd =
   let doc = "Analyze OCaml code for style issues" in
@@ -417,6 +425,6 @@ let cmd =
   Cmd.v info
     Term.(
       const main $ exclude_flag $ rules_flag $ profile_flag $ show_config_flag
-      $ files $ Vlog.setup "merlint")
+      $ no_build_flag $ files $ Vlog.setup "merlint")
 
 let () = Stdlib.exit (Cmd.eval cmd)

@@ -1,5 +1,5 @@
 Test bad example - should find boolean blindness:
-  $ merlint -r E350 bad.ml
+  $ merlint -B -r E350 bad.ml
   Running merlint analysis...
   
   Analyzing 1 files
@@ -16,12 +16,19 @@ Test bad example - should find boolean blindness:
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   
+  ╭──────────────┬─────────────────────────╮
+  │ Category     │ Issues                  │
+  ├──────────────┼─────────────────────────┤
+  │ Code Quality │ 1 (1 boolean blindness) │
+  ╰──────────────┴─────────────────────────╯
+  
+  
   Summary: ✗ 1 total issue (applied 1 rule)
   ✗ Some checks failed. See details above.
   [1]
 
 Test good example - should find no issues:
-  $ merlint -r E350 good.ml
+  $ merlint -B -r E350 good.ml
   Running merlint analysis...
   
   Analyzing 1 files

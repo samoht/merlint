@@ -1,5 +1,5 @@
 Test bad example - should find redundant function prefixes:
-  $ merlint -r E331 bad.ml
+  $ merlint -B -r E331 bad.ml
   Running merlint analysis...
   
   Analyzing 1 files
@@ -31,12 +31,19 @@ Test bad example - should find redundant function prefixes:
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   
+  ╭────────────────────┬─────────────────────────────────────╮
+  │ Category           │ Issues                              │
+  ├────────────────────┼─────────────────────────────────────┤
+  │ Naming Conventions │ 13 (13 redundant function prefixes) │
+  ╰────────────────────┴─────────────────────────────────────╯
+  
+  
   Summary: ✗ 13 total issues (applied 1 rule)
   ✗ Some checks failed. See details above.
   [1]
 
 Test good example - should find no issues:
-  $ merlint -r E331 good.ml
+  $ merlint -B -r E331 good.ml
   Running merlint analysis...
   
   Analyzing 1 files

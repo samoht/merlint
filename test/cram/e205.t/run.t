@@ -1,5 +1,5 @@
 Test bad example - should find usage of Printf instead of Fmt:
-  $ merlint -r E205 bad.ml
+  $ merlint -B -r E205 bad.ml
   Running merlint analysis...
   
   Analyzing 1 files
@@ -17,12 +17,19 @@ Test bad example - should find usage of Printf instead of Fmt:
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   
+  ╭────────────┬─────────────────────────────────╮
+  │ Category   │ Issues                          │
+  ├────────────┼─────────────────────────────────┤
+  │ Code Style │ 2 (2 consider using fmt module) │
+  ╰────────────┴─────────────────────────────────╯
+  
+  
   Summary: ✗ 2 total issues (applied 1 rule)
   ✗ Some checks failed. See details above.
   [1]
 
 Test good example - should find no issues:
-  $ merlint -r E205 good.ml
+  $ merlint -B -r E205 good.ml
   Running merlint analysis...
   
   Analyzing 1 files

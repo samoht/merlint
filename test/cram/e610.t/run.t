@@ -1,5 +1,5 @@
 Test bad example - should find test without library:
-  $ merlint -r E610 bad/
+  $ merlint -B -r E610 bad/
   Running merlint analysis...
   
   Analyzing 4 files
@@ -17,12 +17,19 @@ Test bad example - should find test without library:
     - bad/test/test_old_feature.ml:1:0: Test file exists but corresponding library module 'old_feature.ml' not found
     - bad/test/test_runner.ml:1:0: Test file exists but corresponding library module 'runner.ml' not found
   
+  ╭──────────────┬────────────────────────────╮
+  │ Category     │ Issues                     │
+  ├──────────────┼────────────────────────────┤
+  │ Test Quality │ 2 (2 test without library) │
+  ╰──────────────┴────────────────────────────╯
+  
+  
   Summary: ✗ 2 total issues (applied 1 rule)
   ✗ Some checks failed. See details above.
   [1]
 
 Test good example - all test files have corresponding library modules:
-  $ merlint -r E610 good/
+  $ merlint -B -r E610 good/
   Running merlint analysis...
   
   Analyzing 6 files

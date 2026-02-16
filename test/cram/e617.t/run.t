@@ -1,5 +1,5 @@
 Test bad examples - should find naming issues:
-  $ merlint -r E617 test_bad.ml
+  $ merlint -B -r E617 test_bad.ml
   Running merlint analysis...
   
   Analyzing 1 files
@@ -17,11 +17,18 @@ Test bad examples - should find naming issues:
     identify which test file contains which suite.
     - test_bad.ml:3:0: Test suite name 'BadName' should be lowercase - use 'badname' instead
   
+  ╭──────────────┬────────────────────────────────────╮
+  │ Category     │ Issues                             │
+  ├──────────────┼────────────────────────────────────┤
+  │ Test Quality │ 1 (1 test suite naming convention) │
+  ╰──────────────┴────────────────────────────────────╯
+  
+  
   Summary: ✗ 1 total issue (applied 1 rule)
   ✗ Some checks failed. See details above.
   [1]
 
-  $ merlint -r E617 test_config.ml
+  $ merlint -B -r E617 test_config.ml
   Running merlint analysis...
   
   Analyzing 1 files
@@ -39,11 +46,18 @@ Test bad examples - should find naming issues:
     identify which test file contains which suite.
     - test_config.ml:5:0: Test suite name 'Config' should be lowercase - use 'config' instead
   
+  ╭──────────────┬────────────────────────────────────╮
+  │ Category     │ Issues                             │
+  ├──────────────┼────────────────────────────────────┤
+  │ Test Quality │ 1 (1 test suite naming convention) │
+  ╰──────────────┴────────────────────────────────────╯
+  
+  
   Summary: ✗ 1 total issue (applied 1 rule)
   ✗ Some checks failed. See details above.
   [1]
 
-  $ merlint -r E617 test_parser.ml
+  $ merlint -B -r E617 test_parser.ml
   Running merlint analysis...
   
   Analyzing 1 files
@@ -61,11 +75,18 @@ Test bad examples - should find naming issues:
     identify which test file contains which suite.
     - test_parser.ml:5:0: Test suite name 'parser-tests' should use snake_case naming convention
   
+  ╭──────────────┬────────────────────────────────────╮
+  │ Category     │ Issues                             │
+  ├──────────────┼────────────────────────────────────┤
+  │ Test Quality │ 1 (1 test suite naming convention) │
+  ╰──────────────┴────────────────────────────────────╯
+  
+  
   Summary: ✗ 1 total issue (applied 1 rule)
   ✗ Some checks failed. See details above.
   [1]
 
-  $ merlint -r E617 test_user_auth.ml  
+  $ merlint -B -r E617 test_user_auth.ml  
   Running merlint analysis...
   
   Analyzing 1 files
@@ -83,12 +104,19 @@ Test bad examples - should find naming issues:
     identify which test file contains which suite.
     - test_user_auth.ml:5:0: Test suite name 'auth' should match the filename - expected 'user_auth'
   
+  ╭──────────────┬────────────────────────────────────╮
+  │ Category     │ Issues                             │
+  ├──────────────┼────────────────────────────────────┤
+  │ Test Quality │ 1 (1 test suite naming convention) │
+  ╰──────────────┴────────────────────────────────────╯
+  
+  
   Summary: ✗ 1 total issue (applied 1 rule)
   ✗ Some checks failed. See details above.
   [1]
 
 Test good examples - should find no issues:
-  $ merlint -r E617 good/test_config.ml good/test_parser.ml good/test_user_auth.ml
+  $ merlint -B -r E617 good/test_config.ml good/test_parser.ml good/test_user_auth.ml
   Running merlint analysis...
   
   Analyzing 3 files
