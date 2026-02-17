@@ -11,17 +11,34 @@ type style_issue =
 
 (** Count required and total arguments in a signature string. e.g., "?foo:int ->
     string -> int -> bool" has 2 required, 3 total. Returns (required_count,
-    total_count). *)
+    total_count). Ignores arrows inside parentheses (function-typed arguments).
+*)
 let count_args signature =
-  let arrows = String.split_on_char '-' signature in
-  (* Each arrow segment except the last is an argument *)
-  let total_count = max 0 (List.length arrows - 1) in
-  (* Count optional args (those with ? prefix) *)
-  let optional_count =
-    List.fold_left
-      (fun acc s -> if String.contains s '?' then acc + 1 else acc)
-      0 arrows
+  (* Count top-level arrows only, ignoring those inside parentheses *)
+  let rec scan_args acc_total acc_optional depth i optional_in_arg =
+    if i >= String.length signature then (acc_optional, acc_total)
+    else
+      match signature.[i] with
+      | '(' ->
+          scan_args acc_total acc_optional (depth + 1) (i + 1) optional_in_arg
+      | ')' ->
+          scan_args acc_total acc_optional
+            (max 0 (depth - 1))
+            (i + 1) optional_in_arg
+      | '-'
+        when depth = 0
+             && i + 1 < String.length signature
+             && signature.[i + 1] = '>' ->
+          (* Found a top-level arrow, this completes an argument *)
+          let new_optional =
+            if optional_in_arg then acc_optional + 1 else acc_optional
+          in
+          scan_args (acc_total + 1) new_optional depth (i + 2) false
+      | '?' when depth = 0 ->
+          scan_args acc_total acc_optional depth (i + 1) true
+      | _ -> scan_args acc_total acc_optional depth (i + 1) optional_in_arg
   in
+  let optional_count, total_count = scan_args 0 0 0 0 false in
   let required_count = max 0 (total_count - optional_count) in
   (required_count, total_count)
 
@@ -261,16 +278,20 @@ let extract_location_info loc_start loc_end =
   let end_line = loc_end.Lexing.pos_lnum in
   (start_line, end_line)
 
-(** Get the string representation of a core type *)
-let rec core_type_to_string (typ : Parsetree.core_type) =
+(** Get the string representation of a core type. The [~wrap_arrows] parameter
+    controls whether arrow types should be wrapped in parentheses (used for
+    function-typed arguments). *)
+let rec core_type_to_string ?(wrap_arrows = false) (typ : Parsetree.core_type) =
   match typ.ptyp_desc with
   | Ptyp_var name -> "'" ^ name
   | Ptyp_constr ({ txt = Lident name; _ }, []) -> name
   | Ptyp_constr ({ txt = Ldot (_, name); _ }, []) -> name.txt
   | Ptyp_arrow (_, t1, t2) ->
-      let arg_str = core_type_to_string t1 in
+      (* When processing arguments, wrap arrow types in parentheses *)
+      let arg_str = core_type_to_string ~wrap_arrows:true t1 in
       let ret_str = core_type_to_string t2 in
-      arg_str ^ " -> " ^ ret_str
+      let result = arg_str ^ " -> " ^ ret_str in
+      if wrap_arrows then "(" ^ result ^ ")" else result
   | Ptyp_tuple types ->
       let type_strs = List.map (fun (_, t) -> core_type_to_string t) types in
       String.concat " * " type_strs
