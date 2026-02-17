@@ -1,8 +1,9 @@
 (** Tests for Command module *)
 
 let test_run_success () =
-  (* Test running a simple command *)
-  match Merlint.Command.run "echo test" with
+  Eio_main.run @@ fun env ->
+  let mgr = Eio.Stdenv.process_mgr env in
+  match Merlint.Command.run mgr "echo test" with
   | Ok output ->
       Alcotest.(check bool)
         "output contains test" true
@@ -10,14 +11,16 @@ let test_run_success () =
   | Error msg -> Alcotest.fail ("Expected success but got error: " ^ msg)
 
 let test_run_failure () =
-  (* Test running a command that fails *)
-  match Merlint.Command.run "false" with
+  Eio_main.run @@ fun env ->
+  let mgr = Eio.Stdenv.process_mgr env in
+  match Merlint.Command.run mgr "false" with
   | Ok _ -> Alcotest.fail "Expected error but got success"
   | Error _ -> ()
 
 let test_run_nonexistent () =
-  (* Test running a nonexistent command *)
-  match Merlint.Command.run "nonexistent_command_12345" with
+  Eio_main.run @@ fun env ->
+  let mgr = Eio.Stdenv.process_mgr env in
+  match Merlint.Command.run mgr "nonexistent_command_12345" with
   | Ok _ -> Alcotest.fail "Expected error but got success"
   | Error _ -> ()
 

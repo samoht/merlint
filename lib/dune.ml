@@ -41,7 +41,7 @@ let rec find_workspace_root dir =
     if Fpath.equal parent dir then None else find_workspace_root parent
 
 (** Ensure the project is built by running 'dune build' if needed *)
-let ensure_project_built project_root =
+let ensure_project_built mgr project_root =
   let dune_project = Fpath.(project_root / "dune-project") in
   if not (Sys.file_exists (Fpath.to_string dune_project)) then
     Ok () (* Not a dune project, skip build *)
@@ -54,12 +54,18 @@ let ensure_project_built project_root =
           (ws_root, Fpath.to_string project_root)
       | None -> (project_root, ".")
     in
+    let suppress_stderr =
+      match Logs.Src.level src with
+      | Some Logs.Debug -> "" (* show stderr in -vv mode *)
+      | _ -> " 2>/dev/null"
+    in
     let cmd =
-      Fmt.str "dune build %s --root %s 2>/dev/null" (Filename.quote target)
+      Fmt.str "dune build %s --root %s%s" (Filename.quote target)
         (Filename.quote (Fpath.to_string build_root))
+        suppress_stderr
     in
     Log.info (fun m -> m "Ensuring project is built: %s" cmd);
-    match Command.run cmd with
+    match Command.run mgr cmd with
     | Ok _ -> Ok ()
     | Error msg -> err_build_failed msg
 
