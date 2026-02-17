@@ -133,6 +133,13 @@ let check (ctx : Context.project) =
               files
           in
           match module_file with
+          | Some file_path
+            when Astring.String.is_infix ~affix:"/test/" file_path ->
+              (* Skip libraries defined in test directories - they are test support libs *)
+              Logs.debug (fun m ->
+                  m "E605: Skipping module '%s' (defined in test directory)"
+                    lib_mod);
+              false
           | Some file_path when contains_only_types_and_modules file_path ->
               Logs.debug (fun m ->
                   m "E605: Skipping module '%s' (contains only types/modules)"

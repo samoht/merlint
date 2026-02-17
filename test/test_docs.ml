@@ -43,7 +43,19 @@ let test_check_function_doc () =
       ~doc:"[wrong x] computes something."
   in
   Alcotest.(check (list style_issue))
-    "wrong name in brackets" [ Bad_function_format ] issues
+    "wrong name in brackets" [ Bad_function_format ] issues;
+
+  (* Function with function-typed arguments - arrows inside parens should not count *)
+  let issues =
+    check_function_doc ~name:"field_codec"
+      ~signature:
+        "string -> ?constraint_:bool expr -> 'a typ -> get:('r -> 'a) -> \
+         set:('a -> 'r -> 'r) -> ('a, 'r) field_codec"
+      ~doc:
+        "[field_codec name ?constraint_ typ ~get ~set] creates a field codec."
+  in
+  Alcotest.(check (list style_issue))
+    "function-typed args (arrows inside parens)" [] issues
 
 let test_check_value_doc () =
   let open Merlint.Docs in
