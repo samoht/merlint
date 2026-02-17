@@ -269,7 +269,7 @@ let analyze_files mgr ?(exclude_patterns = []) ?rule_filter
     match files with file :: _ -> Merlint.Project.root file | [] -> "."
   in
 
-  Log.info (fun m -> m "Project root: %s" project_root);
+  Log.info (fun m -> m "Project root: %s (cwd: %s)" project_root (Sys.getcwd ()));
 
   (* Ensure project is built before running merlin-based analyses *)
   if not no_build then ensure_project_built mgr project_root;

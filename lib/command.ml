@@ -12,8 +12,7 @@ let run mgr cmd =
     let status =
       Eio.Switch.run @@ fun sw ->
       let proc =
-        Eio.Process.spawn ~sw mgr ~stdout
-          ~executable:"/bin/sh"
+        Eio.Process.spawn ~sw mgr ~stdout ~executable:"/bin/sh"
           [ "sh"; "-c"; cmd ]
       in
       Eio.Process.await proc
@@ -21,7 +20,7 @@ let run mgr cmd =
     let result = Buffer.contents buf in
     String.split_on_char '\n' result
     |> List.iter (fun line ->
-           if line <> "" then Log.debug (fun m -> m "%s" line));
+        if line <> "" then Log.debug (fun m -> m "%s" line));
     match status with
     | `Exited 0 ->
         Log.info (fun m ->
