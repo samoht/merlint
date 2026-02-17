@@ -433,8 +433,7 @@ let cmd =
   Cmd.v info
     Term.(
       const main $ exclude_flag $ rules_flag $ profile_flag $ show_config_flag
-      $ no_build_flag $ files $ Vlog.setup "merlint")
+      $ no_build_flag $ files
+      $ Term.(const (fun () () -> ()) $ Vlog.setup "merlint" $ Memtrace.term))
 
-let () =
-  Memtrace.trace_if_requested ();
-  Stdlib.exit (Cmd.eval cmd)
+let () = Stdlib.exit (Cmd.eval cmd)
