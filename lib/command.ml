@@ -5,7 +5,7 @@ let src = Logs.Src.create "merlint.command" ~doc:"Command execution"
 module Log = (val Logs.src_log src : Logs.LOG)
 
 let run mgr cmd =
-  Log.info (fun m -> m "Running command: %s" cmd);
+  Log.info (fun m -> m "Running command: %s (cwd: %s)" cmd (Sys.getcwd ()));
   try
     let buf = Buffer.create 256 in
     let stdout = Eio.Flow.buffer_sink buf in
