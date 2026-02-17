@@ -32,42 +32,23 @@ let describe_ref =
       ignore project_root;
       { libraries = []; executables = []; tests = [] })
 
-(** Find the workspace root by looking for dune-workspace up the tree *)
-let rec find_workspace_root dir =
-  let workspace = Fpath.(dir / "dune-workspace") in
-  if Sys.file_exists (Fpath.to_string workspace) then Some dir
-  else
-    let parent = Fpath.parent dir in
-    if Fpath.equal parent dir then None else find_workspace_root parent
-
 (** Ensure the project is built by running 'dune build' if needed *)
-let ensure_project_built mgr project_root =
-  let dune_project = Fpath.(project_root / "dune-project") in
-  if not (Sys.file_exists (Fpath.to_string dune_project)) then
-    Ok () (* Not a dune project, skip build *)
-  else
-    (* In a monorepo, use the workspace root but target the specific directory *)
-    let build_root, target =
-      match find_workspace_root project_root with
-      | Some ws_root ->
-          (* Build just this package's directory, not the whole workspace *)
-          (ws_root, Fpath.to_string project_root)
-      | None -> (project_root, ".")
-    in
-    let suppress_stderr =
-      match Logs.Src.level src with
-      | Some Logs.Debug -> "" (* show stderr in -vv mode *)
-      | _ -> " 2>/dev/null"
-    in
-    let cmd =
-      Fmt.str "dune build %s --root %s%s" (Filename.quote target)
-        (Filename.quote (Fpath.to_string build_root))
-        suppress_stderr
-    in
-    Log.info (fun m -> m "Ensuring project is built: %s" cmd);
-    match Command.run mgr cmd with
-    | Ok _ -> Ok ()
-    | Error msg -> err_build_failed msg
+let ensure_project_built mgr =
+  let suppress_stderr =
+    match Logs.Src.level src with
+    | Some Logs.Debug -> "" (* show stderr in -vv mode *)
+    | _ -> " 2>/dev/null"
+  in
+  (* Just run dune build - it will figure out the context *)
+  let cmd = Fmt.str "dune build%s" suppress_stderr in
+  (* Print command when verbose *)
+  (match Logs.level () with
+  | Some (Logs.Info | Logs.Debug) ->
+      Fmt.epr "Running: %s@.    cwd: %s@." cmd (Sys.getcwd ())
+  | _ -> ());
+  match Command.run mgr cmd with
+  | Ok _ -> Ok ()
+  | Error msg -> err_build_failed msg
 
 (** Check if a file is an executable *)
 let is_executable dune_describe ml_file =

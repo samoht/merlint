@@ -7,9 +7,9 @@ val describe : Fpath.t -> describe
 (** [describe project_path] returns parsed dune describe output for a project.
 *)
 
-val ensure_project_built : _ Eio.Process.mgr -> Fpath.t -> (unit, string) result
-(** [ensure_project_built mgr project_path] ensures the project is built by
-    running 'dune build' if needed. *)
+val ensure_project_built : _ Eio.Process.mgr -> (unit, string) result
+(** [ensure_project_built mgr] ensures the project is built by running 'dune
+    build'. *)
 
 val is_executable : describe -> Fpath.t -> bool
 (** [is_executable describe file_path] checks if a file is an executable (binary
