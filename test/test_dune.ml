@@ -128,11 +128,14 @@ let test_get_test_modules () =
     (Fmt.str "Found %d test modules" (List.length test_modules))
     () ()
 
-(* Test ensure_project_built *)
+(* Test ensure_project_built on a non-dune directory (should be a no-op) *)
 let test_ensure_project_built () =
-  match Dune.ensure_project_built (Fpath.v "/fake/path") with
-  | Ok () -> Alcotest.(check pass) "ensure_project_built returns Ok" () ()
-  | Error _ -> Alcotest.fail "ensure_project_built should return Ok"
+  Eio_main.run @@ fun env ->
+  let mgr = Eio.Stdenv.process_mgr env in
+  let tmpdir = Filename.get_temp_dir_name () in
+  match Dune.ensure_project_built mgr (Fpath.v tmpdir) with
+  | Ok () -> Alcotest.(check pass) "non-dune dir returns Ok" () ()
+  | Error msg -> Alcotest.fail ("Expected Ok for non-dune dir: " ^ msg)
 
 (* Test cram directory exclusion *)
 let test_cram_exclusion () =

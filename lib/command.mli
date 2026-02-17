@@ -1,4 +1,4 @@
 (** Generic command execution utility. *)
 
-val run : string -> (string, string) result
-(** [run cmd] executes shell command. *)
+val run : _ Eio.Process.mgr -> string -> (string, string) result
+(** [run mgr cmd] executes shell command. *)

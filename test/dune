@@ -1,6 +1,6 @@
 (test
  (name test)
- (libraries merlint alcotest logs.fmt fmt fmt.tty))
+ (libraries merlint alcotest eio_main logs.fmt fmt fmt.tty))
 
 ; TODO: Re-enable merlint self-check after fixing all issues
 ; (rule

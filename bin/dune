@@ -2,7 +2,16 @@
  (public_name merlint)
  (name main)
  (modules main)
- (libraries merlint cmdliner fpath fmt vlog tty monopam-info))
+ (libraries
+  merlint
+  cmdliner
+  eio_main
+  fpath
+  fmt
+  vlog
+  tty
+  monopam-info
+  memtrace))
 
 (executable
  (public_name merlint-doc-gen)

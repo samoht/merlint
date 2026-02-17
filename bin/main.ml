@@ -254,16 +254,16 @@ let run_analysis project_root dune_describe rule_filter show_profile =
 
       print_fix_hints all_issues
 
-let ensure_project_built project_root =
-  match Merlint.Dune.ensure_project_built (Fpath.v project_root) with
+let ensure_project_built mgr project_root =
+  match Merlint.Dune.ensure_project_built mgr (Fpath.v project_root) with
   | Ok () -> ()
   | Error msg ->
       Fmt.epr "Warning: %s@." msg;
       Fmt.epr "Function type analysis may not work properly.@.";
       Fmt.epr "Continuing with analysis...@."
 
-let analyze_files ?(exclude_patterns = []) ?rule_filter ?(show_profile = false)
-    ?(no_build = false) files =
+let analyze_files mgr ?(exclude_patterns = []) ?rule_filter
+    ?(show_profile = false) ?(no_build = false) files =
   (* Find project root *)
   let project_root =
     match files with file :: _ -> Merlint.Project.root file | [] -> "."
@@ -272,7 +272,7 @@ let analyze_files ?(exclude_patterns = []) ?rule_filter ?(show_profile = false)
   Log.info (fun m -> m "Project root: %s" project_root);
 
   (* Ensure project is built before running merlin-based analyses *)
-  if not no_build then ensure_project_built project_root;
+  if not no_build then ensure_project_built mgr project_root;
 
   (* Build dune describes from directories/files *)
   let dune_describe =
@@ -402,7 +402,10 @@ let main exclude_patterns rules_spec show_profile show_config no_build files ()
   if show_config then show_configuration files
   else
     let rule_filter = parse_rule_filter rules_spec in
-    analyze_files ~exclude_patterns ?rule_filter ~show_profile ~no_build files
+    Eio_main.run @@ fun env ->
+    let mgr = Eio.Stdenv.process_mgr env in
+    analyze_files mgr ~exclude_patterns ?rule_filter ~show_profile ~no_build
+      files
 
 let cmd =
   let doc = "Analyze OCaml code for style issues" in
@@ -427,4 +430,6 @@ let cmd =
       const main $ exclude_flag $ rules_flag $ profile_flag $ show_config_flag
       $ no_build_flag $ files $ Vlog.setup "merlint")
 
-let () = Stdlib.exit (Cmd.eval cmd)
+let () =
+  Memtrace.trace_if_requested ();
+  Stdlib.exit (Cmd.eval cmd)
