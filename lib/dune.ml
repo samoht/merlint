@@ -33,14 +33,14 @@ let describe_ref =
       { libraries = []; executables = []; tests = [] })
 
 (** Ensure the project is built by running 'dune build' if needed *)
-let ensure_project_built mgr =
+let ensure_project_built ~path mgr =
   let suppress_stderr =
     match Logs.Src.level src with
     | Some Logs.Debug -> "" (* show stderr in -vv mode *)
     | _ -> " 2>/dev/null"
   in
-  (* Just run dune build - it will figure out the context *)
-  let cmd = Fmt.str "dune build%s" suppress_stderr in
+  (* Build only the specified path, not the entire workspace *)
+  let cmd = Fmt.str "dune build %s%s" path suppress_stderr in
   (* Print command when verbose *)
   (match Logs.level () with
   | Some (Logs.Info | Logs.Debug) ->

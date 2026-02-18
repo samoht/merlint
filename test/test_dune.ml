@@ -133,7 +133,7 @@ let test_ensure_project_built () =
   Eio_main.run @@ fun env ->
   let mgr = Eio.Stdenv.process_mgr env in
   (* In a dune project (like this test), it should succeed *)
-  match Dune.ensure_project_built mgr with
+  match Dune.ensure_project_built ~path:"." mgr with
   | Ok () -> Alcotest.(check pass) "dune build succeeds" () ()
   | Error _ -> Alcotest.(check pass) "dune build may fail in test context" () ()
 
