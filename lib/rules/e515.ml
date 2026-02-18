@@ -9,8 +9,7 @@ let is_test_directory dir =
   || Astring.String.is_infix ~affix:"/tests/" dir_lower
   || String.starts_with ~prefix:"test/" dir_lower
   || String.starts_with ~prefix:"tests/" dir_lower
-  || dir_lower = "test"
-  || dir_lower = "tests"
+  || dir_lower = "test" || dir_lower = "tests"
 
 (** Check if a library name suggests it's a test support library *)
 let is_test_support_library name =
@@ -55,7 +54,11 @@ let check (ctx : Context.project) =
               in
               Some
                 (Issue.v ~loc
-                   { directory = dir; library_name = lib_name; test_name = test.name })
+                   {
+                     directory = dir;
+                     library_name = lib_name;
+                     test_name = test.name;
+                   })
           | None -> None)
         test.files)
     tests
