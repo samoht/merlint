@@ -7,7 +7,8 @@ val describe : Fpath.t -> describe
 (** [describe project_path] returns parsed dune describe output for a project.
 *)
 
-val ensure_project_built : path:string -> _ Eio.Process.mgr -> (unit, string) result
+val ensure_project_built :
+  path:string -> _ Eio.Process.mgr -> (unit, string) result
 (** [ensure_project_built ~path mgr] ensures the project at [path] is built by
     running 'dune build path'. *)
 

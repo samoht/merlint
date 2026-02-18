@@ -7,18 +7,14 @@ type payload = { test_file : string; expected_module : string }
 let find_test_prefix path =
   match Astring.String.find_sub ~sub:"/test/" path with
   | Some idx -> Some (idx + 6)
-  | None ->
-      if String.starts_with ~prefix:"test/" path then Some 5
-      else None
+  | None -> if String.starts_with ~prefix:"test/" path then Some 5 else None
 
 (** Find "lib/" in path, handling both absolute (/lib/) and relative (lib/)
     paths. Returns the index after "lib/" if found. *)
 let find_lib_prefix path =
   match Astring.String.find_sub ~sub:"/lib/" path with
   | Some idx -> Some (idx + 5)
-  | None ->
-      if String.starts_with ~prefix:"lib/" path then Some 4
-      else None
+  | None -> if String.starts_with ~prefix:"lib/" path then Some 4 else None
 
 (** Extract the relative path from test/ directory. e.g., "test/foo/test_x.ml"
     -> "foo/x.ml" "test/test_x.ml" -> "x.ml" *)
@@ -53,7 +49,7 @@ let check ctx =
       (fun (lib_info : Dune.library_info) ->
         List.filter_map
           (fun file ->
-            if Fpath.has_ext ".ml" file then
+            if Fpath.has_ext ".ml" file then (
               let path = Fpath.to_string file in
               (* Extract path relative to lib/ *)
               match find_lib_prefix path with
@@ -62,14 +58,18 @@ let check ctx =
                   Logs.debug (fun m -> m "E610: lib path %s -> %s" path result);
                   Some result
               | None ->
-                  Logs.debug (fun m -> m "E610: lib path %s (no lib/ prefix)" path);
-                  Some (Fpath.to_string file)
+                  Logs.debug (fun m ->
+                      m "E610: lib path %s (no lib/ prefix)" path);
+                  Some (Fpath.to_string file))
             else None)
           lib_info.files)
       (Dune.libraries dune_describe)
   in
 
-  Logs.debug (fun m -> m "E610: library_module_paths = %a" Fmt.(list ~sep:comma string) library_module_paths);
+  Logs.debug (fun m ->
+      m "E610: library_module_paths = %a"
+        Fmt.(list ~sep:comma string)
+        library_module_paths);
 
   (* Check each test file *)
   let issues = ref [] in
@@ -82,7 +82,9 @@ let check ctx =
             if String.starts_with ~prefix:"test_" test_module then
               match expected_lib_path file with
               | Some expected_path ->
-                  Logs.debug (fun m -> m "E610: test %s expects lib %s" (Fpath.to_string file) expected_path);
+                  Logs.debug (fun m ->
+                      m "E610: test %s expects lib %s" (Fpath.to_string file)
+                        expected_path);
                   let found = List.mem expected_path library_module_paths in
                   Logs.debug (fun m -> m "E610: found=%b" found);
                   if not found then
