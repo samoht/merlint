@@ -254,8 +254,8 @@ let run_analysis project_root dune_describe rule_filter show_profile =
 
       print_fix_hints all_issues
 
-let ensure_project_built mgr =
-  match Merlint.Dune.ensure_project_built mgr with
+let ensure_project_built ~path mgr =
+  match Merlint.Dune.ensure_project_built ~path mgr with
   | Ok () -> ()
   | Error msg ->
       Fmt.epr "Warning: %s@." msg;
@@ -275,7 +275,7 @@ let analyze_files mgr ?(exclude_patterns = []) ?rule_filter
   (* Ensure project is built before running merlin-based analyses *)
   if not no_build then (
     Log.info (fun m -> m "Building project...");
-    ensure_project_built mgr;
+    ensure_project_built ~path:project_root mgr;
     Log.info (fun m -> m "Build done."));
 
   (* Build dune describes from directories/files *)
