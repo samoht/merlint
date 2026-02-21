@@ -286,11 +286,12 @@ let rec core_type_to_string ?(wrap_arrows = false) (typ : Parsetree.core_type) =
   | Ptyp_var name -> "'" ^ name
   | Ptyp_constr ({ txt = Lident name; _ }, []) -> name
   | Ptyp_constr ({ txt = Ldot (_, name); _ }, []) -> name.txt
-  | Ptyp_arrow (_, t1, t2) ->
+  | Ptyp_arrow (label, t1, t2) ->
       (* When processing arguments, wrap arrow types in parentheses *)
+      let label_prefix = match label with Optional _ -> "?" | _ -> "" in
       let arg_str = core_type_to_string ~wrap_arrows:true t1 in
       let ret_str = core_type_to_string t2 in
-      let result = arg_str ^ " -> " ^ ret_str in
+      let result = label_prefix ^ arg_str ^ " -> " ^ ret_str in
       if wrap_arrows then "(" ^ result ^ ")" else result
   | Ptyp_tuple types ->
       let type_strs = List.map (fun (_, t) -> core_type_to_string t) types in
