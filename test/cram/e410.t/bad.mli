@@ -11,3 +11,6 @@ val ( <@ ) : t -> t -> t
 
 (** The default configuration. *)
 val default : t
+
+(** [create t] is missing args. *)
+val create : ?debug:bool -> name:string -> t -> t
