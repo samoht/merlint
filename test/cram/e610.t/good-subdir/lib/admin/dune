@@ -1,0 +1,3 @@
+(library
+ (name admin)
+ (flags :standard -w -32))
