@@ -60,8 +60,7 @@ let is_executable dune_describe ml_file =
       String.lowercase_ascii name = String.lowercase_ascii module_name
       (* Or if this file appears in the executable's file list *)
       || List.exists
-           (fun f ->
-             String.lowercase_ascii (Fpath.to_string f) = ml_file_lc)
+           (fun f -> String.lowercase_ascii (Fpath.to_string f) = ml_file_lc)
            files)
     dune_describe.executables
 
