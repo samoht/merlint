@@ -85,7 +85,13 @@ let check ctx =
                   Logs.debug (fun m ->
                       m "E610: test %s expects lib %s" (Fpath.to_string file)
                         expected_path);
-                  let found = List.mem expected_path library_module_paths in
+                  let found =
+                    List.exists
+                      (fun lib_path ->
+                        lib_path = expected_path
+                        || Filename.basename lib_path = expected_path)
+                      library_module_paths
+                  in
                   Logs.debug (fun m -> m "E610: found=%b" found);
                   if not found then
                     let loc =

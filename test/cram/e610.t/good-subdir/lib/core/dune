@@ -1,0 +1,3 @@
+(library
+ (name core)
+ (flags :standard -w -32))

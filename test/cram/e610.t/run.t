@@ -28,6 +28,22 @@ Test bad example - should find test without library:
   ✗ Some checks failed. See details above.
   [1]
 
+Test good example with library subdirectories - test files match library modules in subdirs:
+  $ merlint -B -r E610 good-subdir/
+  Running merlint analysis...
+  
+  Analyzing 4 files
+  
+  ✓ Code Quality (0 total issues)
+  ✓ Code Style (0 total issues)
+  ✓ Naming Conventions (0 total issues)
+  ✓ Documentation (0 total issues)
+  ✓ Project Structure (0 total issues)
+  ✓ Test Quality (0 total issues)
+  
+  Summary: ✓ 0 total issues (applied 1 rule)
+  ✓ All checks passed!
+
 Test good example - all test files have corresponding library modules:
   $ merlint -B -r E610 good/
   Running merlint analysis...
