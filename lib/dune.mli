@@ -52,6 +52,10 @@ val libraries : describe -> library_info list
 (** [libraries describe] returns the list of libraries with their information.
 *)
 
+val executables : describe -> (string * Fpath.t list) list
+(** [executables describe] returns the list of executables with their name and
+    files. *)
+
 type test_info = {
   name : string;
   files : Fpath.t list;
