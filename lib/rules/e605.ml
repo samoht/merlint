@@ -57,31 +57,33 @@ let expected_test_path source_file =
 
 (** Creates a missing test file issue for a library module without corresponding
     test *)
-let create_missing_test_issue module_name files =
-  (* Find the source file to generate a location and compute expected path *)
-  let source_file =
-    List.find_opt
-      (fun f ->
-        let basename = Filename.basename f |> Filename.remove_extension in
-        String.lowercase_ascii basename = String.lowercase_ascii module_name)
-      files
+let create_missing_test_issue module_name source_file =
+  let loc =
+    Location.v ~file:source_file ~start_line:1 ~start_col:0 ~end_line:1
+      ~end_col:0
   in
-  let loc, expected_path =
-    match source_file with
-    | Some file ->
-        ( Location.v ~file ~start_line:1 ~start_col:0 ~end_line:1 ~end_col:0,
-          expected_test_path file )
-    | None ->
-        ( Location.v ~file:"dune" ~start_line:1 ~start_col:0 ~end_line:1
-            ~end_col:0,
-          Fmt.str "test/test_%s.ml" module_name )
-  in
+  let expected_path = expected_test_path source_file in
   Issue.v ~loc { module_name; expected_test_file = expected_path }
+
+(** Build a set of file paths that belong to libraries. *)
+let library_file_set dune_desc =
+  Dune.libraries dune_desc
+  |> List.concat_map (fun (lib : Dune.library_info) -> lib.files)
+  |> List.map (fun p -> String.lowercase_ascii (Fpath.to_string p))
+
+(** Build a set of file paths that belong to executables. *)
+let executable_file_set dune_desc =
+  Dune.executables dune_desc
+  |> List.concat_map snd
+  |> List.map (fun p -> String.lowercase_ascii (Fpath.to_string p))
 
 let check (ctx : Context.project) =
   let files = Context.all_files ctx in
   let lib_modules = Context.lib_modules ctx in
   let test_modules = Context.test_modules ctx in
+  let dune_desc = Context.dune_describe ctx in
+  let lib_files = library_file_set dune_desc in
+  let exec_files = executable_file_set dune_desc in
 
   (* E605 checks if library modules have corresponding test files.
      First check dune metadata, then check actual files being analyzed. *)
@@ -118,34 +120,65 @@ let check (ctx : Context.project) =
            test directories in the analysis (e.g., 'merlint lib test' instead \
            of just 'merlint lib')");
 
+  (* Find the source file for a library module, preferring library files over
+     executable files. When module names collide (e.g. multiple common.ml in
+     different directories), we want the library's source, not the
+     executable's. *)
+  let find_lib_source lib_mod =
+    let matches =
+      List.filter
+        (fun f ->
+          String.ends_with ~suffix:".ml" f
+          && Filename.basename (Filename.remove_extension f) = lib_mod)
+        files
+    in
+    (* Prefer files that are known library files *)
+    match
+      List.find_opt
+        (fun f -> List.mem (String.lowercase_ascii f) lib_files)
+        matches
+    with
+    | Some _ as found -> found
+    | None ->
+        (* Fall back to any match that is NOT an executable file *)
+        List.find_opt
+          (fun f ->
+            not (List.mem (String.lowercase_ascii f) exec_files))
+          matches
+  in
+
   let missing_tests =
-    List.filter
+    List.filter_map
       (fun lib_mod ->
         (* Skip if this is already a test module *)
-        if String.starts_with ~prefix:"test_" lib_mod then false
+        if String.starts_with ~prefix:"test_" lib_mod then None
         else
-          (* Find the source file for this module *)
-          let module_file =
-            List.find_opt
-              (fun f ->
-                String.ends_with ~suffix:".ml" f
-                && Filename.basename (Filename.remove_extension f) = lib_mod)
-              files
-          in
+          (* Find the source file for this module, preferring library files *)
+          let module_file = find_lib_source lib_mod in
           match module_file with
+          | None ->
+              (* No library source file found — the module only exists in
+                 executables. Skip it; executable modules don't need E605
+                 test files. *)
+              Logs.debug (fun m ->
+                  m
+                    "E605: Skipping module '%s' (no library source file, only \
+                     in executables)"
+                    lib_mod);
+              None
           | Some file_path
             when Astring.String.is_infix ~affix:"/test/" file_path ->
               (* Skip libraries defined in test directories - they are test support libs *)
               Logs.debug (fun m ->
                   m "E605: Skipping module '%s' (defined in test directory)"
                     lib_mod);
-              false
+              None
           | Some file_path when contains_only_types_and_modules file_path ->
               Logs.debug (fun m ->
                   m "E605: Skipping module '%s' (contains only types/modules)"
                     lib_mod);
-              false
-          | _ ->
+              None
+          | Some file_path ->
               let expected_test_name = "test_" ^ lib_mod in
 
               (* Debug what we're checking *)
@@ -166,10 +199,14 @@ let check (ctx : Context.project) =
               (* Check both:
                  1. If test module exists in dune metadata (test_modules)
                  2. If test file exists in the files being analyzed *)
-              (not in_dune) && not in_files)
+              if (not in_dune) && not in_files then
+                Some (lib_mod, file_path)
+              else None)
       lib_modules
   in
-  List.map (fun m -> create_missing_test_issue m files) missing_tests
+  List.map
+    (fun (m, source_file) -> create_missing_test_issue m source_file)
+    missing_tests
 
 let pp ppf { module_name; expected_test_file } =
   Fmt.pf ppf "Library module '%s' is missing test file (expected: %s)"

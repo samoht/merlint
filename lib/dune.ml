@@ -50,13 +50,19 @@ let ensure_project_built ~path mgr =
   | Ok _ -> Ok ()
   | Error msg -> err_build_failed msg
 
-(** Check if a file is an executable *)
+(** Check if a file belongs to an executable stanza *)
 let is_executable dune_describe ml_file =
   let module_name = Fpath.(ml_file |> rem_ext |> basename) in
+  let ml_file_lc = String.lowercase_ascii (Fpath.to_string ml_file) in
   List.exists
     (fun (name, files) ->
-      ignore files;
-      String.lowercase_ascii name = String.lowercase_ascii module_name)
+      (* Check if this is the main executable module *)
+      String.lowercase_ascii name = String.lowercase_ascii module_name
+      (* Or if this file appears in the executable's file list *)
+      || List.exists
+           (fun f ->
+             String.lowercase_ascii (Fpath.to_string f) = ml_file_lc)
+           files)
     dune_describe.executables
 
 (** Find all dune files in a directory tree *)
@@ -540,6 +546,9 @@ let synthetic files =
 
 (** Get libraries from describe *)
 let libraries describe = describe.libraries
+
+(** Get executables from describe *)
+let executables describe = describe.executables
 
 (** Get tests from describe *)
 let tests describe = describe.tests

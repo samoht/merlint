@@ -28,11 +28,11 @@ Test bad example - should find missing test files:
   ✗ Some checks failed. See details above.
   [1]
 
-Test good example - should find no issues:
+Test good example - should find no issues (includes bin/common.ml which is an executable module, not a library):
   $ merlint -B -r E605 good/
   Running merlint analysis...
   
-  Analyzing 7 files
+  Analyzing 9 files
   
   ✓ Code Quality (0 total issues)
   ✓ Code Style (0 total issues)
@@ -44,7 +44,15 @@ Test good example - should find no issues:
   Summary: ✓ 0 total issues (applied 1 rule)
   ✓ All checks passed!
 
+
+
+
 Test multidir - analyzing lib and test together should not report missing tests when they exist:
   $ merlint -B -r E605 good/lib good/test 2>&1 | grep -c "missing test file"
+  0
+  [1]
+
+Test executable modules are not flagged - bin/common.ml should not require a test:
+  $ merlint -B -r E605 good/ 2>&1 | grep -c "common"
   0
   [1]
