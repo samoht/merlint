@@ -73,8 +73,7 @@ let library_file_set dune_desc =
 
 (** Build a set of file paths that belong to executables. *)
 let executable_file_set dune_desc =
-  Dune.executables dune_desc
-  |> List.concat_map snd
+  Dune.executables dune_desc |> List.concat_map snd
   |> List.map (fun p -> String.lowercase_ascii (Fpath.to_string p))
 
 let check (ctx : Context.project) =
@@ -142,8 +141,7 @@ let check (ctx : Context.project) =
     | None ->
         (* Fall back to any match that is NOT an executable file *)
         List.find_opt
-          (fun f ->
-            not (List.mem (String.lowercase_ascii f) exec_files))
+          (fun f -> not (List.mem (String.lowercase_ascii f) exec_files))
           matches
   in
 
@@ -199,8 +197,7 @@ let check (ctx : Context.project) =
               (* Check both:
                  1. If test module exists in dune metadata (test_modules)
                  2. If test file exists in the files being analyzed *)
-              if (not in_dune) && not in_files then
-                Some (lib_mod, file_path)
+              if (not in_dune) && not in_files then Some (lib_mod, file_path)
               else None)
       lib_modules
   in
