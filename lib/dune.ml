@@ -477,6 +477,14 @@ let merge describes =
 
   { libraries; executables; tests }
 
+(** Check if [s1] contains [s2] as a substring. *)
+let string_contains s1 s2 =
+  let len2 = String.length s2 in
+  let rec aux i =
+    i + len2 <= String.length s1 && (String.sub s1 i len2 = s2 || aux (i + 1))
+  in
+  aux 0
+
 (** Filter out files matching patterns *)
 let exclude patterns describe =
   let filter_files files =
@@ -485,14 +493,7 @@ let exclude patterns describe =
         let file_str = Fpath.to_string file in
         not
           (List.exists
-             (fun pattern ->
-               (* Check if pattern is a substring of file *)
-               let rec contains s1 s2 =
-                 String.length s1 >= String.length s2
-                 && (String.sub s1 0 (String.length s2) = s2
-                    || contains (String.sub s1 1 (String.length s1 - 1)) s2)
-               in
-               contains file_str pattern)
+             (fun pattern -> string_contains file_str pattern)
              patterns))
       files
   in

@@ -298,24 +298,23 @@ let rec core_type_to_string ?(wrap_arrows = false) (typ : Parsetree.core_type) =
       String.concat " * " type_strs
   | _ -> "<complex type>"
 
+(** Check if a line is a regular comment immediately before a val declaration.
+*)
+let is_comment_before_val lines i trimmed =
+  Re.execp (Re.compile (Re.str "(* ")) trimmed
+  && Re.execp (Re.compile (Re.str " *)")) trimmed
+  && (not (String.starts_with ~prefix:"(**" trimmed))
+  && i + 1 < List.length lines
+  && String.starts_with ~prefix:"val " (String.trim (List.nth lines (i + 1)))
+
 (** Find regular comments that precede value declarations *)
 let regular_comments lines =
   let regular_comments = ref [] in
   List.iteri
     (fun i line ->
       let trimmed = String.trim line in
-      if
-        Re.execp (Re.compile (Re.str "(* ")) trimmed
-        && Re.execp (Re.compile (Re.str " *)")) trimmed
-        && not (String.starts_with ~prefix:"(**" trimmed)
-      then
-        if
-          (* Found a regular comment, check if next line is a val *)
-          i + 1 < List.length lines
-        then
-          let next_line = String.trim (List.nth lines (i + 1)) in
-          if String.starts_with ~prefix:"val " next_line then
-            regular_comments := (i + 2, "BAD_COMMENT") :: !regular_comments)
+      if is_comment_before_val lines i trimmed then
+        regular_comments := (i + 2, "BAD_COMMENT") :: !regular_comments)
     lines;
   !regular_comments
 

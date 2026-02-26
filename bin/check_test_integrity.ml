@@ -313,83 +313,129 @@ let check_undefined_rules cram_dir defined_rules test_dirs errors =
           :: !errors)
     test_dirs
 
+(* Check a single rule's test directory structure *)
+let check_rule_structure cram_dir rule_code errors =
+  let ( bad_exists,
+        good_exists,
+        run_exists,
+        dune_project_exists,
+        dune_exists,
+        has_subdirs,
+        has_incorrect_root_files ) =
+    check_test_files cram_dir rule_code
+  in
+  if not bad_exists then
+    errors :=
+      Fmt.str "Error: %s/%s.t/bad.ml is missing" cram_dir rule_code :: !errors;
+  if not good_exists then
+    errors :=
+      Fmt.str "Error: %s/%s.t/good.ml is missing" cram_dir rule_code :: !errors;
+  if not run_exists then begin
+    errors :=
+      Fmt.str "Error: %s/%s.t/run.t is missing" cram_dir rule_code :: !errors;
+    ()
+  end
+  else begin
+    let has_bad_test, has_good_test, wrong_formats =
+      check_run_t_format cram_dir rule_code
+    in
+    if not has_bad_test then
+      errors :=
+        Fmt.str "Error: %s/%s.t/run.t doesn't test 'merlint -r %s bad.ml'"
+          cram_dir rule_code
+          (String.uppercase_ascii rule_code)
+        :: !errors;
+    if not has_good_test then
+      errors :=
+        Fmt.str "Error: %s/%s.t/run.t doesn't test 'merlint -r %s good.ml'"
+          cram_dir rule_code
+          (String.uppercase_ascii rule_code)
+        :: !errors;
+    List.iter
+      (fun msg ->
+        errors :=
+          Fmt.str "Error: %s/%s.t/run.t: %s" cram_dir rule_code msg :: !errors)
+      wrong_formats;
+    if has_incorrect_root_files then
+      errors :=
+        Fmt.str
+          "Error: %s/%s.t has dune or dune-project at root but uses \
+           subdirectory structure - these files should be in bad/ and good/ \
+           subdirs instead"
+          cram_dir rule_code
+        :: !errors;
+    if not dune_project_exists then begin
+      if has_subdirs then
+        errors :=
+          Fmt.str "Error: %s/%s.t/{bad,good}/dune-project files are missing"
+            cram_dir rule_code
+          :: !errors
+      else
+        errors :=
+          Fmt.str "Error: %s/%s.t/dune-project is missing" cram_dir rule_code
+          :: !errors
+    end;
+    if (not dune_exists) && not has_subdirs then
+      errors :=
+        Fmt.str "Error: %s/%s.t/dune is missing" cram_dir rule_code :: !errors
+  end
+
 (* Check 3: Every test directory must have required files *)
 let check_test_directory_structure cram_dir defined_rules test_dirs errors =
   List.iter
     (fun rule_code ->
-      if List.mem rule_code test_dirs then (
-        let ( bad_exists,
-              good_exists,
-              run_exists,
-              dune_project_exists,
-              dune_exists,
-              has_subdirs,
-              has_incorrect_root_files ) =
-          check_test_files cram_dir rule_code
-        in
-        if not bad_exists then
-          errors :=
-            Fmt.str "Error: %s/%s.t/bad.ml is missing" cram_dir rule_code
-            :: !errors;
-        if not good_exists then
-          errors :=
-            Fmt.str "Error: %s/%s.t/good.ml is missing" cram_dir rule_code
-            :: !errors;
-        if not run_exists then
-          errors :=
-            Fmt.str "Error: %s/%s.t/run.t is missing" cram_dir rule_code
-            :: !errors
-        else
-          (* Check 4: run.t must use correct -r flag format *)
-          let has_bad_test, has_good_test, wrong_formats =
-            check_run_t_format cram_dir rule_code
-          in
-          if not has_bad_test then
-            errors :=
-              Fmt.str "Error: %s/%s.t/run.t doesn't test 'merlint -r %s bad.ml'"
-                cram_dir rule_code
-                (String.uppercase_ascii rule_code)
-              :: !errors;
-          if not has_good_test then
-            errors :=
-              Fmt.str
-                "Error: %s/%s.t/run.t doesn't test 'merlint -r %s good.ml'"
-                cram_dir rule_code
-                (String.uppercase_ascii rule_code)
-              :: !errors;
-          (* Report any wrong -r flag usage *)
-          List.iter
-            (fun msg ->
-              errors :=
-                Fmt.str "Error: %s/%s.t/run.t: %s" cram_dir rule_code msg
-                :: !errors)
-            wrong_formats;
-          (* Check 5: test directories SHOULD have dune-project and dune files in correct location *)
-          if has_incorrect_root_files then
-            errors :=
-              Fmt.str
-                "Error: %s/%s.t has dune or dune-project at root but uses \
-                 subdirectory structure - these files should be in bad/ and \
-                 good/ subdirs instead"
-                cram_dir rule_code
-              :: !errors;
-          if not dune_project_exists then
-            if has_subdirs then
-              errors :=
-                Fmt.str
-                  "Error: %s/%s.t/{bad,good}/dune-project files are missing"
-                  cram_dir rule_code
-                :: !errors
-            else
-              errors :=
-                Fmt.str "Error: %s/%s.t/dune-project is missing" cram_dir
-                  rule_code
-                :: !errors;
-          if (not dune_exists) && not has_subdirs then
-            errors :=
-              Fmt.str "Error: %s/%s.t/dune is missing" cram_dir rule_code
-              :: !errors))
+      if List.mem rule_code test_dirs then
+        check_rule_structure cram_dir rule_code errors)
     defined_rules
+
+(* Check a single test output for build errors or incorrect exit behavior *)
+let check_test_output cram_dir rule_code errors (test_name, output_lines) =
+  let re_command_failed = Re.compile (Re.str "Command failed with exit code") in
+  let re_build_warning =
+    Re.compile (Re.str "Warning: Failed to build project")
+  in
+  let has_build_error =
+    List.exists
+      (fun line ->
+        Re.execp re_dune_error line
+        || Re.execp re_command_failed line
+        || Re.execp re_build_warning line)
+      output_lines
+  in
+  if has_build_error then
+    errors :=
+      Fmt.str
+        "Error: %s/%s.t/run.t: %s test shows build errors/warnings - fix the \
+         build (debug with: dune build --root %s/%s.t)"
+        cram_dir rule_code test_name cram_dir rule_code
+      :: !errors
+  else if test_name = "bad" then begin
+    let has_exit_1 =
+      List.exists (fun line -> Re.execp re_exit_1 line) output_lines
+    in
+    if not has_exit_1 then
+      errors :=
+        Fmt.str
+          "Error: %s/%s.t/run.t: bad.ml test doesn't show exit code [1] - \
+           should find issues"
+          cram_dir rule_code
+        :: !errors
+  end
+  else if test_name = "good" then begin
+    let has_exit_1 =
+      List.exists (fun line -> Re.execp re_exit_1 line) output_lines
+    in
+    let shows_zero_issues =
+      List.exists (fun line -> Re.execp re_zero_issues line) output_lines
+    in
+    if has_exit_1 && shows_zero_issues then
+      errors :=
+        Fmt.str
+          "Error: %s/%s.t/run.t: good.ml test shows exit [1] but claims 0 \
+           issues"
+          cram_dir rule_code
+        :: !errors
+  end
 
 (* Check 6: Parse run.t files to verify expected behavior *)
 let check_expected_outputs cram_dir defined_rules test_dirs errors =
@@ -398,62 +444,7 @@ let check_expected_outputs cram_dir defined_rules test_dirs errors =
     (fun rule_code ->
       if List.mem rule_code test_dirs then
         let test_outputs = check_run_t_output cram_dir rule_code in
-        (* Check each test in the run.t file *)
-        List.iter
-          (fun (test_name, output_lines) ->
-            (* Check for any build failures or warnings - these should not be present in tests *)
-            let has_build_error =
-              let re_command_failed =
-                Re.compile (Re.str "Command failed with exit code")
-              in
-              let re_build_warning =
-                Re.compile (Re.str "Warning: Failed to build project")
-              in
-              List.exists
-                (fun line ->
-                  Re.execp re_dune_error line
-                  || Re.execp re_command_failed line
-                  || Re.execp re_build_warning line)
-                output_lines
-            in
-            if has_build_error then
-              errors :=
-                Fmt.str
-                  "Error: %s/%s.t/run.t: %s test shows build errors/warnings - \
-                   fix the build (debug with: dune build --root %s/%s.t)"
-                  cram_dir rule_code test_name cram_dir rule_code
-                :: !errors
-            else if test_name = "bad" then
-              (* bad.ml should exit with code [1] *)
-              let has_exit_1 =
-                List.exists (fun line -> Re.execp re_exit_1 line) output_lines
-              in
-              if not has_exit_1 then
-                errors :=
-                  Fmt.str
-                    "Error: %s/%s.t/run.t: bad.ml test doesn't show exit code \
-                     [1] - should find issues"
-                    cram_dir rule_code
-                  :: !errors
-              else if test_name = "good" then
-                (* good.ml should be successful (no exit code [1] at the end) *)
-                let has_exit_1 =
-                  List.exists (fun line -> Re.execp re_exit_1 line) output_lines
-                in
-                (* Check if it shows all checks passed for the specific rule *)
-                let shows_zero_issues =
-                  List.exists
-                    (fun line -> Re.execp re_zero_issues line)
-                    output_lines
-                in
-                if has_exit_1 && shows_zero_issues then
-                  errors :=
-                    Fmt.str
-                      "Error: %s/%s.t/run.t: good.ml test shows exit [1] but \
-                       claims 0 issues"
-                      cram_dir rule_code
-                    :: !errors)
-          test_outputs)
+        List.iter (check_test_output cram_dir rule_code errors) test_outputs)
     defined_rules
 
 (* Report results and exit *)
