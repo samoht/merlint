@@ -29,35 +29,32 @@ let filename_to_identifier filename =
     filename;
   Buffer.contents buf
 
+let classify_entry base_dir current_path entry =
+  let entry_path =
+    if current_path = "" then entry else Filename.concat current_path entry
+  in
+  let full_entry_path = Filename.concat base_dir entry_path in
+  if Sys.is_directory full_entry_path then
+    if entry = "_build" then `Skip else `Recurse entry_path
+  else if
+    Filename.check_suffix entry ".ml" || Filename.check_suffix entry ".mli"
+  then `File (entry_path, full_entry_path)
+  else `Skip
+
 let rec collect_files_recursively base_dir current_path =
   let full_path =
     if current_path = "" then base_dir
     else Filename.concat base_dir current_path
   in
-
   if Sys.file_exists full_path && Sys.is_directory full_path then
     let entries = Sys.readdir full_path |> Array.to_list in
     List.fold_left
       (fun acc entry ->
-        let entry_path =
-          if current_path = "" then entry
-          else Filename.concat current_path entry
-        in
-        let full_entry_path = Filename.concat base_dir entry_path in
-
-        if Sys.is_directory full_entry_path then
-          (* Skip _build directories *)
-          if entry = "_build" then acc
-          else
-            (* Recursively collect from subdirectory *)
+        match classify_entry base_dir current_path entry with
+        | `Skip -> acc
+        | `Recurse entry_path ->
             acc @ collect_files_recursively base_dir entry_path
-        else if
-          Filename.check_suffix entry ".ml"
-          || Filename.check_suffix entry ".mli"
-        then
-          (* Include the relative path from test_dir *)
-          (entry_path, full_entry_path) :: acc
-        else acc)
+        | `File file -> file :: acc)
       [] entries
     |> List.sort (fun (a, _) (b, _) -> String.compare a b)
   else []
