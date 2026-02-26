@@ -57,23 +57,22 @@ let file ~filename ~config ~project_root ~outline ~dump =
          ast);
   }
 
+let test_module_of_file f =
+  if String.ends_with ~suffix:".ml" f then
+    let basename = Filename.basename f |> Filename.remove_extension in
+    if String.starts_with ~prefix:"test_" basename || basename = "test" then begin
+      Log.debug (fun m ->
+          m "Context: Found test file %s -> module %s" f basename);
+      Some basename
+    end
+    else None
+  else None
+
 let discover_test_modules ~all_files dune_desc_lazy =
   (* Get test modules from dune describe *)
   let dune_test_modules = Dune.test_modules (Lazy.force dune_desc_lazy) in
   (* Also discover test_*.ml files from all_files that might not be in dune *)
-  let file_test_modules =
-    all_files
-    |> List.filter_map (fun f ->
-        if String.ends_with ~suffix:".ml" f then
-          let basename = Filename.basename f |> Filename.remove_extension in
-          if String.starts_with ~prefix:"test_" basename || basename = "test"
-          then (
-            Log.debug (fun m ->
-                m "Context: Found test file %s -> module %s" f basename);
-            Some basename)
-          else None
-        else None)
-  in
+  let file_test_modules = List.filter_map test_module_of_file all_files in
   (* Combine and deduplicate *)
   let all_test_modules =
     dune_test_modules @ file_test_modules |> List.sort_uniq String.compare

@@ -369,9 +369,36 @@ let cram_only_dirs dune_files =
     cram_dirs;
   cram_dirs
 
+let is_under_cram_only_dir cram_dirs path =
+  let path_fp = path |> Fpath.normalize in
+  let result =
+    List.exists
+      (fun cram_dir ->
+        let cram_fp = cram_dir |> Fpath.normalize in
+        Fpath.is_prefix cram_fp path_fp)
+      cram_dirs
+  in
+  if result then
+    Log.debug (fun m ->
+        m "Path %s is under cram-only directory" (Fpath.to_string path_fp));
+  result
+
+let extract_items_from_dune_file cram_dirs dune_file =
+  if should_include_dir dune_file then
+    let dir = Fpath.(dune_file |> parent |> normalize) in
+    if not (is_under_cram_only_dir cram_dirs dir) then
+      let stanzas = parse_dune_file dune_file in
+      List.filter_map (extract_project_item dir) stanzas
+    else (
+      Log.debug (fun m ->
+          m "Skipping dune file in cram dir: %s (dir=%s)"
+            (Fpath.to_string dune_file)
+            (Fpath.to_string dir));
+      [])
+  else []
+
 (** Get project structure from dune files *)
 let project_structure project_root =
-  (* Find all dune files *)
   let dune_files = files project_root in
   Log.debug (fun m ->
       m "Found %d dune files in %a" (List.length dune_files) Fpath.pp
@@ -379,46 +406,9 @@ let project_structure project_root =
   List.iter
     (fun f -> Log.debug (fun m -> m "  Dune file: %a" Fpath.pp f))
     dune_files;
-
-  (* First pass: find "cram-only" directories - directories that contain a cram
-     stanza but no test, library, or executable stanzas. Directories like
-     monopam/test that have both (test ...) and (cram ...) should not be
-     treated as cram-only directories. *)
   let cram_dirs = cram_only_dirs dune_files in
-
-  (* Helper to check if a directory is under a cram-only directory *)
-  let is_under_cram_only_dir path =
-    let path_fp = path |> Fpath.normalize in
-    let result =
-      List.exists
-        (fun cram_dir ->
-          let cram_fp = cram_dir |> Fpath.normalize in
-          Fpath.is_prefix cram_fp path_fp)
-        cram_dirs
-    in
-    if result then
-      Log.debug (fun m ->
-          m "Path %s is under cram-only directory" (Fpath.to_string path_fp));
-    result
-  in
-
-  (* Extract project structure, excluding anything under cram-only directories *)
   let project_items =
-    List.concat_map
-      (fun dune_file ->
-        if should_include_dir dune_file then
-          let dir = Fpath.(dune_file |> parent |> normalize) in
-          if not (is_under_cram_only_dir dir) then
-            let stanzas = parse_dune_file dune_file in
-            List.filter_map (extract_project_item dir) stanzas
-          else (
-            Log.debug (fun m ->
-                m "Skipping dune file in cram dir: %s (dir=%s)"
-                  (Fpath.to_string dune_file)
-                  (Fpath.to_string dir));
-            [])
-        else [])
-      dune_files
+    List.concat_map (extract_items_from_dune_file cram_dirs) dune_files
   in
   Log.debug (fun m ->
       m "Found %d project items after filtering cram dirs"
