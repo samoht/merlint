@@ -3,8 +3,8 @@
 open Merlint.Outline
 
 (* Helper to create test items *)
-let make_item ?(type_sig = None) ?(deprecated = false) ?(children = []) ~name
-    ~kind () =
+let item ?(type_sig = None) ?(deprecated = false) ?(children = []) ~name ~kind
+    () =
   {
     Merlin.name;
     kind;
@@ -25,25 +25,23 @@ let test_flatten_empty () =
 
 let test_flatten_simple () =
   let items =
-    [
-      make_item ~name:"foo" ~kind:Value (); make_item ~name:"bar" ~kind:Type ();
-    ]
+    [ item ~name:"foo" ~kind:Value (); item ~name:"bar" ~kind:Type () ]
   in
   let result = flatten items in
   Alcotest.(check int) "two items" 2 (List.length result)
 
 let test_flatten_with_children () =
-  let child = make_item ~name:"inner" ~kind:Value () in
-  let parent = make_item ~name:"Outer" ~kind:Module ~children:[ child ] () in
+  let child = item ~name:"inner" ~kind:Value () in
+  let parent = item ~name:"Outer" ~kind:Module ~children:[ child ] () in
   let result = flatten [ parent ] in
   Alcotest.(check int) "parent and child" 2 (List.length result)
 
 let test_get_values () =
   let items =
     [
-      make_item ~name:"foo" ~kind:Value ~type_sig:(Some "int") ();
-      make_item ~name:"Bar" ~kind:Type ();
-      make_item ~name:"baz" ~kind:Value ~type_sig:(Some "string") ();
+      item ~name:"foo" ~kind:Value ~type_sig:(Some "int") ();
+      item ~name:"Bar" ~kind:Type ();
+      item ~name:"baz" ~kind:Value ~type_sig:(Some "string") ();
     ]
   in
 
@@ -55,8 +53,8 @@ let test_get_values () =
 let test_find_by_name () =
   let items =
     [
-      make_item ~name:"foo" ~kind:Value ~type_sig:(Some "int") ();
-      make_item ~name:"Bar" ~kind:Type ();
+      item ~name:"foo" ~kind:Value ~type_sig:(Some "int") ();
+      item ~name:"Bar" ~kind:Type ();
     ]
   in
 
@@ -68,8 +66,8 @@ let test_find_by_name () =
   Alcotest.(check bool) "not found baz" true (not_found = None)
 
 let test_find_nested () =
-  let child = make_item ~name:"nested" ~kind:Value () in
-  let parent = make_item ~name:"M" ~kind:Module ~children:[ child ] () in
+  let child = item ~name:"nested" ~kind:Value () in
+  let parent = item ~name:"M" ~kind:Module ~children:[ child ] () in
   let found = by_name "nested" [ parent ] in
   Alcotest.(check bool) "found nested" true (found <> None);
   Alcotest.(check string) "correct name" "nested" (Option.get found).name
@@ -92,7 +90,7 @@ let test_all_kinds () =
   in
   List.iter
     (fun (kind, name) ->
-      let item = make_item ~name ~kind () in
+      let item = item ~name ~kind () in
       Alcotest.(check string) (Fmt.str "%s kind" name) name item.name)
     kinds
 
