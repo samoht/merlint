@@ -69,6 +69,39 @@ let aggregate_timings timings =
     !file_rule_count,
     !project_rule_count )
 
+let summary_columns =
+  Tty.Table.
+    [
+      column "Operation";
+      column ~align:`Right "Count";
+      column ~align:`Right "Total (ms)";
+      column ~align:`Right "Avg (ms)";
+      column ~align:`Right "% Time";
+    ]
+
+let summary_rows ~merlin_time ~file_rules_time ~project_rules_time ~merlin_count
+    ~file_rule_count ~project_rule_count =
+  let total_time = merlin_time +. file_rules_time +. project_rules_time in
+  let pct t =
+    if total_time > 0.0 then Fmt.str "%.1f%%" (t /. total_time *. 100.0) else ""
+  in
+  let avg t c =
+    if c > 0 then Fmt.str "%.1f" (t *. 1000.0 /. float_of_int c) else ""
+  in
+  let total_count = merlin_count + file_rule_count + project_rule_count in
+  let rows = ref [] in
+  let add name count time =
+    if count > 0 then
+      rows :=
+        [ name; string_of_int count; ms time; avg time count; pct time ]
+        :: !rows
+  in
+  add "Merlin Analysis" merlin_count merlin_time;
+  add "File Rules" file_rule_count file_rules_time;
+  add "Project Rules" project_rule_count project_rules_time;
+  rows := [ "Total"; string_of_int total_count; ms total_time; ""; "" ] :: !rows;
+  List.rev !rows
+
 let print_summary t =
   let timings = timings_from_state t in
   if timings = [] then ()
@@ -76,51 +109,19 @@ let print_summary t =
     let ( merlin_time,
           file_rules_time,
           project_rules_time,
-          other_time,
+          _other_time,
           merlin_count,
           file_rule_count,
           project_rule_count ) =
       aggregate_timings timings
     in
-
-    let total_time =
-      merlin_time +. file_rules_time +. project_rules_time +. other_time
+    let rows =
+      summary_rows ~merlin_time ~file_rules_time ~project_rules_time
+        ~merlin_count ~file_rule_count ~project_rule_count
     in
-    let pct t =
-      if total_time > 0.0 then Fmt.str "%.1f%%" (t /. total_time *. 100.0)
-      else ""
-    in
-    let avg t c =
-      if c > 0 then Fmt.str "%.1f" (t *. 1000.0 /. float_of_int c) else ""
-    in
-    let total_count = merlin_count + file_rule_count + project_rule_count in
-
-    let columns =
-      Tty.Table.
-        [
-          column "Operation";
-          column ~align:`Right "Count";
-          column ~align:`Right "Total (ms)";
-          column ~align:`Right "Avg (ms)";
-          column ~align:`Right "% Time";
-        ]
-    in
-    let rows = ref [] in
-    let add name count time =
-      if count > 0 then
-        rows :=
-          [ name; string_of_int count; ms time; avg time count; pct time ]
-          :: !rows
-    in
-    add "Merlin Analysis" merlin_count merlin_time;
-    add "File Rules" file_rule_count file_rules_time;
-    add "Project Rules" project_rule_count project_rules_time;
-    rows :=
-      [ "Total"; string_of_int total_count; ms total_time; ""; "" ] :: !rows;
-
     Fmt.pr "@.[Profiling Summary]@.";
     let table =
-      Tty.Table.of_string_rows ~border:Tty.Border.none columns (List.rev !rows)
+      Tty.Table.of_string_rows ~border:Tty.Border.none summary_columns rows
     in
     Tty.Table.pp Format.std_formatter table
 
