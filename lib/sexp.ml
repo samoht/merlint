@@ -2,6 +2,15 @@
 
 type t = Atom of string | List of t list
 
+let is_atom_char c =
+  match c with
+  | 'a' .. 'z'
+  | 'A' .. 'Z'
+  | '0' .. '9'
+  | '_' | '-' | '.' | '/' | ':' | '+' | '=' | '<' | '>' | '*' | '?' | '!' ->
+      true
+  | _ -> false
+
 (** Parse s-expressions from a string *)
 let parse_string content =
   let len = String.length content in
@@ -25,16 +34,6 @@ let parse_string content =
     if !pos < len && content.[!pos] = ';' then (
       skip_line_comment ();
       skip_whitespace_and_comments ())
-  in
-
-  let is_atom_char c =
-    match c with
-    | 'a' .. 'z'
-    | 'A' .. 'Z'
-    | '0' .. '9'
-    | '_' | '-' | '.' | '/' | ':' | '+' | '=' | '<' | '>' | '*' | '?' | '!' ->
-        true
-    | _ -> false
   in
 
   let parse_quoted_string () =

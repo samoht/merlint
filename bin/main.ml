@@ -262,6 +262,39 @@ let ensure_project_built ~path mgr =
       Fmt.epr "Function type analysis may not work properly.@.";
       Fmt.epr "Continuing with analysis...@."
 
+let build_dune_describe ~project_root files =
+  match files with
+  | [] ->
+      (* No files specified, use dune for the project root *)
+      Merlint.Dune.describe (Fpath.v project_root)
+  | _ ->
+      (* Files or directories specified *)
+      let describes = ref [] in
+      let explicit_files = ref [] in
+      List.iter
+        (fun path ->
+          if Sys.file_exists path && Sys.is_directory path then
+            (* For directories, create a dune describe *)
+            let desc = Merlint.Dune.describe (Fpath.v path) in
+            describes := desc :: !describes
+          else if Sys.file_exists path then
+            (* For individual files, we need to create a describe with them *)
+            if
+              Filename.check_suffix path ".ml"
+              || Filename.check_suffix path ".mli"
+            then explicit_files := path :: !explicit_files
+            else ()
+          else Fmt.epr "Warning: %s does not exist@." path)
+        files;
+
+      (* If we have explicit files but no describes, create a synthetic describe *)
+      if !describes = [] && !explicit_files <> [] then
+        (* Create a synthetic describe with the files as executables *)
+        Merlint.Dune.synthetic (List.rev !explicit_files)
+      else
+        (* Merge all describes *)
+        Merlint.Dune.merge (List.rev !describes)
+
 let analyze_files mgr ?(exclude_patterns = []) ?rule_filter
     ?(show_profile = false) ?(no_build = false) files =
   (* Find project root *)
@@ -280,39 +313,7 @@ let analyze_files mgr ?(exclude_patterns = []) ?rule_filter
 
   (* Build dune describes from directories/files *)
   Log.info (fun m -> m "Scanning project structure...");
-  let dune_describe =
-    match files with
-    | [] ->
-        (* No files specified, use dune for the project root *)
-        Merlint.Dune.describe (Fpath.v project_root)
-    | _ ->
-        (* Files or directories specified *)
-        let describes = ref [] in
-        let explicit_files = ref [] in
-        List.iter
-          (fun path ->
-            if Sys.file_exists path && Sys.is_directory path then
-              (* For directories, create a dune describe *)
-              let desc = Merlint.Dune.describe (Fpath.v path) in
-              describes := desc :: !describes
-            else if Sys.file_exists path then
-              (* For individual files, we need to create a describe with them *)
-              if
-                Filename.check_suffix path ".ml"
-                || Filename.check_suffix path ".mli"
-              then explicit_files := path :: !explicit_files
-              else ()
-            else Fmt.epr "Warning: %s does not exist@." path)
-          files;
-
-        (* If we have explicit files but no describes, create a synthetic describe *)
-        if !describes = [] && !explicit_files <> [] then
-          (* Create a synthetic describe with the files as executables *)
-          Merlint.Dune.synthetic (List.rev !explicit_files)
-        else
-          (* Merge all describes *)
-          Merlint.Dune.merge (List.rev !describes)
-  in
+  let dune_describe = build_dune_describe ~project_root files in
 
   (* Apply exclusions (including cram directories which are already filtered) *)
   let filtered_describe =

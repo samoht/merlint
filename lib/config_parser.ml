@@ -55,18 +55,19 @@ let parse_rule_yaml line =
     Some (`Exclude rules)
   else None
 
+let finalize_rule current_rule exclusions =
+  match current_rule with
+  | Some (files, rules) when List.length rules > 0 ->
+      Rule_config.add { pattern = files; rules } exclusions
+  | _ -> exclusions
+
 (** Parse configuration content *)
 let parse content =
   let lines = String.split_on_char '\n' content in
   let rec process_lines current_section current_rule exclusions settings =
     function
     | [] ->
-        let exclusions =
-          match current_rule with
-          | Some (files, rules) when List.length rules > 0 ->
-              Rule_config.add { pattern = files; rules } exclusions
-          | _ -> exclusions
-        in
+        let exclusions = finalize_rule current_rule exclusions in
         { settings; exclusions }
     | line :: rest -> (
         let trimmed = String.trim line in
@@ -77,12 +78,7 @@ let parse content =
           else
           match parse_section_header trimmed with
           | Some section ->
-              let exclusions =
-                match current_rule with
-                | Some (files, rules) when List.length rules > 0 ->
-                    Rule_config.add { pattern = files; rules } exclusions
-                | _ -> exclusions
-              in
+              let exclusions = finalize_rule current_rule exclusions in
               process_lines section None exclusions settings rest
           | None -> (
               (* Process based on current section *)
@@ -99,15 +95,7 @@ let parse content =
                   match parse_rule_yaml trimmed with
                   | Some (`Files files_pattern) ->
                       (* Save previous rule if any *)
-                      let exclusions =
-                        match current_rule with
-                        | Some (prev_files, prev_rules)
-                          when List.length prev_rules > 0 ->
-                            Rule_config.add
-                              { pattern = prev_files; rules = prev_rules }
-                              exclusions
-                        | _ -> exclusions
-                      in
+                      let exclusions = finalize_rule current_rule exclusions in
                       process_lines current_section
                         (Some (files_pattern, []))
                         exclusions settings rest
