@@ -48,6 +48,7 @@ module Complexity : sig
   }
 
   val empty : info
+  (** [empty] is the zero-valued complexity info. *)
 
   val analyze : expr -> info
   (** [analyze expr] returns complexity information for an expression. *)
