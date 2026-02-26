@@ -4,6 +4,18 @@ let src = Logs.Src.create "merlint.command" ~doc:"Command execution"
 
 module Log = (val Logs.src_log src : Logs.LOG)
 
+let err_exit_code code =
+  Log.err (fun m -> m "Command failed with exit code %d" code);
+  Error (Fmt.str "Command failed with exit code %d" code)
+
+let err_signal n =
+  Log.err (fun m -> m "Command killed by signal %d" n);
+  Error (Fmt.str "Command killed by signal %d" n)
+
+let err_exception exn =
+  Log.err (fun m -> m "Exception running command: %s" (Printexc.to_string exn));
+  Error (Fmt.str "Exception: %s" (Printexc.to_string exn))
+
 let run mgr cmd =
   Log.info (fun m -> m "Running command: %s (cwd: %s)" cmd (Sys.getcwd ()));
   try
@@ -29,13 +41,6 @@ let run mgr cmd =
     | `Exited 127 ->
         Log.err (fun m -> m "Command not found: %s" cmd);
         Error "Command not found"
-    | `Exited code ->
-        Log.err (fun m -> m "Command failed with exit code %d" code);
-        Error (Fmt.str "Command failed with exit code %d" code)
-    | `Signaled n ->
-        Log.err (fun m -> m "Command killed by signal %d" n);
-        Error (Fmt.str "Command killed by signal %d" n)
-  with exn ->
-    Log.err (fun m ->
-        m "Exception running command: %s" (Printexc.to_string exn));
-    Error (Fmt.str "Exception: %s" (Printexc.to_string exn))
+    | `Exited code -> err_exit_code code
+    | `Signaled n -> err_signal n
+  with exn -> err_exception exn

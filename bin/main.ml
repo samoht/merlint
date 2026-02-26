@@ -402,8 +402,8 @@ let parse_rule_filter rules_spec =
           Log.err (fun m -> m "Invalid rules specification: %s" msg);
           Stdlib.exit 1)
 
-let main exclude_patterns rules_spec show_profile show_config no_build files ()
-    =
+let main exclude_patterns rules_spec ~show_profile ~show_config ~no_build files
+    () =
   if show_config then show_configuration files
   else
     let rule_filter = parse_rule_filter rules_spec in
@@ -432,7 +432,9 @@ let cmd =
   let info = Cmd.info "merlint" ~version:Monopam_info.version ~doc ~man in
   Cmd.v info
     Term.(
-      const main $ exclude_flag $ rules_flag $ profile_flag $ show_config_flag
+      const (fun e r p c n f u ->
+          main e r ~show_profile:p ~show_config:c ~no_build:n f u)
+      $ exclude_flag $ rules_flag $ profile_flag $ show_config_flag
       $ no_build_flag $ files
       $ Term.(const (fun () () -> ()) $ Vlog.setup "merlint" $ Memtrace.term))
 
