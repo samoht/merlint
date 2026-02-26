@@ -16,10 +16,14 @@ let is_valid_snake_case_with_suffix name =
   else false
 
 let check_value_name name =
-  let expected = Naming.to_lowercase_snake_case name in
-  if name <> expected && name <> String.lowercase_ascii name then
-    if is_valid_snake_case_with_suffix name then None else Some expected
-  else None
+  (* Skip names starting with uppercase: these are first-class module bindings
+     like (module M) which must be uppercase in OCaml *)
+  if name <> "" && name.[0] >= 'A' && name.[0] <= 'Z' then None
+  else
+    let expected = Naming.to_lowercase_snake_case name in
+    if name <> expected && name <> String.lowercase_ascii name then
+      if is_valid_snake_case_with_suffix name then None else Some expected
+    else None
 
 let check (ctx : Context.file) =
   let filename = ctx.filename in
