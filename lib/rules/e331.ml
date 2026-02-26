@@ -59,14 +59,6 @@ let check (ctx : Context.file) =
     else None
   in
 
-  (* Collect all value names to detect clashes *)
-  let existing_names =
-    List.filter_map
-      (fun (item : Outline.item) ->
-        match item.kind with Outline.Value -> Some item.name | _ -> None)
-      outline_data
-  in
-
   List.filter_map
     (fun (item : Outline.item) ->
       let name = item.name in
@@ -76,8 +68,7 @@ let check (ctx : Context.file) =
       | Outline.Value, Some loc -> (
           (* Check for regular function prefix patterns *)
           match check_function_prefix name with
-          | Some (prefix_type, suggested)
-            when not (List.mem suggested existing_names) ->
+          | Some (prefix_type, suggested) ->
               Some
                 (Issue.v ~loc
                    {
@@ -86,11 +77,10 @@ let check (ctx : Context.file) =
                      prefix_type;
                      context = name;
                    })
-          | Some _ | None -> (
+          | None -> (
               (* Check for Module.create_module pattern *)
               match check_module_create_prefix name with
-              | Some (prefix_type, suggested)
-                when not (List.mem suggested existing_names) ->
+              | Some (prefix_type, suggested) ->
                   Some
                     (Issue.v ~loc
                        {
@@ -100,7 +90,7 @@ let check (ctx : Context.file) =
                          context =
                            String.capitalize_ascii module_name ^ "." ^ name;
                        })
-              | Some _ | None -> None))
+              | None -> None))
       | _ -> None)
     outline_data
 
