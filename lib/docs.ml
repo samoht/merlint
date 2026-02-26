@@ -52,25 +52,7 @@ let count_doc_args doc_content =
   (* First part is the name, rest are args *)
   max 0 (List.length parts - 1)
 
-let check_function_doc ~name ~signature ~doc =
-  (* If doc uses [x ...] format, verify x matches the function name
-     and has the right number of arguments. Otherwise, accept any doc format. *)
-  let issues = ref [] in
-
-  (* Check if this is an operator *)
-  let operator_keywords =
-    [ "mod"; "land"; "lor"; "lxor"; "lsl"; "lsr"; "asr"; "or"; "and" ]
-  in
-  let is_operator =
-    List.mem name operator_keywords
-    || String.length name > 0
-       && not
-            (match name.[0] with
-            | 'a' .. 'z' | 'A' .. 'Z' | '_' -> true
-            | _ -> false)
-  in
-
-  (* Extract the content inside [...] if present *)
+let check_bracket_format ~name ~signature ~is_operator ~doc issues =
   let bracket_pattern =
     Re.compile
       (Re.seq
@@ -80,7 +62,7 @@ let check_function_doc ~name ~signature ~doc =
            Re.str "]";
          ])
   in
-  (match Re.exec_opt bracket_pattern doc with
+  match Re.exec_opt bracket_pattern doc with
   | Some groups ->
       let bracket_content = Re.Group.get groups 1 in
       let parts =
@@ -117,18 +99,9 @@ let check_function_doc ~name ~signature ~doc =
               :: !issues
         end
       end
-  | None -> ());
+  | None -> ()
 
-  (* No bracket format - that's fine, accept as valid *)
-
-  (* Check for redundant phrases *)
-  let lower = String.lowercase_ascii doc in
-  if
-    String.starts_with ~prefix:"this function" lower
-    || String.starts_with ~prefix:"this method" lower
-  then issues := Redundant_phrase "This function" :: !issues;
-
-  (* Check ends with period (but not if it ends with a code block ]} or if it's a list ending with ) *)
+let check_ends_with_period ~doc issues =
   let trimmed = String.trim doc in
   let has_list_markers =
     Re.execp (Re.compile (Re.str "- ")) doc
@@ -140,7 +113,40 @@ let check_function_doc ~name ~signature ~doc =
     && (not (String.ends_with ~suffix:"." trimmed))
     && (not (String.ends_with ~suffix:"]}" trimmed))
     && not (has_list_markers && String.ends_with ~suffix:")" trimmed)
-  then issues := Missing_period :: !issues;
+  then issues := Missing_period :: !issues
+
+let check_function_doc ~name ~signature ~doc =
+  (* If doc uses [x ...] format, verify x matches the function name
+     and has the right number of arguments. Otherwise, accept any doc format. *)
+  let issues = ref [] in
+
+  (* Check if this is an operator *)
+  let operator_keywords =
+    [ "mod"; "land"; "lor"; "lxor"; "lsl"; "lsr"; "asr"; "or"; "and" ]
+  in
+  let is_operator =
+    List.mem name operator_keywords
+    || String.length name > 0
+       && not
+            (match name.[0] with
+            | 'a' .. 'z' | 'A' .. 'Z' | '_' -> true
+            | _ -> false)
+  in
+
+  (* Extract the content inside [...] if present *)
+  check_bracket_format ~name ~signature ~is_operator ~doc issues;
+
+  (* No bracket format - that's fine, accept as valid *)
+
+  (* Check for redundant phrases *)
+  let lower = String.lowercase_ascii doc in
+  if
+    String.starts_with ~prefix:"this function" lower
+    || String.starts_with ~prefix:"this method" lower
+  then issues := Redundant_phrase "This function" :: !issues;
+
+  (* Check ends with period (but not if it ends with a code block ]} or if it's a list ending with ) *)
+  check_ends_with_period ~doc issues;
 
   !issues
 

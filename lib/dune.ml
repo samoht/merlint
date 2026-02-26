@@ -142,6 +142,38 @@ let should_include_dir dune_file =
   in
   not has_data_only
 
+let extract_test_item dir fields =
+  let names =
+    List.concat_map
+      (function
+        | Sexp.List [ Sexp.Atom "name"; Sexp.Atom n ] -> [ n ]
+        | Sexp.List (Sexp.Atom "names" :: names) ->
+            List.filter_map (function Sexp.Atom n -> Some n | _ -> None) names
+        | _ -> [])
+      fields
+  in
+  let modules = List.concat_map extract_modules_field fields in
+  let libraries =
+    List.concat_map
+      (function
+        | Sexp.List (Sexp.Atom "libraries" :: libs) ->
+            List.filter_map (function Sexp.Atom l -> Some l | _ -> None) libs
+        | _ -> [])
+      fields
+  in
+  (* Handle test stanzas without explicit names - use "test" as default *)
+  let test_names = if names = [] then [ "test" ] else names in
+  Log.debug (fun m ->
+      m "Found test stanza in %a: names=%a, modules=%a, libraries=%a" Fpath.pp
+        dir
+        Fmt.(list ~sep:comma string)
+        test_names
+        Fmt.(list ~sep:comma string)
+        modules
+        Fmt.(list ~sep:comma string)
+        libraries);
+  Some (Test { names = test_names; dir; modules; libraries })
+
 (** Extract project structure from dune stanza *)
 let extract_project_item dir = function
   | Sexp.List (Sexp.Atom "library" :: fields) -> (
@@ -178,40 +210,7 @@ let extract_project_item dir = function
       let modules = List.concat_map extract_modules_field fields in
       if names <> [] then Some (Executable { names; dir; modules }) else None
   | Sexp.List (Sexp.Atom kind :: fields) when kind = "test" || kind = "tests" ->
-      let names =
-        List.concat_map
-          (function
-            | Sexp.List [ Sexp.Atom "name"; Sexp.Atom n ] -> [ n ]
-            | Sexp.List (Sexp.Atom "names" :: names) ->
-                List.filter_map
-                  (function Sexp.Atom n -> Some n | _ -> None)
-                  names
-            | _ -> [])
-          fields
-      in
-      let modules = List.concat_map extract_modules_field fields in
-      let libraries =
-        List.concat_map
-          (function
-            | Sexp.List (Sexp.Atom "libraries" :: libs) ->
-                List.filter_map
-                  (function Sexp.Atom l -> Some l | _ -> None)
-                  libs
-            | _ -> [])
-          fields
-      in
-      (* Handle test stanzas without explicit names - use "test" as default *)
-      let test_names = if names = [] then [ "test" ] else names in
-      Log.debug (fun m ->
-          m "Found test stanza in %a: names=%a, modules=%a, libraries=%a"
-            Fpath.pp dir
-            Fmt.(list ~sep:comma string)
-            test_names
-            Fmt.(list ~sep:comma string)
-            modules
-            Fmt.(list ~sep:comma string)
-            libraries);
-      Some (Test { names = test_names; dir; modules; libraries })
+      extract_test_item dir fields
   | Sexp.List (Sexp.Atom "cram" :: _) -> Some (Cram_test { dir })
   | _ -> None
 
@@ -335,21 +334,7 @@ let test_modules dune_describe =
       else None)
   |> List.sort_uniq String.compare
 
-(** Get project structure from dune files *)
-let project_structure project_root =
-  (* Find all dune files *)
-  let dune_files = files project_root in
-  Log.debug (fun m ->
-      m "Found %d dune files in %a" (List.length dune_files) Fpath.pp
-        project_root);
-  List.iter
-    (fun f -> Log.debug (fun m -> m "  Dune file: %a" Fpath.pp f))
-    dune_files;
-
-  (* First pass: find "cram-only" directories - directories that contain a cram
-     stanza but no test, library, or executable stanzas. Directories like
-     monopam/test that have both (test ...) and (cram ...) should not be
-     treated as cram-only directories. *)
+let cram_only_dirs dune_files =
   let cram_dirs =
     List.fold_left
       (fun acc dune_file ->
@@ -382,6 +367,24 @@ let project_structure project_root =
   List.iter
     (fun dir -> Log.debug (fun m -> m "Cram dir: %s" (Fpath.to_string dir)))
     cram_dirs;
+  cram_dirs
+
+(** Get project structure from dune files *)
+let project_structure project_root =
+  (* Find all dune files *)
+  let dune_files = files project_root in
+  Log.debug (fun m ->
+      m "Found %d dune files in %a" (List.length dune_files) Fpath.pp
+        project_root);
+  List.iter
+    (fun f -> Log.debug (fun m -> m "  Dune file: %a" Fpath.pp f))
+    dune_files;
+
+  (* First pass: find "cram-only" directories - directories that contain a cram
+     stanza but no test, library, or executable stanzas. Directories like
+     monopam/test that have both (test ...) and (cram ...) should not be
+     treated as cram-only directories. *)
+  let cram_dirs = cram_only_dirs dune_files in
 
   (* Helper to check if a directory is under a cram-only directory *)
   let is_under_cram_only_dir path =
