@@ -44,6 +44,7 @@ let check ctx =
   let dune_describe = Context.dune_describe ctx in
 
   (* Build a set of library module paths (relative to lib/) *)
+  let libraries = Dune.libraries dune_describe in
   let library_module_paths =
     List.concat_map
       (fun (lib_info : Dune.library_info) ->
@@ -63,7 +64,39 @@ let check ctx =
                   Some (Fpath.to_string file))
             else None)
           lib_info.files)
-      (Dune.libraries dune_describe)
+      libraries
+  in
+
+  (* Collect all library source file paths for sub-module reference checking *)
+  let library_source_files =
+    List.concat_map
+      (fun (lib_info : Dune.library_info) ->
+        List.filter_map
+          (fun file ->
+            if Fpath.has_ext ".ml" file || Fpath.has_ext ".mli" file then
+              Some (Fpath.to_string file)
+            else None)
+          lib_info.files)
+      libraries
+  in
+
+  (* Check if [module_name] (e.g. "Dump") is referenced as a module in any
+     library source file. Looks for patterns like [Foo.Dump.] or
+     [module Dump]. *)
+  let is_referenced_in_library module_name =
+    let cap_name = String.capitalize_ascii module_name in
+    let pattern_dot = cap_name ^ "." in
+    let pattern_module = "module " ^ cap_name in
+    List.exists
+      (fun src_path ->
+        try
+          let content =
+            In_channel.with_open_text src_path In_channel.input_all
+          in
+          Astring.String.is_infix ~affix:pattern_dot content
+          || Astring.String.is_infix ~affix:pattern_module content
+        with _ -> false)
+      library_source_files
   in
 
   Logs.debug (fun m ->
@@ -92,8 +125,15 @@ let check ctx =
                         || Filename.basename lib_path = expected_path)
                       library_module_paths
                   in
-                  Logs.debug (fun m -> m "E610: found=%b" found);
-                  if not found then
+                  (* Also check if the expected module name is referenced as a
+                     sub-module or dependency module in any library source file *)
+                  let module_name =
+                    Filename.remove_extension (Filename.basename expected_path)
+                  in
+                  let referenced = is_referenced_in_library module_name in
+                  Logs.debug (fun m ->
+                      m "E610: found=%b referenced=%b" found referenced);
+                  if (not found) && not referenced then
                     let loc =
                       Location.v ~file:(Fpath.to_string file) ~start_line:1
                         ~start_col:0 ~end_line:1 ~end_col:0

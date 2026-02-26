@@ -2,7 +2,9 @@
 
 type payload = { module_name : string; expected_test_file : string }
 
-(** Check if a module only contains type definitions and module aliases *)
+(** Check if a module only contains type definitions, module aliases, and
+    delegations. This detects facade/wrapper modules that just re-export other
+    modules (e.g. the top-level [Irmin] module). *)
 let contains_only_types_and_modules file_path =
   try
     let ic = open_in file_path in
@@ -11,49 +13,65 @@ let contains_only_types_and_modules file_path =
     let structure = Parse.implementation lexbuf in
     close_in ic;
 
-    (* Check if all items are type definitions or module aliases *)
-    List.for_all
-      (fun item ->
-        match item.Parsetree.pstr_desc with
-        | Pstr_type _ -> true (* Type definitions *)
-        | Pstr_typext _ -> true (* Type extensions *)
-        | Pstr_module { pmb_expr; _ } -> (
-            (* Check for module aliases and applications *)
-            match pmb_expr.pmod_desc with
-            | Pmod_ident _ ->
-                true (* Module alias like: module M = OtherModule *)
-            | Pmod_apply _ ->
-                true (* Module application like: module M = Map.Make(String) *)
-            | _ -> false)
-        | Pstr_modtype _ -> true (* Module type definitions *)
-        | Pstr_open _ -> true (* Open statements *)
-        | Pstr_include _ -> true (* Include statements *)
-        | Pstr_attribute _ -> true (* Attributes *)
-        | _ -> false) (* Any other construct means it has implementation *)
-      structure
+    let rec is_facade_mod_expr (me : Parsetree.module_expr) =
+      match me.pmod_desc with
+      | Pmod_ident _ -> true (* module M = OtherModule *)
+      | Pmod_apply _ -> true (* module M = Map.Make(String) *)
+      | Pmod_structure items -> List.for_all is_facade_item items
+      | Pmod_constraint (me, _) -> is_facade_mod_expr me
+      | Pmod_functor (_, body) -> is_facade_mod_expr body
+      | _ -> false
+    and is_facade_item (item : Parsetree.structure_item) =
+      match item.pstr_desc with
+      | Pstr_type _ | Pstr_typext _ | Pstr_modtype _ | Pstr_open _
+      | Pstr_include _ | Pstr_attribute _ ->
+          true
+      | Pstr_module { pmb_expr; _ } -> is_facade_mod_expr pmb_expr
+      | Pstr_value (_, bindings) ->
+          (* Accept simple delegations: let f = Other.f *)
+          List.for_all
+            (fun (vb : Parsetree.value_binding) ->
+              match vb.pvb_expr.pexp_desc with
+              | Pexp_ident _ -> true
+              | _ -> false)
+            bindings
+      | _ -> false
+    in
+    List.for_all is_facade_item structure
   with _ -> false (* If we can't parse, assume it needs tests *)
 
 (** Compute expected test file path from source file. lib/foo.ml ->
-    test/test_foo.ml lib/sub/bar.ml -> test/sub/test_bar.ml *)
+    test/test_foo.ml src/foo.ml -> test/test_foo.ml lib/sub/bar.ml ->
+    test/sub/test_bar.ml *)
 let expected_test_path source_file =
   let path = source_file in
-  (* Find /lib/ and replace with /test/, then rename the file *)
-  match Astring.String.find_sub ~sub:"/lib/" path with
-  | Some idx ->
-      let before = String.sub path 0 idx in
-      let after = String.sub path (idx + 5) (String.length path - idx - 5) in
-      let dirname = Filename.dirname after in
-      let basename = Filename.basename after in
-      let test_name = "test_" ^ basename in
-      let test_after =
-        if dirname = "." then test_name else Filename.concat dirname test_name
-      in
-      Fmt.str "%s/test/%s" before test_after
-  | None ->
-      (* Fallback: just prefix with test_ *)
-      let dir = Filename.dirname source_file in
-      let base = Filename.basename source_file in
-      Filename.concat dir ("test_" ^ base)
+  let replace_dir ~sub ~skip path =
+    match Astring.String.find_sub ~sub path with
+    | Some idx ->
+        let before = String.sub path 0 idx in
+        let after =
+          String.sub path (idx + skip) (String.length path - idx - skip)
+        in
+        let dirname = Filename.dirname after in
+        let basename = Filename.basename after in
+        let test_name = "test_" ^ basename in
+        let test_after =
+          if dirname = "." then test_name else Filename.concat dirname test_name
+        in
+        Some (Fmt.str "%s/test/%s" before test_after)
+    | None -> None
+  in
+  (* Try /lib/ first, then /src/ *)
+  match replace_dir ~sub:"/lib/" ~skip:5 path with
+  | Some p -> p
+  | None -> (
+      match replace_dir ~sub:"/src/" ~skip:5 path with
+      | Some p -> p
+      | None ->
+          (* Fallback: just prefix with test_ *)
+          let dir = Filename.dirname source_file in
+          let base = Filename.basename source_file in
+          Filename.concat dir ("test_" ^ base))
 
 (** Creates a missing test file issue for a library module without corresponding
     test *)

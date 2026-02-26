@@ -32,6 +32,7 @@ let () =
       Test_guide.suite;
       Test_profiling.suite;
       Test_rule.suite;
+      Test_sexp.suite;
     ]
   in
   Alcotest.run "merlint" suites
