@@ -15,7 +15,8 @@
   vlog
   tty
   jsont
-  jsont.bytesrw))
+  jsont.bytesrw
+  sexpt))
 
 (rule
  (target examples.ml)
