@@ -1,5 +1,7 @@
 (** Dune project structure analysis *)
 
+module Sexp = Sexpt.Sexp
+
 let src = Logs.Src.create "merlint.dune" ~doc:"Dune interface"
 
 module Log = (val Logs.src_log src : Logs.LOG)
@@ -92,7 +94,7 @@ let parse_dune_file filename =
     close_in ic;
 
     (* Parse all S-expressions in the file *)
-    let stanzas = Sexp.parse_string content in
+    let stanzas = Sexp.parse_string_many_exn content in
     Log.debug (fun m ->
         m "Parsed dune file %a: found %d stanzas" Fpath.pp filename
           (List.length stanzas));
