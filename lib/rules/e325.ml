@@ -21,39 +21,52 @@ let kind_to_string = function
 let returns_option return_type =
   String.ends_with ~suffix:"option" (String.trim return_type)
 
+(** Check if a type is a type variable (e.g. ['a], ['b]) meaning merlin could
+    not resolve the concrete type. *)
+let is_type_variable s =
+  let s = String.trim s in
+  String.length s >= 2
+  && s.[0] = '\''
+  && String.for_all
+       (fun c -> (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c = '_')
+       (String.sub s 1 (String.length s - 1))
+
 (* Check a single function for naming issues *)
 let check_single_function filename name kind type_sig location =
   ignore filename;
   match (name, kind, type_sig, location) with
   | Some n, Some "Value", Some ts, Some loc when Outline.is_function_type ts ->
       let return_type = Outline.extract_return_type ts in
-      let is_option = returns_option return_type in
-      (* Check get_* functions or just 'get' *)
-      if (String.starts_with ~prefix:"get_" n || n = "get") && is_option then
-        Some
-          (Issue.v ~loc
-             {
-               function_name = n;
-               expected =
-                 (if n = "get" then "find"
-                  else
-                    let suffix = String.sub n 4 (String.length n - 4) in
-                    "find_" ^ suffix);
-             })
-      else if
-        (String.starts_with ~prefix:"find_" n || n = "find") && not is_option
-      then
-        Some
-          (Issue.v ~loc
-             {
-               function_name = n;
-               expected =
-                 (if n = "find" then "get"
-                  else
-                    let suffix = String.sub n 5 (String.length n - 5) in
-                    "get_" ^ suffix);
-             })
-      else None
+      (* Skip check when return type is unresolved (type variable like 'a) *)
+      if is_type_variable return_type then None
+      else
+        let is_option = returns_option return_type in
+        (* Check get_* functions or just 'get' *)
+        if (String.starts_with ~prefix:"get_" n || n = "get") && is_option then
+          Some
+            (Issue.v ~loc
+               {
+                 function_name = n;
+                 expected =
+                   (if n = "get" then "find"
+                    else
+                      let suffix = String.sub n 4 (String.length n - 4) in
+                      "find_" ^ suffix);
+               })
+        else if
+          (String.starts_with ~prefix:"find_" n || n = "find") && not is_option
+        then
+          Some
+            (Issue.v ~loc
+               {
+                 function_name = n;
+                 expected =
+                   (if n = "find" then "get"
+                    else
+                      let suffix = String.sub n 5 (String.length n - 5) in
+                      "get_" ^ suffix);
+               })
+        else None
   | _ -> None
 
 let check ctx =
