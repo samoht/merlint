@@ -314,9 +314,11 @@ let executable_modules dune_describe =
       else None)
   |> List.sort_uniq String.compare
 
-(** Get library modules from describe *)
+(** Get library modules from describe (public libraries only) *)
 let lib_modules dune_describe =
   dune_describe.libraries
+  |> List.filter (fun (lib_info : library_info) ->
+      Option.is_some lib_info.public_name)
   |> List.concat_map (fun (lib_info : library_info) -> lib_info.files)
   |> List.filter_map (fun file ->
       let file_str = Fpath.to_string file in
