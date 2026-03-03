@@ -87,13 +87,44 @@ let check_runner_in_wrong_file filename content =
     ]
   else []
 
-(** Check if a test_*.mli file exports only suite with correct type *)
-let check_test_mli_file filename content =
+(** Check if the corresponding .ml file is a test suite module (defines a suite
+    value and does not contain its own Alcotest.run). Standalone executables and
+    utility libraries with a [test_] prefix are not test suite modules. *)
+let is_suite_module files mli_filename =
+  let ml_filename = Filename.chop_extension mli_filename ^ ".ml" in
+  match
+    List.find_opt
+      (fun f ->
+        Filename.basename f = Filename.basename ml_filename
+        && Filename.dirname f = Filename.dirname mli_filename)
+      files
+  with
+  | None -> false
+  | Some ml_path -> (
+      try
+        let ml_content =
+          In_channel.with_open_text ml_path In_channel.input_all
+        in
+        (* Skip standalone executables that have their own Alcotest.run *)
+        if has_test_runner ml_content then false
+        else
+          (* Only check .mli for modules that define a suite value *)
+          Re.execp
+            (Re.compile
+               (Re.seq
+                  [ Re.bow; Re.str "let"; Re.rep1 Re.space; Re.str "suite" ]))
+            ml_content
+      with _ -> false)
+
+(** Check if a test_*.mli file exports only suite with correct type. Skips .mli
+    files for standalone executables and utility libraries. *)
+let check_test_mli_file files filename content =
   let basename = Filename.basename filename in
   if
     String.ends_with ~suffix:".mli" basename
     && String.starts_with ~prefix:"test_" basename
     && basename <> "test.mli"
+    && is_suite_module files filename
   then
     (* Parse the interface to check what's exported *)
     let lines = String.split_on_char '\n' content in
@@ -233,7 +264,7 @@ let check ctx =
             in
             check_test_file_uses_modules filename content
             @ check_runner_in_wrong_file filename content
-            @ check_test_mli_file filename content
+            @ check_test_mli_file files filename content
           with _ -> []
         else [])
       files
