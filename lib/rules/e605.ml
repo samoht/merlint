@@ -40,38 +40,45 @@ let contains_only_types_and_modules file_path =
     List.for_all is_facade_item structure
   with _ -> false (* If we can't parse, assume it needs tests *)
 
-(** Compute expected test file path from source file. lib/foo.ml ->
-    test/test_foo.ml src/foo.ml -> test/test_foo.ml lib/sub/bar.ml ->
-    test/sub/test_bar.ml *)
+(** Compute expected test file path from source file. For [lib] and [src] source
+    directories, the directory is replaced with [test]. For any other source
+    directory, it is preserved under [test/]. The basename is always prefixed
+    with [test_]. Subdirectories within the source dir are preserved.
+
+    - [proj/lib/foo.ml] -> [proj/test/test_foo.ml]
+    - [proj/src/foo.ml] -> [proj/test/test_foo.ml]
+    - [proj/proto/foo.ml] -> [proj/test/proto/test_foo.ml]
+    - [proj/lib/sub/bar.ml] -> [proj/test/sub/test_bar.ml]
+    - [proj/foo/sub/bar.ml] -> [proj/test/foo/sub/test_bar.ml] *)
 let expected_test_path source_file =
-  let path = source_file in
-  let replace_dir ~sub ~skip path =
-    match Astring.String.find_sub ~sub path with
-    | Some idx ->
-        let before = String.sub path 0 idx in
-        let after =
-          String.sub path (idx + skip) (String.length path - idx - skip)
+  let parts = String.split_on_char '/' source_file in
+  (* Given [project :: source_dir :: rest], compute the test path.
+     [lib] and [src] are conventional source dirs that get replaced by [test].
+     Any other directory (proto, foo, etc.) is kept under [test/]. *)
+  let compute_test_path prefix dir rest =
+    let after = String.concat "/" rest in
+    let dirname = Filename.dirname after in
+    let basename = Filename.basename after in
+    let test_name = "test_" ^ basename in
+    let test_after =
+      if dir = "lib" || dir = "src" then
+        if dirname = "." then test_name else Filename.concat dirname test_name
+      else
+        let with_dir =
+          if dirname = "." then Filename.concat dir test_name
+          else Filename.concat dir (Filename.concat dirname test_name)
         in
-        let dirname = Filename.dirname after in
-        let basename = Filename.basename after in
-        let test_name = "test_" ^ basename in
-        let test_after =
-          if dirname = "." then test_name else Filename.concat dirname test_name
-        in
-        Some (Fmt.str "%s/test/%s" before test_after)
-    | None -> None
+        with_dir
+    in
+    Fmt.str "%s/test/%s" prefix test_after
   in
-  (* Try /lib/ first, then /src/ *)
-  match replace_dir ~sub:"/lib/" ~skip:5 path with
-  | Some p -> p
-  | None -> (
-      match replace_dir ~sub:"/src/" ~skip:5 path with
-      | Some p -> p
-      | None ->
-          (* Fallback: just prefix with test_ *)
-          let dir = Filename.dirname source_file in
-          let base = Filename.basename source_file in
-          Filename.concat dir ("test_" ^ base))
+  match parts with
+  | project :: dir :: rest when dir <> "test" && dir <> "bin" && rest <> [] ->
+      compute_test_path project dir rest
+  | _ ->
+      let dir = Filename.dirname source_file in
+      let base = Filename.basename source_file in
+      Filename.concat (Filename.concat dir "test") ("test_" ^ base)
 
 (** Creates a missing test file issue for a library module without corresponding
     test *)
