@@ -58,7 +58,11 @@ let check (ctx : Context.file) =
         Filename.basename ctx.filename
         |> Filename.remove_extension |> String.capitalize_ascii
       in
-      [ Issue.v { module_name } ]
+      let loc =
+        let pos = { Location.line = 1; col = 0 } in
+        { Location.file = ctx.filename; start = pos; end_ = pos }
+      in
+      [ Issue.v ~loc { module_name } ]
     else []
   with _ ->
     (* If we can't parse the dump, skip this check *)
