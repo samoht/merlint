@@ -438,6 +438,11 @@ let man_config_section =
       \  - files: lib/generated/*.ml\n\
       \    exclude: [E200, E300]";
     `P
+      "Rule patterns support wildcards: $(b,[*]) excludes all rules for \
+       matching files, and $(b,[E1*]) excludes all rules starting with E1. Use \
+       this to completely skip a file:";
+    `Pre "rules:\n  - files: vendor/**/*.ml\n    exclude: [*]";
+    `P
       "File patterns support $(b,*) (any filename), $(b,**/) (any directory \
        depth), and $(b,?) (single character). Use $(b,--show-config) to verify \
        the loaded configuration.";
