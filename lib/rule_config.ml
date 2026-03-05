@@ -10,6 +10,7 @@ type t = rule_pattern list
 
 let empty = []
 let add pattern exclusions = pattern :: exclusions
+let merge a b = a @ b
 
 (** Convert glob pattern to regex pattern *)
 let glob_to_regex pattern =

@@ -35,7 +35,9 @@ val pp : t Fmt.t
 (** Configuration file loading. *)
 
 val file : string -> string option
-(** [file path] finds the .merlint config file from the given path. *)
+(** [file path] finds the outermost .merlint config file from the given path. *)
 
 val load_from_path : string -> t
-(** [load_from_path path] loads nearest config file. *)
+(** [load_from_path path] loads and merges all .merlint config files from [path]
+    up to the workspace root. Settings from closer files override outer ones;
+    rule exclusions accumulate. *)

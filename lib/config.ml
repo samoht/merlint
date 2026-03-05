@@ -44,9 +44,7 @@ let default =
 let filename = ".merlint"
 
 let file path =
-  let project_root = Project.root path in
-  let config_path = Filename.concat project_root filename in
-  if Sys.file_exists config_path then Some config_path else None
+  match Project.config_files path with [] -> None | first :: _ -> Some first
 
 (** Parse boolean value *)
 let parse_bool value =
@@ -108,7 +106,24 @@ let load path =
     default
 
 let load_from_path path =
-  match file path with Some config_path -> load config_path | None -> default
+  let config_files = Project.config_files path in
+  List.fold_left
+    (fun acc path ->
+      match Config_parser.parse_file path with
+      | Some parsed ->
+          let config =
+            List.fold_left
+              (fun c (key, value) -> apply_config c key value)
+              acc parsed.Config_parser.settings
+          in
+          {
+            config with
+            exclusions =
+              Rule_config.merge config.exclusions
+                parsed.Config_parser.exclusions;
+          }
+      | None -> acc)
+    default config_files
 
 (** Standard functions for type t *)
 let equal a b =
