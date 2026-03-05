@@ -19,6 +19,9 @@ val add : rule_pattern -> t -> t
 (** [add pattern exclusions] adds a new exclusion pattern to the configuration.
 *)
 
+val merge : t -> t -> t
+(** [merge a b] combines two exclusion configurations. *)
+
 val should_exclude : t -> rule:string -> file:string -> bool
 (** [should_exclude exclusions ~rule ~file] returns true if the rule should be
     excluded for the given file path. *)

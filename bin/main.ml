@@ -364,18 +364,19 @@ let no_build_flag =
   Arg.(value & flag & info [ "no-build"; "B" ] ~doc)
 
 let show_configuration files =
-  let project_root =
-    match files with
-    | [] -> Merlint.Project.root (Sys.getcwd ())
-    | path :: _ -> Merlint.Project.root path
-  in
-  let config = Merlint.Config.load_from_path project_root in
+  let path = match files with [] -> Sys.getcwd () | path :: _ -> path in
+  let project_root = Merlint.Project.root path in
+  let workspace_root = Merlint.Project.workspace_root path in
+  let config_files = Merlint.Project.config_files path in
+  let config = Merlint.Config.load_from_path path in
   Fmt.pr "=== Merlint Configuration ===@.";
   Fmt.pr "Project root: %s@." project_root;
-  let config_file = Merlint.Config.file project_root in
-  (match config_file with
-  | Some path -> Fmt.pr "Config file: %s (found)@." path
-  | None -> Fmt.pr "Config file: .merlint (not found, using defaults)@.");
+  Fmt.pr "Workspace root: %s@." workspace_root;
+  (match config_files with
+  | [] -> Fmt.pr "Config files: (none, using defaults)@."
+  | files ->
+      Fmt.pr "Config files:@.";
+      List.iter (fun f -> Fmt.pr "  %s@." f) files);
   Fmt.pr "@.Settings:@.";
   Fmt.pr "  max-complexity: %d@." config.max_complexity;
   Fmt.pr "  max-function-length: %d@." config.max_function_length;
@@ -413,6 +414,42 @@ let main exclude_patterns rules_spec ~show_profile ~show_config ~no_build files
     analyze_files mgr ~exclude_patterns ?rule_filter ~show_profile ~no_build
       files
 
+let man_config_section =
+  [
+    `S "CONFIGURATION FILE";
+    `P
+      "$(tname) looks for $(b,.merlint) configuration files by searching \
+       upward from the analyzed path to the workspace root (outermost \
+       dune-project). All found files are merged: settings from closer files \
+       override outer ones, while rule exclusions accumulate. This allows a \
+       single config at a monorepo root to govern all subdirectories.";
+    `P "The file uses a YAML-like syntax with two sections:";
+    `P "$(b,settings:) — Override default thresholds and toggles.";
+    `Pre
+      "settings:\n\
+      \  max-complexity: 15\n\
+      \  max-function-length: 80\n\
+      \  allow-obj-magic: true";
+    `P "$(b,rules:) — Exclude specific rules for files matching a glob pattern.";
+    `Pre
+      "rules:\n\
+      \  - files: memtrace/src/trace.ml\n\
+      \    exclude: [E100]\n\
+      \  - files: lib/generated/*.ml\n\
+      \    exclude: [E200, E300]";
+    `P
+      "File patterns support $(b,*) (any filename), $(b,**/) (any directory \
+       depth), and $(b,?) (single character). Use $(b,--show-config) to verify \
+       the loaded configuration.";
+    `P
+      "Available settings: $(b,max-complexity), $(b,max-function-length), \
+       $(b,max-nesting), $(b,exempt-data-definitions), \
+       $(b,max-underscores-in-name), $(b,min-name-length-underscore), \
+       $(b,allow-obj-magic), $(b,allow-str-module), \
+       $(b,allow-catch-all-exceptions), $(b,require-ocamlformat-file), \
+       $(b,require-mli-files).";
+  ]
+
 let cmd =
   let doc = "Analyze OCaml code for style issues" in
   let man =
@@ -429,6 +466,7 @@ let cmd =
          .mli files in the current dune project (searching upward for \
          dune-project).";
     ]
+    @ man_config_section
   in
   let info = Cmd.info "merlint" ~version:Monopam_info.version ~doc ~man in
   Cmd.v info
