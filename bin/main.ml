@@ -224,8 +224,7 @@ let run_analysis project_root dune_describe rule_filter show_profile =
         | Error _ -> [] (* Should not happen *))
   in
 
-  Fmt.pr "Running merlint analysis...@.@.";
-  Fmt.pr "Analyzing %d files@.@." files_count;
+  Fmt.pr "Running merlint analysis...@.@.Analyzing %d files@.@." files_count;
 
   (* Group issues by category for reporting *)
   let issues_by_category = group_issues_by_category all_issues in
