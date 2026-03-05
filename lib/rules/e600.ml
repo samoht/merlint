@@ -87,13 +87,24 @@ let check_runner_in_wrong_file filename content =
     ]
   else []
 
-(** Check if a test_*.mli file exports only suite with correct type. *)
-let check_test_mli_file filename content =
+(** Check if a file belongs to a private library (no public_name). *)
+let is_in_private_library dune_describe filename =
+  let fp = Fpath.v filename |> Fpath.normalize in
+  List.exists
+    (fun (lib : Dune.library_info) ->
+      Option.is_none lib.public_name
+      && List.exists (fun f -> Fpath.equal (Fpath.normalize f) fp) lib.files)
+    (Dune.libraries dune_describe)
+
+(** Check if a test_*.mli file exports only suite with correct type. Skips files
+    that belong to private libraries. *)
+let check_test_mli_file dune_describe filename content =
   let basename = Filename.basename filename in
   if
     String.ends_with ~suffix:".mli" basename
     && String.starts_with ~prefix:"test_" basename
     && basename <> "test.mli"
+    && not (is_in_private_library dune_describe filename)
   then
     (* Parse the interface to check what's exported *)
     let lines = String.split_on_char '\n' content in
@@ -173,13 +184,17 @@ let check_test_mli_file filename content =
   else []
 
 (** Check if test_*.ml files have corresponding .mli files. Skip files that
-    contain Alcotest.run since they shouldn't be test modules. *)
-let check_missing_test_mli files =
+    contain Alcotest.run since they shouldn't be test modules, and files that
+    belong to private libraries. *)
+let check_missing_test_mli dune_describe files =
   List.filter_map
     (fun ml_file ->
       if String.ends_with ~suffix:".ml" ml_file then
         let basename = Filename.basename ml_file in
-        if String.starts_with ~prefix:"test_" basename && basename <> "test.ml"
+        if
+          String.starts_with ~prefix:"test_" basename
+          && basename <> "test.ml"
+          && not (is_in_private_library dune_describe ml_file)
         then
           (* Skip if file contains Alcotest.run - it's a runner not a test module *)
           let has_runner =
@@ -213,12 +228,13 @@ let check_missing_test_mli files =
 (** Check all files for test convention issues *)
 let check ctx =
   let files = Context.all_files ctx in
+  let dune_describe = Context.dune_describe ctx in
   (* Debug log to see what files we're analyzing *)
   Logs.debug (fun m -> m "E600: Analyzing %d files:" (List.length files));
   List.iter (fun f -> Logs.debug (fun m -> m "E600:   - %s" f)) files;
 
   (* Check for missing .mli files for test modules *)
-  let missing_mli_issues = check_missing_test_mli files in
+  let missing_mli_issues = check_missing_test_mli dune_describe files in
 
   let content_issues =
     List.concat_map
@@ -233,7 +249,7 @@ let check ctx =
             in
             check_test_file_uses_modules filename content
             @ check_runner_in_wrong_file filename content
-            @ check_test_mli_file filename content
+            @ check_test_mli_file dune_describe filename content
           with _ -> []
         else [])
       files
