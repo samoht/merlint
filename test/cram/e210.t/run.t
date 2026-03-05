@@ -1,12 +1,12 @@
 Test bad example - should find double underscore patterns:
-  $ merlint -B -r E618 bad.ml
+  $ merlint -B -r E210 bad.ml
   Running merlint analysis...
   
   Analyzing 1 files
   
   ✓ Code Quality (0 total issues)
   ✗ Code Style (2 total issues)
-    [E618] Avoid X__Y Module Access (2 issues)
+    [E210] Avoid X__Y Module Access (2 issues)
     Avoid using double underscore module access like 'Module__Submodule'. Use dot
     notation 'Module.Submodule' instead. Double underscore notation is internal to
     the OCaml module system and should not be used in application code.
@@ -29,7 +29,7 @@ Test bad example - should find double underscore patterns:
   [1]
 
 Test good example - should find no issues:
-  $ merlint -B -r E618 good.ml
+  $ merlint -B -r E210 good.ml
   Running merlint analysis...
   
   Analyzing 1 files

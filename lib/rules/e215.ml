@@ -1,4 +1,4 @@
-(** E619: Use Fmt.failwith instead of failwith (Fmt.str *)
+(** E215: Use Fmt.failwith instead of failwith (Fmt.str *)
 
 let check (ctx : Context.file) =
   let filename = ctx.filename in
@@ -20,7 +20,7 @@ let pp _ppf () =
      provides printf-style formatting directly"
 
 let rule =
-  Rule.v ~code:"E619" ~title:"Use Fmt.failwith Instead of failwith (Fmt.str)"
+  Rule.v ~code:"E215" ~title:"Use Fmt.failwith Instead of failwith (Fmt.str)"
     ~category:Style_modernization
     ~hint:
       "Use Fmt.failwith instead of failwith (Fmt.str ...). Fmt.failwith \

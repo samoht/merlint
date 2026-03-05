@@ -1,7 +1,7 @@
 let example1 = Printf.sprintf "hello"
 let example2 = String.length "test"
 
-(* OCaml special identifiers should not trigger E618 *)
+(* OCaml special identifiers should not trigger E210 *)
 let example3 = __LOC__
 let example4 = __FILE__
 let example5 = __LINE__

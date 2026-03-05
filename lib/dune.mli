@@ -66,3 +66,16 @@ type test_info = {
 val tests : describe -> test_info list
 (** [tests describe] returns the list of test stanzas with their files and
     library dependencies. *)
+
+val module_to_libraries : describe -> (string * string list) list
+(** [module_to_libraries describe] maps module basenames to the libraries that
+    contain them. *)
+
+val resolve_library : describe -> string -> string
+(** [resolve_library describe name] resolves a public library name to its
+    internal name, or returns [name] unchanged if not found. *)
+
+val test_file_library : (string * string list) list -> string -> string option
+(** [test_file_library mod_to_libs basename] returns the library that a test
+    file tests, based on the [test_<module>] naming convention. Returns [None]
+    if the module is ambiguous or not found. *)

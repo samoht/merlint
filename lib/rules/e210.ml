@@ -1,4 +1,4 @@
-(** E618: Avoid X__Y Module Access - Use X.Y Instead *)
+(** E210: Avoid X__Y Module Access - Use X.Y Instead *)
 
 type payload = { module_path : string; suggested_path : string }
 
@@ -94,7 +94,7 @@ let pp ppf { module_path; suggested_path } =
     suggested_path module_path
 
 let rule =
-  Rule.v ~code:"E618" ~title:"Avoid X__Y Module Access"
+  Rule.v ~code:"E210" ~title:"Avoid X__Y Module Access"
     ~category:Style_modernization
     ~hint:
       "Avoid using double underscore module access like 'Module__Submodule'. \
@@ -106,13 +106,13 @@ let rule =
         {
           is_good = false;
           code =
-            {|let result = Merlint__Location.v ~file:"test.ml" 
+            {|let result = Merlint__Location.v ~file:"test.ml"
                    ~start_line:1 ~start_col:0 ~end_line:1 ~end_col:10|};
         };
         {
           is_good = true;
           code =
-            {|let result = Merlint.Location.v ~file:"test.ml" 
+            {|let result = Merlint.Location.v ~file:"test.ml"
                    ~start_line:1 ~start_col:0 ~end_line:1 ~end_col:10|};
         };
       ]
