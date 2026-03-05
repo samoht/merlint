@@ -549,3 +549,35 @@ let executables describe = describe.executables
 
 (** Get tests from describe *)
 let tests describe = describe.tests
+
+let module_to_libraries describe =
+  List.fold_left
+    (fun acc (lib_info : library_info) ->
+      List.fold_left
+        (fun acc file ->
+          if Fpath.has_ext ".ml" file then
+            let module_name = Fpath.(file |> rem_ext |> basename) in
+            match List.assoc_opt module_name acc with
+            | Some libs ->
+                (module_name, lib_info.name :: libs)
+                :: List.remove_assoc module_name acc
+            | None -> (module_name, [ lib_info.name ]) :: acc
+          else acc)
+        acc lib_info.files)
+    [] describe.libraries
+
+let resolve_library describe name =
+  let internal =
+    List.find_opt
+      (fun (lib_info : library_info) -> lib_info.public_name = Some name)
+      describe.libraries
+  in
+  match internal with Some lib -> lib.name | None -> name
+
+let test_file_library module_to_libs basename =
+  if String.starts_with ~prefix:"test_" basename then
+    let tested_module = String.sub basename 5 (String.length basename - 5) in
+    match List.assoc_opt tested_module module_to_libs with
+    | Some [ lib ] -> Some lib
+    | _ -> None
+  else None

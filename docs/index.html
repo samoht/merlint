@@ -629,6 +629,52 @@ pre code {
 </div>
 </div></div>
 </div>
+<div class="error-card" id="E210">
+    <div>
+        <span class="error-code">E210</span>
+        <span class="error-title">Avoid X__Y Module Access</span>
+    </div>
+    <div class="error-hint"><p>Avoid using double underscore module access like 'Module__Submodule'. Use dot notation 'Module.Submodule' instead. Double underscore notation is internal to the OCaml module system and should not be used in application code.</p><div class="examples-grid">
+<div class="example bad">
+  <h4>BAD</h4>
+  <pre><code><span class="kw">let</span> result = <span class="cn">Merlint__Location</span>.v ~file:&quot;test.ml&quot;
+                   ~start_line:<span class="nu">1</span> ~start_col:<span class="nu">0</span> ~end_line:<span class="nu">1</span> ~end_col:<span class="nu">10</span></code></pre>
+</div>
+<div class="example good">
+  <h4>GOOD</h4>
+  <pre><code><span class="kw">let</span> result = <span class="cn">Merlint</span>.<span class="cn">Location</span>.v ~file:&quot;test.ml&quot;
+                   ~start_line:<span class="nu">1</span> ~start_col:<span class="nu">0</span> ~end_line:<span class="nu">1</span> ~end_col:<span class="nu">10</span></code></pre>
+</div>
+</div></div>
+</div>
+<div class="error-card" id="E215">
+    <div>
+        <span class="error-code">E215</span>
+        <span class="error-title">Use Fmt.failwith Instead of failwith (Fmt.str)</span>
+    </div>
+    <div class="error-hint"><p>Use Fmt.failwith instead of failwith (Fmt.str ...). Fmt.failwith provides printf-style formatting directly, making the code more concise and readable.</p><div class="examples-grid">
+<div class="example bad">
+  <h4>BAD</h4>
+  <pre><code><span class="kw">let</span> validate_input input =
+  <span class="kw">if</span> <span class="cn">String</span>.length input = <span class="nu">0</span> <span class="kw">then</span>
+    failwith (<span class="cn">Fmt</span>.str &quot;<span class="cn">Empty</span> input provided&quot;)
+  <span class="kw">else</span> <span class="kw">if</span> <span class="cn">String</span>.length input &gt; <span class="nu">100</span> <span class="kw">then</span>
+    failwith (<span class="cn">Fmt</span>.str &quot;<span class="cn">Input</span> too long: %d characters&quot; (<span class="cn">String</span>.length input))
+  <span class="kw">else</span>
+    input</code></pre>
+</div>
+<div class="example good">
+  <h4>GOOD</h4>
+  <pre><code><span class="kw">let</span> validate_input input =
+  <span class="kw">if</span> <span class="cn">String</span>.length input = <span class="nu">0</span> <span class="kw">then</span>
+    <span class="cn">Fmt</span>.failwith &quot;<span class="cn">Empty</span> input provided&quot;
+  <span class="kw">else</span> <span class="kw">if</span> <span class="cn">String</span>.length input &gt; <span class="nu">100</span> <span class="kw">then</span>
+    <span class="cn">Fmt</span>.failwith &quot;<span class="cn">Input</span> too long: %d characters&quot; (<span class="cn">String</span>.length input)
+  <span class="kw">else</span>
+    input</code></pre>
+</div>
+</div></div>
+</div>
 <h2 id="naming conventions">Naming Conventions</h2>
 <div class="category">E300-E399 • Identifier naming convention violations</div>
 <div class="error-card" id="E300">
@@ -1305,6 +1351,13 @@ pre code {
 </div>
 </div></div>
 </div>
+<div class="error-card" id="E607">
+    <div>
+        <span class="error-code">E607</span>
+        <span class="error-title">Test Stanza Mixes Multiple Libraries</span>
+    </div>
+    <div class="error-hint"><p>Test stanzas without declared library dependencies should not contain test files for multiple different libraries. Split tests into separate test stanzas, one per library.</p></div>
+</div>
 <div class="error-card" id="E610">
     <div>
         <span class="error-code">E610</span>
@@ -1376,52 +1429,6 @@ pre code {
 
 <span class="cm">(* In test_parser.ml *)</span>
 <span class="kw">let</span> suite = (&quot;parser&quot;, tests)</code></pre>
-</div>
-</div></div>
-</div>
-<div class="error-card" id="E618">
-    <div>
-        <span class="error-code">E618</span>
-        <span class="error-title">Avoid X__Y Module Access</span>
-    </div>
-    <div class="error-hint"><p>Avoid using double underscore module access like 'Module__Submodule'. Use dot notation 'Module.Submodule' instead. Double underscore notation is internal to the OCaml module system and should not be used in application code.</p><div class="examples-grid">
-<div class="example bad">
-  <h4>BAD</h4>
-  <pre><code><span class="kw">let</span> result = <span class="cn">Merlint__Location</span>.v ~file:&quot;test.ml&quot; 
-                   ~start_line:<span class="nu">1</span> ~start_col:<span class="nu">0</span> ~end_line:<span class="nu">1</span> ~end_col:<span class="nu">10</span></code></pre>
-</div>
-<div class="example good">
-  <h4>GOOD</h4>
-  <pre><code><span class="kw">let</span> result = <span class="cn">Merlint</span>.<span class="cn">Location</span>.v ~file:&quot;test.ml&quot; 
-                   ~start_line:<span class="nu">1</span> ~start_col:<span class="nu">0</span> ~end_line:<span class="nu">1</span> ~end_col:<span class="nu">10</span></code></pre>
-</div>
-</div></div>
-</div>
-<div class="error-card" id="E619">
-    <div>
-        <span class="error-code">E619</span>
-        <span class="error-title">Use Fmt.failwith Instead of failwith (Fmt.str)</span>
-    </div>
-    <div class="error-hint"><p>Use Fmt.failwith instead of failwith (Fmt.str ...). Fmt.failwith provides printf-style formatting directly, making the code more concise and readable.</p><div class="examples-grid">
-<div class="example bad">
-  <h4>BAD</h4>
-  <pre><code><span class="kw">let</span> validate_input input =
-  <span class="kw">if</span> <span class="cn">String</span>.length input = <span class="nu">0</span> <span class="kw">then</span>
-    failwith (<span class="cn">Fmt</span>.str &quot;<span class="cn">Empty</span> input provided&quot;)
-  <span class="kw">else</span> <span class="kw">if</span> <span class="cn">String</span>.length input &gt; <span class="nu">100</span> <span class="kw">then</span>
-    failwith (<span class="cn">Fmt</span>.str &quot;<span class="cn">Input</span> too long: %d characters&quot; (<span class="cn">String</span>.length input))
-  <span class="kw">else</span>
-    input</code></pre>
-</div>
-<div class="example good">
-  <h4>GOOD</h4>
-  <pre><code><span class="kw">let</span> validate_input input =
-  <span class="kw">if</span> <span class="cn">String</span>.length input = <span class="nu">0</span> <span class="kw">then</span>
-    <span class="cn">Fmt</span>.failwith &quot;<span class="cn">Empty</span> input provided&quot;
-  <span class="kw">else</span> <span class="kw">if</span> <span class="cn">String</span>.length input &gt; <span class="nu">100</span> <span class="kw">then</span>
-    <span class="cn">Fmt</span>.failwith &quot;<span class="cn">Input</span> too long: %d characters&quot; (<span class="cn">String</span>.length input)
-  <span class="kw">else</span>
-    input</code></pre>
 </div>
 </div></div>
 </div>
