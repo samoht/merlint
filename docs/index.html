@@ -675,6 +675,28 @@ pre code {
 </div>
 </div></div>
 </div>
+<div class="error-card" id="E216">
+    <div>
+        <span class="error-code">E216</span>
+        <span class="error-title">Use Fmt.invalid_arg Instead of invalid_arg (Fmt.str)</span>
+    </div>
+    <div class="error-hint"><p>Use Fmt.invalid_arg instead of invalid_arg (Fmt.str ...). Fmt.invalid_arg provides printf-style formatting directly, making the code more concise and readable.</p><div class="examples-grid">
+<div class="example bad">
+  <h4>BAD</h4>
+  <pre><code><span class="kw">let</span> validate_port port =
+  <span class="kw">if</span> port &lt; <span class="nu">0</span> || port &gt; <span class="nu">65535</span> <span class="kw">then</span>
+    invalid_arg (<span class="cn">Fmt</span>.str &quot;<span class="cn">Invalid</span> port: %d&quot; port)
+  <span class="kw">else</span> port</code></pre>
+</div>
+<div class="example good">
+  <h4>GOOD</h4>
+  <pre><code><span class="kw">let</span> validate_port port =
+  <span class="kw">if</span> port &lt; <span class="nu">0</span> || port &gt; <span class="nu">65535</span> <span class="kw">then</span>
+    <span class="cn">Fmt</span>.invalid_arg &quot;<span class="cn">Invalid</span> port: %d&quot; port
+  <span class="kw">else</span> port</code></pre>
+</div>
+</div></div>
+</div>
 <h2 id="naming conventions">Naming Conventions</h2>
 <div class="category">E300-E399 • Identifier naming convention violations</div>
 <div class="error-card" id="E300">
