@@ -1,0 +1,3 @@
+(library
+ (name core_lib)
+ (modules page))
