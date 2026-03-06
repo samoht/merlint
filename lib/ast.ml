@@ -131,7 +131,7 @@ end
 
 (** Pretty-print expression for debugging *)
 let expr_to_string (expr : Parsetree.expression) =
-  Format.asprintf "%a" Pprintast.expression expr
+  Fmt.str "%a" Pprintast.expression expr
 
 (** Convert Parsetree expression to our AST representation *)
 let rec parsetree_expr_to_ast (expr : Parsetree.expression) : expr =

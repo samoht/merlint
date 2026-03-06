@@ -13,6 +13,7 @@ let all_rules =
     E205.rule;
     E210.rule;
     E215.rule;
+    E216.rule;
     E300.rule;
     E305.rule;
     E310.rule;
