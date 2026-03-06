@@ -29,3 +29,21 @@ Test stanza with no deps mixing test files from multiple libraries:
   ✗ Some checks failed. See details above.
   [1]
 
+Test stanza with files from only one library (no issue):
+  $ merlint -B -r E607 good/
+  Running merlint analysis...
+  
+  Analyzing 3 files
+  
+  ✓ Code Quality (0 total issues)
+  ✓ Code Style (0 total issues)
+  ✓ Naming Conventions (0 total issues)
+  ✓ Documentation (0 total issues)
+  ✓ Project Structure (0 total issues)
+  ✓ Test Quality (0 total issues)
+  
+  Summary: ✓ 0 total issues (applied 1 rule)
+  ✓ All checks passed!
+
+
+

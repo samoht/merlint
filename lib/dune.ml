@@ -550,19 +550,20 @@ let executables describe = describe.executables
 (** Get tests from describe *)
 let tests describe = describe.tests
 
+let add_module_lib acc lib_name file =
+  if Fpath.has_ext ".ml" file then
+    let module_name = Fpath.(file |> rem_ext |> basename) in
+    match List.assoc_opt module_name acc with
+    | Some libs ->
+        (module_name, lib_name :: libs) :: List.remove_assoc module_name acc
+    | None -> (module_name, [ lib_name ]) :: acc
+  else acc
+
 let module_to_libraries describe =
   List.fold_left
     (fun acc (lib_info : library_info) ->
       List.fold_left
-        (fun acc file ->
-          if Fpath.has_ext ".ml" file then
-            let module_name = Fpath.(file |> rem_ext |> basename) in
-            match List.assoc_opt module_name acc with
-            | Some libs ->
-                (module_name, lib_info.name :: libs)
-                :: List.remove_assoc module_name acc
-            | None -> (module_name, [ lib_info.name ]) :: acc
-          else acc)
+        (fun acc file -> add_module_lib acc lib_info.name file)
         acc lib_info.files)
     [] describe.libraries
 
