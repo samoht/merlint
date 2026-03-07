@@ -1459,7 +1459,7 @@ pre code {
         <span class="error-code">E618</span>
         <span class="error-title">Non-Test File in Test Stanza</span>
     </div>
-    <div class="error-hint"><p>All .ml files in a test stanza should follow the test_ naming convention (e.g., test_parser.ml) or be the test runner (test.ml). Helper modules should be extracted into a private (library ...) stanza in a subdirectory.</p></div>
+    <div class="error-hint"><p>All .ml files in a test stanza should follow the test_ (or fuzz_ in fuzz/ directories) naming convention or be the test runner (test.ml). Non-test modules should either be extracted into a private (library ...) stanza or renamed to &lt;prefix&gt;_&lt;module&gt;.ml.</p></div>
 </div>
 <div class="error-card" id="E620">
     <div>
