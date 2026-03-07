@@ -1,0 +1,3 @@
+(test
+ (name fuzz)
+ (libraries crowbar))
