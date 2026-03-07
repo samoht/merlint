@@ -1,0 +1,3 @@
+(library
+ (name e621_bad)
+ (modules parser))
