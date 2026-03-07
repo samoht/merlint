@@ -1510,6 +1510,20 @@ pre code {
     </div>
     <div class="error-hint"><p>Fuzz directories should be at the same level as test directories (siblings), not nested inside them. Move fuzz/ to be a sibling of test/.</p></div>
 </div>
+<div class="error-card" id="E722">
+    <div>
+        <span class="error-code">E722</span>
+        <span class="error-title">Fuzz Uses Test Stanza</span>
+    </div>
+    <div class="error-hint"><p>Fuzz targets should use (executable ...) stanzas with explicit (rule (alias fuzz) ...) and (rule (alias fuzz-afl) ...) rules, not (test ...) stanzas. This enables separate quick-check and AFL campaign workflows.</p></div>
+</div>
+<div class="error-card" id="E724">
+    <div>
+        <span class="error-code">E724</span>
+        <span class="error-title">Missing Fuzz Build Rules</span>
+    </div>
+    <div class="error-hint"><p>Each fuzz directory should have (rule (alias runtest) (deps fuzz.exe) (action (run %{exe:fuzz.exe}))) for property-based testing during dune test, and (rule (alias fuzz-afl) ...) for AFL fuzzing campaigns.</p></div>
+</div>
 
     <a href="#top" class="back-to-top">↑ Top</a>
 </body>
