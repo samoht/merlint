@@ -1,0 +1,9 @@
+(test
+ (name test)
+ (modules test)
+ (libraries alcotest))
+
+(test
+ (name test_extra)
+ (modules test_extra)
+ (libraries alcotest))

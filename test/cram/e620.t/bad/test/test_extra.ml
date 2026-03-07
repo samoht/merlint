@@ -1,0 +1,3 @@
+(** Extra test runner. *)
+
+let () = Alcotest.run "e620_bad_extra" []
