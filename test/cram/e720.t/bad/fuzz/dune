@@ -1,0 +1,9 @@
+(test
+ (name fuzz)
+ (modules fuzz)
+ (libraries crowbar))
+
+(test
+ (name fuzz_extra)
+ (modules fuzz_extra)
+ (libraries crowbar))
