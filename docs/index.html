@@ -1494,7 +1494,7 @@ pre code {
         <span class="error-code">E718</span>
         <span class="error-title">Non-Fuzz File in Fuzz Directory</span>
     </div>
-    <div class="error-hint"><p>All .ml files in a fuzz/ directory should follow the fuzz_ naming convention (e.g., fuzz_parser.ml) or be the fuzz runner (fuzz.ml). Each fuzz/ directory must have a fuzz.ml runner.</p></div>
+    <div class="error-hint"><p>All .ml files in a fuzz/ directory should follow the fuzz_ naming convention (e.g., fuzz_parser.ml), be the fuzz runner (fuzz.ml), or the corpus generator (gen_corpus.ml). Each fuzz directory must have a gen_corpus.ml.</p></div>
 </div>
 <div class="error-card" id="E720">
     <div>
@@ -1515,14 +1515,14 @@ pre code {
         <span class="error-code">E722</span>
         <span class="error-title">Fuzz Uses Test Stanza</span>
     </div>
-    <div class="error-hint"><p>Fuzz targets should use (executable ...) stanzas with explicit (rule (alias fuzz) ...) and (rule (alias fuzz-afl) ...) rules, not (test ...) stanzas. This enables separate quick-check and AFL campaign workflows.</p></div>
+    <div class="error-hint"><p>Fuzz targets should use (executable ...) stanzas with explicit (rule (alias runtest) ...) and (rule (alias fuzz) ...) rules, not (test ...) stanzas. This enables property-based testing during dune test and separate AFL campaign workflows.</p></div>
 </div>
 <div class="error-card" id="E724">
     <div>
         <span class="error-code">E724</span>
         <span class="error-title">Missing Fuzz Build Rules</span>
     </div>
-    <div class="error-hint"><p>Each fuzz directory should have (rule (alias runtest) (deps fuzz.exe) (action (run %{exe:fuzz.exe}))) for property-based testing during dune test, and (rule (alias fuzz-afl) ...) for AFL fuzzing campaigns.</p></div>
+    <div class="error-hint"><p>Each fuzz directory should have (rule (alias runtest) ...) for property-based testing during dune test, and (rule (alias fuzz) ...) for AFL fuzzing campaigns with corpus generation.</p></div>
 </div>
 
     <a href="#top" class="back-to-top">↑ Top</a>
