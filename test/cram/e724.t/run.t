@@ -12,10 +12,10 @@ Test bad example - fuzz directory missing build rules:
   ✓ Project Structure (0 total issues)
   ✗ Test Quality (1 total issues)
     [E724] Missing Fuzz Build Rules (1 issue)
-    Each fuzz directory should have (rule (alias runtest) (deps fuzz.exe) (action
-    (run %{exe:fuzz.exe}))) for property-based testing during dune test, and (rule
-    (alias fuzz-afl) ...) for AFL fuzzing campaigns.
-    - bad/fuzz/dune:1:0: Fuzz directory 'bad/fuzz/' is missing both (rule (alias runtest) ...) and (rule (alias fuzz-afl) ...) build rules
+    Each fuzz directory should have (rule (alias runtest) ...) for property-based
+    testing during dune test, and (rule (alias fuzz) ...) for AFL fuzzing
+    campaigns with corpus generation.
+    - bad/fuzz/dune:1:0: Fuzz directory 'bad/fuzz/' is missing both (rule (alias runtest) ...) and (rule (alias fuzz) ...) build rules
   
   ╭──────────────┬────────────────────────────────╮
   │ Category     │ Issues                         │

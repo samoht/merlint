@@ -37,7 +37,7 @@ let rule =
   Rule.v ~code:"E722" ~title:"Fuzz Uses Test Stanza" ~category:Testing
     ~hint:
       "Fuzz targets should use (executable ...) stanzas with explicit (rule \
-       (alias runtest) ...) and (rule (alias fuzz-afl) ...) rules, not (test \
-       ...) stanzas. This enables property-based testing during dune test and \
+       (alias runtest) ...) and (rule (alias fuzz) ...) rules, not (test ...) \
+       stanzas. This enables property-based testing during dune test and \
        separate AFL campaign workflows."
     ~examples:[] ~pp (Project check)
