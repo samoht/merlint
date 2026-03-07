@@ -7,8 +7,11 @@ let prefix_of_dir file =
   let dir = Fpath.parent file |> Fpath.basename in
   if String.equal dir "fuzz" then "fuzz_" else "test_"
 
+let runner_of_prefix = function "fuzz_" -> "fuzz" | _ -> "test"
+
 let is_valid basename ~prefix =
-  String.starts_with ~prefix basename || String.equal basename "test"
+  String.starts_with ~prefix basename
+  || String.equal basename (runner_of_prefix prefix)
 
 let check (ctx : Context.project) =
   let dune_describe = Context.dune_describe ctx in
@@ -39,10 +42,15 @@ let check (ctx : Context.project) =
 let pp ppf { filename; test_stanza; prefix } =
   let basename = Filename.basename filename in
   let modname = Filename.chop_extension basename in
+  let suggestion =
+    if String.equal modname "test" || String.equal modname "fuzz" then
+      runner_of_prefix prefix ^ ".ml"
+    else prefix ^ modname ^ ".ml"
+  in
   Fmt.pf ppf
     "File '%s' in test stanza '%s' does not follow the %s naming convention - \
-     extract into a private (library ...) stanza or rename to %s%s.ml"
-    basename test_stanza prefix prefix modname
+     extract into a private (library ...) stanza or rename to %s"
+    basename test_stanza prefix suggestion
 
 let rule =
   Rule.v ~code:"E618" ~title:"Non-Test File in Test Stanza" ~category:Testing
