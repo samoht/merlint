@@ -36,16 +36,15 @@ let check (ctx : Context.project) =
 let pp ppf { filename; test_stanza } =
   Fmt.pf ppf
     "File '%s' in test stanza '%s' does not follow the test_ naming convention \
-     - rename to test_%s"
+     - extract into a private (library ...) stanza"
     (Filename.basename filename)
     test_stanza
-    (Filename.basename filename)
 
 let rule =
   Rule.v ~code:"E618" ~title:"Non-Test File in Test Stanza" ~category:Testing
     ~hint:
       "All .ml files in a test stanza should follow the test_ naming \
        convention (e.g., test_parser.ml) or be the test runner (test.ml). \
-       Files like helpers.ml or utils.ml should be renamed to test_helpers.ml \
-       or test_utils.ml."
+       Helper modules should be extracted into a private (library ...) stanza \
+       in a subdirectory."
     ~examples:[] ~pp (Project check)
