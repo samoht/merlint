@@ -12,10 +12,10 @@ Test bad example - should find non-test file in test stanza:
   ✓ Project Structure (0 total issues)
   ✗ Test Quality (1 total issues)
     [E618] Non-Test File in Test Stanza (1 issue)
-    All .ml files in a test stanza should follow the test_ (or fuzz_ in fuzz/
-    directories) naming convention or be the test runner (test.ml). Non-test
-    modules should either be extracted into a private (library ...) stanza or
-    renamed to <prefix>_<module>.ml.
+    All .ml files in a test/ directory should follow the test_ naming convention
+    (e.g., test_parser.ml) or be the test runner (test.ml). Non-test modules
+    should either be extracted into a private (library ...) stanza or renamed to
+    test_<module>.ml.
     - bad/test/helpers.ml:1:0: File 'helpers.ml' in test stanza 'test' does not follow the test_ naming convention - extract into a private (library ...) stanza or rename to test_helpers.ml
   
   ╭──────────────┬────────────────────────────────────╮

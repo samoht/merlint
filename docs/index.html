@@ -1459,7 +1459,7 @@ pre code {
         <span class="error-code">E618</span>
         <span class="error-title">Non-Test File in Test Stanza</span>
     </div>
-    <div class="error-hint"><p>All .ml files in a test stanza should follow the test_ (or fuzz_ in fuzz/ directories) naming convention or be the test runner (test.ml). Non-test modules should be renamed to the runner name or moved to a separate directory.</p></div>
+    <div class="error-hint"><p>All .ml files in a test/ directory should follow the test_ naming convention (e.g., test_parser.ml) or be the test runner (test.ml). Non-test modules should either be extracted into a private (library ...) stanza or renamed to test_&lt;module&gt;.ml.</p></div>
 </div>
 <div class="error-card" id="E620">
     <div>
@@ -1468,9 +1468,44 @@ pre code {
     </div>
     <div class="error-hint"><p>Each test directory should have exactly one test stanza with a single test runner (test.ml). Multiple test stanzas in the same directory cause module ownership conflicts and break @check builds.</p></div>
 </div>
-<div class="error-card" id="E621">
+<div class="error-card" id="E700">
     <div>
-        <span class="error-code">E621</span>
+        <span class="error-code">E700</span>
+        <span class="error-title">Fuzz Module Convention</span>
+    </div>
+    <div class="error-hint"><p>The fuzz runner (fuzz.ml) should call Fuzz_*.run() for each fuzz module rather than defining tests with add_test directly. This keeps fuzz tests organized per-module.</p></div>
+</div>
+<div class="error-card" id="E710">
+    <div>
+        <span class="error-code">E710</span>
+        <span class="error-title">Fuzz Without Library</span>
+    </div>
+    <div class="error-hint"><p>Every fuzz module (fuzz_&lt;module&gt;.ml) should have a corresponding library module (&lt;module&gt;.ml). This ensures fuzz tests are testing actual library functionality.</p></div>
+</div>
+<div class="error-card" id="E715">
+    <div>
+        <span class="error-code">E715</span>
+        <span class="error-title">Fuzz Module Not Included</span>
+    </div>
+    <div class="error-hint"><p>All fuzz modules should be included in the fuzz runner (fuzz.ml) via Fuzz_*.run() calls. This ensures all fuzz tests are actually executed.</p></div>
+</div>
+<div class="error-card" id="E718">
+    <div>
+        <span class="error-code">E718</span>
+        <span class="error-title">Non-Fuzz File in Fuzz Directory</span>
+    </div>
+    <div class="error-hint"><p>All .ml files in a fuzz/ directory should follow the fuzz_ naming convention (e.g., fuzz_parser.ml) or be the fuzz runner (fuzz.ml). Each fuzz/ directory must have a fuzz.ml runner.</p></div>
+</div>
+<div class="error-card" id="E720">
+    <div>
+        <span class="error-code">E720</span>
+        <span class="error-title">Multiple Fuzz Stanzas in Directory</span>
+    </div>
+    <div class="error-hint"><p>Each fuzz directory should have exactly one executable stanza with a single fuzz runner (fuzz.ml). Use (modules ...) to list all fuzz modules in a single stanza.</p></div>
+</div>
+<div class="error-card" id="E721">
+    <div>
+        <span class="error-code">E721</span>
         <span class="error-title">Misplaced Fuzz Directory</span>
     </div>
     <div class="error-hint"><p>Fuzz directories should be at the same level as test directories (siblings), not nested inside them. Move fuzz/ to be a sibling of test/.</p></div>

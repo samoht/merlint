@@ -1,4 +1,4 @@
-(** E621: Misplaced Fuzz Directory *)
+(** E721: Misplaced Fuzz Directory *)
 
 type payload = { fuzz_dir : string }
 
@@ -49,7 +49,7 @@ let pp ppf { fuzz_dir } =
     fuzz_dir
 
 let rule =
-  Rule.v ~code:"E621" ~title:"Misplaced Fuzz Directory" ~category:Testing
+  Rule.v ~code:"E721" ~title:"Misplaced Fuzz Directory" ~category:Testing
     ~hint:
       "Fuzz directories should be at the same level as test directories \
        (siblings), not nested inside them. Move fuzz/ to be a sibling of \
