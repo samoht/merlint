@@ -13,9 +13,9 @@ Test bad example - should find non-test file in test stanza:
   ✗ Test Quality (1 total issues)
     [E618] Non-Test File in Test Stanza (1 issue)
     All .ml files in a test stanza should follow the test_ naming convention
-    (e.g., test_parser.ml) or be the test runner (test.ml). Files like helpers.ml
-    or utils.ml should be renamed to test_helpers.ml or test_utils.ml.
-    - bad/test/helpers.ml:1:0: File 'helpers.ml' in test stanza 'test' does not follow the test_ naming convention - rename to test_helpers.ml
+    (e.g., test_parser.ml) or be the test runner (test.ml). Helper modules should
+    be extracted into a private (library ...) stanza in a subdirectory.
+    - bad/test/helpers.ml:1:0: File 'helpers.ml' in test stanza 'test' does not follow the test_ naming convention - extract into a private (library ...) stanza
   
   ╭──────────────┬────────────────────────────────────╮
   │ Category     │ Issues                             │
