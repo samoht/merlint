@@ -3,6 +3,10 @@
  (modules fuzz_parser)
  (libraries crowbar))
 
+(executable
+ (name gen_corpus)
+ (modules gen_corpus))
+
 (rule
  (alias runtest)
  (deps fuzz_parser.exe)
@@ -11,8 +15,13 @@
 
 (rule
  (alias fuzz)
+ (enabled_if
+  (= %{profile} afl))
  (deps
-  (source_tree input)
-  fuzz_parser.exe)
+  (source_tree corpus)
+  fuzz_parser.exe
+  gen_corpus.exe)
  (action
-  (echo "AFL fuzzer built: %{exe:fuzz_parser.exe}\n")))
+  (progn
+   (run %{exe:gen_corpus.exe})
+   (run afl-fuzz -V 60 -i corpus -o _fuzz -- %{exe:fuzz_parser.exe} @@))))

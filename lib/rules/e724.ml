@@ -1,6 +1,15 @@
 (** E724: Missing Fuzz Build Rules *)
 
-type payload = { directory : string; missing : [ `runtest | `fuzz | `both ] }
+type payload = {
+  directory : string;
+  kind :
+    [ `missing_runtest
+    | `missing_fuzz
+    | `missing_both
+    | `fuzz_missing_corpus
+    | `fuzz_missing_gen_corpus
+    | `fuzz_missing_afl_profile ];
+}
 
 let is_fuzz_dir file =
   let dir = Fpath.parent file |> Fpath.basename in
@@ -24,11 +33,12 @@ let fuzz_dirs dune_describe =
   in
   List.sort_uniq String.compare dirs
 
-(** Check that fuzz dune files contain required rule aliases. *)
+(** Check that fuzz dune files contain required rule aliases with proper
+    content. *)
 let check (ctx : Context.project) =
   let dune_describe = Context.dune_describe ctx in
   let dirs = fuzz_dirs dune_describe in
-  List.filter_map
+  List.concat_map
     (fun dir ->
       let dune_file = Filename.concat dir "dune" in
       try
@@ -39,46 +49,94 @@ let check (ctx : Context.project) =
           Re.execp (Re.compile (Re.str "(alias runtest)")) content
         in
         let has_fuzz = Re.execp (Re.compile (Re.str "(alias fuzz)")) content in
-        let missing =
-          match (has_runtest, has_fuzz) with
-          | true, true -> None
-          | false, false -> Some `both
-          | false, true -> Some `runtest
-          | true, false -> Some `fuzz
+        let loc =
+          Location.v ~file:dune_file ~start_line:1 ~start_col:0 ~end_line:1
+            ~end_col:0
         in
-        match missing with
-        | None -> None
-        | Some missing ->
-            let loc =
-              Location.v ~file:dune_file ~start_line:1 ~start_col:0 ~end_line:1
-                ~end_col:0
+        let presence_issues =
+          match (has_runtest, has_fuzz) with
+          | true, true -> []
+          | false, false ->
+              [ Issue.v ~loc { directory = dir; kind = `missing_both } ]
+          | false, true ->
+              [ Issue.v ~loc { directory = dir; kind = `missing_runtest } ]
+          | true, false ->
+              [ Issue.v ~loc { directory = dir; kind = `missing_fuzz } ]
+        in
+        (* If fuzz alias exists, check it references corpus and gen_corpus *)
+        let content_issues =
+          if has_fuzz then (
+            let has_corpus =
+              Re.execp (Re.compile (Re.str "source_tree corpus")) content
+              || Re.execp (Re.compile (Re.str "source_tree input")) content
             in
-            Some (Issue.v ~loc { directory = dir; missing })
-      with _ -> None)
+            let has_gen_corpus =
+              Re.execp (Re.compile (Re.str "gen_corpus")) content
+            in
+            let has_afl_profile =
+              Re.execp (Re.compile (Re.str "profile")) content
+              && Re.execp (Re.compile (Re.str "afl")) content
+            in
+            let issues = ref [] in
+            if not has_corpus then
+              issues :=
+                Issue.v ~loc { directory = dir; kind = `fuzz_missing_corpus }
+                :: !issues;
+            if not has_gen_corpus then
+              issues :=
+                Issue.v ~loc
+                  { directory = dir; kind = `fuzz_missing_gen_corpus }
+                :: !issues;
+            if not has_afl_profile then
+              issues :=
+                Issue.v ~loc
+                  { directory = dir; kind = `fuzz_missing_afl_profile }
+                :: !issues;
+            !issues)
+          else []
+        in
+        presence_issues @ content_issues
+      with _ -> [])
     dirs
 
-let pp ppf { directory; missing } =
-  match missing with
-  | `runtest ->
+let pp ppf { directory; kind } =
+  match kind with
+  | `missing_runtest ->
       Fmt.pf ppf
         "Fuzz directory '%s' is missing (rule (alias runtest) ...) for \
          property-based testing"
         directory
-  | `fuzz ->
+  | `missing_fuzz ->
       Fmt.pf ppf
         "Fuzz directory '%s' is missing (rule (alias fuzz) ...) for AFL \
          campaigns"
         directory
-  | `both ->
+  | `missing_both ->
       Fmt.pf ppf
         "Fuzz directory '%s' is missing both (rule (alias runtest) ...) and \
          (rule (alias fuzz) ...) build rules"
+        directory
+  | `fuzz_missing_corpus ->
+      Fmt.pf ppf
+        "Fuzz directory '%s' (alias fuzz) rule should depend on (source_tree \
+         corpus) for seed inputs"
+        directory
+  | `fuzz_missing_gen_corpus ->
+      Fmt.pf ppf
+        "Fuzz directory '%s' (alias fuzz) rule should depend on gen_corpus.exe \
+         to generate seed corpus"
+        directory
+  | `fuzz_missing_afl_profile ->
+      Fmt.pf ppf
+        "Fuzz directory '%s' (alias fuzz) rule should use (enabled_if (= \
+         %%{profile} afl)) to only run under AFL profile"
         directory
 
 let rule =
   Rule.v ~code:"E724" ~title:"Missing Fuzz Build Rules" ~category:Testing
     ~hint:
       "Each fuzz directory should have (rule (alias runtest) ...) for \
-       property-based testing during dune test, and (rule (alias fuzz) ...) \
-       for AFL fuzzing campaigns with corpus generation."
+       property-based testing during dune test, and (rule (alias fuzz) (deps \
+       (source_tree corpus) fuzz.exe gen_corpus.exe) ...) for AFL fuzzing \
+       campaigns with corpus generation."
     ~examples:[] ~pp (Project check)
