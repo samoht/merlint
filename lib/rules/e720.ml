@@ -12,11 +12,15 @@ let fuzz_stanzas_by_dir dune_describe =
   let collect_dirs entries =
     List.filter_map
       (fun (name, files) ->
-        match
-          List.find_opt (fun f -> Fpath.has_ext ".ml" f && is_fuzz_dir f) files
-        with
-        | Some f -> Some (Fpath.parent f |> Fpath.to_string, name)
-        | None -> None)
+        if not (String.starts_with ~prefix:"fuzz" name) then None
+        else
+          match
+            List.find_opt
+              (fun f -> Fpath.has_ext ".ml" f && is_fuzz_dir f)
+              files
+          with
+          | Some f -> Some (Fpath.parent f |> Fpath.to_string, name)
+          | None -> None)
       entries
   in
   let from_tests =

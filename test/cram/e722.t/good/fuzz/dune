@@ -1,0 +1,18 @@
+(executable
+ (name fuzz_parser)
+ (modules fuzz_parser)
+ (libraries crowbar))
+
+(rule
+ (alias runtest)
+ (deps fuzz_parser.exe)
+ (action
+  (run %{exe:fuzz_parser.exe})))
+
+(rule
+ (alias fuzz-afl)
+ (deps
+  (source_tree input)
+  fuzz_parser.exe)
+ (action
+  (echo "AFL fuzzer built: %{exe:fuzz_parser.exe}\n")))
