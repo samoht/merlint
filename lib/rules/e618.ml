@@ -16,8 +16,7 @@ let check (ctx : Context.project) =
             if
               not
                 (String.starts_with ~prefix:"test_" basename
-                || is_allowed_name basename
-                || String.equal basename test_info.Dune.name)
+                || is_allowed_name basename)
             then
               let loc =
                 Location.v ~file:(Fpath.to_string file) ~start_line:1
