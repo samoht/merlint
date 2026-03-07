@@ -1,9 +1,6 @@
 (** E724: Missing Fuzz Build Rules *)
 
-type payload = {
-  directory : string;
-  missing : [ `runtest | `fuzz_afl | `both ];
-}
+type payload = { directory : string; missing : [ `runtest | `fuzz | `both ] }
 
 let is_fuzz_dir file =
   let dir = Fpath.parent file |> Fpath.basename in
@@ -41,15 +38,13 @@ let check (ctx : Context.project) =
         let has_runtest =
           Re.execp (Re.compile (Re.str "(alias runtest)")) content
         in
-        let has_fuzz_afl =
-          Re.execp (Re.compile (Re.str "(alias fuzz-afl)")) content
-        in
+        let has_fuzz = Re.execp (Re.compile (Re.str "(alias fuzz)")) content in
         let missing =
-          match (has_runtest, has_fuzz_afl) with
+          match (has_runtest, has_fuzz) with
           | true, true -> None
           | false, false -> Some `both
           | false, true -> Some `runtest
-          | true, false -> Some `fuzz_afl
+          | true, false -> Some `fuzz
         in
         match missing with
         | None -> None
@@ -69,21 +64,21 @@ let pp ppf { directory; missing } =
         "Fuzz directory '%s' is missing (rule (alias runtest) ...) for \
          property-based testing"
         directory
-  | `fuzz_afl ->
+  | `fuzz ->
       Fmt.pf ppf
-        "Fuzz directory '%s' is missing (rule (alias fuzz-afl) ...) for AFL \
+        "Fuzz directory '%s' is missing (rule (alias fuzz) ...) for AFL \
          campaigns"
         directory
   | `both ->
       Fmt.pf ppf
         "Fuzz directory '%s' is missing both (rule (alias runtest) ...) and \
-         (rule (alias fuzz-afl) ...) build rules"
+         (rule (alias fuzz) ...) build rules"
         directory
 
 let rule =
   Rule.v ~code:"E724" ~title:"Missing Fuzz Build Rules" ~category:Testing
     ~hint:
-      "Each fuzz directory should have (rule (alias runtest) (deps fuzz.exe) \
-       (action (run %{exe:fuzz.exe}))) for property-based testing during dune \
-       test, and (rule (alias fuzz-afl) ...) for AFL fuzzing campaigns."
+      "Each fuzz directory should have (rule (alias runtest) ...) for \
+       property-based testing during dune test, and (rule (alias fuzz) ...) \
+       for AFL fuzzing campaigns with corpus generation."
     ~examples:[] ~pp (Project check)

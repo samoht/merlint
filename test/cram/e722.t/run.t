@@ -13,8 +13,8 @@ Test bad example - fuzz stanza using (test ...) instead of (executable ...):
   ✗ Test Quality (1 total issues)
     [E722] Fuzz Uses Test Stanza (1 issue)
     Fuzz targets should use (executable ...) stanzas with explicit (rule (alias
-    runtest) ...) and (rule (alias fuzz-afl) ...) rules, not (test ...) stanzas.
-    This enables property-based testing during dune test and separate AFL campaign
+    runtest) ...) and (rule (alias fuzz) ...) rules, not (test ...) stanzas. This
+    enables property-based testing during dune test and separate AFL campaign
     workflows.
     - bad/fuzz/dune:1:0: Fuzz stanza 'fuzz_parser' uses (test ...) - use (executable ...) with (rule (alias runtest) ...) instead
   

@@ -10,7 +10,7 @@
   (run %{exe:fuzz_parser.exe})))
 
 (rule
- (alias fuzz-afl)
+ (alias fuzz)
  (deps
   (source_tree input)
   fuzz_parser.exe)
