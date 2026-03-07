@@ -41,8 +41,9 @@ let ensure_project_built ~path mgr =
     | Some Logs.Debug -> "" (* show stderr in -vv mode *)
     | _ -> " 2>/dev/null"
   in
-  (* Build only the specified path, not the entire workspace *)
-  let cmd = Fmt.str "dune build %s%s" path suppress_stderr in
+  (* Use @check to produce .cmt files for all modules (including wrapped
+     executables/tests where plain 'dune build' only produces native code). *)
+  let cmd = Fmt.str "dune build @check %s%s" path suppress_stderr in
   (* Print command when verbose *)
   (match Logs.level () with
   | Some (Logs.Info | Logs.Debug) ->

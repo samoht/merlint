@@ -1459,7 +1459,14 @@ pre code {
         <span class="error-code">E618</span>
         <span class="error-title">Non-Test File in Test Stanza</span>
     </div>
-    <div class="error-hint"><p>All .ml files in a test stanza should follow the test_ naming convention (e.g., test_parser.ml) or be the test runner (test.ml). Files like helpers.ml or utils.ml should be renamed to test_helpers.ml or test_utils.ml.</p></div>
+    <div class="error-hint"><p>All .ml files in a test stanza should follow the test_ naming convention (e.g., test_parser.ml) or be the test runner (test.ml). Helper modules should be extracted into a private (library ...) stanza in a subdirectory.</p></div>
+</div>
+<div class="error-card" id="E620">
+    <div>
+        <span class="error-code">E620</span>
+        <span class="error-title">Multiple Test Stanzas in Directory</span>
+    </div>
+    <div class="error-hint"><p>Each test directory should have exactly one test stanza with a single test runner (test.ml). Multiple test stanzas in the same directory cause module ownership conflicts and break @check builds.</p></div>
 </div>
 
     <a href="#top" class="back-to-top">↑ Top</a>
