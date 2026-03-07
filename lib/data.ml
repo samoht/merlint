@@ -43,4 +43,5 @@ let all_rules =
     E615.rule;
     E616.rule;
     E617.rule;
+    E618.rule;
   ]
