@@ -84,8 +84,7 @@ let check (ctx : Context.project) =
               ~file:(Filename.concat dir "dune")
               ~start_line:1 ~start_col:0 ~end_line:1 ~end_col:0
           in
-          Some
-            (Issue.v ~loc { directory = dir; kind = `missing_gen_corpus })
+          Some (Issue.v ~loc { directory = dir; kind = `missing_gen_corpus })
         else None)
       fuzz_dirs
   in
@@ -107,7 +106,7 @@ let rule =
   Rule.v ~code:"E718" ~title:"Non-Fuzz File in Fuzz Directory" ~category:Testing
     ~hint:
       "All .ml files in a fuzz/ directory should follow the fuzz_ naming \
-       convention (e.g., fuzz_parser.ml), be the fuzz runner (fuzz.ml), or \
-       the corpus generator (gen_corpus.ml). Each fuzz directory must have a \
+       convention (e.g., fuzz_parser.ml), be the fuzz runner (fuzz.ml), or the \
+       corpus generator (gen_corpus.ml). Each fuzz directory must have a \
        gen_corpus.ml."
     ~examples:[] ~pp (Project check)
