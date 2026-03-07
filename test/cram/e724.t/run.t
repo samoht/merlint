@@ -13,8 +13,9 @@ Test bad example - fuzz directory missing build rules:
   ✗ Test Quality (1 total issues)
     [E724] Missing Fuzz Build Rules (1 issue)
     Each fuzz directory should have (rule (alias runtest) ...) for property-based
-    testing during dune test, and (rule (alias fuzz) ...) for AFL fuzzing
-    campaigns with corpus generation.
+    testing during dune test, and (rule (alias fuzz) (deps (source_tree corpus)
+    fuzz.exe gen_corpus.exe) ...) for AFL fuzzing campaigns with corpus
+    generation.
     - bad/fuzz/dune:1:0: Fuzz directory 'bad/fuzz/' is missing both (rule (alias runtest) ...) and (rule (alias fuzz) ...) build rules
   
   ╭──────────────┬────────────────────────────────╮
@@ -32,7 +33,7 @@ Test good example - fuzz directory with all required build rules:
   $ merlint -B -r E724 good/
   Running merlint analysis...
   
-  Analyzing 2 files
+  Analyzing 3 files
   
   ✓ Code Quality (0 total issues)
   ✓ Code Style (0 total issues)
