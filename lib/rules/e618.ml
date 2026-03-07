@@ -8,17 +8,11 @@ type payload = {
   conflicts_with_library : bool;
 }
 
-(** Guess the expected prefix by checking if any ancestor directory is named
-    "fuzz". This handles both fuzz/foo.ml and fuzz/diff/foo.ml. *)
+(** Guess the expected prefix by checking if any path segment is "fuzz".
+    This handles both fuzz/foo.ml and fuzz/diff/foo.ml. *)
 let prefix_of_dir file =
-  let rec has_fuzz p =
-    let name = Fpath.basename p in
-    if String.equal name "fuzz" then true
-    else
-      let parent = Fpath.parent p in
-      if Fpath.equal parent p then false else has_fuzz parent
-  in
-  if has_fuzz (Fpath.parent file) then "fuzz_" else "test_"
+  if List.exists (String.equal "fuzz") (Fpath.segs file) then "fuzz_"
+  else "test_"
 
 let runner_of_prefix = function "fuzz_" -> "fuzz" | _ -> "test"
 
