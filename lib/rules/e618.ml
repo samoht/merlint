@@ -18,7 +18,7 @@ let runner_of_prefix = function "fuzz_" -> "fuzz" | _ -> "test"
 
 let is_valid basename ~prefix =
   String.starts_with ~prefix basename
-  || String.equal basename "test" || String.equal basename "fuzz"
+  || String.equal basename (runner_of_prefix prefix)
 
 let library_modules dune_describe (test_info : Dune.test_info) =
   let resolved =
