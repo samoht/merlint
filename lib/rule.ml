@@ -83,9 +83,12 @@ module Run = struct
   let location (Result (_, _, _, issue)) = Issue.location issue
 
   let compare (Result (_, _, _, a)) (Result (_, _, _, b)) =
-    match (Issue.location a, Issue.location b) with
-    | None, None -> 0
-    | None, Some _ -> -1
-    | Some _, None -> 1
-    | Some a_loc, Some b_loc -> Location.compare a_loc b_loc
+    match Int.compare (Issue.severity b) (Issue.severity a) with
+    | 0 -> (
+        match (Issue.location a, Issue.location b) with
+        | None, None -> 0
+        | None, Some _ -> -1
+        | Some _, None -> 1
+        | Some a_loc, Some b_loc -> Location.compare a_loc b_loc)
+    | c -> c
 end
