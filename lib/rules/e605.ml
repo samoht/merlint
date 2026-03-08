@@ -196,9 +196,7 @@ let check (ctx : Context.project) =
                   m "E605: Skipping module '%s' (defined in test directory)"
                     lib_mod);
               None
-          | Some file_path
-            when Astring.String.is_infix ~affix:"/examples/" file_path
-                 || Astring.String.is_infix ~affix:"/example/" file_path ->
+          | Some file_path when File.is_in_examples file_path ->
               (* Skip modules in examples directories - they demo usage, not library code *)
               Logs.debug (fun m ->
                   m "E605: Skipping module '%s' (defined in examples directory)"

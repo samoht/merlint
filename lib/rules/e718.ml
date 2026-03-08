@@ -5,9 +5,7 @@ type payload = {
   kind : [ `naming of string * string | `missing_gen_corpus ];
 }
 
-let is_fuzz_dir file =
-  let dir = Fpath.parent file |> Fpath.basename in
-  String.equal dir "fuzz"
+let is_fuzz_dir = File.is_in_fuzz_dir
 
 let is_valid basename =
   String.starts_with ~prefix:"fuzz_" basename

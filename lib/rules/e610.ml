@@ -112,7 +112,10 @@ let check ctx =
         (fun file ->
           if Fpath.has_ext ".ml" file then
             let test_module = Fpath.(file |> rem_ext |> basename) in
-            if String.starts_with ~prefix:"test_" test_module then
+            if
+              String.starts_with ~prefix:"test_" test_module
+              && not (File.is_in_examples (Fpath.to_string file))
+            then
               match expected_lib_path file with
               | Some expected_path ->
                   Logs.debug (fun m ->

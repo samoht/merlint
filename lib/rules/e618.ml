@@ -2,10 +2,6 @@
 
 type payload = { filename : string; test_stanza : string }
 
-let is_test_dir file =
-  let dir = Fpath.parent file |> Fpath.basename in
-  String.equal dir "test"
-
 let is_valid basename =
   String.starts_with ~prefix:"test_" basename || String.equal basename "test"
 
@@ -15,7 +11,10 @@ let check (ctx : Context.project) =
     (fun (test_info : Dune.test_info) ->
       List.filter_map
         (fun file ->
-          if Fpath.has_ext ".ml" file && is_test_dir file then
+          if
+            Fpath.has_ext ".ml" file && File.is_in_test_dir file
+            && not (File.is_in_examples (Fpath.to_string file))
+          then
             let basename = Fpath.(file |> rem_ext |> basename) in
             if not (is_valid basename) then
               let loc =

@@ -11,9 +11,7 @@ type payload = {
     | `fuzz_missing_afl_profile ];
 }
 
-let is_fuzz_dir file =
-  let dir = Fpath.parent file |> Fpath.basename in
-  String.equal dir "fuzz"
+let is_fuzz_dir = File.is_in_fuzz_dir
 
 (** Collect fuzz directories from executable stanzas. *)
 let fuzz_dirs dune_describe =
