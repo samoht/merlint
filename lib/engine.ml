@@ -139,7 +139,7 @@ let run ~filter ~dune_describe ?profiling project_root =
   let project_issues = run_project_rules ?profiling enabled_rules project_ctx in
 
   let file_rules = List.filter Rule.is_file_scoped enabled_rules in
-  let backend = Merlin.create () in
+  let backend = Merlin.v () in
   let analyze_file =
     analyze_single_file ?profiling ~backend ~config ~project_root ~file_rules
   in
