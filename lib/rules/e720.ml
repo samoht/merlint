@@ -2,9 +2,7 @@
 
 type payload = { directory : string; stanza_names : string list }
 
-let is_fuzz_dir file =
-  let dir = Fpath.parent file |> Fpath.basename in
-  String.equal dir "fuzz"
+let is_fuzz_dir = File.is_in_fuzz_dir
 
 (** Collect all stanza names in fuzz/ directories from both test and executable
     stanzas. *)

@@ -1,5 +1,15 @@
 (** File processing utilities. *)
 
+val is_in_examples : string -> bool
+(** [is_in_examples path] returns [true] if [path] is in an examples directory.
+*)
+
+val is_in_fuzz_dir : Fpath.t -> bool
+(** [is_in_fuzz_dir file] returns [true] if [file] is in a fuzz directory. *)
+
+val is_in_test_dir : Fpath.t -> bool
+(** [is_in_test_dir file] returns [true] if [file] is in a test directory. *)
+
 val process_ocaml_files :
   Context.project -> (string -> string -> 'a list) -> 'a list
 (** [process_ocaml_files ctx f] processes all OCaml files in project with

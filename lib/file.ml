@@ -1,5 +1,17 @@
 (** File processing utilities *)
 
+let is_in_examples path =
+  Astring.String.is_infix ~affix:"/examples/" path
+  || Astring.String.is_infix ~affix:"/example/" path
+
+let is_in_fuzz_dir file =
+  let dir = Fpath.parent file |> Fpath.basename in
+  String.equal dir "fuzz"
+
+let is_in_test_dir file =
+  let dir = Fpath.parent file |> Fpath.basename in
+  String.equal dir "test"
+
 let process_ocaml_files ctx f =
   let files = Context.all_files ctx in
   List.concat_map

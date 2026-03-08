@@ -2,9 +2,7 @@
 
 type payload = { fuzz_file : string; expected_module : string }
 
-let is_fuzz_dir file =
-  let dir = Fpath.parent file |> Fpath.basename in
-  String.equal dir "fuzz"
+let is_fuzz_dir = File.is_in_fuzz_dir
 
 (** Extract the expected library module name from a fuzz file. fuzz_foo.ml ->
     foo *)

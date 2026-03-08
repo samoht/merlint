@@ -76,7 +76,9 @@ let check_runner_in_wrong_file filename content =
   if
     String.ends_with ~suffix:".ml" basename
     && String.starts_with ~prefix:"test_" basename
-    && basename <> "test.ml" && has_test_runner content
+    && basename <> "test.ml"
+    && (not (File.is_in_examples filename))
+    && has_test_runner content
   then
     [
       Issue.v
@@ -104,7 +106,8 @@ let check_test_mli_file dune_describe filename content =
     String.ends_with ~suffix:".mli" basename
     && String.starts_with ~prefix:"test_" basename
     && basename <> "test.mli"
-    && not (is_in_private_library dune_describe filename)
+    && (not (is_in_private_library dune_describe filename))
+    && not (File.is_in_examples filename)
   then
     (* Parse the interface to check what's exported *)
     let lines = String.split_on_char '\n' content in
@@ -194,7 +197,8 @@ let check_missing_test_mli dune_describe files =
         if
           String.starts_with ~prefix:"test_" basename
           && basename <> "test.ml"
-          && not (is_in_private_library dune_describe ml_file)
+          && (not (is_in_private_library dune_describe ml_file))
+          && not (File.is_in_examples ml_file)
         then
           (* Skip if file contains Alcotest.run - it's a runner not a test module *)
           let has_runner =

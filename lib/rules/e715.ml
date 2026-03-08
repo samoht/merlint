@@ -2,9 +2,7 @@
 
 type payload = { fuzz_module : string; fuzz_runner_file : string }
 
-let is_fuzz_dir file =
-  let dir = Fpath.parent file |> Fpath.basename in
-  String.equal dir "fuzz"
+let is_fuzz_dir = File.is_in_fuzz_dir
 
 (** Check if fuzz.ml includes all fuzz modules via Fuzz_*.run() *)
 let check (ctx : Context.project) =
