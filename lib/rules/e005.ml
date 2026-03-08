@@ -115,8 +115,8 @@ let check (ctx : Context.file) =
                     ~start_col:loc.start.col ~end_line:loc.end_.line
                     ~end_col:loc.end_.col
                 in
-                (* Severity = how much the function exceeds the threshold *)
-                let severity = length - threshold in
+                (* Severity = absolute length, so reports sort longest first *)
+                let severity = length in
                 Some
                   (Issue.v ~loc:issue_loc ~severity
                      { name = item.name; length; threshold })
