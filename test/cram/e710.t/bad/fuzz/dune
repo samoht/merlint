@@ -1,0 +1,8 @@
+(executable
+ (name fuzz)
+ (modules fuzz fuzz_missing)
+ (libraries crowbar))
+
+(executable
+ (name gen_corpus)
+ (modules gen_corpus))

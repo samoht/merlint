@@ -1524,6 +1524,13 @@ pre code {
     </div>
     <div class="error-hint"><p>Each fuzz directory should have (rule (alias runtest) ...) for property-based testing during dune test, and (rule (alias fuzz) (deps (source_tree corpus) fuzz.exe gen_corpus.exe) ...) for AFL fuzzing campaigns with corpus generation.</p></div>
 </div>
+<div class="error-card" id="E725">
+    <div>
+        <span class="error-code">E725</span>
+        <span class="error-title">Fuzz Test Name Prefix</span>
+    </div>
+    <div class="error-hint"><p>Fuzz test names must follow the convention "&lt;module&gt;: &lt;description&gt;" where &lt;module&gt; matches the filename (fuzz_&lt;module&gt;.ml with underscores replaced by hyphens). This enables automatic grouping in test output.</p></div>
+</div>
 
     <a href="#top" class="back-to-top">↑ Top</a>
 </body>
