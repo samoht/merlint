@@ -4,12 +4,7 @@ type payload = { filename : string; module_name : string }
 
 let is_fuzz_dir = File.is_in_fuzz_dir
 
-let has_fuzz_runner content =
-  (* Multi-module pattern: fuzz.ml calls Fuzz_*.run() *)
-  Re.execp (Re.compile (Re.str ".run ()")) content
-  || Re.execp (Re.compile (Re.str ".run()")) content
-
-let uses_fuzz_module_runs content =
+let uses_fuzz_module_suites content =
   Re.execp
     (Re.compile
        (Re.seq
@@ -17,14 +12,14 @@ let uses_fuzz_module_runs content =
             Re.bow;
             Re.str "Fuzz_";
             Re.rep1 (Re.alt [ Re.alnum; Re.char '_' ]);
-            Re.str ".run";
+            Re.str ".suite";
           ]))
     content
 
 let defines_own_tests content =
-  Re.execp (Re.compile (Re.str "add_test")) content
+  Re.execp (Re.compile (Re.str "test_case")) content
 
-(** Check if fuzz.ml properly delegates to fuzz modules via Fuzz_*.run() instead
+(** Check if fuzz.ml properly delegates to fuzz modules via Fuzz_*.suite instead
     of defining its own tests inline. *)
 let check ctx =
   let files = Context.all_files ctx in
@@ -39,7 +34,7 @@ let check ctx =
           let content =
             In_channel.with_open_text filename In_channel.input_all
           in
-          if defines_own_tests content && not (uses_fuzz_module_runs content)
+          if defines_own_tests content && not (uses_fuzz_module_suites content)
           then
             [
               Issue.v
@@ -55,14 +50,14 @@ let check ctx =
 
 let pp ppf { filename; module_name = _ } =
   Fmt.pf ppf
-    "Fuzz runner '%s' defines tests inline - use Fuzz_*.run() to delegate to \
+    "Fuzz runner '%s' defines tests inline - use Fuzz_*.suite to delegate to \
      fuzz modules"
     (Filename.basename filename)
 
 let rule =
   Rule.v ~code:"E700" ~title:"Fuzz Module Convention" ~category:Testing
     ~hint:
-      "The fuzz runner (fuzz.ml) should call Fuzz_*.run() for each fuzz module \
-       rather than defining tests with add_test directly. This keeps fuzz \
-       tests organized per-module."
+      "The fuzz runner (fuzz.ml) should collect Fuzz_*.suite from each fuzz \
+       module rather than defining test_case directly. This keeps fuzz tests \
+       organized per-module."
     ~examples:[] ~pp (Project check)
