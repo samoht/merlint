@@ -2,7 +2,8 @@
 
 type payload = {
   directory : string;
-  kind : [ `naming of string * string | `missing_gen_corpus ];
+  kind :
+    [ `naming of string * string | `missing_gen_corpus | `missing_fuzz_runner ];
 }
 
 let is_fuzz_dir = File.is_in_fuzz_dir
@@ -66,27 +67,49 @@ let check (ctx : Context.project) =
     List.map (fun f -> Fpath.parent f |> Fpath.to_string) all_files
     |> List.sort_uniq String.compare
   in
-  let gen_corpus_issues =
-    List.filter_map
+  let missing_issues =
+    List.concat_map
       (fun dir ->
-        let has_gen_corpus =
-          List.exists
-            (fun f ->
-              Fpath.parent f |> Fpath.to_string = dir
-              && Fpath.(f |> rem_ext |> basename) = "gen_corpus")
+        let dir_files =
+          List.filter
+            (fun f -> Fpath.parent f |> Fpath.to_string = dir)
             all_files
         in
-        if not has_gen_corpus then
-          let loc =
-            Location.v
-              ~file:(Filename.concat dir "dune")
-              ~start_line:1 ~start_col:0 ~end_line:1 ~end_col:0
-          in
-          Some (Issue.v ~loc { directory = dir; kind = `missing_gen_corpus })
-        else None)
+        let has file =
+          List.exists
+            (fun f -> Fpath.(f |> rem_ext |> basename) = file)
+            dir_files
+        in
+        let has_fuzz_modules =
+          List.exists
+            (fun f ->
+              String.starts_with ~prefix:"fuzz_"
+                Fpath.(f |> rem_ext |> basename))
+            dir_files
+        in
+        let issues = ref [] in
+        if not (has "gen_corpus") then
+          issues :=
+            Issue.v
+              ~loc:
+                (Location.v
+                   ~file:(Filename.concat dir "dune")
+                   ~start_line:1 ~start_col:0 ~end_line:1 ~end_col:0)
+              { directory = dir; kind = `missing_gen_corpus }
+            :: !issues;
+        if has_fuzz_modules && not (has "fuzz") then
+          issues :=
+            Issue.v
+              ~loc:
+                (Location.v
+                   ~file:(Filename.concat dir "dune")
+                   ~start_line:1 ~start_col:0 ~end_line:1 ~end_col:0)
+              { directory = dir; kind = `missing_fuzz_runner }
+            :: !issues;
+        List.rev !issues)
       fuzz_dirs
   in
-  naming_issues @ gen_corpus_issues
+  naming_issues @ missing_issues
 
 let pp ppf { directory; kind } =
   match kind with
@@ -99,6 +122,10 @@ let pp ppf { directory; kind } =
         basename stanza_name modname
   | `missing_gen_corpus ->
       Fmt.pf ppf "Fuzz directory '%s' is missing gen_corpus.ml" directory
+  | `missing_fuzz_runner ->
+      Fmt.pf ppf
+        "Fuzz directory '%s' has fuzz_* modules but is missing fuzz.ml runner"
+        directory
 
 let rule =
   Rule.v ~code:"E718" ~title:"Non-Fuzz File in Fuzz Directory" ~category:Testing
