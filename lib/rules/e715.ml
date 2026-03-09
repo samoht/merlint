@@ -41,10 +41,8 @@ let check (ctx : Context.project) =
               (fun f ->
                 if f <> runner_file then
                   let basename = Fpath.(f |> rem_ext |> basename) in
-                  if
-                    String.starts_with ~prefix:"fuzz_" basename
-                    && basename <> "fuzz_common"
-                  then Some basename
+                  if String.starts_with ~prefix:"fuzz_" basename then
+                    Some basename
                   else None
                 else None)
               fuzz_files
