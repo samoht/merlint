@@ -1473,7 +1473,7 @@ pre code {
         <span class="error-code">E700</span>
         <span class="error-title">Fuzz Module Convention</span>
     </div>
-    <div class="error-hint"><p>The fuzz runner (fuzz.ml) should call Fuzz_*.run() for each fuzz module rather than defining tests with add_test directly. This keeps fuzz tests organized per-module.</p></div>
+    <div class="error-hint"><p>The fuzz runner (fuzz.ml) should collect Fuzz_*.suite from each fuzz module rather than defining test_case directly. This keeps fuzz tests organized per-module.</p></div>
 </div>
 <div class="error-card" id="E710">
     <div>
@@ -1487,7 +1487,7 @@ pre code {
         <span class="error-code">E715</span>
         <span class="error-title">Fuzz Module Not Included</span>
     </div>
-    <div class="error-hint"><p>All fuzz modules should be included in the fuzz runner (fuzz.ml) via Fuzz_*.run() calls. This ensures all fuzz tests are actually executed.</p></div>
+    <div class="error-hint"><p>All fuzz modules should be included in the fuzz runner (fuzz.ml) via Fuzz_*.suite references. This ensures all fuzz tests are actually executed.</p></div>
 </div>
 <div class="error-card" id="E718">
     <div>
