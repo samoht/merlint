@@ -1,3 +1,3 @@
 (** Fuzz runner that properly includes all modules. *)
 
-let () = Fuzz_parser.run ()
+let () = Crowbar.run "parser" [ Fuzz_parser.suite ]

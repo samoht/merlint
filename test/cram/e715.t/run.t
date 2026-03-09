@@ -12,7 +12,7 @@ Test bad example - fuzz_parser not included in fuzz.ml:
   ✗ Test Quality (1 total issues)
     [E715] Fuzz Module Not Included (1 issue)
     All fuzz modules should be included in the fuzz runner (fuzz.ml) via
-    Fuzz_*.run() calls. This ensures all fuzz tests are actually executed.
+    Fuzz_*.suite references. This ensures all fuzz tests are actually executed.
     - bad/fuzz/fuzz.ml:1:0: Fuzz module fuzz_parser is not included in bad/fuzz/fuzz.ml
   
   ╭──────────────┬────────────────────────────────╮

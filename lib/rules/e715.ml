@@ -4,7 +4,7 @@ type payload = { fuzz_module : string; fuzz_runner_file : string }
 
 let is_fuzz_dir = File.is_in_fuzz_dir
 
-(** Check if fuzz.ml includes all fuzz modules via Fuzz_*.run() *)
+(** Check if fuzz.ml includes all fuzz modules via Fuzz_*.suite *)
 let check (ctx : Context.project) =
   let dune_describe = Context.dune_describe ctx in
   let issues = ref [] in
@@ -58,7 +58,7 @@ let check (ctx : Context.project) =
               let capitalized = String.capitalize_ascii fuzz_mod in
               let run_pattern =
                 Re.compile
-                  (Re.seq [ Re.bow; Re.str capitalized; Re.str ".run" ])
+                  (Re.seq [ Re.bow; Re.str capitalized; Re.str ".suite" ])
               in
               if not (Re.execp run_pattern content) then
                 let loc =
@@ -93,5 +93,6 @@ let rule =
   Rule.v ~code:"E715" ~title:"Fuzz Module Not Included" ~category:Testing
     ~hint:
       "All fuzz modules should be included in the fuzz runner (fuzz.ml) via \
-       Fuzz_*.run() calls. This ensures all fuzz tests are actually executed."
+       Fuzz_*.suite references. This ensures all fuzz tests are actually \
+       executed."
     ~examples:[] ~pp (Project check)
