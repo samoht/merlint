@@ -11,10 +11,10 @@ Test bad example - fuzz.ml defines tests inline:
   ✓ Project Structure (0 total issues)
   ✗ Test Quality (1 total issues)
     [E700] Fuzz Module Convention (1 issue)
-    The fuzz runner (fuzz.ml) should call Fuzz_*.run() for each fuzz module rather
-    than defining tests with add_test directly. This keeps fuzz tests organized
+    The fuzz runner (fuzz.ml) should collect Fuzz_*.suite from each fuzz module
+    rather than defining test_case directly. This keeps fuzz tests organized
     per-module.
-    - bad/fuzz/fuzz.ml:1:0: Fuzz runner 'fuzz.ml' defines tests inline - use Fuzz_*.run() to delegate to fuzz modules
+    - bad/fuzz/fuzz.ml:1:0: Fuzz runner 'fuzz.ml' defines tests inline - use Fuzz_*.suite to delegate to fuzz modules
   
   ╭──────────────┬──────────────────────────────╮
   │ Category     │ Issues                       │
