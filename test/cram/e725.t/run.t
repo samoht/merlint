@@ -1,4 +1,4 @@
-Test bad example - fuzz test name has wrong prefix:
+Test bad example - fuzz suite name mismatch:
   $ merlint -B -r E725 bad/
   Running merlint analysis...
   
@@ -10,24 +10,28 @@ Test bad example - fuzz test name has wrong prefix:
   ✓ Documentation (0 total issues)
   ✓ Project Structure (0 total issues)
   ✗ Test Quality (1 total issues)
-    [E725] Fuzz Test Name Prefix (1 issue)
-    Fuzz test names must follow the convention "<module>: <description>" where
-    <module> matches the filename (fuzz_<module>.ml with underscores replaced by
-    hyphens). This enables automatic grouping in test output.
-    - bad/fuzz/fuzz_parser.ml:1:0: Fuzz test name "wrong prefix" should start with "parser: "
+    [E725] Fuzz Test Suite Mismatch (1 issue)
+    Fuzz tests must declare let suite = ("<module>", [...]) where <module> matches
+    the filename: fuzz_<module>.ml should use suite:"<module>".
+    - bad/fuzz/fuzz_parser.ml:1:0: Fuzz suite "wrong_name" should be "parser"
   
-  ╭──────────────┬─────────────────────────────╮
-  │ Category     │ Issues                      │
-  ├──────────────┼─────────────────────────────┤
-  │ Test Quality │ 1 (1 fuzz test name prefix) │
-  ╰──────────────┴─────────────────────────────╯
+  ╭──────────────┬────────────────────────────────╮
+  │ Category     │ Issues                         │
+  ├──────────────┼────────────────────────────────┤
+  │ Test Quality │ 1 (1 fuzz test suite mismatch) │
+  ╰──────────────┴────────────────────────────────╯
   
   
   Summary: ✗ 1 total issue (applied 1 rule)
   ✗ Some checks failed. See details above.
   [1]
 
-Test good example - fuzz test name has correct prefix:
+
+
+
+
+
+Test good example - fuzz suite name matches filename:
   $ merlint -B -r E725 good/
   Running merlint analysis...
   
@@ -42,3 +46,6 @@ Test good example - fuzz test name has correct prefix:
   
   Summary: ✓ 0 total issues (applied 1 rule)
   ✓ All checks passed!
+
+
+

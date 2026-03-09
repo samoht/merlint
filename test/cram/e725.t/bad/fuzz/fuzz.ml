@@ -1,3 +1,1 @@
-(** Fuzz runner. *)
-
-let () = Fuzz_parser.run ()
+let () = Crowbar.run "parser" [ Fuzz_parser.suite ]

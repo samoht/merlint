@@ -1527,9 +1527,9 @@ pre code {
 <div class="error-card" id="E725">
     <div>
         <span class="error-code">E725</span>
-        <span class="error-title">Fuzz Test Name Prefix</span>
+        <span class="error-title">Fuzz Test Suite Mismatch</span>
     </div>
-    <div class="error-hint"><p>Fuzz test names must follow the convention "&lt;module&gt;: &lt;description&gt;" where &lt;module&gt; matches the filename (fuzz_&lt;module&gt;.ml with underscores replaced by hyphens). This enables automatic grouping in test output.</p></div>
+    <div class="error-hint"><p>Fuzz tests must declare let suite = ("&lt;module&gt;", [...]) where &lt;module&gt; matches the filename: fuzz_&lt;module&gt;.ml should use suite:"&lt;module&gt;".</p></div>
 </div>
 
     <a href="#top" class="back-to-top">↑ Top</a>

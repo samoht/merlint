@@ -1,5 +1,8 @@
-(** Fuzz parser with correct test name prefix. *)
+(** Fuzz parser with correct suite name. *)
 
-let run () =
-  Crowbar.add_test ~name:"parser: roundtrip" [ Crowbar.bytes ] (fun s ->
-      ignore (s : string))
+let suite =
+  ( "parser",
+    [
+      Crowbar.test_case "roundtrip" [ Crowbar.bytes ] (fun s ->
+          ignore (s : string));
+    ] )
