@@ -1,0 +1,2 @@
+(lang dune 3.16)
+(package (name e710-bad) (allow_empty))
