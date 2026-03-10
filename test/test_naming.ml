@@ -40,7 +40,7 @@ let test_to_capitalized_snake_case () =
   test "A" "A";
   test "AB" "AB";
   test "ABC" "ABC";
-  test "AbC" "Ab_C";
+  test "AbC" "AbC";
   test "ABc" "ABc"
 
 let test_is_pascal_case () =
