@@ -32,7 +32,10 @@ let split_words name =
     let at_boundary =
       match (prev, next) with
       | Some p, _ when is_lower p && is_upper c ->
-          true (* camelCase boundary: aB *)
+          (* Don't split when entering a short trailing acronym (≤ 2 chars).
+             These form compound terms in English: MacOS, WebGL, OpenAI.
+             Longer acronyms (XML, API, SDK) are separate words. *)
+          not (i >= len - trailing_upper_count && trailing_upper_count <= 2)
       | Some p, Some n when is_upper p && is_upper c && is_lower n ->
           (* Don't split if:
              1. We're at position 1 (preserves 2-letter uppercase prefix like OCaml)
