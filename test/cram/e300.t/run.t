@@ -28,7 +28,6 @@ Test bad example - should find bad variant naming:
   Summary: ✗ 3 total issues (applied 1 rule)
   ✗ Some checks failed. See details above.
   [1]
-  
 Test good example - should find no issues (including compound terms like MacOS):
   $ merlint -B -r E300 good.ml
   Running merlint analysis...
