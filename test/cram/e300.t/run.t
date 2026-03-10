@@ -1,9 +1,9 @@
 Test bad example - should find bad variant naming:
   $ merlint -B -r E300 bad.ml
   Running merlint analysis...
-
+  
   Analyzing 1 files
-
+  
   ✓ Code Quality (0 total issues)
   ✓ Code Style (0 total issues)
   ✗ Naming Conventions (3 total issues)
@@ -17,30 +17,31 @@ Test bad example - should find bad variant naming:
   ✓ Documentation (0 total issues)
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
-
+  
   ╭────────────────────┬─────────────────────────────────╮
   │ Category           │ Issues                          │
   ├────────────────────┼─────────────────────────────────┤
   │ Naming Conventions │ 3 (3 variant naming convention) │
   ╰────────────────────┴─────────────────────────────────╯
-
-
+  
+  
   Summary: ✗ 3 total issues (applied 1 rule)
   ✗ Some checks failed. See details above.
   [1]
-
+  
 Test good example - should find no issues (including compound terms like MacOS):
   $ merlint -B -r E300 good.ml
   Running merlint analysis...
-
+  
   Analyzing 1 files
-
+  
   ✓ Code Quality (0 total issues)
   ✓ Code Style (0 total issues)
   ✓ Naming Conventions (0 total issues)
   ✓ Documentation (0 total issues)
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
-
+  
   Summary: ✓ 0 total issues (applied 1 rule)
   ✓ All checks passed!
+  
