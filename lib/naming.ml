@@ -4,24 +4,24 @@
 let is_all_upper s =
   String.length s > 0 && String.for_all (fun c -> c < 'a' || c > 'z') s
 
+let is_upper c = c >= 'A' && c <= 'Z'
+let is_lower c = c >= 'a' && c <= 'z'
+
+(* Count trailing uppercase letters in a string *)
+let trailing_upper_count name =
+  let rec count i acc =
+    if i < 0 then acc
+    else if is_upper name.[i] then count (i - 1) (acc + 1)
+    else acc
+  in
+  count (String.length name - 1) 0
+
 (* Helper to detect word boundaries and split into words *)
 let split_words name =
   let len = String.length name in
   let words = ref [] in
   let current_word = Buffer.create 10 in
-
-  let is_upper c = c >= 'A' && c <= 'Z' in
-  let is_lower c = c >= 'a' && c <= 'z' in
-
-  (* Count trailing uppercase letters *)
-  let trailing_upper_count =
-    let rec count i acc =
-      if i < 0 then acc
-      else if is_upper name.[i] then count (i - 1) (acc + 1)
-      else acc
-    in
-    count (len - 1) 0
-  in
+  let trailing = trailing_upper_count name in
 
   for i = 0 to len - 1 do
     let c = name.[i] in
@@ -35,13 +35,13 @@ let split_words name =
           (* Don't split when entering a short trailing acronym (≤ 2 chars).
              These form compound terms in English: MacOS, WebGL, OpenAI.
              Longer acronyms (XML, API, SDK) are separate words. *)
-          not (i >= len - trailing_upper_count && trailing_upper_count <= 2)
+          not (i >= len - trailing && trailing <= 2)
       | Some p, Some n when is_upper p && is_upper c && is_lower n ->
           (* Don't split if:
              1. We're at position 1 (preserves 2-letter uppercase prefix like OCaml)
              2. We're in the trailing uppercase section *)
           if i = 1 then false
-          else if i >= len - trailing_upper_count then false
+          else if i >= len - trailing then false
           else true (* Otherwise split: XMLParser -> XML, Parser *)
       | _ -> false
     in
