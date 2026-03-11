@@ -25,8 +25,36 @@ let extract_expected_name filename =
   else if basename = "test.ml" then "test"
   else Filename.chop_extension basename
 
+(** Extract suite name from a [let suite = ...] binding using the AST. Handles
+    both [let suite = ("name", ...)] and [let suite = \n  ("name", ...)]. *)
+let extract_suite_name_from_expr (expr : Parsetree.expression) =
+  match expr.pexp_desc with
+  | Pexp_tuple
+      ((_, { pexp_desc = Pexp_constant (Pconst_string (name, _, _)); _ }) :: _)
+    ->
+      Some (name, expr.pexp_loc)
+  | _ -> None
+
+(** Find the suite name from a parsed structure by looking for
+    [let suite = ("name", ...)] bindings. *)
+let find_suite_name structure =
+  List.find_map
+    (fun (item : Parsetree.structure_item) ->
+      match item.pstr_desc with
+      | Pstr_value
+          ( _,
+            [
+              {
+                pvb_pat = { ppat_desc = Ppat_var { txt = "suite"; _ }; _ };
+                pvb_expr;
+                _;
+              };
+            ] ) ->
+          extract_suite_name_from_expr pvb_expr
+      | _ -> None)
+    structure
+
 let check (ctx : Context.file) =
-  (* Only check test files (those starting with test_) *)
   let filename = ctx.filename in
   let basename = Filename.basename filename in
   if
@@ -36,70 +64,49 @@ let check (ctx : Context.file) =
   then []
   else
     let expected_name = extract_expected_name filename in
-
-    (* Simple approach: look for suite definition line directly in content *)
     let content = Context.content ctx in
-    let lines = String.split_on_char '\n' content in
-
-    (* Find line containing "let suite =" *)
-    let suite_line =
-      List.find_opt
-        (fun line ->
-          let line_trimmed = String.trim line in
-          String.starts_with ~prefix:"let suite " line_trimmed)
-        lines
+    let structure =
+      try
+        let lexbuf = Lexing.from_string content in
+        lexbuf.lex_curr_p <- { lexbuf.lex_curr_p with pos_fname = filename };
+        Some (Parse.implementation lexbuf)
+      with _ -> None
     in
-
-    match suite_line with
-    | Some line -> (
-        (* Extract suite name from quotes *)
-        let quote_start = String.index_opt line '"' in
-        match quote_start with
-        | Some start -> (
-            let quote_end = String.index_from_opt line (start + 1) '"' in
-            match quote_end with
-            | Some end_pos ->
-                let suite_name =
-                  String.sub line (start + 1) (end_pos - start - 1)
-                in
-
-                (* Find line number for location *)
-                let line_num = ref 0 in
-                List.iteri (fun i l -> if l = line then line_num := i + 1) lines;
-                let loc =
-                  Location.v ~file:filename ~start_line:!line_num ~start_col:0
-                    ~end_line:!line_num ~end_col:(String.length line)
-                in
-
-                (* Check if suite name is lowercase *)
-                if suite_name <> String.lowercase_ascii suite_name then
-                  [
-                    Issue.v ~loc
-                      {
-                        suite_name;
-                        issue_type =
-                          Not_lowercase (String.lowercase_ascii suite_name);
-                      };
-                  ] (* Check if suite name is snake_case *)
-                else if not (is_snake_case suite_name) then
-                  [
-                    Issue.v ~loc
-                      { suite_name; issue_type = Not_snake_case suite_name };
-                  ] (* Check if suite name matches expected *)
-                else if suite_name <> expected_name then
-                  [
-                    Issue.v ~loc
-                      {
-                        suite_name;
-                        issue_type =
-                          Wrong_name
-                            { actual = suite_name; expected = expected_name };
-                      };
-                  ]
-                else []
-            | None -> [])
-        | None -> [])
+    match structure with
     | None -> []
+    | Some structure -> (
+        match find_suite_name structure with
+        | None -> []
+        | Some (suite_name, name_loc) ->
+            let loc =
+              Location.v ~file:filename ~start_line:name_loc.loc_start.pos_lnum
+                ~start_col:0 ~end_line:name_loc.loc_start.pos_lnum ~end_col:80
+            in
+            if suite_name <> String.lowercase_ascii suite_name then
+              [
+                Issue.v ~loc
+                  {
+                    suite_name;
+                    issue_type =
+                      Not_lowercase (String.lowercase_ascii suite_name);
+                  };
+              ]
+            else if not (is_snake_case suite_name) then
+              [
+                Issue.v ~loc
+                  { suite_name; issue_type = Not_snake_case suite_name };
+              ]
+            else if suite_name <> expected_name then
+              [
+                Issue.v ~loc
+                  {
+                    suite_name;
+                    issue_type =
+                      Wrong_name
+                        { actual = suite_name; expected = expected_name };
+                  };
+              ]
+            else [])
 
 let pp ppf { suite_name; issue_type } =
   match issue_type with
