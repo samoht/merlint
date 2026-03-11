@@ -210,6 +210,8 @@ let rec parsetree_expr_to_ast (expr : Parsetree.expression) : expr =
       Sequence [ parsetree_expr_to_ast e1; parsetree_expr_to_ast e2 ]
   | Pexp_construct ({ txt = Lident "[]"; _ }, None) -> List (* Empty list *)
   | Pexp_construct ({ txt = Lident "::"; _ }, Some _) -> List (* List cons *)
+  | Pexp_construct (_, Some arg) ->
+      parsetree_expr_to_ast arg (* Ok/Some/constructor wrapping *)
   | Pexp_array _ -> List (* Array literal *)
   | Pexp_record (fields, _) ->
       Record { fields = List.length fields } (* Record literal *)
@@ -222,6 +224,7 @@ let rec parsetree_expr_to_ast (expr : Parsetree.expression) : expr =
       in
       (* Treat the whole apply as a sequence containing func and all args *)
       Sequence (func_ast :: args_asts)
+  | Pexp_open (_, body) -> parsetree_expr_to_ast body (* let open M in expr *)
   | _ -> Other
 
 (** Extract function definitions from structure items *)
