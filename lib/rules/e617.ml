@@ -30,8 +30,13 @@ let extract_expected_name filename =
 let extract_suite_name_from_expr (expr : Parsetree.expression) =
   match expr.pexp_desc with
   | Pexp_tuple
-      ((_, { pexp_desc = Pexp_constant (Pconst_string (name, _, _)); _ }) :: _)
-    ->
+      (( _,
+         {
+           pexp_desc =
+             Pexp_constant { pconst_desc = Pconst_string (name, _, _); _ };
+           _;
+         } )
+      :: _) ->
       Some (name, expr.pexp_loc)
   | _ -> None
 
