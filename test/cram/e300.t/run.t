@@ -44,4 +44,3 @@ Test good example - should find no issues (including compound terms like MacOS):
   
   Summary: ✓ 0 total issues (applied 1 rule)
   ✓ All checks passed!
-  
