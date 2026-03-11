@@ -70,6 +70,12 @@ module Nesting : sig
       node. *)
 end
 
+val trailing_record_fields : expr -> int
+(** [trailing_record_fields expr] returns the number of fields in a trailing
+    record literal at the tail position of [expr]. Returns 0 if the expression
+    does not end with a record. Used by E005 to exempt trailing record
+    construction from function length counts. *)
+
 val extract_functions : string -> (string * expr) list
 (** [extract_functions source] extracts functions with their control flow from a
     source file. Returns a list of (function_name, control_flow_ast) pairs. *)
