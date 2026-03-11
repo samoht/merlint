@@ -1480,6 +1480,13 @@ pre code {
     </div>
     <div class="error-hint"><p>The fuzz runner (fuzz.ml) should collect Fuzz_*.suite from each fuzz module rather than defining test_case directly. This keeps fuzz tests organized per-module.</p></div>
 </div>
+<div class="error-card" id="E705">
+    <div>
+        <span class="error-code">E705</span>
+        <span class="error-title">Missing Fuzz MLI File</span>
+    </div>
+    <div class="error-hint"><p>Fuzz modules (fuzz_*.ml) should have corresponding .mli files that export only 'suite : string * unit Alcotest.test_case list'. This enforces proper encapsulation of fuzz test internals.</p></div>
+</div>
 <div class="error-card" id="E710">
     <div>
         <span class="error-code">E710</span>

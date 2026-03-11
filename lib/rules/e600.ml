@@ -89,14 +89,7 @@ let check_runner_in_wrong_file filename content =
     ]
   else []
 
-(** Check if a file belongs to a private library (no public_name). *)
-let is_in_private_library dune_describe filename =
-  let fp = Fpath.v filename |> Fpath.normalize in
-  List.exists
-    (fun (lib : Dune.library_info) ->
-      Option.is_none lib.public_name
-      && List.exists (fun f -> Fpath.equal (Fpath.normalize f) fp) lib.files)
-    (Dune.libraries dune_describe)
+let is_in_private_library = File.is_in_private_library
 
 (** Check if a test_*.mli file exports only suite with correct type. Skips files
     that belong to private libraries. *)

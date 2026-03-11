@@ -12,6 +12,14 @@ let is_in_test_dir file =
   let dir = Fpath.parent file |> Fpath.basename in
   String.equal dir "test"
 
+let is_in_private_library dune_describe filename =
+  let fp = Fpath.v filename |> Fpath.normalize in
+  List.exists
+    (fun (lib : Dune.library_info) ->
+      Option.is_none lib.public_name
+      && List.exists (fun f -> Fpath.equal (Fpath.normalize f) fp) lib.files)
+    (Dune.libraries dune_describe)
+
 let process_ocaml_files ctx f =
   let files = Context.all_files ctx in
   List.concat_map
