@@ -44,8 +44,7 @@ let check_fuzz_mli_file dune_describe filename content =
           let normalized =
             Re.replace_string whitespace_re ~by:" " line |> String.trim
           in
-          String.ends_with ~suffix:"string * unit Alcotest.test_case list"
-            normalized
+          String.ends_with ~suffix:"string * Crowbar.test_case list" normalized
       | None -> true
     in
     let exports_other =
@@ -118,7 +117,7 @@ let pp ppf { filename; module_name = _ } =
   if String.ends_with ~suffix:".mli" filename then
     Fmt.pf ppf
       "Fuzz module interface should only export 'suite' with type string * \
-       unit Alcotest.test_case list"
+       Crowbar.test_case list"
   else
     Fmt.pf ppf "Fuzz module %s is missing interface file %s" filename
       (Filename.remove_extension filename ^ ".mli")
@@ -127,6 +126,6 @@ let rule =
   Rule.v ~code:"E705" ~title:"Missing Fuzz MLI File" ~category:Testing
     ~hint:
       "Fuzz modules (fuzz_*.ml) should have corresponding .mli files that \
-       export only 'suite : string * unit Alcotest.test_case list'. This \
-       enforces proper encapsulation of fuzz test internals."
+       export only 'suite : string * Crowbar.test_case list'. This enforces \
+       proper encapsulation of fuzz test internals."
     ~examples:[] ~pp (Project check)
