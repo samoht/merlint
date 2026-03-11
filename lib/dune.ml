@@ -315,18 +315,30 @@ let executable_modules dune_describe =
       else None)
   |> List.sort_uniq String.compare
 
-(** Get library modules from describe (public libraries only) *)
+(** Get library modules from describe (public libraries only).
+
+    Returns both module basenames (from .ml files) and library names, so that
+    [fuzz_tls.ml] matches a library named [tls] even when there is no [tls.ml]
+    file (e.g. the library wraps multiple modules). *)
 let lib_modules dune_describe =
-  dune_describe.libraries
-  |> List.filter (fun (lib_info : library_info) ->
-      Option.is_some lib_info.public_name)
-  |> List.concat_map (fun (lib_info : library_info) -> lib_info.files)
-  |> List.filter_map (fun file ->
-      let file_str = Fpath.to_string file in
-      if String.ends_with ~suffix:".ml" file_str then
-        Some Fpath.(file |> rem_ext |> basename)
-      else None)
-  |> List.sort_uniq String.compare
+  let public_libs =
+    dune_describe.libraries
+    |> List.filter (fun (lib_info : library_info) ->
+        Option.is_some lib_info.public_name)
+  in
+  let lib_names =
+    public_libs |> List.map (fun (lib_info : library_info) -> lib_info.name)
+  in
+  let file_modules =
+    public_libs
+    |> List.concat_map (fun (lib_info : library_info) -> lib_info.files)
+    |> List.filter_map (fun file ->
+        let file_str = Fpath.to_string file in
+        if String.ends_with ~suffix:".ml" file_str then
+          Some Fpath.(file |> rem_ext |> basename)
+        else None)
+  in
+  lib_names @ file_modules |> List.sort_uniq String.compare
 
 (** Get test modules from describe *)
 let test_modules dune_describe =
