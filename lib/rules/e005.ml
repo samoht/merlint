@@ -95,19 +95,27 @@ let check (ctx : Context.file) =
                   m "Skipping pure data structure: %s" item.name);
               None)
             else
-              (* Find the function's AST to count match cases *)
+              (* Find the function's AST *)
+              let func_expr =
+                List.find_opt (fun (name, _) -> name = item.name) ast.functions
+              in
               let match_cases =
-                match
-                  List.find_opt
-                    (fun (name, _) -> name = item.name)
-                    ast.functions
-                with
+                match func_expr with
                 | Some (_, expr) -> count_match_cases expr
                 | None -> 0
               in
+              (* Trailing record literals are pure data, not logic *)
+              let trailing_record =
+                match func_expr with
+                | Some (_, expr) -> Ast.trailing_record_fields expr
+                | None -> 0
+              in
 
-              (* Apply additional allowance for pattern matching (2 lines per case) *)
-              let threshold = config.max_function_length + (match_cases * 2) in
+              (* Apply additional allowance for pattern matching (2 lines per case)
+                 and trailing record fields (1 line per field) *)
+              let threshold =
+                config.max_function_length + (match_cases * 2) + trailing_record
+              in
 
               if length > threshold then
                 let issue_loc =
