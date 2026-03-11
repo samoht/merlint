@@ -109,6 +109,9 @@ let check (ctx : Context.file) =
                 match func_expr with
                 | Some (_, expr) ->
                     let n = Ast.trailing_record_fields expr in
+                    if item.name = "init" then
+                      Logs.debug (fun m ->
+                          m "E005: init AST = %a" Ast.pp_expr expr);
                     Logs.debug (fun m ->
                         m "E005: %s trailing_record=%d" item.name n);
                     n
