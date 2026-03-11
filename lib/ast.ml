@@ -129,6 +129,24 @@ module Nesting = struct
     depth_of 0 node
 end
 
+(** Count fields in a trailing record literal. Walks down the "tail" of the
+    expression (body of let, else branch of if-then-else, last element of
+    sequence) looking for a Record at the end. Returns the field count, or 0 if
+    the tail isn't a record. *)
+let rec trailing_record_fields = function
+  | Record { fields } -> fields
+  | Let { body; _ } -> trailing_record_fields body
+  | Sequence exprs -> (
+      match List.rev exprs with
+      | last :: _ -> trailing_record_fields last
+      | [] -> 0)
+  | If_then_else { else_expr = Some e; _ } -> trailing_record_fields e
+  | If_then_else { then_expr; else_expr = None } ->
+      trailing_record_fields then_expr
+  | Try { expr; _ } -> trailing_record_fields expr
+  | Function { body; _ } -> trailing_record_fields body
+  | Match _ | List | Other -> 0
+
 (** Pretty-print expression for debugging *)
 let expr_to_string (expr : Parsetree.expression) =
   Fmt.str "%a" Pprintast.expression expr
