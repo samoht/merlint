@@ -107,18 +107,8 @@ let check (ctx : Context.file) =
               (* Trailing record literals are pure data, not logic *)
               let trailing_record =
                 match func_expr with
-                | Some (_, expr) ->
-                    let n = Ast.trailing_record_fields expr in
-                    if item.name = "init" then
-                      Logs.debug (fun m ->
-                          m "E005: init AST = %a" Ast.pp_expr expr);
-                    Logs.debug (fun m ->
-                        m "E005: %s trailing_record=%d" item.name n);
-                    n
-                | None ->
-                    Logs.debug (fun m ->
-                        m "E005: %s not found in AST" item.name);
-                    0
+                | Some (_, expr) -> Ast.trailing_record_fields expr
+                | None -> 0
               in
 
               (* Apply additional allowance for pattern matching (2 lines per case)
