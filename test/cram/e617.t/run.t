@@ -115,6 +115,36 @@ Test bad examples - should find naming issues:
   ✗ Some checks failed. See details above.
   [1]
 
+Test multi-line suite definition:
+  $ merlint -B -r E617 test_multiline.ml
+  Running merlint analysis...
+  
+  Analyzing 1 files
+  
+  ✓ Code Quality (0 total issues)
+  ✓ Code Style (0 total issues)
+  ✓ Naming Conventions (0 total issues)
+  ✓ Documentation (0 total issues)
+  ✓ Project Structure (0 total issues)
+  ✗ Test Quality (1 total issues)
+    [E617] Test Suite Naming Convention (1 issue)
+    Test suite names should follow these conventions: (1) Use lowercase snake_case
+    for the suite name. (2) The suite name should match the test file name - for
+    example, test_foo.ml should have suite name 'foo'. This makes it easier to
+    identify which test file contains which suite.
+    - test_multiline.ml:6:0: Test suite name 'Multiline' should be lowercase - use 'multiline' instead
+  
+  ╭──────────────┬────────────────────────────────────╮
+  │ Category     │ Issues                             │
+  ├──────────────┼────────────────────────────────────┤
+  │ Test Quality │ 1 (1 test suite naming convention) │
+  ╰──────────────┴────────────────────────────────────╯
+  
+  
+  Summary: ✗ 1 total issue (applied 1 rule)
+  ✗ Some checks failed. See details above.
+  [1]
+
 Test good examples - should find no issues:
   $ merlint -B -r E617 good/test_config.ml good/test_parser.ml good/test_user_auth.ml
   Running merlint analysis...
