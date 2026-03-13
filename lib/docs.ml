@@ -72,11 +72,26 @@ let check_bracket_format ~name ~signature ~is_operator ~doc issues =
       let doc_name = if List.length parts > 0 then List.hd parts else "" in
       (* If using bracket format, the name should match *)
       if is_operator then begin
-        (* For operators, check infix notation [x op y] *)
+        (* For operators, check infix notation [x op y].
+           Index operators (starting with '.') use [x .op{arg}] syntax, so we
+           only require that the doc bracket starts with an identifier followed
+           by a space and the beginning of the operator name. *)
+        let op_prefix =
+          if String.length name > 0 && name.[0] = '.' then
+            (* Index operator: match [alnum+ .op_start] where op_start is
+               everything up to the first '{' or end of name *)
+            let stop =
+              match String.index_opt name '{' with
+              | Some i -> i
+              | None -> String.length name
+            in
+            String.sub name 0 stop
+          else name
+        in
         let infix_pattern =
           Re.compile
             (Re.seq
-               [ Re.str "["; Re.rep1 Re.alnum; Re.space; Re.str name; Re.space ])
+               [ Re.str "["; Re.rep1 Re.alnum; Re.space; Re.str op_prefix ])
         in
         if not (Re.execp infix_pattern doc) then
           issues := Bad_operator_format :: !issues
