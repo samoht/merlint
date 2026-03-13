@@ -1,0 +1,3 @@
+(library
+ (name e726_bad)
+ (modules fuzz_parser fuzz_encoder))

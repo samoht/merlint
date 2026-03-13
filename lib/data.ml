@@ -45,6 +45,7 @@ let all_rules =
     E617.rule;
     E618.rule;
     E620.rule;
+    E621.rule;
     E700.rule;
     E705.rule;
     E710.rule;
@@ -55,4 +56,5 @@ let all_rules =
     E722.rule;
     E724.rule;
     E725.rule;
+    E726.rule;
   ]
