@@ -1473,6 +1473,28 @@ pre code {
     </div>
     <div class="error-hint"><p>Each test directory should have exactly one test stanza with a single test runner (test.ml). Multiple test stanzas in the same directory cause module ownership conflicts and break @check builds.</p></div>
 </div>
+<div class="error-card" id="E621">
+    <div>
+        <span class="error-code">E621</span>
+        <span class="error-title">Empty Test Suite</span>
+    </div>
+    <div class="error-hint"><p>An empty test suite provides no value. Tests should: (1) cover the module's public API with representative inputs, (2) exercise boundary conditions and edge cases, (3) verify error handling and invalid inputs, (4) document expected behaviour through concrete examples. A suite with no test cases will never catch regressions.</p><div class="examples-grid">
+<div class="example bad">
+  <h4>BAD</h4>
+  <pre><code><span class="kw">let</span> suite = (&quot;parser&quot;, [])  <span class="cm">(* no tests: regressions go undetected *)</span></code></pre>
+</div>
+<div class="example good">
+  <h4>GOOD</h4>
+  <pre><code><span class="kw">let</span> suite =
+  ( &quot;parser&quot;,
+    [
+      <span class="cn">Alcotest</span>.test_case &quot;parses valid input&quot; `<span class="cn">Quick</span> test_parse_valid;
+      <span class="cn">Alcotest</span>.test_case &quot;rejects empty input&quot; `<span class="cn">Quick</span> test_parse_empty;
+      <span class="cn">Alcotest</span>.test_case &quot;handles malformed data&quot; `<span class="cn">Quick</span> test_parse_malformed;
+    ] )</code></pre>
+</div>
+</div></div>
+</div>
 <div class="error-card" id="E700">
     <div>
         <span class="error-code">E700</span>
@@ -1542,6 +1564,29 @@ pre code {
         <span class="error-title">Fuzz Test Suite Mismatch</span>
     </div>
     <div class="error-hint"><p>Fuzz tests must declare let suite = ("&lt;module&gt;", [...]) where &lt;module&gt; matches the filename: fuzz_&lt;module&gt;.ml should use suite:"&lt;module&gt;".</p></div>
+</div>
+<div class="error-card" id="E726">
+    <div>
+        <span class="error-code">E726</span>
+        <span class="error-title">Empty Fuzz Suite</span>
+    </div>
+    <div class="error-hint"><p>An empty fuzz suite provides no coverage. Fuzz tests should: (1) test crash safety of all parsers and decoders on arbitrary input, (2) verify roundtrip invariants (decode(encode(x)) = x), (3) exercise state machine transitions including invalid ones, (4) cover boundary conditions and edge cases that unit tests miss. A suite with no test cases will never find bugs.</p><div class="examples-grid">
+<div class="example bad">
+  <h4>BAD</h4>
+  <pre><code><span class="kw">let</span> suite = (&quot;parser&quot;, <span class="cn">Crowbar</span>.[])  <span class="cm">(* no fuzz tests: bugs go undetected *)</span></code></pre>
+</div>
+<div class="example good">
+  <h4>GOOD</h4>
+  <pre><code><span class="kw">let</span> suite =
+  ( &quot;parser&quot;,
+    <span class="cn">Crowbar</span>.
+      [
+        test_case &quot;parse crash safety&quot; [ bytes ] test_parse;
+        test_case &quot;roundtrip&quot; [ bytes ] test_roundtrip;
+        test_case &quot;boundary: empty input&quot; [ const () ] test_empty;
+      ] )</code></pre>
+</div>
+</div></div>
 </div>
 
     <a href="#top" class="back-to-top">↑ Top</a>

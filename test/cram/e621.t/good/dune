@@ -1,0 +1,3 @@
+(library
+ (name e621_good)
+ (modules test_encoder))
