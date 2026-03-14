@@ -77,14 +77,14 @@ let rec files dir =
   |> List.concat_map (fun entry ->
       let path = Fpath.(dir_path / entry) in
       let path_str = Fpath.to_string path in
-      if
-        entry = "dune" && Sys.file_exists path_str
-        && not (Sys.is_directory path_str)
-      then [ path ]
+      let first_char = if String.length entry > 0 then entry.[0] else '\000' in
+      if first_char = '.' || first_char = '_' then []
       else if
-        Sys.is_directory path_str && entry <> "_build" && entry <> ".git"
-        && entry <> "_opam"
-      then files path
+        entry = "dune" && Sys.file_exists path_str
+        && not (try Sys.is_directory path_str with Sys_error _ -> true)
+      then [ path ]
+      else if try Sys.is_directory path_str with Sys_error _ -> false then
+        files path
       else [])
 
 (** Parse a dune file and extract module information *)
