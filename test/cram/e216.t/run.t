@@ -20,7 +20,8 @@ Test bad example - should find invalid_arg with Fmt.str:
   ╭────────────┬────────────────────────────────────────────────────────╮
   │ Category   │ Issues                                                 │
   ├────────────┼────────────────────────────────────────────────────────┤
-  │ Code Style │ 2 (2 use fmt.invalid_arg instead of invalid_arg (fmt.… │
+  │ Code Style │ 2 (2 use fmt.invalid_arg instead of invalid_arg        │
+  │            │ (fmt.str))                                             │
   ╰────────────┴────────────────────────────────────────────────────────╯
   
   
