@@ -58,7 +58,7 @@ let expected_test_path source_file =
   let compute_test_path prefix dir rest =
     let after = String.concat "/" rest in
     let dirname = Filename.dirname after in
-    let basename = Filename.basename after in
+    let basename = Filename.basename after |> String.lowercase_ascii in
     let test_name = "test_" ^ basename in
     let test_after =
       if dir = "lib" || dir = "src" then
@@ -208,15 +208,22 @@ let check (ctx : Context.project) =
                     lib_mod);
               None
           | Some file_path ->
-              let expected_test_name = "test_" ^ lib_mod in
+              (* Use lowercase for comparison: OS.ml -> test_os (not test_OS) *)
+              let expected_test_name =
+                "test_" ^ String.lowercase_ascii lib_mod
+              in
 
               (* Debug what we're checking *)
-              let in_dune = List.mem expected_test_name test_modules in
+              let in_dune =
+                List.mem expected_test_name
+                  (List.map String.lowercase_ascii test_modules)
+              in
               let in_files =
                 List.exists
                   (fun f ->
                     String.ends_with ~suffix:".ml" f
-                    && Filename.basename (Filename.remove_extension f)
+                    && String.lowercase_ascii
+                         (Filename.basename (Filename.remove_extension f))
                        = expected_test_name)
                   files
               in
