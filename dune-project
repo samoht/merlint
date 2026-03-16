@@ -28,8 +28,6 @@
   fmt
   astring
   sexpt
-  sexplib0
-  parsexp
   tty
   vlog
   (alcotest :with-test)))
