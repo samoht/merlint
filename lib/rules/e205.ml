@@ -17,11 +17,11 @@ let check (ctx : Context.file) =
       let prefix = name.prefix in
       let base = name.base in
 
-      (* Check for Printf/Format module usage *)
+      (* Check for Printf/Format module usage (with or without Stdlib prefix) *)
       match prefix with
-      | [ "Stdlib"; "Printf" ] ->
+      | [ "Stdlib"; "Printf" ] | [ "Printf" ] ->
           issues := Issue.v ~loc { module_used = "Printf" } :: !issues
-      | [ "Stdlib"; "Format" ] when is_printf_function base ->
+      | ([ "Stdlib"; "Format" ] | [ "Format" ]) when is_printf_function base ->
           issues := Issue.v ~loc { module_used = "Format" } :: !issues
       | _ -> ());
 
