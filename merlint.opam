@@ -11,16 +11,22 @@ bug-reports: "https://tangled.org/gazagnaire.org/merlint/issues"
 depends: [
   "ocaml"
   "dune" {>= "3.21"}
+  "bytesrw"
   "jsont"
   "cmdliner"
+  "eio"
   "merlin"
+  "ocaml-merlin"
   "re"
   "fpath"
   "logs"
   "fmt"
   "astring"
+  "sexpt"
   "sexplib0"
   "parsexp"
+  "tty"
+  "vlog"
   "alcotest" {with-test}
   "odoc" {with-doc}
 ]
