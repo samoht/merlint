@@ -16,14 +16,20 @@
  (depends
   ocaml
   dune
+  bytesrw
   jsont
   cmdliner
+  eio
   merlin
+  ocaml-merlin
   re
   fpath
   logs
   fmt
   astring
+  sexpt
   sexplib0
   parsexp
+  tty
+  vlog
   (alcotest :with-test)))
