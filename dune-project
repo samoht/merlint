@@ -20,7 +20,6 @@
   jsont
   cmdliner
   eio
-  merlin
   ocaml-merlin
   re
   fpath
