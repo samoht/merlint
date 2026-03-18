@@ -122,10 +122,12 @@ let check ctx =
                       m "E610: test %s expects lib %s" (Fpath.to_string file)
                         expected_path);
                   let found =
+                    let expected_lc = String.lowercase_ascii expected_path in
                     List.exists
                       (fun lib_path ->
-                        lib_path = expected_path
-                        || Filename.basename lib_path = expected_path)
+                        String.lowercase_ascii lib_path = expected_lc
+                        || String.lowercase_ascii (Filename.basename lib_path)
+                           = expected_lc)
                       library_module_paths
                   in
                   (* Also check if the expected module name is referenced as a
