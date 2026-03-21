@@ -1,8 +1,4 @@
 (executable
  (name fuzz)
  (modules fuzz fuzz_parser)
- (libraries crowbar))
-
-(executable
- (name gen_corpus)
- (modules gen_corpus))
+ (libraries alcobar))

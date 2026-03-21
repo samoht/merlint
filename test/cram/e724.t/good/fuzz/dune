@@ -1,13 +1,9 @@
 (executable
  (name fuzz_parser)
  (modules fuzz_parser)
- (libraries crowbar))
+ (libraries alcobar))
 
 (executable
- (name gen_corpus)
- (modules gen_corpus))
-
-(rule
  (alias runtest)
  (deps fuzz_parser.exe)
  (action
@@ -20,8 +16,6 @@
  (deps
   (source_tree corpus)
   fuzz_parser.exe
-  gen_corpus.exe)
  (action
   (progn
-   (run %{exe:gen_corpus.exe})
    (run afl-fuzz -V 60 -i corpus -o _fuzz -- %{exe:fuzz_parser.exe} @@))))

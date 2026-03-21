@@ -1507,7 +1507,7 @@ pre code {
         <span class="error-code">E705</span>
         <span class="error-title">Missing Fuzz MLI File</span>
     </div>
-    <div class="error-hint"><p>Fuzz modules (fuzz_*.ml) should have corresponding .mli files that export only 'suite : string * Crowbar.test_case list'. This enforces proper encapsulation of fuzz test internals.</p></div>
+    <div class="error-hint"><p>Fuzz modules (fuzz_*.ml) should have corresponding .mli files that export only 'suite : string * Alcobar.test_case list'. This enforces proper encapsulation of fuzz test internals.</p></div>
 </div>
 <div class="error-card" id="E710">
     <div>
@@ -1573,13 +1573,13 @@ pre code {
     <div class="error-hint"><p>An empty fuzz suite provides no coverage. Fuzz tests should: (1) test crash safety of all parsers and decoders on arbitrary input, (2) verify roundtrip invariants (decode(encode(x)) = x), (3) exercise state machine transitions including invalid ones, (4) cover boundary conditions and edge cases that unit tests miss. A suite with no test cases will never find bugs.</p><div class="examples-grid">
 <div class="example bad">
   <h4>BAD</h4>
-  <pre><code><span class="kw">let</span> suite = (&quot;parser&quot;, <span class="cn">Crowbar</span>.[])  <span class="cm">(* no fuzz tests: bugs go undetected *)</span></code></pre>
+  <pre><code><span class="kw">let</span> suite = (&quot;parser&quot;, <span class="cn">Alcobar</span>.[])  <span class="cm">(* no fuzz tests: bugs go undetected *)</span></code></pre>
 </div>
 <div class="example good">
   <h4>GOOD</h4>
   <pre><code><span class="kw">let</span> suite =
   ( &quot;parser&quot;,
-    <span class="cn">Crowbar</span>.
+    <span class="cn">Alcobar</span>.
       [
         test_case &quot;parse crash safety&quot; [ bytes ] test_parse;
         test_case &quot;roundtrip&quot; [ bytes ] test_roundtrip;

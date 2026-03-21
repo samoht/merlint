@@ -1,4 +1,4 @@
 (executable
  (name fuzz)
  (modules fuzz fuzz_parser)
- (libraries crowbar))
+ (libraries alcobar))
