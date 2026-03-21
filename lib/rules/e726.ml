@@ -3,7 +3,7 @@
 type payload = { suite_name : string }
 
 (** [is_empty_list expr] returns true if [expr] is the empty list constructor
-    [[]]. Handles module-opened lists like [Crowbar.[]], which appear as
+    [[]]. Handles module-opened lists like [Alcobar.[]], which appear as
     [Pexp_open (_, Pexp_construct ("[]", None))]. *)
 let rec is_empty_list (expr : Parsetree.expression) =
   match expr.pexp_desc with
@@ -89,14 +89,14 @@ let rule =
         {
           is_good = false;
           code =
-            {|let suite = ("parser", Crowbar.[])  (* no fuzz tests: bugs go undetected *)|};
+            {|let suite = ("parser", Alcobar.[])  (* no fuzz tests: bugs go undetected *)|};
         };
         {
           is_good = true;
           code =
             {|let suite =
   ( "parser",
-    Crowbar.
+    Alcobar.
       [
         test_case "parse crash safety" [ bytes ] test_parse;
         test_case "roundtrip" [ bytes ] test_roundtrip;

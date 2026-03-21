@@ -1,9 +1,9 @@
 (test
  (name fuzz)
  (modules fuzz)
- (libraries crowbar))
+ (libraries alcobar))
 
 (test
  (name fuzz_extra)
  (modules fuzz_extra)
- (libraries crowbar))
+ (libraries alcobar))

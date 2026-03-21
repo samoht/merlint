@@ -3,6 +3,6 @@
 let suite =
   ( "parser",
     [
-      Crowbar.test_case "roundtrip" [ Crowbar.bytes ] (fun s ->
+      Alcobar.test_case "roundtrip" [ Alcobar.bytes ] (fun s ->
           ignore (s : string));
     ] )
