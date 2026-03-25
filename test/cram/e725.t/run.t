@@ -2,7 +2,7 @@ Test bad example - fuzz suite name mismatch:
   $ merlint -B -r E725 bad/
   Running merlint analysis...
   
-  Analyzing 4 files
+  Analyzing 3 files
   
   ✓ Code Quality (0 total issues)
   ✓ Code Style (0 total issues)
@@ -35,7 +35,7 @@ Test good example - fuzz suite name matches filename:
   $ merlint -B -r E725 good/
   Running merlint analysis...
   
-  Analyzing 4 files
+  Analyzing 3 files
   
   ✓ Code Quality (0 total issues)
   ✓ Code Style (0 total issues)

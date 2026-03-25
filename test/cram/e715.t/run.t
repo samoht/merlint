@@ -2,7 +2,7 @@ Test bad example - fuzz_parser not included in fuzz.ml:
   $ merlint -B -r E715 bad/
   Running merlint analysis...
   
-  Analyzing 4 files
+  Analyzing 3 files
   
   ✓ Code Quality (0 total issues)
   ✓ Code Style (0 total issues)
@@ -30,7 +30,7 @@ Test good example - all fuzz modules included:
   $ merlint -B -r E715 good/
   Running merlint analysis...
   
-  Analyzing 4 files
+  Analyzing 3 files
   
   ✓ Code Quality (0 total issues)
   ✓ Code Style (0 total issues)

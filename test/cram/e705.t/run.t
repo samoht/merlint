@@ -2,7 +2,7 @@ Test bad example - missing fuzz .mli file:
   $ merlint -B -r E705 bad/
   Running merlint analysis...
   
-  Analyzing 4 files
+  Analyzing 3 files
   
   ✓ Code Quality (0 total issues)
   ✓ Code Style (0 total issues)
@@ -12,7 +12,7 @@ Test bad example - missing fuzz .mli file:
   ✗ Test Quality (1 total issues)
     [E705] Missing Fuzz MLI File (1 issue)
     Fuzz modules (fuzz_*.ml) should have corresponding .mli files that export only
-    'suite : string * Crowbar.test_case list'. This enforces proper encapsulation
+    'suite : string * Alcobar.test_case list'. This enforces proper encapsulation
     of fuzz test internals.
     - bad/fuzz/fuzz_parser.ml:1:0: Fuzz module bad/fuzz/fuzz_parser.ml is missing interface file bad/fuzz/fuzz_parser.mli
   
@@ -31,7 +31,7 @@ Test good example - fuzz .mli file present with correct type:
   $ merlint -B -r E705 good/
   Running merlint analysis...
   
-  Analyzing 5 files
+  Analyzing 4 files
   
   ✓ Code Quality (0 total issues)
   ✓ Code Style (0 total issues)
