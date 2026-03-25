@@ -2,7 +2,7 @@ Test bad example - fuzz.ml defines tests inline:
   $ merlint -B -r E700 bad/
   Running merlint analysis...
   
-  Analyzing 4 files
+  Analyzing 3 files
   
   ✓ Code Quality (0 total issues)
   ✓ Code Style (0 total issues)
@@ -31,7 +31,7 @@ Test good example - fuzz.ml delegates to Fuzz_*.run():
   $ merlint -B -r E700 good/
   Running merlint analysis...
   
-  Analyzing 4 files
+  Analyzing 3 files
   
   ✓ Code Quality (0 total issues)
   ✓ Code Style (0 total issues)

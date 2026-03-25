@@ -2,7 +2,7 @@ Test bad example - fuzz_missing.ml has no corresponding library module:
   $ merlint -B -r E710 bad/
   Running merlint analysis...
   
-  Analyzing 4 files
+  Analyzing 3 files
   
   ✓ Code Quality (0 total issues)
   ✓ Code Style (0 total issues)
@@ -31,7 +31,7 @@ Test good example - fuzz_parser.ml has corresponding parser.ml:
   $ merlint -B -r E710 good/
   Running merlint analysis...
   
-  Analyzing 4 files
+  Analyzing 3 files
   
   ✓ Code Quality (0 total issues)
   ✓ Code Style (0 total issues)
