@@ -315,7 +315,9 @@ let rec core_type_to_string ?(wrap_arrows = false) (typ : Parsetree.core_type) =
       let result = label_prefix ^ arg_str ^ " -> " ^ ret_str in
       if wrap_arrows then "(" ^ result ^ ")" else result
   | Ptyp_tuple types ->
-      let type_strs = List.map (fun (_, t) -> core_type_to_string t) types in
+      let type_strs =
+        List.map (fun (_, t) -> core_type_to_string ~wrap_arrows:true t) types
+      in
       String.concat " * " type_strs
   | _ -> "<complex type>"
 
