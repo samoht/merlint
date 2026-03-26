@@ -55,7 +55,18 @@ let test_check_function_doc () =
         "[field_codec name ?constraint_ typ ~get ~set] creates a field codec."
   in
   Alcotest.(check (list style_issue))
-    "function-typed args (arrows inside parens)" [] issues
+    "function-typed args (arrows inside parens)" [] issues;
+
+  (* Function returning a tuple of functions - arrows in return tuple should not count *)
+  let issues =
+    check_function_doc ~name:"cycling"
+      ~signature:
+        "data:bytes -> n_items:int -> size:int -> (bytes -> int -> unit) -> \
+         (unit -> unit) * (unit -> unit)"
+      ~doc:"[cycling ~data ~n_items ~size read_fn] cycles through items."
+  in
+  Alcotest.(check (list style_issue))
+    "function returning tuple of functions" [] issues
 
 let test_check_value_doc () =
   let open Merlint.Docs in
