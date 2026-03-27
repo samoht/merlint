@@ -52,6 +52,42 @@ let count_doc_args doc_content =
   (* First part is the name, rest are args *)
   max 0 (List.length parts - 1)
 
+let check_operator_bracket ~name ~doc issues =
+  let op_prefix =
+    if String.length name > 0 && name.[0] = '.' then
+      let stop =
+        match String.index_opt name '{' with
+        | Some i -> i
+        | None -> String.length name
+      in
+      String.sub name 0 stop
+    else name
+  in
+  let infix_pattern =
+    Re.compile
+      (Re.seq [ Re.str "["; Re.rep1 Re.alnum; Re.space; Re.str op_prefix ])
+  in
+  if not (Re.execp infix_pattern doc) then
+    issues := Bad_operator_format :: !issues
+
+let check_function_bracket ~name ~signature ~bracket_content issues =
+  let parts =
+    String.split_on_char ' ' bracket_content
+    |> List.filter (fun s -> String.trim s <> "")
+  in
+  let doc_name = if List.length parts > 0 then List.hd parts else "" in
+  if doc_name <> name then issues := Bad_function_format :: !issues;
+  let found_args = count_doc_args bracket_content in
+  if found_args > 0 then begin
+    let min_args, max_args = count_args signature in
+    if found_args < min_args then
+      issues :=
+        Wrong_arg_count { expected = min_args; found = found_args } :: !issues
+    else if found_args > max_args then
+      issues :=
+        Wrong_arg_count { expected = max_args; found = found_args } :: !issues
+  end
+
 let check_bracket_format ~name ~signature ~is_operator ~doc issues =
   let bracket_pattern =
     Re.compile
@@ -65,55 +101,8 @@ let check_bracket_format ~name ~signature ~is_operator ~doc issues =
   match Re.exec_opt bracket_pattern doc with
   | Some groups ->
       let bracket_content = Re.Group.get groups 1 in
-      let parts =
-        String.split_on_char ' ' bracket_content
-        |> List.filter (fun s -> String.trim s <> "")
-      in
-      let doc_name = if List.length parts > 0 then List.hd parts else "" in
-      (* If using bracket format, the name should match *)
-      if is_operator then begin
-        (* For operators, check infix notation [x op y].
-           Index operators (starting with '.') use [x .op{arg}] syntax, so we
-           only require that the doc bracket starts with an identifier followed
-           by a space and the beginning of the operator name. *)
-        let op_prefix =
-          if String.length name > 0 && name.[0] = '.' then
-            (* Index operator: match [alnum+ .op_start] where op_start is
-               everything up to the first '{' or end of name *)
-            let stop =
-              match String.index_opt name '{' with
-              | Some i -> i
-              | None -> String.length name
-            in
-            String.sub name 0 stop
-          else name
-        in
-        let infix_pattern =
-          Re.compile
-            (Re.seq
-               [ Re.str "["; Re.rep1 Re.alnum; Re.space; Re.str op_prefix ])
-        in
-        if not (Re.execp infix_pattern doc) then
-          issues := Bad_operator_format :: !issues
-      end
-      else begin
-        (* For regular functions, check that doc name matches function name *)
-        if doc_name <> name then issues := Bad_function_format :: !issues;
-        (* Check argument count - [name] alone is always valid,
-           but if args are provided they should be within valid range *)
-        let found_args = count_doc_args bracket_content in
-        if found_args > 0 then begin
-          let min_args, max_args = count_args signature in
-          if found_args < min_args then
-            issues :=
-              Wrong_arg_count { expected = min_args; found = found_args }
-              :: !issues
-          else if found_args > max_args then
-            issues :=
-              Wrong_arg_count { expected = max_args; found = found_args }
-              :: !issues
-        end
-      end
+      if is_operator then check_operator_bracket ~name ~doc issues
+      else check_function_bracket ~name ~signature ~bracket_content issues
   | None -> ()
 
 let check_ends_with_period ~doc issues =
