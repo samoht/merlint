@@ -4,20 +4,21 @@ type payload = { variant : string; expected : string }
 
 let check (ctx : Context.file) =
   let filename = ctx.filename in
+  let allowed = ctx.config.allowed_words in
   Merlin.Dump.check_elements ~full_path:filename (Context.dump ctx).variants
     (fun name ->
       (* For qualified names, only check the basename *)
       let name_to_check =
         if String.contains name '.' then
-          (* Get everything after the last dot *)
           let parts = String.split_on_char '.' name in
           List.hd (List.rev parts)
         else name
       in
-      (* Check if the name needs to be converted *)
-      let expected = Naming.to_capitalized_snake_case name_to_check in
-      (* Only report if the conversion actually changes the name *)
-      if expected <> name_to_check then Some expected else None)
+      (* Skip names that match an allowed word exactly *)
+      if List.mem name_to_check allowed then None
+      else
+        let expected = Naming.to_capitalized_snake_case name_to_check in
+        if expected <> name_to_check then Some expected else None)
     (fun variant_name loc expected ->
       Issue.v ~loc { variant = variant_name; expected })
 

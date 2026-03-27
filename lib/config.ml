@@ -9,6 +9,7 @@ type t = {
   (* Naming rules *)
   max_underscores_in_name : int;
   min_name_length_underscore : int;
+  allowed_words : string list;
   (* Style rules *)
   allow_obj_magic : bool;
   allow_str_module : bool;
@@ -30,6 +31,7 @@ let default =
     (* Naming defaults *)
     max_underscores_in_name = 3;
     min_name_length_underscore = 5;
+    allowed_words = [];
     (* Style defaults - all issues enabled *)
     allow_obj_magic = false;
     allow_str_module = false;
@@ -76,6 +78,20 @@ let apply_config config key value : t =
       { config with max_underscores_in_name = parse_int value }
   | "min_name_length_underscore" ->
       { config with min_name_length_underscore = parse_int value }
+  | "allowed_words" | "acronyms" ->
+      (* Parse list: "[EdDSA, ECDSA, SHA]" or "EdDSA, ECDSA, SHA" *)
+      let stripped =
+        let v = String.trim value in
+        if String.length v >= 2 && v.[0] = '[' && v.[String.length v - 1] = ']'
+        then String.sub v 1 (String.length v - 2)
+        else v
+      in
+      let words =
+        String.split_on_char ',' stripped
+        |> List.concat_map (fun s -> String.split_on_char ' ' (String.trim s))
+        |> List.filter (fun s -> s <> "")
+      in
+      { config with allowed_words = words }
   (* Style rules *)
   | "allow_obj_magic" -> { config with allow_obj_magic = parse_bool value }
   | "allow_str_module" -> { config with allow_str_module = parse_bool value }
@@ -133,6 +149,7 @@ let equal a b =
   && a.exempt_data_definitions = b.exempt_data_definitions
   && a.max_underscores_in_name = b.max_underscores_in_name
   && a.min_name_length_underscore = b.min_name_length_underscore
+  && a.allowed_words = b.allowed_words
   && a.allow_obj_magic = b.allow_obj_magic
   && a.allow_str_module = b.allow_str_module
   && a.allow_catch_all_exceptions = b.allow_catch_all_exceptions
