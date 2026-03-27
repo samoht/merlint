@@ -9,6 +9,9 @@ type t = {
   (* Naming rules *)
   max_underscores_in_name : int;
   min_name_length_underscore : int;
+  allowed_words : string list;
+      (** Words treated as atomic by naming rules (e.g. EdDSA, ECDSA).
+          Parsed from [allowed_words] or [acronyms] in [.merlint]. *)
   (* Style rules *)
   allow_obj_magic : bool;
   allow_str_module : bool;
