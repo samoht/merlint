@@ -1528,7 +1528,7 @@ pre code {
         <span class="error-code">E718</span>
         <span class="error-title">Non-Fuzz File in Fuzz Directory</span>
     </div>
-    <div class="error-hint"><p>All .ml files in a fuzz/ directory should follow the fuzz_ naming convention (e.g., fuzz_parser.ml), be the fuzz runner (fuzz.ml), or the corpus generator (gen_corpus.ml). Each fuzz directory must have a gen_corpus.ml.</p></div>
+    <div class="error-hint"><p>All .ml files in a fuzz/ directory should follow the fuzz_ naming convention (e.g., fuzz_parser.ml) or be the fuzz runner (fuzz.ml). Each fuzz directory must use fuzz.exe --gen-corpus in its dune rule.</p></div>
 </div>
 <div class="error-card" id="E720">
     <div>
@@ -1556,7 +1556,7 @@ pre code {
         <span class="error-code">E724</span>
         <span class="error-title">Missing Fuzz Build Rules</span>
     </div>
-    <div class="error-hint"><p>Each fuzz directory should have (rule (alias runtest) ...) for property-based testing during dune test, and (rule (alias fuzz) (deps (source_tree corpus) fuzz.exe gen_corpus.exe) ...) for AFL fuzzing campaigns with corpus generation.</p></div>
+    <div class="error-hint"><p>Each fuzz directory should have (rule (alias runtest) ...) for property-based testing during dune test, and (rule (alias fuzz) ...) using fuzz.exe --gen-corpus for AFL fuzzing campaigns.</p></div>
 </div>
 <div class="error-card" id="E725">
     <div>
