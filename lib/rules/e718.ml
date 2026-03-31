@@ -9,9 +9,7 @@ type payload = {
 let is_fuzz_dir = File.is_in_fuzz_dir
 
 let is_valid basename =
-  String.starts_with ~prefix:"fuzz_" basename
-  || String.equal basename "fuzz"
-  || String.equal basename "gen_corpus"
+  String.starts_with ~prefix:"fuzz_" basename || String.equal basename "fuzz"
 
 (** Collect all stanzas with files in fuzz/ directories from both test and
     executable stanzas. *)
@@ -88,13 +86,22 @@ let check (ctx : Context.project) =
             dir_files
         in
         let issues = ref [] in
-        if not (has "gen_corpus") then
+        (* Corpus generation should use fuzz.exe --gen-corpus (alcobar). *)
+        let dune_file = Filename.concat dir "dune" in
+        let has_gen_corpus =
+          try
+            let content =
+              In_channel.with_open_text dune_file In_channel.input_all
+            in
+            Re.execp (Re.compile (Re.str "--gen-corpus")) content
+          with _ -> false
+        in
+        if not has_gen_corpus then
           issues :=
             Issue.v
               ~loc:
-                (Location.v
-                   ~file:(Filename.concat dir "dune")
-                   ~start_line:1 ~start_col:0 ~end_line:1 ~end_col:0)
+                (Location.v ~file:dune_file ~start_line:1 ~start_col:0
+                   ~end_line:1 ~end_col:0)
               { directory = dir; kind = `missing_gen_corpus }
             :: !issues;
         if has_fuzz_modules && not (has "fuzz") then
@@ -121,7 +128,8 @@ let pp ppf { directory; kind } =
          convention - rename to fuzz_%s.ml"
         basename stanza_name modname
   | `missing_gen_corpus ->
-      Fmt.pf ppf "Fuzz directory '%s' is missing gen_corpus.ml" directory
+      Fmt.pf ppf "Fuzz directory '%s' is missing --gen-corpus in fuzz dune rule"
+        directory
   | `missing_fuzz_runner ->
       Fmt.pf ppf
         "Fuzz directory '%s' has fuzz_* modules but is missing fuzz.ml runner"
@@ -131,7 +139,6 @@ let rule =
   Rule.v ~code:"E718" ~title:"Non-Fuzz File in Fuzz Directory" ~category:Testing
     ~hint:
       "All .ml files in a fuzz/ directory should follow the fuzz_ naming \
-       convention (e.g., fuzz_parser.ml), be the fuzz runner (fuzz.ml), or the \
-       corpus generator (gen_corpus.ml). Each fuzz directory must have a \
-       gen_corpus.ml."
+       convention (e.g., fuzz_parser.ml) or be the fuzz runner (fuzz.ml). Each \
+       fuzz directory must use fuzz.exe --gen-corpus in its dune rule."
     ~examples:[] ~pp (Project check)

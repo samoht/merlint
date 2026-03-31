@@ -67,9 +67,10 @@ let check (ctx : Context.project) =
             let has_corpus =
               Re.execp (Re.compile (Re.str "source_tree corpus")) content
               || Re.execp (Re.compile (Re.str "source_tree input")) content
+              || Re.execp (Re.compile (Re.str "--gen-corpus corpus")) content
             in
             let has_gen_corpus =
-              Re.execp (Re.compile (Re.str "gen_corpus")) content
+              Re.execp (Re.compile (Re.str "--gen-corpus")) content
             in
             let has_afl_profile =
               Re.execp (Re.compile (Re.str "profile")) content
@@ -121,8 +122,8 @@ let pp ppf { directory; kind } =
         directory
   | `fuzz_missing_gen_corpus ->
       Fmt.pf ppf
-        "Fuzz directory '%s' (alias fuzz) rule should depend on gen_corpus.exe \
-         to generate seed corpus"
+        "Fuzz directory '%s' (alias fuzz) rule should use fuzz.exe \
+         --gen-corpus to generate seed corpus"
         directory
   | `fuzz_missing_afl_profile ->
       Fmt.pf ppf
@@ -134,7 +135,6 @@ let rule =
   Rule.v ~code:"E724" ~title:"Missing Fuzz Build Rules" ~category:Testing
     ~hint:
       "Each fuzz directory should have (rule (alias runtest) ...) for \
-       property-based testing during dune test, and (rule (alias fuzz) (deps \
-       (source_tree corpus) fuzz.exe gen_corpus.exe) ...) for AFL fuzzing \
-       campaigns with corpus generation."
+       property-based testing during dune test, and (rule (alias fuzz) ...) \
+       using fuzz.exe --gen-corpus for AFL fuzzing campaigns."
     ~examples:[] ~pp (Project check)
