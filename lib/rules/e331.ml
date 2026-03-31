@@ -19,6 +19,7 @@ let prefix_type_to_string = function
 let check (ctx : Context.file) =
   let outline_data = Context.outline ctx in
   let filename = ctx.filename in
+  let allowed = ctx.config.allowed_words in
   let module_name =
     Filename.basename filename |> Filename.remove_extension
     |> String.lowercase_ascii
@@ -65,7 +66,7 @@ let check (ctx : Context.file) =
       let location = Outline.location filename item in
 
       match (item.kind, location) with
-      | Outline.Value, Some loc -> (
+      | Outline.Value, Some loc when not (List.mem name allowed) -> (
           (* Check for regular function prefix patterns *)
           match check_function_prefix name with
           | Some (prefix_type, suggested) ->

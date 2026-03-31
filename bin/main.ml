@@ -446,6 +446,14 @@ let man_config_section =
        depth), and $(b,?) (single character). Use $(b,--show-config) to verify \
        the loaded configuration.";
     `P
+      "$(b,allowed_words:) — Names that should be accepted as-is by naming \
+       rules (E300, E331, etc.). For example, $(b,create_table) would normally \
+       trigger E331 (redundant prefix) but can be exempted:";
+    `Pre "allowed_words: [create_table]";
+    `P
+      "$(b,acronyms:) is an alias for $(b,allowed_words) — both add to the \
+       same allowlist.";
+    `P
       "Available settings: $(b,max-complexity), $(b,max-function-length), \
        $(b,max-nesting), $(b,exempt-data-definitions), \
        $(b,max-underscores-in-name), $(b,min-name-length-underscore), \
