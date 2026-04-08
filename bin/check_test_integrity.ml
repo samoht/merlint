@@ -343,8 +343,8 @@ let check_run_t_issues cram_dir rule_code ~dune_project_exists ~dune_exists
          structure - these files should be in bad/ and good/ subdirs instead"
         cram_dir rule_code
       :: !errors;
-  if not dune_project_exists then begin
-    if has_subdirs then
+  if not dune_project_exists then
+    begin if has_subdirs then
       errors :=
         Fmt.str "Error: %s/%s.t/{bad,good}/dune-project files are missing"
           cram_dir rule_code
@@ -353,7 +353,7 @@ let check_run_t_issues cram_dir rule_code ~dune_project_exists ~dune_exists
       errors :=
         Fmt.str "Error: %s/%s.t/dune-project is missing" cram_dir rule_code
         :: !errors
-  end;
+    end;
   if (not dune_exists) && not has_subdirs then
     errors :=
       Fmt.str "Error: %s/%s.t/dune is missing" cram_dir rule_code :: !errors
