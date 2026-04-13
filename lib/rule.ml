@@ -8,6 +8,7 @@ type category =
   | Documentation
   | Project_structure
   | Testing
+  | Interop_testing
 
 type example = { is_good : bool; code : string }
 
@@ -45,6 +46,7 @@ let category_name = function
   | Documentation -> "Documentation"
   | Project_structure -> "Project Structure"
   | Testing -> "Test Quality"
+  | Interop_testing -> "Interop Testing"
 
 let is_file_scoped (T desc) =
   match desc.check with File _ -> true | Project _ -> false

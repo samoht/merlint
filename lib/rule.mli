@@ -9,6 +9,7 @@ type category =
   | Documentation
   | Project_structure
   | Testing
+  | Interop_testing
 
 type example = {
   is_good : bool;  (** true for good examples, false for bad examples. *)
