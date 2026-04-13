@@ -59,9 +59,15 @@ let all_rules =
     E726.rule;
     E800.rule;
     E801.rule;
+    E802.rule;
+    E803.rule;
     E805.rule;
+    E806.rule;
+    E807.rule;
     E810.rule;
     E815.rule;
     E820.rule;
+    E825.rule;
     E830.rule;
+    E835.rule;
   ]
