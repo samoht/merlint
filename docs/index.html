@@ -1588,6 +1588,55 @@ pre code {
 </div>
 </div></div>
 </div>
+<div class="error-card" id="E800">
+    <div>
+        <span class="error-code">E800</span>
+        <span class="error-title">Missing generate.sh</span>
+    </div>
+    <div class="error-hint"><p>Every interop test must have scripts/generate.sh as the single entry point for trace regeneration via `dune build @regen-traces`.</p></div>
+</div>
+<div class="error-card" id="E801">
+    <div>
+        <span class="error-code">E801</span>
+        <span class="error-title">Interop dir named after language</span>
+    </div>
+    <div class="error-hint"><p>Interop test directories should be named after the oracle tool (e.g. spacepackets, dariol83, crcmod), not the language (e.g. python, go). This makes it clear which external implementation is the reference.</p></div>
+</div>
+<div class="error-card" id="E805">
+    <div>
+        <span class="error-code">E805</span>
+        <span class="error-title">Missing requirements.txt</span>
+    </div>
+    <div class="error-hint"><p>Python oracles must pin dependencies in requirements.txt with exact versions (e.g. crcmod==1.7). This ensures reproducible trace generation without depending on local installs.</p></div>
+</div>
+<div class="error-card" id="E810">
+    <div>
+        <span class="error-code">E810</span>
+        <span class="error-title">Missing regen-traces alias</span>
+    </div>
+    <div class="error-hint"><p>Every interop test dune file must define a regen-traces alias as the single trigger for refreshing traces: `(rule (alias regen-traces) ...)`.</p></div>
+</div>
+<div class="error-card" id="E815">
+    <div>
+        <span class="error-code">E815</span>
+        <span class="error-title">REGEN_TRACES sentinel in dune</span>
+    </div>
+    <div class="error-hint"><p>The regen-traces alias should be the single entry point — no REGEN_TRACES=1 env var sentinel. Remove the (enabled_if ...) guard so `dune build @regen-traces` works directly.</p></div>
+</div>
+<div class="error-card" id="E820">
+    <div>
+        <span class="error-code">E820</span>
+        <span class="error-title">Hand-rolled CSV parsing</span>
+    </div>
+    <div class="error-hint"><p>Use csvt (Csvt.decode_file with a Csvt.Row codec) for CSV trace parsing. Never hand-roll CSV readers with open_in/input_line/split_on_char.</p></div>
+</div>
+<div class="error-card" id="E830">
+    <div>
+        <span class="error-code">E830</span>
+        <span class="error-title">Inlined algorithm in generator</span>
+    </div>
+    <div class="error-hint"><p>The generator MUST call the upstream tool's public API. Never reimplement the algorithm being verified — this defeats the purpose of interop testing. If the public API doesn't expose what you need, drop the test rather than inlining.</p></div>
+</div>
 
     <a href="#top" class="back-to-top">↑ Top</a>
 </body>
