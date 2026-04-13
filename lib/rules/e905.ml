@@ -30,14 +30,14 @@ let check (ctx : Context.project) =
                 Filename.check_suffix f ".ml"
                 && (not (Filename.check_suffix f ".mli"))
                 &&
-                try
-                  let c =
-                    In_channel.with_open_text
-                      (Filename.concat lib_dir f)
-                      In_channel.input_all
-                  in
-                  Astring.String.is_infix ~affix:"Wire." c
-                with _ -> false)
+                  try
+                    let c =
+                      In_channel.with_open_text
+                        (Filename.concat lib_dir f)
+                        In_channel.input_all
+                    in
+                    Astring.String.is_infix ~affix:"Wire." c
+                  with _ -> false)
               all_files
           in
           if has_wire then
@@ -56,8 +56,7 @@ let check (ctx : Context.project) =
                       let pattern = "val " ^ sym in
                       if Astring.String.is_infix ~affix:pattern content then
                         issues :=
-                          Issue.v
-                            { file = Filename.concat pkg f; symbol = sym }
+                          Issue.v { file = Filename.concat pkg f; symbol = sym }
                           :: !issues)
                     wire_symbols
                 with _ -> ())
