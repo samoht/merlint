@@ -22,27 +22,46 @@ let check (ctx : Context.project) =
       then
         let lib_dir = Filename.concat pkg_dir "lib" in
         if Sys.file_exists lib_dir && Sys.is_directory lib_dir then
-          let mli_files =
-            try_readdir lib_dir
-            |> List.filter (fun f -> Filename.check_suffix f ".mli")
+          let all_files = try_readdir lib_dir in
+          (* Only flag packages that actually use Wire *)
+          let has_wire =
+            List.exists
+              (fun f ->
+                Filename.check_suffix f ".ml"
+                && (not (Filename.check_suffix f ".mli"))
+                &&
+                try
+                  let c =
+                    In_channel.with_open_text
+                      (Filename.concat lib_dir f)
+                      In_channel.input_all
+                  in
+                  Astring.String.is_infix ~affix:"Wire." c
+                with _ -> false)
+              all_files
           in
-          List.iter
-            (fun f ->
-              try
-                let path = Filename.concat lib_dir f in
-                let content =
-                  In_channel.with_open_text path In_channel.input_all
-                in
-                List.iter
-                  (fun sym ->
-                    let pattern = "val " ^ sym in
-                    if Astring.String.is_infix ~affix:pattern content then
-                      issues :=
-                        Issue.v { file = Filename.concat pkg f; symbol = sym }
-                        :: !issues)
-                  wire_symbols
-              with _ -> ())
-            mli_files)
+          if has_wire then
+            let mli_files =
+              List.filter (fun f -> Filename.check_suffix f ".mli") all_files
+            in
+            List.iter
+              (fun f ->
+                try
+                  let path = Filename.concat lib_dir f in
+                  let content =
+                    In_channel.with_open_text path In_channel.input_all
+                  in
+                  List.iter
+                    (fun sym ->
+                      let pattern = "val " ^ sym in
+                      if Astring.String.is_infix ~affix:pattern content then
+                        issues :=
+                          Issue.v
+                            { file = Filename.concat pkg f; symbol = sym }
+                          :: !issues)
+                    wire_symbols
+                with _ -> ())
+              mli_files)
     packages;
   !issues
 
