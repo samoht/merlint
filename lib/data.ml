@@ -70,4 +70,6 @@ let all_rules =
     E825.rule;
     E830.rule;
     E835.rule;
+    E900.rule;
+    E905.rule;
   ]

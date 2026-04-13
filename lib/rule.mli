@@ -10,6 +10,7 @@ type category =
   | Project_structure
   | Testing
   | Interop_testing
+  | Code_generation
 
 type example = {
   is_good : bool;  (** true for good examples, false for bad examples. *)
