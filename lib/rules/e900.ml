@@ -2,8 +2,6 @@
 
 type payload = { package : string }
 
-(** Walk <pkg>/lib/*.ml looking for Wire.Codec or Wire.Field usage. If found and
-    <pkg>/c/ doesn't exist, flag it. *)
 let check (ctx : Context.project) =
   let root = ctx.project_root in
   let try_readdir d =
@@ -17,8 +15,6 @@ let check (ctx : Context.project) =
       if
         Sys.file_exists pkg_dir && Sys.is_directory pkg_dir && pkg <> "_build"
         && pkg <> ".git" && pkg <> "_opam"
-        (* space-wire has its own C generation approach *)
-        && pkg <> "space-wire"
       then
         let lib_dir = Filename.concat pkg_dir "lib" in
         if Sys.file_exists lib_dir && Sys.is_directory lib_dir then
@@ -37,8 +33,6 @@ let check (ctx : Context.project) =
                       (Filename.concat lib_dir f)
                       In_channel.input_all
                   in
-                  (* Only flag packages that define codecs, not ones
-                     that just consume them *)
                   Astring.String.is_infix ~affix:"Wire.Codec.v " content
                   || Astring.String.is_infix ~affix:"Codec.v \"" content
                 with _ -> false)
