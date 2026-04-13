@@ -1,0 +1,28 @@
+(** E806: Go oracle missing go.mod *)
+
+type payload = { dir : string }
+
+let check (ctx : Context.project) =
+  let dirs = Interop.find_oracle_dirs ctx.project_root in
+  List.filter_map
+    (fun (d : Interop.oracle_dir) ->
+      let scripts = Filename.concat d.path "scripts" in
+      let has_go =
+        try
+          Sys.readdir scripts |> Array.to_list
+          |> List.exists (fun f -> Filename.check_suffix f ".go")
+        with Sys_error _ -> false
+      in
+      let has_go_mod = Sys.file_exists (Filename.concat scripts "go.mod") in
+      if has_go && not has_go_mod then Some (Issue.v { dir = d.path }) else None)
+    dirs
+
+let pp ppf { dir } = Fmt.pf ppf "Go oracle %s/scripts/ missing go.mod" dir
+
+let rule =
+  Rule.v ~code:"E806" ~title:"Missing go.mod" ~category:Interop_testing
+    ~hint:
+      "Go oracles must pin the upstream module in go.mod with a tagged version \
+       or pseudo-version. This ensures reproducible trace generation without \
+       depending on $GOPATH or local clones."
+    ~examples:[] ~pp (Project check)
