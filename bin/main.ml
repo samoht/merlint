@@ -72,6 +72,8 @@ let group_issues_by_category all_issues =
       "Documentation";
       "Project Structure";
       "Test Quality";
+      "Interop Testing";
+      "Code Generation";
     ]
   in
   List.map
