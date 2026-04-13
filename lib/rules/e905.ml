@@ -4,31 +4,46 @@ type payload = { file : string; symbol : string }
 
 let wire_symbols = [ "struct_"; "module_"; "c_stubs"; "ml_stubs" ]
 
+(** Walk <pkg>/lib/*.mli looking for val struct_ / val module_ / val c_stubs /
+    val ml_stubs. These belong in c/gen.ml. *)
 let check (ctx : Context.project) =
-  let desc = Context.dune_describe ctx in
-  let libs = Dune.libraries desc in
+  let root = ctx.project_root in
+  let try_readdir d =
+    try Sys.readdir d |> Array.to_list with Sys_error _ -> []
+  in
   let issues = ref [] in
+  let packages = try_readdir root in
   List.iter
-    (fun (lib : Dune.library_info) ->
-      List.iter
-        (fun f ->
-          if Fpath.has_ext ".mli" f then
-            try
-              let content =
-                In_channel.with_open_text (Fpath.to_string f)
-                  In_channel.input_all
-              in
-              List.iter
-                (fun sym ->
-                  let pattern = "val " ^ sym in
-                  if Astring.String.is_infix ~affix:pattern content then
-                    issues :=
-                      Issue.v { file = Fpath.to_string f; symbol = sym }
-                      :: !issues)
-                wire_symbols
-            with _ -> ())
-        lib.files)
-    libs;
+    (fun pkg ->
+      let pkg_dir = Filename.concat root pkg in
+      if
+        Sys.file_exists pkg_dir && Sys.is_directory pkg_dir && pkg <> "_build"
+        && pkg <> ".git" && pkg <> "_opam"
+      then
+        let lib_dir = Filename.concat pkg_dir "lib" in
+        if Sys.file_exists lib_dir && Sys.is_directory lib_dir then
+          let mli_files =
+            try_readdir lib_dir
+            |> List.filter (fun f -> Filename.check_suffix f ".mli")
+          in
+          List.iter
+            (fun f ->
+              try
+                let path = Filename.concat lib_dir f in
+                let content =
+                  In_channel.with_open_text path In_channel.input_all
+                in
+                List.iter
+                  (fun sym ->
+                    let pattern = "val " ^ sym in
+                    if Astring.String.is_infix ~affix:pattern content then
+                      issues :=
+                        Issue.v { file = Filename.concat pkg f; symbol = sym }
+                        :: !issues)
+                  wire_symbols
+              with _ -> ())
+            mli_files)
+    packages;
   !issues
 
 let pp ppf { file; symbol } =
