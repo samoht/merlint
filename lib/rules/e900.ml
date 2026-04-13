@@ -35,8 +35,10 @@ let check (ctx : Context.project) =
                       (Filename.concat lib_dir f)
                       In_channel.input_all
                   in
-                  Astring.String.is_infix ~affix:"Wire.Codec" content
-                  || Astring.String.is_infix ~affix:"Wire.Field" content
+                  (* Only flag packages that define codecs, not ones
+                     that just consume them *)
+                  Astring.String.is_infix ~affix:"Wire.Codec.v " content
+                  || Astring.String.is_infix ~affix:"Codec.v \"" content
                 with _ -> false)
               ml_files
           in
