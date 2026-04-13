@@ -1679,6 +1679,20 @@ pre code {
     </div>
     <div class="error-hint"><p>Python deps must live in a venv. Never use pip install --break-system-packages. The generate.sh wrapper should create/reuse a venv automatically.</p></div>
 </div>
+<div class="error-card" id="E900">
+    <div>
+        <span class="error-code">E900</span>
+        <span class="error-title">Wire.Codec without c/ directory</span>
+    </div>
+    <div class="error-hint"><p>Add a c/ directory with gen.ml that calls Wire_3d.main to generate .3d files and C validators from the Wire codec definitions. See ocaml-clcw/c/ for the pattern.</p></div>
+</div>
+<div class="error-card" id="E905">
+    <div>
+        <span class="error-code">E905</span>
+        <span class="error-title">Wire struct_/module_ in public API</span>
+    </div>
+    <div class="error-hint"><p>Move struct_, module_, c_stubs, ml_stubs out of the .mli. These belong in c/gen.ml where they are used to generate EverParse 3D files and C stubs. The codec is the public API; the 3D projection is a build artifact.</p></div>
+</div>
 
     <a href="#top" class="back-to-top">↑ Top</a>
 </body>
