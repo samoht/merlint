@@ -1602,12 +1602,40 @@ pre code {
     </div>
     <div class="error-hint"><p>Interop test directories should be named after the oracle tool (e.g. spacepackets, dariol83, crcmod), not the language (e.g. python, go). This makes it clear which external implementation is the reference.</p></div>
 </div>
+<div class="error-card" id="E802">
+    <div>
+        <span class="error-code">E802</span>
+        <span class="error-title">Interop test not replay-only</span>
+    </div>
+    <div class="error-hint"><p>Traces must be committed to git. The test stanza must depend on (source_tree traces) so tests run from traces alone — the external tool is NOT required at test time. This is the 'generate once, replay always' principle.</p></div>
+</div>
+<div class="error-card" id="E803">
+    <div>
+        <span class="error-code">E803</span>
+        <span class="error-title">Interop test requires external tool</span>
+    </div>
+    <div class="error-hint"><p>Interop tests must run from committed traces without needing the external tool at test time. The test.ml should only read trace files, never shell out to run the oracle. If you need the oracle, put it in the generator script.</p></div>
+</div>
 <div class="error-card" id="E805">
     <div>
         <span class="error-code">E805</span>
         <span class="error-title">Missing requirements.txt</span>
     </div>
     <div class="error-hint"><p>Python oracles must pin dependencies in requirements.txt with exact versions (e.g. crcmod==1.7). This ensures reproducible trace generation without depending on local installs.</p></div>
+</div>
+<div class="error-card" id="E806">
+    <div>
+        <span class="error-code">E806</span>
+        <span class="error-title">Missing go.mod</span>
+    </div>
+    <div class="error-hint"><p>Go oracles must pin the upstream module in go.mod with a tagged version or pseudo-version. This ensures reproducible trace generation without depending on $GOPATH or local clones.</p></div>
+</div>
+<div class="error-card" id="E807">
+    <div>
+        <span class="error-code">E807</span>
+        <span class="error-title">Missing Cargo.toml</span>
+    </div>
+    <div class="error-hint"><p>Rust oracles must pin the upstream crate in Cargo.toml with a tagged version or git rev. This ensures reproducible trace generation without depending on local checkouts.</p></div>
 </div>
 <div class="error-card" id="E810">
     <div>
@@ -1630,12 +1658,26 @@ pre code {
     </div>
     <div class="error-hint"><p>Use csvt (Csvt.decode_file with a Csvt.Row codec) for CSV trace parsing. Never hand-roll CSV readers with open_in/input_line/split_on_char.</p></div>
 </div>
+<div class="error-card" id="E825">
+    <div>
+        <span class="error-code">E825</span>
+        <span class="error-title">Missing csvt dependency</span>
+    </div>
+    <div class="error-hint"><p>Interop tests with CSV traces should use csvt for parsing. Add csvt to the (libraries ...) in the dune file and use Csvt.decode_file with a Row codec.</p></div>
+</div>
 <div class="error-card" id="E830">
     <div>
         <span class="error-code">E830</span>
         <span class="error-title">Inlined algorithm in generator</span>
     </div>
     <div class="error-hint"><p>The generator MUST call the upstream tool's public API. Never reimplement the algorithm being verified — this defeats the purpose of interop testing. If the public API doesn't expose what you need, drop the test rather than inlining.</p></div>
+</div>
+<div class="error-card" id="E835">
+    <div>
+        <span class="error-code">E835</span>
+        <span class="error-title">pip install --break-system-packages</span>
+    </div>
+    <div class="error-hint"><p>Python deps must live in a venv. Never use pip install --break-system-packages. The generate.sh wrapper should create/reuse a venv automatically.</p></div>
 </div>
 
     <a href="#top" class="back-to-top">↑ Top</a>
