@@ -17,6 +17,8 @@ let check (ctx : Context.project) =
       if
         Sys.file_exists pkg_dir && Sys.is_directory pkg_dir && pkg <> "_build"
         && pkg <> ".git" && pkg <> "_opam"
+        (* space-wire has its own C generation approach *)
+        && pkg <> "space-wire"
       then
         let lib_dir = Filename.concat pkg_dir "lib" in
         if Sys.file_exists lib_dir && Sys.is_directory lib_dir then
