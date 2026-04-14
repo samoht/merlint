@@ -1,15 +1,9 @@
 (** Linting engine. *)
 
-type exclusion_stats = {
-  rule : string;
-  file : string;
-}
+type exclusion_stats = { rule : string; file : string }
 (** A single suppressed issue. *)
 
-type result = {
-  issues : Rule.Run.result list;
-  excluded : exclusion_stats list;
-}
+type result = { issues : Rule.Run.result list; excluded : exclusion_stats list }
 (** Analysis result. *)
 
 val run :
