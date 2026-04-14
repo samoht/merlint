@@ -6,9 +6,10 @@ let test_run_empty_filter () =
   | Error msg -> Alcotest.failf "Failed to create filter: %s" msg
   | Ok filter ->
       let dune_describe = Dune.describe (Fpath.v ".") in
-      let results = Engine.run ~filter ~dune_describe "." in
+      let result = Engine.run ~filter ~dune_describe "." in
       Alcotest.(check int)
-        "no results with all rules disabled" 0 (List.length results)
+        "no results with all rules disabled" 0
+        (List.length result.Engine.issues)
 
 let suite =
   ( "engine",
