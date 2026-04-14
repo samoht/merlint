@@ -237,9 +237,10 @@ let run_analysis project_root dune_describe rule_filter show_profile =
         Hashtbl.replace by_rule e.rule (prev + 1))
       all_excluded;
     Fmt.pr "@[<v>%a %d issues suppressed by .merlintrc exclusions:@,"
-      Fmt.(styled `Yellow string) "!" n;
-    Hashtbl.iter (fun rule count ->
-      Fmt.pr "  [%s] %d suppressed@," rule count)
+      Fmt.(styled `Yellow string)
+      "!" n;
+    Hashtbl.iter
+      (fun rule count -> Fmt.pr "  [%s] %d suppressed@," rule count)
       by_rule;
     Fmt.pr "@]@."
   end;
