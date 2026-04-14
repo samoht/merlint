@@ -212,21 +212,37 @@ let run_analysis project_root dune_describe rule_filter show_profile =
   Log.info (fun m -> m "Starting visual analysis on %d files" files_count);
 
   (* Run the engine to get all issues *)
-  let all_issues =
+  let { Merlint.Engine.issues = all_issues; excluded = all_excluded } =
     match rule_filter with
     | Some filter ->
         Merlint.Engine.run ~filter ~dune_describe ?profiling:profiling_state
           project_root
     | None -> (
-        (* Create a default filter that enables all rules *)
         match Merlint.Filter.parse "all" with
         | Ok filter ->
             Merlint.Engine.run ~filter ~dune_describe ?profiling:profiling_state
               project_root
-        | Error _ -> [] (* Should not happen *))
+        | Error _ -> { Merlint.Engine.issues = []; excluded = [] })
   in
 
   Fmt.pr "Running merlint analysis...@.@.Analyzing %d files@.@." files_count;
+
+  (* Show exclusion stats so suppressed issues are visible *)
+  if all_excluded <> [] then begin
+    let n = List.length all_excluded in
+    let by_rule = Hashtbl.create 16 in
+    List.iter
+      (fun (e : Merlint.Engine.exclusion_stats) ->
+        let prev = try Hashtbl.find by_rule e.rule with Not_found -> 0 in
+        Hashtbl.replace by_rule e.rule (prev + 1))
+      all_excluded;
+    Fmt.pr "@[<v>%a %d issues suppressed by .merlintrc exclusions:@,"
+      Fmt.(styled `Yellow string) "⚠" n;
+    Hashtbl.iter (fun rule count ->
+      Fmt.pr "  [%s] %d suppressed@," rule count)
+      by_rule;
+    Fmt.pr "@]@."
+  end;
 
   (* Group issues by category for reporting *)
   let issues_by_category = group_issues_by_category all_issues in

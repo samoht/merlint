@@ -1,12 +1,22 @@
 (** Linting engine. *)
 
+type exclusion_stats = {
+  rule : string;
+  file : string;
+}
+(** A single suppressed issue. *)
+
+type result = {
+  issues : Rule.Run.result list;
+  excluded : exclusion_stats list;
+}
+(** Analysis result. *)
+
 val run :
   filter:Filter.t ->
   dune_describe:Dune.describe ->
   ?profiling:Profiling.t ->
   string ->
-  Rule.Run.result list
-(** [run ~filter ~dune_describe ?profiling project_root] runs all checks on a
-    project. Runs all enabled rules using the given dune describe for project
-    structure. If [profiling] is provided, timing data will be collected.
-    Returns a sorted list of issues found. *)
+  result
+(** [run ~filter ~dune_describe ?profiling project_root] runs all checks.
+    Returns detected issues and a record of every suppressed issue. *)
