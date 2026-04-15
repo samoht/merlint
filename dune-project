@@ -9,6 +9,7 @@
 (package
  (name merlint)
  (synopsis "OCaml linter enforcing modern coding conventions")
+ (tags (org:blacksun cli test))
  (description "An opinionated OCaml linter that enforces modern OCaml coding conventions and best practices")
  (maintainers "Thomas Gazagnaire <thomas@gazagnaire.org>")
  (authors "Thomas Gazagnaire <thomas@gazagnaire.org>")
