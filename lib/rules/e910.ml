@@ -1,8 +1,8 @@
 (** E910: Package quality metadata.
 
-    Scans each package's dune-project for x-quality-* fields and verifies
-    that declared quality features are still valid (directories exist,
-    dates not stale). Also detects undeclared features that could be added.
+    Scans each package's dune-project for x-quality-* fields and verifies that
+    declared quality features are still valid (directories exist, dates not
+    stale). Also detects undeclared features that could be added.
 
     Features:
     - build: package compiles
@@ -17,10 +17,9 @@
 
     Format in dune-project:
     {[
-      (package
-       (name mylib)
-       (x-quality-build "2026-04-15")
-       (x-quality-fuzz "2026-04-13"))
+    package (name mylib)
+      (x - quality - build "2026-04-15")
+      (x - quality - fuzz "2026-04-13")
     ]} *)
 
 type finding =
@@ -30,8 +29,7 @@ type finding =
 
 type payload = { package : string; findings : finding list }
 
-let dir_exists path =
-  try Sys.is_directory path with Sys_error _ -> false
+let dir_exists path = try Sys.is_directory path with Sys_error _ -> false
 
 let has_files dir suffix =
   try
@@ -49,14 +47,14 @@ let detect_features pkg_dir =
   in
   if dir_exists interop_dir then add "interop";
   let test_dir = Filename.concat pkg_dir "test" in
-  if dir_exists test_dir then
-    (try
+  (if dir_exists test_dir then
+     try
        Sys.readdir test_dir |> Array.to_list
        |> List.iter (fun f ->
-              if
-                Filename.check_suffix f ".t"
-                && dir_exists (Filename.concat test_dir f)
-              then add "cram")
+           if
+             Filename.check_suffix f ".t"
+             && dir_exists (Filename.concat test_dir f)
+           then add "cram")
      with Sys_error _ -> ());
   if dir_exists test_dir && has_files test_dir ".ml" then add "test";
   let lib_dir = Filename.concat pkg_dir "lib" in
@@ -76,9 +74,7 @@ let parse_quality_fields content =
         | None -> ()
         | Some sp ->
             let feature = String.sub line plen (sp - plen) in
-            let rest =
-              String.sub line (sp + 1) (String.length line - sp - 1)
-            in
+            let rest = String.sub line (sp + 1) (String.length line - sp - 1) in
             let date =
               String.trim rest |> String.split_on_char '"'
               |> List.filter (fun s -> s <> "" && s <> ")" && s <> " ")
@@ -102,11 +98,10 @@ let check (ctx : Context.project) =
     (fun pkg ->
       let pkg_dir = Filename.concat root pkg in
       if
-        dir_exists pkg_dir && pkg <> "_build" && pkg <> ".git"
-        && pkg <> "_opam"
+        dir_exists pkg_dir && pkg <> "_build" && pkg <> ".git" && pkg <> "_opam"
       then
         let dune_project = Filename.concat pkg_dir "dune-project" in
-        if Sys.file_exists dune_project then
+        if Sys.file_exists dune_project then (
           let content =
             let ic = open_in dune_project in
             let s = In_channel.input_all ic in
@@ -127,8 +122,7 @@ let check (ctx : Context.project) =
                 findings := Missing feature :: !findings)
             declared;
           if !findings <> [] then
-            issues :=
-              Issue.v { package = pkg; findings = !findings } :: !issues)
+            issues := Issue.v { package = pkg; findings = !findings } :: !issues))
     packages;
   !issues
 
