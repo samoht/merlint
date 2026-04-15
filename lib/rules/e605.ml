@@ -52,30 +52,31 @@ let contains_only_types_and_modules file_path =
     - [proj/foo/sub/bar.ml] -> [proj/test/foo/sub/test_bar.ml] *)
 let expected_test_path source_file =
   let parts = String.split_on_char '/' source_file in
-  (* Given [project :: source_dir :: rest], compute the test path.
-     [lib] and [src] are conventional source dirs that get replaced by [test].
-     Any other directory (proto, foo, etc.) is kept under [test/]. *)
-  let compute_test_path prefix dir rest =
-    let after = String.concat "/" rest in
-    let dirname = Filename.dirname after in
-    let basename = Filename.basename after |> String.lowercase_ascii in
-    let test_name = "test_" ^ basename in
-    let test_after =
-      if dir = "lib" || dir = "src" then
-        if dirname = "." then test_name else Filename.concat dirname test_name
-      else
-        let with_dir =
-          if dirname = "." then Filename.concat dir test_name
-          else Filename.concat dir (Filename.concat dirname test_name)
-        in
-        with_dir
-    in
-    Fmt.str "%s/test/%s" prefix test_after
+  (* Find the first [lib] or [src] component and split the path there.
+     Everything before it is the project prefix; everything after is the
+     module path within the library. The test file mirrors that structure
+     under [test/].
+
+     - [proj/lib/foo.ml] → [proj/test/test_foo.ml]
+     - [proj/atp/lib/atp_mst.ml] → [proj/atp/test/test_atp_mst.ml]
+     - [proj/lib/sub/bar.ml] → [proj/test/sub/test_bar.ml] *)
+  let rec find_lib_dir prefix = function
+    | [] -> None
+    | dir :: rest when dir = "lib" || dir = "src" ->
+        Some (String.concat "/" (List.rev prefix), dir, rest)
+    | part :: rest -> find_lib_dir (part :: prefix) rest
   in
-  match parts with
-  | project :: dir :: rest when dir <> "test" && dir <> "bin" && rest <> [] ->
-      compute_test_path project dir rest
-  | _ ->
+  match find_lib_dir [] parts with
+  | Some (project_prefix, _lib_or_src, rest) ->
+      let after = String.concat "/" rest in
+      let dirname = Filename.dirname after in
+      let basename = Filename.basename after |> String.lowercase_ascii in
+      let test_name = "test_" ^ basename in
+      let test_after =
+        if dirname = "." then test_name else Filename.concat dirname test_name
+      in
+      Fmt.str "%s/test/%s" project_prefix test_after
+  | None ->
       let dir = Filename.dirname source_file in
       let base = Filename.basename source_file in
       Filename.concat (Filename.concat dir "test") ("test_" ^ base)
