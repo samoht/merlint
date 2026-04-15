@@ -205,7 +205,7 @@ and test thoroughly.
 
 ## Licence
 
-MIT — see LICENSE.md for details.
+ISC — see LICENSE.md for details.
 
 ## Acknowledgements
 
