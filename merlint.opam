@@ -6,6 +6,7 @@ description:
 maintainer: ["Thomas Gazagnaire <thomas@gazagnaire.org>"]
 authors: ["Thomas Gazagnaire <thomas@gazagnaire.org>"]
 license: "ISC"
+tags: ["org:blacksun" "cli" "test"]
 homepage: "https://tangled.org/gazagnaire.org/merlint"
 bug-reports: "https://tangled.org/gazagnaire.org/merlint/issues"
 depends: [
