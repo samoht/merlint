@@ -44,3 +44,5 @@ build: [
 ]
 dev-repo: "git+https://tangled.org/gazagnaire.org/merlint"
 x-maintenance-intent: ["(latest)"]
+x-quality-build: "2026-04-15"
+x-quality-test: "2026-04-15"
