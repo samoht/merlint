@@ -1,21 +1,19 @@
 (** E910: Package quality policy enforcement.
 
     Reads quality policy from [*.opam.template] files:
-    {[ x-quality: ["build" "test" "fuzz" "doc"] ]}
+    {[
+     x-quality: ["build" "test" "fuzz" "doc"]
+    ]}
 
     Checks that declared quality features actually exist in the package.
     Reports:
     - Missing: declared in policy but not present (error)
     - Undeclared: present but not in policy (suggestion) *)
 
-type finding =
-  | Missing of string
-  | Undeclared of string
-
+type finding = Missing of string | Undeclared of string
 type payload = { package : string; findings : finding list }
 
-let dir_exists path =
-  try Sys.is_directory path with Sys_error _ -> false
+let dir_exists path = try Sys.is_directory path with Sys_error _ -> false
 
 let has_files dir suffix =
   try
@@ -37,23 +35,23 @@ let detect_features pkg_dir =
   if dir_exists test_dir && has_files test_dir ".ml" then add "test";
   if dir_exists fuzz_dir && has_files fuzz_dir ".ml" then add "fuzz";
   if dir_exists interop_dir then add "interop";
-  if dir_exists test_dir then
-    (try
+  (if dir_exists test_dir then
+     try
        Sys.readdir test_dir |> Array.to_list
        |> List.iter (fun f ->
-              if
-                Filename.check_suffix f ".t"
-                && dir_exists (Filename.concat test_dir f)
-              then add "cram")
+           if
+             Filename.check_suffix f ".t"
+             && dir_exists (Filename.concat test_dir f)
+           then add "cram")
      with Sys_error _ -> ());
   List.sort_uniq String.compare !features
 
-(** Read quality policy from [*.opam.template] files. *)
+(** Read quality policy from [*.opam] files. *)
 let read_policy pkg_dir =
   try
     let files = Sys.readdir pkg_dir |> Array.to_list in
-    let templates =
-      List.filter (fun f -> Filename.check_suffix f ".opam.template") files
+    let opam_files =
+      List.filter (fun f -> Filename.check_suffix f ".opam") files
     in
     List.concat_map
       (fun f ->
@@ -72,12 +70,12 @@ let read_policy pkg_dir =
                 let rest = String.sub t plen (String.length t - plen) in
                 String.split_on_char '"' rest
                 |> List.filter (fun s ->
-                       let s = String.trim s in
-                       s <> "" && s <> "[" && s <> "]" && s <> " ")
+                    let s = String.trim s in
+                    s <> "" && s <> "[" && s <> "]" && s <> " ")
               else [])
             lines
         with Sys_error _ -> [])
-      templates
+      opam_files
   with Sys_error _ -> []
 
 let check (ctx : Context.project) =
@@ -94,7 +92,7 @@ let check (ctx : Context.project) =
         dir_exists pkg_dir && pkg <> "_build" && pkg <> ".git" && pkg <> "_opam"
       then
         let policy = read_policy pkg_dir in
-        if policy <> [] then
+        if policy <> [] then (
           let detected = detect_features pkg_dir in
           let findings = ref [] in
           (* Policy violations: declared but missing *)
@@ -110,8 +108,7 @@ let check (ctx : Context.project) =
                 findings := Undeclared feature :: !findings)
             detected;
           if !findings <> [] then
-            issues :=
-              Issue.v { package = pkg; findings = !findings } :: !issues)
+            issues := Issue.v { package = pkg; findings = !findings } :: !issues))
     packages;
   !issues
 
@@ -121,7 +118,8 @@ let pp ppf { package; findings } =
        (List.map
           (function
             | Missing f -> Fmt.str "%s required by x-quality but missing" f
-            | Undeclared f -> Fmt.str "%s present, consider adding to x-quality" f)
+            | Undeclared f ->
+                Fmt.str "%s present, consider adding to x-quality" f)
           findings))
 
 let rule =
