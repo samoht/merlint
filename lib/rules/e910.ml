@@ -1,35 +1,21 @@
-(** E910: Package quality metadata.
+(** E910: Package quality policy enforcement.
 
-    Scans each package's dune-project for x-quality-* fields and verifies that
-    declared quality features are still valid (directories exist, dates not
-    stale). Also detects undeclared features that could be added.
+    Reads quality policy from [*.opam.template] files:
+    {[ x-quality: ["build" "test" "fuzz" "doc"] ]}
 
-    Features:
-    - build: package compiles
-    - merlint: passes merlint
-    - prune: no dead code
-    - test: unit tests exist and pass
-    - fuzz: fuzz/ directory with alcobar tests
-    - interop: test/interop/ directory
-    - cram: test/*.t/ directories
-    - doc: .mli has docstrings (AI-checked)
-    - api: .mli well-structured (AI-checked)
-
-    Format in dune-project:
-    {[
-    package (name mylib)
-      (x - quality - build "2026-04-15")
-      (x - quality - fuzz "2026-04-13")
-    ]} *)
+    Checks that declared quality features actually exist in the package.
+    Reports:
+    - Missing: declared in policy but not present (error)
+    - Undeclared: present but not in policy (suggestion) *)
 
 type finding =
-  | Undeclared of string
   | Missing of string
-  | Stale of string * string
+  | Undeclared of string
 
 type payload = { package : string; findings : finding list }
 
-let dir_exists path = try Sys.is_directory path with Sys_error _ -> false
+let dir_exists path =
+  try Sys.is_directory path with Sys_error _ -> false
 
 let has_files dir suffix =
   try
@@ -37,55 +23,62 @@ let has_files dir suffix =
     |> List.exists (fun f -> Filename.check_suffix f suffix)
   with Sys_error _ -> false
 
+(** Detect quality features from directory structure. *)
 let detect_features pkg_dir =
   let features = ref [] in
   let add f = features := f :: !features in
-  let fuzz_dir = Filename.concat pkg_dir "fuzz" in
-  if dir_exists fuzz_dir && has_files fuzz_dir ".ml" then add "fuzz";
-  let interop_dir =
-    Filename.concat (Filename.concat pkg_dir "test") "interop"
-  in
-  if dir_exists interop_dir then add "interop";
+  let lib_dir = Filename.concat pkg_dir "lib" in
   let test_dir = Filename.concat pkg_dir "test" in
-  (if dir_exists test_dir then
-     try
+  let fuzz_dir = Filename.concat pkg_dir "fuzz" in
+  let interop_dir = Filename.concat test_dir "interop" in
+  let has_lib = dir_exists lib_dir && has_files lib_dir ".ml" in
+  if has_lib && Sys.file_exists (Filename.concat pkg_dir "dune-project") then
+    add "build";
+  if dir_exists test_dir && has_files test_dir ".ml" then add "test";
+  if dir_exists fuzz_dir && has_files fuzz_dir ".ml" then add "fuzz";
+  if dir_exists interop_dir then add "interop";
+  if dir_exists test_dir then
+    (try
        Sys.readdir test_dir |> Array.to_list
        |> List.iter (fun f ->
-           if
-             Filename.check_suffix f ".t"
-             && dir_exists (Filename.concat test_dir f)
-           then add "cram")
+              if
+                Filename.check_suffix f ".t"
+                && dir_exists (Filename.concat test_dir f)
+              then add "cram")
      with Sys_error _ -> ());
-  if dir_exists test_dir && has_files test_dir ".ml" then add "test";
-  let lib_dir = Filename.concat pkg_dir "lib" in
-  if dir_exists lib_dir && has_files lib_dir ".ml" then add "build";
   List.sort_uniq String.compare !features
 
-let parse_quality_fields content =
-  let fields = ref [] in
-  let lines = String.split_on_char '\n' content in
-  List.iter
-    (fun line ->
-      let line = String.trim line in
-      let prefix = "(x-quality-" in
-      let plen = String.length prefix in
-      if String.length line > plen && String.sub line 0 plen = prefix then
-        match String.index_opt line ' ' with
-        | None -> ()
-        | Some sp ->
-            let feature = String.sub line plen (sp - plen) in
-            let rest = String.sub line (sp + 1) (String.length line - sp - 1) in
-            let date =
-              String.trim rest |> String.split_on_char '"'
-              |> List.filter (fun s -> s <> "" && s <> ")" && s <> " ")
-              |> function
-              | d :: _ -> d
-              | [] -> ""
-            in
-            if feature <> "" && date <> "" then
-              fields := (feature, date) :: !fields)
-    lines;
-  !fields
+(** Read quality policy from [*.opam.template] files. *)
+let read_policy pkg_dir =
+  try
+    let files = Sys.readdir pkg_dir |> Array.to_list in
+    let templates =
+      List.filter (fun f -> Filename.check_suffix f ".opam.template") files
+    in
+    List.concat_map
+      (fun f ->
+        let path = Filename.concat pkg_dir f in
+        try
+          let ic = open_in path in
+          let content = In_channel.input_all ic in
+          close_in ic;
+          let lines = String.split_on_char '\n' content in
+          List.concat_map
+            (fun line ->
+              let t = String.trim line in
+              let prefix = "x-quality:" in
+              let plen = String.length prefix in
+              if String.length t > plen && String.sub t 0 plen = prefix then
+                let rest = String.sub t plen (String.length t - plen) in
+                String.split_on_char '"' rest
+                |> List.filter (fun s ->
+                       let s = String.trim s in
+                       s <> "" && s <> "[" && s <> "]" && s <> " ")
+              else [])
+            lines
+        with Sys_error _ -> [])
+      templates
+  with Sys_error _ -> []
 
 let check (ctx : Context.project) =
   let root = ctx.project_root in
@@ -100,29 +93,25 @@ let check (ctx : Context.project) =
       if
         dir_exists pkg_dir && pkg <> "_build" && pkg <> ".git" && pkg <> "_opam"
       then
-        let dune_project = Filename.concat pkg_dir "dune-project" in
-        if Sys.file_exists dune_project then (
-          let content =
-            let ic = open_in dune_project in
-            let s = In_channel.input_all ic in
-            close_in ic;
-            s
-          in
-          let declared = parse_quality_fields content in
+        let policy = read_policy pkg_dir in
+        if policy <> [] then
           let detected = detect_features pkg_dir in
           let findings = ref [] in
+          (* Policy violations: declared but missing *)
           List.iter
             (fun feature ->
-              if not (List.mem_assoc feature declared) then
-                findings := Undeclared feature :: !findings)
-            detected;
-          List.iter
-            (fun (feature, _date) ->
               if not (List.mem feature detected) then
                 findings := Missing feature :: !findings)
-            declared;
+            policy;
+          (* Suggestions: present but not declared *)
+          List.iter
+            (fun feature ->
+              if not (List.mem feature policy) then
+                findings := Undeclared feature :: !findings)
+            detected;
           if !findings <> [] then
-            issues := Issue.v { package = pkg; findings = !findings } :: !issues))
+            issues :=
+              Issue.v { package = pkg; findings = !findings } :: !issues)
     packages;
   !issues
 
@@ -131,15 +120,13 @@ let pp ppf { package; findings } =
     (String.concat "; "
        (List.map
           (function
-            | Undeclared f -> Fmt.str "%s detected but not declared" f
-            | Missing f -> Fmt.str "%s declared but not found" f
-            | Stale (f, d) -> Fmt.str "%s stale (last checked %s)" f d)
+            | Missing f -> Fmt.str "%s required by x-quality but missing" f
+            | Undeclared f -> Fmt.str "%s present, consider adding to x-quality" f)
           findings))
 
 let rule =
-  Rule.v ~code:"E910" ~title:"Package quality metadata"
+  Rule.v ~code:"E910" ~title:"Package quality policy"
     ~hint:
-      "Add x-quality-* fields to dune-project to declare quality features \
-       (fuzz, interop, cram, test). Merlint checks they match the actual \
-       package structure."
+      "Add x-quality field to *.opam.template to declare required quality \
+       features. Merlint checks that declared features actually exist."
     ~category:Rule.Project_structure ~examples:[] ~pp (Project check)
