@@ -16,7 +16,8 @@
   tty
   jsont
   jsont.bytesrw
-  sexpt))
+  sexpt
+  textloc))
 
 (rule
  (target examples.ml)

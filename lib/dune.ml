@@ -100,7 +100,7 @@ let parse_dune_file filename =
         m "Parsed dune file %a: found %d stanzas" Fpath.pp filename
           (List.length stanzas));
     stanzas
-  with Sys_error _ | End_of_file | Sexp.Error.Error _ -> []
+  with Sys_error _ | End_of_file | Textloc.Error _ -> []
 
 (** Extract modules from a modules field *)
 let extract_modules_field = function
