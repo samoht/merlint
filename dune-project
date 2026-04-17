@@ -28,6 +28,7 @@
   fmt
   astring
   sexpt
+  textloc
   tty
   vlog
   (alcotest :with-test)))
