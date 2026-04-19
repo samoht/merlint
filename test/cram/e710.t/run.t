@@ -15,6 +15,8 @@ Test bad example - fuzz_missing.ml has no corresponding library module:
     module (<module>.ml). This ensures fuzz tests are testing actual library
     functionality.
     - bad/fuzz/fuzz_missing.ml:1:0: Fuzz file exists but corresponding library module 'missing' not found
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
   
   ╭──────────────┬────────────────────────────╮
   │ Category     │ Issues                     │
@@ -39,6 +41,8 @@ Test good example - fuzz_parser.ml has corresponding parser.ml:
   ✓ Documentation (0 total issues)
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
   
   Summary: ✓ 0 total issues (applied 1 rule)
   ✓ All checks passed!

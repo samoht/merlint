@@ -16,6 +16,8 @@ Test bad example - should find multiple test stanzas:
     runner (test.ml). Multiple test stanzas in the same directory cause module
     ownership conflicts and break @check builds.
     - bad/test/dune:1:0: Directory 'bad/test/' has 2 test stanzas (test, test_extra) - use a single test runner per directory
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
   
   ╭──────────────┬──────────────────────────────────────────╮
   │ Category     │ Issues                                   │
@@ -40,6 +42,8 @@ Test good example - should find no issues:
   ✓ Documentation (0 total issues)
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
   
   Summary: ✓ 0 total issues (applied 1 rule)
   ✓ All checks passed!

@@ -14,6 +14,8 @@ Test bad example - fuzz suite name mismatch:
     Fuzz tests must declare let suite = ("<module>", [...]) where <module> matches
     the filename: fuzz_<module>.ml should use suite:"<module>".
     - bad/fuzz/fuzz_parser.ml:1:0: Fuzz suite "wrong_name" should be "parser"
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
   
   ╭──────────────┬────────────────────────────────╮
   │ Category     │ Issues                         │
@@ -43,6 +45,8 @@ Test good example - fuzz suite name matches filename:
   ✓ Documentation (0 total issues)
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
   
   Summary: ✓ 0 total issues (applied 1 rule)
   ✓ All checks passed!

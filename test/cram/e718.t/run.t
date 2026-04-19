@@ -18,6 +18,8 @@ Test bad example - fuzz dir with no fuzz.ml runner:
     - bad/fuzz/dune:1:0: Fuzz directory 'bad/fuzz/' has fuzz_* modules but is missing fuzz.ml runner
     - bad/fuzz/dune:1:0: Fuzz directory 'bad/fuzz/' is missing --gen-corpus in fuzz dune rule
     - bad/fuzz/parser_helpers.ml:1:0: File 'parser_helpers.ml' in fuzz stanza 'fuzz_parser' does not follow the fuzz_ naming convention - rename to fuzz_parser_helpers.ml
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
   
   ╭──────────────┬───────────────────────────────────────╮
   │ Category     │ Issues                                │
@@ -48,6 +50,8 @@ Test good example - fuzz dir with proper fuzz.ml runner:
     must use fuzz.exe --gen-corpus in its dune rule.
     - good/fuzz/dune:1:0: Fuzz directory 'good/fuzz/' is missing --gen-corpus in fuzz dune rule
     - good/fuzz/gen_corpus.ml:1:0: File 'gen_corpus.ml' in fuzz stanza 'gen_corpus' does not follow the fuzz_ naming convention - rename to fuzz_gen_corpus.ml
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
   
   ╭──────────────┬───────────────────────────────────────╮
   │ Category     │ Issues                                │

@@ -15,6 +15,8 @@ Test bad example - fuzz/ nested inside test/:
     Fuzz directories should be at the same level as test directories (siblings),
     not nested inside them. Move fuzz/ to be a sibling of test/.
     - bad/test/fuzz/dune:1:0: Fuzz directory 'bad/test/fuzz/' is nested inside a test directory - fuzz/ should be a sibling of test/, not nested inside it
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
   
   ╭──────────────┬────────────────────────────────╮
   │ Category     │ Issues                         │
@@ -39,6 +41,8 @@ Test good example - fuzz/ as sibling of test/:
   ✓ Documentation (0 total issues)
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
   
   Summary: ✓ 0 total issues (applied 1 rule)
   ✓ All checks passed!

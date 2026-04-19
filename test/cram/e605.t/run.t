@@ -16,6 +16,8 @@ Test bad example - should find missing test files:
     test_<module>.ml
     - bad/lib/config.ml:1:0: Library module 'config' is missing test file (expected: bad/test/test_config.ml)
     - bad/lib/parser.ml:1:0: Library module 'parser' is missing test file (expected: bad/test/test_parser.ml)
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
   
   ╭──────────────┬─────────────────────────╮
   │ Category     │ Issues                  │
@@ -40,6 +42,8 @@ Test good example - should find no issues (includes bin/common.ml which is an ex
   ✓ Documentation (0 total issues)
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
   
   Summary: ✓ 0 total issues (applied 1 rule)
   ✓ All checks passed!

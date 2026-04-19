@@ -16,6 +16,8 @@ Test bad example - multiple fuzz stanzas in same directory:
     fuzz runner (fuzz.ml). Use (modules ...) to list all fuzz modules in a single
     stanza.
     - bad/fuzz/dune:1:0: Directory 'bad/fuzz/' has 2 fuzz stanzas (fuzz, fuzz_extra) - use a single fuzz runner per directory
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
   
   ╭──────────────┬──────────────────────────────────────────╮
   │ Category     │ Issues                                   │
@@ -40,6 +42,8 @@ Test good example - single fuzz stanza:
   ✓ Documentation (0 total issues)
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
   
   Summary: ✓ 0 total issues (applied 1 rule)
   ✓ All checks passed!

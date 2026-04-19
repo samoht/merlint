@@ -15,6 +15,8 @@ Test bad example - should find missing interface file:
     and provide a clean API.
     - bad.ml:1:0: Library module bad.ml is missing interface file bad.mli
   ✓ Test Quality (0 total issues)
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
   
   ╭───────────────────┬────────────────────────╮
   │ Category          │ Issues                 │
@@ -39,6 +41,8 @@ Test good example - should find no issues:
   ✓ Documentation (0 total issues)
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
   
   Summary: ✓ 0 total issues (applied 1 rule)
   ✓ All checks passed!
@@ -55,6 +59,8 @@ Test interface definition file - should not require .mli:
   ✓ Documentation (0 total issues)
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
   
   Summary: ✓ 0 total issues (applied 1 rule)
   ✓ All checks passed!

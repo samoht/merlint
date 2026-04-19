@@ -14,6 +14,8 @@ Test bad example - fuzz_parser not included in fuzz.ml:
     All fuzz modules should be included in the fuzz runner (fuzz.ml) via
     Fuzz_*.suite references. This ensures all fuzz tests are actually executed.
     - bad/fuzz/fuzz.ml:1:0: Fuzz module fuzz_parser is not included in bad/fuzz/fuzz.ml
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
   
   ╭──────────────┬────────────────────────────────╮
   │ Category     │ Issues                         │
@@ -38,6 +40,8 @@ Test good example - all fuzz modules included:
   ✓ Documentation (0 total issues)
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
   
   Summary: ✓ 0 total issues (applied 1 rule)
   ✓ All checks passed!
