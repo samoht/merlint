@@ -19,6 +19,8 @@ Test bad example - should find test exports module name:
     individual test_*.ml modules.
     - bad/test.ml:1:0: Test file should use test module suites (e.g., Test_user.suite) instead of defining its own test list
     - bad/test_user.mli:1:0: Test module interface should only export 'suite' with type string * unit Alcotest.test_case list
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
   
   ╭──────────────┬──────────────────────────────╮
   │ Category     │ Issues                       │
@@ -51,6 +53,8 @@ Test good example - should find no issues:
     and no other values. (3) Alcotest.run should only appear in test.ml, not in
     individual test_*.ml modules.
     - good/test_user.mli:1:0: Test module interface should only export 'suite' with type string * unit Alcotest.test_case list
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
   
   ╭──────────────┬──────────────────────────────╮
   │ Category     │ Issues                       │

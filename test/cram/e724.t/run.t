@@ -16,6 +16,8 @@ Test bad example - fuzz directory missing build rules:
     testing during dune test, and (rule (alias fuzz) ...) using fuzz.exe
     --gen-corpus for AFL fuzzing campaigns.
     - bad/fuzz/dune:1:0: Fuzz directory 'bad/fuzz/' is missing both (rule (alias runtest) ...) and (rule (alias fuzz) ...) build rules
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
   
   ╭──────────────┬────────────────────────────────╮
   │ Category     │ Issues                         │
@@ -50,6 +52,8 @@ Test good example - fuzz directory with all required build rules:
     testing during dune test, and (rule (alias fuzz) ...) using fuzz.exe
     --gen-corpus for AFL fuzzing campaigns.
     - good/fuzz/dune:1:0: Fuzz directory 'good/fuzz/' (alias fuzz) rule should use fuzz.exe --gen-corpus to generate seed corpus
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
   
   ╭──────────────┬────────────────────────────────╮
   │ Category     │ Issues                         │

@@ -18,6 +18,8 @@ Test bad example - empty fuzz suites:
     tests miss. A suite with no test cases will never find bugs.
     - bad/fuzz_encoder.ml:3:0: Fuzz suite 'encoder' is empty — add meaningful fuzz tests covering parsers, encoders, state machines, and edge cases
     - bad/fuzz_parser.ml:1:0: Fuzz suite 'parser' is empty — add meaningful fuzz tests covering parsers, encoders, state machines, and edge cases
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
   
   ╭──────────────┬────────────────────────╮
   │ Category     │ Issues                 │
@@ -42,6 +44,8 @@ Test good example - non-empty fuzz suite:
   ✓ Documentation (0 total issues)
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
   
   Summary: ✓ 0 total issues (applied 1 rule)
   ✓ All checks passed!

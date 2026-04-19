@@ -17,6 +17,8 @@ Test stanza with no deps mixing test files from multiple libraries:
     files for multiple different libraries. Split tests into separate test
     stanzas, one per library.
     - bad/test/test_feed.ml:1:0: Test file 'test_feed.ml' tests library 'views_lib' but test stanza has no declared dependencies and mixes multiple libraries
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
   
   ╭──────────────┬────────────────────────────────────────────╮
   │ Category     │ Issues                                     │
@@ -41,6 +43,8 @@ Test stanza with files from only one library (no issue):
   ✓ Documentation (0 total issues)
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
   
   Summary: ✓ 0 total issues (applied 1 rule)
   ✓ All checks passed!

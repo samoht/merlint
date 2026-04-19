@@ -30,6 +30,8 @@ Bad test files in wrong test stanza:
     directory. Organize test files so that each test directory contains tests for
     only one library to maintain clear test organization.
     - bad/test_utils.ml:1:0: Test file 'test_utils.ml' tests library 'utils_lib' which is not explicitly declared in the test's dune file
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
   
   ╭──────────────┬────────────────────────────────────╮
   │ Category     │ Issues                             │
@@ -54,6 +56,8 @@ Test files with declared libraries (should pass):
   ✓ Documentation (0 total issues)
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
   
   Summary: ✓ 0 total issues (applied 1 rule)
   ✓ All checks passed!
@@ -75,6 +79,8 @@ Test files with incomplete library declarations:
     directory. Organize test files so that each test directory contains tests for
     only one library to maintain clear test organization.
     - bad3/test/test_feed.ml:1:0: Test file 'test_feed.ml' tests library 'views_lib' which is not explicitly declared in the test's dune file
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
   
   ╭──────────────┬────────────────────────────────────╮
   │ Category     │ Issues                             │

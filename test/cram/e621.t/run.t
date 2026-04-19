@@ -17,6 +17,8 @@ Test bad example - empty test suite:
     expected behaviour through concrete examples. A suite with no test cases will
     never catch regressions.
     - bad/test_parser.ml:1:0: Test suite 'parser' is empty — add meaningful tests covering the public API, edge cases, and error paths
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
   
   ╭──────────────┬────────────────────────╮
   │ Category     │ Issues                 │
@@ -41,6 +43,8 @@ Test good example - non-empty test suite:
   ✓ Documentation (0 total issues)
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
   
   Summary: ✓ 0 total issues (applied 1 rule)
   ✓ All checks passed!

@@ -16,6 +16,8 @@ Test bad example - should find test without library:
     that doesn't exist in the library.
     - bad/test/test_old_feature.ml:1:0: Test file exists but corresponding library module 'old_feature.ml' not found
     - bad/test/test_runner.ml:1:0: Test file exists but corresponding library module 'runner.ml' not found
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
   
   ╭──────────────┬────────────────────────────╮
   │ Category     │ Issues                     │
@@ -40,6 +42,8 @@ Test good example with library subdirectories - test files match library modules
   ✓ Documentation (0 total issues)
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
   
   Summary: ✓ 0 total issues (applied 1 rule)
   ✓ All checks passed!
@@ -56,6 +60,8 @@ Test good example - all test files have corresponding library modules:
   ✓ Documentation (0 total issues)
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
   
   Summary: ✓ 0 total issues (applied 1 rule)
   ✓ All checks passed!

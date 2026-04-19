@@ -17,6 +17,8 @@ Test bad example - should find non-test file in test stanza:
     should either be extracted into a private (library ...) stanza or renamed to
     test_<module>.ml.
     - bad/test/helpers.ml:1:0: File 'helpers.ml' in test stanza 'test' does not follow the test_ naming convention - extract into a private (library ...) stanza or rename to test_helpers.ml
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
   
   ╭──────────────┬────────────────────────────────────╮
   │ Category     │ Issues                             │
@@ -46,6 +48,8 @@ Test good example - should find no issues:
   ✓ Documentation (0 total issues)
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
   
   Summary: ✓ 0 total issues (applied 1 rule)
   ✓ All checks passed!

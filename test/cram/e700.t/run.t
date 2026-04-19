@@ -15,6 +15,8 @@ Test bad example - fuzz.ml defines tests inline:
     rather than defining test_case directly. This keeps fuzz tests organized
     per-module.
     - bad/fuzz/fuzz.ml:1:0: Fuzz runner 'fuzz.ml' defines tests inline - use Fuzz_*.suite to delegate to fuzz modules
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
   
   ╭──────────────┬──────────────────────────────╮
   │ Category     │ Issues                       │
@@ -39,6 +41,8 @@ Test good example - fuzz.ml delegates to Fuzz_*.run():
   ✓ Documentation (0 total issues)
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
   
   Summary: ✓ 0 total issues (applied 1 rule)
   ✓ All checks passed!

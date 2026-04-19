@@ -15,6 +15,8 @@ Test bad example - missing fuzz .mli file:
     'suite : string * Alcobar.test_case list'. This enforces proper encapsulation
     of fuzz test internals.
     - bad/fuzz/fuzz_parser.ml:1:0: Fuzz module bad/fuzz/fuzz_parser.ml is missing interface file bad/fuzz/fuzz_parser.mli
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
   
   ╭──────────────┬─────────────────────────────╮
   │ Category     │ Issues                      │
@@ -39,6 +41,8 @@ Test good example - fuzz .mli file present with correct type:
   ✓ Documentation (0 total issues)
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
   
   Summary: ✓ 0 total issues (applied 1 rule)
   ✓ All checks passed!

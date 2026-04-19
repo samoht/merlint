@@ -18,6 +18,8 @@ Test bad example - should find fail (Fmt.str) patterns:
     - test_bad.ml:11:0: Use Alcotest.failf instead of Alcotest.fail (Fmt.str ...) - failf provides printf-style formatting directly
     - test_bad.ml:18:0: Use Alcotest.failf instead of Alcotest.fail (Fmt.str ...) - failf provides printf-style formatting directly
     - test_bad.ml:23:0: Use Alcotest.failf instead of Alcotest.fail (Fmt.str ...) - failf provides printf-style formatting directly
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
   
   ╭──────────────┬───────────────────────────────────────────╮
   │ Category     │ Issues                                    │
@@ -42,6 +44,8 @@ Test good example - should find no issues:
   ✓ Documentation (0 total issues)
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
   
   Summary: ✓ 0 total issues (applied 1 rule)
   ✓ All checks passed!

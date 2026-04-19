@@ -16,6 +16,8 @@ Test bad examples - should find naming issues:
     example, test_foo.ml should have suite name 'foo'. This makes it easier to
     identify which test file contains which suite.
     - test_bad.ml:3:0: Test suite name 'BadName' should be lowercase - use 'badname' instead
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
   
   ╭──────────────┬────────────────────────────────────╮
   │ Category     │ Issues                             │
@@ -45,6 +47,8 @@ Test bad examples - should find naming issues:
     example, test_foo.ml should have suite name 'foo'. This makes it easier to
     identify which test file contains which suite.
     - test_config.ml:5:0: Test suite name 'Config' should be lowercase - use 'config' instead
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
   
   ╭──────────────┬────────────────────────────────────╮
   │ Category     │ Issues                             │
@@ -74,6 +78,8 @@ Test bad examples - should find naming issues:
     example, test_foo.ml should have suite name 'foo'. This makes it easier to
     identify which test file contains which suite.
     - test_parser.ml:5:0: Test suite name 'parser-tests' should use snake_case naming convention
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
   
   ╭──────────────┬────────────────────────────────────╮
   │ Category     │ Issues                             │
@@ -103,6 +109,8 @@ Test bad examples - should find naming issues:
     example, test_foo.ml should have suite name 'foo'. This makes it easier to
     identify which test file contains which suite.
     - test_user_auth.ml:5:0: Test suite name 'auth' should match the filename - expected 'user_auth'
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
   
   ╭──────────────┬────────────────────────────────────╮
   │ Category     │ Issues                             │
@@ -133,6 +141,8 @@ Test multi-line suite definition:
     example, test_foo.ml should have suite name 'foo'. This makes it easier to
     identify which test file contains which suite.
     - test_multiline.ml:6:0: Test suite name 'Multiline' should be lowercase - use 'multiline' instead
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
   
   ╭──────────────┬────────────────────────────────────╮
   │ Category     │ Issues                             │
@@ -157,6 +167,8 @@ Test good examples - should find no issues:
   ✓ Documentation (0 total issues)
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
   
   Summary: ✓ 0 total issues (applied 1 rule)
   ✓ All checks passed!

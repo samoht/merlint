@@ -17,6 +17,8 @@ Test bad example - fuzz stanza using (test ...) instead of (executable ...):
     enables property-based testing during dune test and separate AFL campaign
     workflows.
     - bad/fuzz/dune:1:0: Fuzz stanza 'fuzz_parser' uses (test ...) - use (executable ...) with (rule (alias runtest) ...) instead
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
   
   ╭──────────────┬─────────────────────────────╮
   │ Category     │ Issues                      │
@@ -41,6 +43,8 @@ Test good example - fuzz stanza using (executable ...):
   ✓ Documentation (0 total issues)
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
   
   Summary: ✓ 0 total issues (applied 1 rule)
   ✓ All checks passed!

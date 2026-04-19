@@ -15,6 +15,8 @@ Test bad example - library and test in same directory:
     (modules ...) to co-locate them in the same directory is discouraged.
     - bad/lib/test_data.ml:1:0: Test 'test_data' and library 'data' are in the same directory 'bad/lib/' - move tests to a separate test/ directory
   ✓ Test Quality (0 total issues)
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
   
   ╭───────────────────┬─────────────────────────────────────────────╮
   │ Category          │ Issues                                      │
@@ -44,6 +46,8 @@ Test good example - library and test in separate directories:
   ✓ Documentation (0 total issues)
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
   
   Summary: ✓ 0 total issues (applied 1 rule)
   ✓ All checks passed!
