@@ -1,0 +1,56 @@
+Test bad example - cram test at test/ rather than test/cram/:
+  $ merlint -B -r E521 bad/
+  Running merlint analysis...
+  
+  Analyzing 0 files
+  
+  ✓ Code Quality (0 total issues)
+  ✓ Code Style (0 total issues)
+  ✓ Naming Conventions (0 total issues)
+  ✓ Documentation (0 total issues)
+  ✗ Project Structure (1 total issues)
+    [E521] Cram test outside test/cram/ (1 issue)
+    Move cram tests (.t files or .t/ directories) under the package's test/cram/
+    umbrella. Shared driver exes go in test/cram/helpers/; shell setup goes in
+    test/cram/helpers.sh (sourced via (setup_scripts helpers.sh)).
+    - (global) pkg/test/foo.t should live under pkg/test/cram/
+  ✓ Test Quality (0 total issues)
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
+  
+  ╭───────────────────┬────────────────────────────────────╮
+  │ Category          │ Issues                             │
+  ├───────────────────┼────────────────────────────────────┤
+  │ Project Structure │ 1 (1 cram test outside test/cram/) │
+  ╰───────────────────┴────────────────────────────────────╯
+  
+  
+  Summary: ✗ 1 total issue (applied 1 rule)
+  ✗ Some checks failed. See details above.
+  [1]
+
+
+
+
+
+
+Test good example - cram test under test/cram/:
+  $ merlint -B -r E521 good/
+  Running merlint analysis...
+  
+  Analyzing 0 files
+  
+  ✓ Code Quality (0 total issues)
+  ✓ Code Style (0 total issues)
+  ✓ Naming Conventions (0 total issues)
+  ✓ Documentation (0 total issues)
+  ✓ Project Structure (0 total issues)
+  ✓ Test Quality (0 total issues)
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
+  
+  Summary: ✓ 0 total issues (applied 1 rule)
+  ✓ All checks passed!
+
+
+
