@@ -1,67 +1,48 @@
 (** E351: Detection of global mutable state patterns.
 
-    Walks the {!Ocaml_typing.Typedtree.signature} produced from the [.cmti]
-    and checks every [Sig_value] whose {!Ocaml_typing.Types.type_expr} head
-    resolves to [Predef.path_array] or [Predef.path_ref].  Because the
-    check is on the fully-resolved {!Ocaml_typing.Path.t}, local type
-    definitions that happen to be called [ref] or [array] do {e not}
-    shadow the rule: only actual [Stdlib.array]/[Stdlib.ref] values are
-    flagged. *)
+    Reads [Context.dump.value_sigs] (populated by [Merlin.Dump] from the
+    typedtree text of the [.mli]) and flags [val x : T] declarations whose outer
+    type path resolves to [Stdlib.ref] or [Stdlib.array].
+
+    Because the path comes from the typed tree, a local definition like
+
+    {[
+    type 'a ref = 'a list
+
+    val x : int ref
+    ]}
+
+    does {e not} trip the rule: the local [ref] has [prefix = []] while the
+    stdlib one has [prefix = ["Stdlib"]]. Wraps like [val y : t array cons] are
+    also skipped -- the outer path is [cons], not [array]. *)
 
 type payload = { kind : string; name : string }
 (** Payload for mutable state issues *)
 
-module Types = Ocaml_typing.Types
-module Typedtree = Ocaml_typing.Typedtree
-module Path = Ocaml_typing.Path
-module Predef = Ocaml_typing.Predef
-
-let is_stdlib_ref = function
-  (* [ref] is not a [Predef] constant -- it's a regular record type in
-     the [Stdlib] module, so we match on the path shape directly.
-     Must be [Stdlib.ref]: a local [type 'a ref = ...] would resolve
-     to [Pident id] with a non-persistent [id] and not match. *)
-  | Ocaml_typing.Path.Pdot (Pident stdlib, "ref") ->
-      Ocaml_typing.Ident.persistent stdlib
-      && Ocaml_typing.Ident.name stdlib = "Stdlib"
-  | _ -> false
-
-let mutable_kind_of_type_expr te =
-  (* [Types.get_desc] unwraps [Tlink]s and other indirections without
-     forcing an environment; the head constructor is what we need. *)
-  match Types.get_desc te with
-  | Tconstr (p, _, _) when Path.same p Predef.path_array -> Some "array"
-  | Tconstr (p, _, _) when is_stdlib_ref p -> Some "ref"
+let is_stdlib_mutable (path : Merlin.Dump.name) =
+  match path.prefix with
+  | [ "Stdlib" ] ->
+      if path.base = "ref" then Some "ref"
+      else if path.base = "array" then Some "array"
+      else None
   | _ -> None
-
-let location_of_cmt (loc : Ocaml_utils.Warnings.loc) =
-  let loc_start = loc.loc_start and loc_end = loc.loc_end in
-  Merlin.Location.v ~file:loc_start.Lexing.pos_fname
-    ~start_line:loc_start.Lexing.pos_lnum
-    ~start_col:(loc_start.Lexing.pos_cnum - loc_start.Lexing.pos_bol)
-    ~end_line:loc_end.Lexing.pos_lnum
-    ~end_col:(loc_end.Lexing.pos_cnum - loc_end.Lexing.pos_bol)
-
-let check_signature (signature : Typedtree.signature) =
-  List.filter_map
-    (fun (item : Typedtree.signature_item) ->
-      match item.sig_desc with
-      | Tsig_value vd -> (
-          match mutable_kind_of_type_expr vd.val_val.val_type with
-          | None -> None
-          | Some kind ->
-              let loc = location_of_cmt vd.val_loc in
-              Some (Issue.v ~loc { kind; name = vd.val_name.txt }))
-      | _ -> None)
-    signature.sig_items
 
 let check (ctx : Context.file) =
   if not (String.ends_with ~suffix:".mli" ctx.filename) then []
   else
-    match Context.cmt ctx with
-    | Some { cmt_annots = Interface signature; _ } ->
-        check_signature signature
-    | _ -> []
+    let dump = Context.dump ctx in
+    List.filter_map
+      (fun (s : Merlin.Dump.value_sig) ->
+        match (s.type_path, s.location) with
+        | Some path, Some loc -> (
+            match is_stdlib_mutable path with
+            | None -> None
+            | Some kind ->
+                Some
+                  (Issue.v ~loc
+                     { kind; name = Merlin.Dump.name_to_string s.name }))
+        | _ -> None)
+      dump.value_sigs
 
 let pp ppf { kind; name } =
   Fmt.pf ppf
