@@ -1,4 +1,4 @@
-(** E825: Interop test uses CSV traces but dune lacks csvt dependency *)
+(** E825: Interop test uses CSV traces but dune lacks csv dependency *)
 
 type payload = { dir : string }
 
@@ -16,7 +16,7 @@ let check (ctx : Context.project) =
         in
         if has_csv then
           let dune = Interop.dune_content d.path in
-          if not (Astring.String.is_infix ~affix:"csvt" dune) then
+          if not (Astring.String.is_infix ~affix:"csv" dune) then
             Some (Issue.v { dir = d.path })
           else None
         else None
@@ -24,12 +24,12 @@ let check (ctx : Context.project) =
     dirs
 
 let pp ppf { dir } =
-  Fmt.pf ppf "Interop test %s has CSV traces but dune lacks csvt dependency" dir
+  Fmt.pf ppf "Interop test %s has CSV traces but dune lacks csv dependency" dir
 
 let rule =
-  Rule.v ~code:"E825" ~title:"Missing csvt dependency" ~category:Interop_testing
+  Rule.v ~code:"E825" ~title:"Missing csv dependency" ~category:Interop_testing
     ~hint:
-      "Interop tests with CSV traces should use csvt for parsing. Add csvt to \
-       the (libraries ...) in the dune file and use Csvt.decode_file with a \
-       Row codec."
+      "Interop tests with CSV traces should use csv for parsing. Add csv to \
+       the (libraries ...) in the dune file and use Csv.decode_file with a Row \
+       codec."
     ~examples:[] ~pp (Project check)
