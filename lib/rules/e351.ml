@@ -16,11 +16,15 @@ module Typedtree = Ocaml_typing.Typedtree
 module Path = Ocaml_typing.Path
 module Predef = Ocaml_typing.Predef
 
-let is_stdlib_ref p =
-  (* [ref] is not a predef -- it's a regular record type in [Stdlib], so
-     we compare against the qualified name directly. *)
-  let n = Path.name p in
-  n = "ref" || n = "Stdlib.ref"
+let is_stdlib_ref = function
+  (* [ref] is not a [Predef] constant -- it's a regular record type in
+     the [Stdlib] module, so we match on the path shape directly.
+     Must be [Stdlib.ref]: a local [type 'a ref = ...] would resolve
+     to [Pident id] with a non-persistent [id] and not match. *)
+  | Ocaml_typing.Path.Pdot (Pident stdlib, "ref") ->
+      Ocaml_typing.Ident.persistent stdlib
+      && Ocaml_typing.Ident.name stdlib = "Stdlib"
+  | _ -> false
 
 let mutable_kind_of_type_expr te =
   (* [Types.get_desc] unwraps [Tlink]s and other indirections without
