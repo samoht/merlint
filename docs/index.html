@@ -1343,6 +1343,20 @@ pre code {
     </div>
     <div class="error-hint"><p>Libraries and tests should be in separate directories for clear project structure. Put library code in lib/ and tests in test/. Using explicit (modules ...) to co-locate them in the same directory is discouraged.</p></div>
 </div>
+<div class="error-card" id="E520">
+    <div>
+        <span class="error-code">E520</span>
+        <span class="error-title">Library directory should be lib/, not src/</span>
+    </div>
+    <div class="error-hint"><p>The monorepo convention is lib/ for library code. Rename src/ to lib/ with `git mv`; no dune changes are needed because dune auto-discovers modules in either directory.</p></div>
+</div>
+<div class="error-card" id="E521">
+    <div>
+        <span class="error-code">E521</span>
+        <span class="error-title">Cram test outside test/cram/</span>
+    </div>
+    <div class="error-hint"><p>Move cram tests (.t files or .t/ directories) under the package's test/cram/ umbrella. Shared driver exes go in test/cram/helpers/; shell setup goes in test/cram/helpers.sh (sourced via (setup_scripts helpers.sh)).</p></div>
+</div>
 <h2 id="testing">Testing</h2>
 <div class="category">E600-E699 • Test coverage and test quality issues</div>
 <div class="error-card" id="E600">
