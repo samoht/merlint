@@ -16,7 +16,9 @@
   tty
   jsont
   jsont.bytesrw
-  opam-file-format
+  opam
+  opam.bytesrw
+  bytesrw
   sexp))
 
 (rule

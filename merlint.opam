@@ -23,6 +23,7 @@ depends: [
   "fmt"
   "astring"
   "sexp"
+  "opam"
   "tty"
   "vlog"
   "alcotest" {with-test}
