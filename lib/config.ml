@@ -45,8 +45,6 @@ let default =
     exclusions = Rule_config.empty;
   }
 
-let filename = ".merlint"
-
 let file path =
   match Project.config_files path with [] -> None | first :: _ -> Some first
 
@@ -107,22 +105,6 @@ let apply_config config key value : t =
   | _ ->
       (* Unknown key - ignore for forward compatibility *)
       config
-
-let load path =
-  try
-    match Config_parser.parse_file path with
-    | Some parsed ->
-        (* Apply settings to the default config *)
-        let config = ref default in
-        List.iter
-          (fun (key, value) -> config := apply_config !config key value)
-          parsed.Config_parser.settings;
-        { !config with exclusions = parsed.Config_parser.exclusions }
-    | None -> default
-  with exn ->
-    Fmt.epr "Warning: Error loading config from %s: %s\n" path
-      (Printexc.to_string exn);
-    default
 
 let load_from_path path =
   let config_files = Project.config_files path in

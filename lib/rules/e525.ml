@@ -1,0 +1,147 @@
+(** E525: Package root dune must enable strict warnings for standalone builds.
+
+    Inside the monorepo, the workspace-root [dune] file declares
+
+    {v (env (dev (flags :standard %{dune-warnings}))) v}
+
+    which promotes warnings to errors under the [dev] profile. That stanza only
+    applies when dune is run from the workspace root. When a package is
+    published standalone (e.g. installed via opam from its own subtree), the
+    workspace-root [dune] is not shipped and the strict-warnings policy
+    disappears — a release that was clean in-tree may compile with warnings
+    after upstream publication.
+
+    Each package must therefore carry its own root [dune] file that redeclares
+    the [%\{dune-warnings\}] flag set, and its [dune-project] must declare
+    [(lang dune 3.21)] or newer (the release that introduced
+    [%\{dune-warnings\}]).
+
+    Reference standalone package: [alcobar/dune]:
+
+    {v (env (dev (flags :standard %{dune-warnings}))) v}
+
+    {b How to fix:}
+    - create [<package>/dune] with the stanza above, and
+    - set [(lang dune 3.21)] (or newer) in [<package>/dune-project]. *)
+
+type kind =
+  | Missing_dune
+  | Missing_warnings
+  | Lang_too_old of { version : string }
+
+type payload = { package : string; kind : kind }
+
+let min_major = 3
+let min_minor = 21
+let try_readdir d = try Sys.readdir d |> Array.to_list with Sys_error _ -> []
+
+let has_opam_file pkg_dir =
+  List.exists
+    (fun name -> Filename.check_suffix name ".opam")
+    (try_readdir pkg_dir)
+
+let read_file path =
+  try
+    let ic = open_in path in
+    let n = in_channel_length ic in
+    let s = really_input_string ic n in
+    close_in ic;
+    Some s
+  with Sys_error _ -> None
+
+let warnings_re = Re.compile (Re.str "%{dune-warnings}")
+let contains_warnings contents = Re.execp warnings_re contents
+
+let lang_re =
+  Re.compile
+    (Re.seq
+       [
+         Re.char '(';
+         Re.rep Re.space;
+         Re.str "lang";
+         Re.rep1 Re.space;
+         Re.str "dune";
+         Re.rep1 Re.space;
+         Re.group (Re.rep1 (Re.alt [ Re.digit; Re.char '.' ]));
+       ])
+
+let parse_lang_version contents =
+  match Re.exec_opt lang_re contents with
+  | None -> None
+  | Some g -> Some (Re.Group.get g 1)
+
+let version_too_old v =
+  match String.split_on_char '.' v with
+  | major :: minor :: _ -> (
+      match (int_of_string_opt major, int_of_string_opt minor) with
+      | Some mj, Some mn -> mj < min_major || (mj = min_major && mn < min_minor)
+      | _, _ -> false)
+  | _ -> false
+
+let check (ctx : Context.project) =
+  let root = ctx.project_root in
+  let is_dir p = try Sys.is_directory p with Sys_error _ -> false in
+  List.concat_map
+    (fun name ->
+      if
+        name = "_build" || name = "_opam" || name = ".git"
+        || String.starts_with ~prefix:"." name
+      then []
+      else
+        let pkg_dir = Filename.concat root name in
+        if (not (is_dir pkg_dir)) || not (has_opam_file pkg_dir) then []
+        else
+          let dune_issue =
+            let dune_path = Filename.concat pkg_dir "dune" in
+            if not (Sys.file_exists dune_path) then
+              [ Issue.v { package = name; kind = Missing_dune } ]
+            else
+              match read_file dune_path with
+              | Some c when contains_warnings c -> []
+              | _ -> [ Issue.v { package = name; kind = Missing_warnings } ]
+          in
+          let lang_issue =
+            let dp_path = Filename.concat pkg_dir "dune-project" in
+            match read_file dp_path with
+            | None -> []
+            | Some c -> (
+                match parse_lang_version c with
+                | Some v when version_too_old v ->
+                    [
+                      Issue.v
+                        { package = name; kind = Lang_too_old { version = v } };
+                    ]
+                | _ -> [])
+          in
+          dune_issue @ lang_issue)
+    (try_readdir root)
+
+let pp ppf { package; kind } =
+  match kind with
+  | Missing_dune ->
+      Fmt.pf ppf
+        "%s has no root dune file; add %s/dune with (env (dev (flags :standard \
+         %%{dune-warnings}))) so standalone opam builds fail on warnings"
+        package package
+  | Missing_warnings ->
+      Fmt.pf ppf
+        "%s/dune does not enable %%{dune-warnings}; add (env (dev (flags \
+         :standard %%{dune-warnings}))) so standalone opam builds fail on \
+         warnings"
+        package
+  | Lang_too_old { version } ->
+      Fmt.pf ppf
+        "%s/dune-project declares (lang dune %s); %%{dune-warnings} requires \
+         (lang dune %d.%d) or newer"
+        package version min_major min_minor
+
+let rule =
+  Rule.v ~code:"E525" ~title:"Package root dune missing %{dune-warnings}"
+    ~category:Rule.Project_structure
+    ~hint:
+      "Create <package>/dune containing (env (dev (flags :standard \
+       %{dune-warnings}))), and bump <package>/dune-project to (lang dune \
+       3.21) or newer. This mirrors the workspace-root dune so that a \
+       standalone opam build of the package still enforces strict warnings \
+       under the dev profile. Reference: alcobar/dune."
+    ~examples:[] ~pp (Project check)

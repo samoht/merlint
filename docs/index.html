@@ -1371,6 +1371,20 @@ pre code {
     </div>
     <div class="error-hint"><p>A dune file with a single library/executable/test stanza doesn't need (modules ...) — dune auto-discovers every .ml in the directory. When multiple stanzas share a directory the (modules ...) fields must together cover every .ml file, otherwise some module is silently dropped. Prefer splitting into sibling directories when the stanza split is a design choice rather than a build requirement.</p></div>
 </div>
+<div class="error-card" id="E524">
+    <div>
+        <span class="error-code">E524</span>
+        <span class="error-title">Multiple Cmdliner subcommands in one file</span>
+    </div>
+    <div class="error-hint"><p>Each Cmd.v subcommand should live in its own file. Move each Cmd.v into a sibling file (e.g. cmd_&lt;name&gt;.ml exposing a single val cmd) and reference it from main.ml's Cmd.group. Sub-subcommands of a grouped subcommand follow the same rule — use cmd_&lt;parent&gt;/&lt;leaf&gt;.ml or cmd_&lt;parent&gt;_&lt;leaf&gt;.ml siblings.</p></div>
+</div>
+<div class="error-card" id="E525">
+    <div>
+        <span class="error-code">E525</span>
+        <span class="error-title">Package root dune missing %{dune-warnings}</span>
+    </div>
+    <div class="error-hint"><p>Create &lt;package&gt;/dune containing (env (dev (flags :standard %{dune-warnings}))), and bump &lt;package&gt;/dune-project to (lang dune 3.21) or newer. This mirrors the workspace-root dune so that a standalone opam build of the package still enforces strict warnings under the dev profile. Reference: alcobar/dune.</p></div>
+</div>
 <h2 id="testing">Testing</h2>
 <div class="category">E600-E699 • Test coverage and test quality issues</div>
 <div class="error-card" id="E600">
