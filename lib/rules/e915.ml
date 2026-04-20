@@ -15,30 +15,23 @@ type payload = { package : string; opam : string; findings : finding list }
 
 let dir_exists path = try Sys.is_directory path with Sys_error _ -> false
 
-(** Extract the list of tags from an opam file using the official
-    [opam-file-format] parser. Handles both list ([tags: ["a" "b"]]) and
-    single-string ([tags: "a"]) forms, as well as multi-line values.
+(** Extract the list of tags from an opam file. Handles both list
+    ([tags: ["a" "b"]]) and single-string ([tags: "a"]) forms.
 
     Returns [None] if no [tags:] field is found or the file cannot be parsed. *)
 let read_tags path =
-  let open OpamParserTypes.FullPos in
-  let string_of_value v =
-    match v.pelem with String s -> Some s | _ -> None
-  in
+  let string_of_value = function Opam.Value.String s -> Some s | _ -> None in
   try
-    let file = OpamParser.FullPos.file path in
-    let rec find = function
-      | [] -> None
-      | item :: rest -> (
-          match item.pelem with
-          | Variable (name, value) when name.pelem = "tags" -> (
-              match value.pelem with
-              | String s -> Some [ s ]
-              | List l -> Some (List.filter_map string_of_value l.pelem)
-              | _ -> Some [])
-          | _ -> find rest)
-    in
-    find file.file_contents
+    let ic = open_in path in
+    Fun.protect
+      ~finally:(fun () -> close_in ic)
+      (fun () ->
+        let r = Bytesrw.Bytes.Reader.of_in_channel ic in
+        match Opam_bytesrw.field_reader ~file:path "tags" r with
+        | None -> None
+        | Some (Opam.Value.String s) -> Some [ s ]
+        | Some (Opam.Value.List l) -> Some (List.filter_map string_of_value l)
+        | Some _ -> Some [])
   with _ -> None
 
 let check_opam_file ~topics pkg_dir opam_name =
