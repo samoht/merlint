@@ -1357,6 +1357,20 @@ pre code {
     </div>
     <div class="error-hint"><p>Move cram tests (.t files or .t/ directories) under the package's test/cram/ umbrella. Shared driver exes go in test/cram/helpers/; shell setup goes in test/cram/helpers.sh (sourced via (setup_scripts helpers.sh)).</p></div>
 </div>
+<div class="error-card" id="E522">
+    <div>
+        <span class="error-code">E522</span>
+        <span class="error-title">Package-prefixed module in main lib/ instead of wrapped submodule</span>
+    </div>
+    <div class="error-hint"><p>Rename &lt;pkg&gt;/lib/&lt;pkg&gt;_foo.ml to &lt;pkg&gt;/lib/foo.ml (and update the .mli similarly). Dune's default wrapped mode will expose it as &lt;Pkg&gt;.Foo. For something that really needs its own public name, create a sublib directory (&lt;pkg&gt;/lib_foo/ with its own dune) instead.</p></div>
+</div>
+<div class="error-card" id="E523">
+    <div>
+        <span class="error-code">E523</span>
+        <span class="error-title">Redundant or incomplete (modules ...) in dune</span>
+    </div>
+    <div class="error-hint"><p>A dune file with a single library/executable/test stanza doesn't need (modules ...) — dune auto-discovers every .ml in the directory. When multiple stanzas share a directory the (modules ...) fields must together cover every .ml file, otherwise some module is silently dropped. Prefer splitting into sibling directories when the stanza split is a design choice rather than a build requirement.</p></div>
+</div>
 <h2 id="testing">Testing</h2>
 <div class="category">E600-E699 • Test coverage and test quality issues</div>
 <div class="error-card" id="E600">
@@ -1712,7 +1726,7 @@ pre code {
         <span class="error-code">E915</span>
         <span class="error-title">Opam tag metadata</span>
     </div>
-    <div class="error-hint"><p>Every *.opam file must declare tags: ["org:blacksun" "&lt;topic&gt;" ...] where each topic is listed in the topics: field of .merlint. Edit the package's dune-project so dune regenerates the opam file.</p></div>
+    <div class="error-hint"><p>Every *.opam file must declare tags: ["org:blacksun" "&lt;topic&gt;" ...] where each topic is a slug declared in categories.toml at the project root (or listed in the topics: field of .merlint). Edit the package's dune-project so dune regenerates the opam file.</p></div>
 </div>
 
     <a href="#top" class="back-to-top">↑ Top</a>

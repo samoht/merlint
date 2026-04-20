@@ -259,7 +259,7 @@ val name : t -> string
 
 ### [E915] Opam tag metadata
 
-Every *.opam file must declare tags: ["org:blacksun" "<topic>" ...] where each topic is listed in the topics: field of .merlint. Edit the package's dune-project so dune regenerates the opam file.
+Every *.opam file must declare tags: ["org:blacksun" "<topic>" ...] where each topic is a slug declared in categories.toml at the project root (or listed in the topics: field of .merlint). Edit the package's dune-project so dune regenerates the opam file.
 
 ## Command-Line Applications
 
