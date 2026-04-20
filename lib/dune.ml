@@ -94,7 +94,7 @@ let parse_dune_file filename =
 
     (* Parse all S-expressions in the file *)
     let stanzas =
-      match Sexp.parse_string_many content with
+      match Sexp.Value.parse_string_many content with
       | Ok s -> s
       | Error e -> raise (Sexp.Error e)
     in
