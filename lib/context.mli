@@ -71,8 +71,12 @@ val functions : file -> (string * Ast.expr) list
 
 val cmt : file -> Ocaml_typing.Cmt_format.cmt_infos option
 (** [cmt file] returns the parsed [.cmt]/[.cmti] for [file] when
-    available, [None] otherwise. The result is cached on the context so
-    repeated rule queries share a single read. *)
+    available, [None] otherwise.  The result is cached on the context so
+    repeated rule queries share a single read.
+
+    This is the {e one} typed-tree access point for rules.  New rules
+    that need [Types.type_expr] / [Path.t] / [Typedtree] information
+    must query through here -- don't introduce a parallel path. *)
 
 (** {2 Project context accessors} *)
 
