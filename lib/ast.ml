@@ -141,7 +141,7 @@ let rec trailing_record_fields = function
       | last :: _ -> trailing_record_fields last
       | [] -> 0)
   | If_then_else { else_expr = Some e; _ } -> trailing_record_fields e
-  | If_then_else { then_expr; else_expr = None } ->
+  | If_then_else { then_expr; else_expr = None; _ } ->
       trailing_record_fields then_expr
   | Try { expr; _ } -> trailing_record_fields expr
   | Function { body; _ } -> trailing_record_fields body
