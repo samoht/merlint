@@ -25,13 +25,11 @@ let check (ctx : Context.project) =
     dirs
 
 let pp ppf { dir } =
-  Fmt.pf ppf "Interop test %s/test.ml hand-rolls CSV parsing instead of csvt"
-    dir
+  Fmt.pf ppf "Interop test %s/test.ml hand-rolls CSV parsing instead of csv" dir
 
 let rule =
   Rule.v ~code:"E820" ~title:"Hand-rolled CSV parsing" ~category:Interop_testing
     ~hint:
-      "Use csvt (Csvt.decode_file with a Csvt.Row codec) for CSV trace \
-       parsing. Never hand-roll CSV readers with \
-       open_in/input_line/split_on_char."
+      "Use csv (Csv.decode_file with a Csv.Row codec) for CSV trace parsing. \
+       Never hand-roll CSV readers with open_in/input_line/split_on_char."
     ~examples:[] ~pp (Project check)
