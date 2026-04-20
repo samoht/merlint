@@ -27,7 +27,7 @@
   logs
   fmt
   astring
-  sexpt
+  sexp
   tty
   vlog
   (alcotest :with-test)))
