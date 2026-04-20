@@ -28,8 +28,8 @@ let check (ctx : Context.file) =
       List.exists
         (fun (module_name, func_name) ->
           List.exists
-            (fun ident ->
-              match ident.Merlin.Dump.name.prefix with
+            (fun (ident : Merlin.Dump.elt) ->
+              match ident.name.prefix with
               | prefix_mod :: _ when prefix_mod = module_name ->
                   ident.name.base = func_name
               | _ -> false)
@@ -40,14 +40,15 @@ let check (ctx : Context.file) =
     (* Check if log source is defined *)
     let has_log_source =
       List.exists
-        (fun ident ->
-          match (ident.Merlin.Dump.name.prefix, ident.name.base) with
+        (fun (ident : Merlin.Dump.elt) ->
+          match (ident.name.prefix, ident.name.base) with
           | [ "Logs"; "Src" ], "create" -> true
           | [ "Logs" ], "src_log" -> true
           | _, ("log_src" | "src") ->
               (* Check if it's a value definition for log source *)
               List.exists
-                (fun value -> value.Merlin.Dump.name.base = ident.name.base)
+                (fun (value : Merlin.Dump.elt) ->
+                  value.name.base = ident.name.base)
                 dump_data.values
           | _ -> false)
         identifiers
