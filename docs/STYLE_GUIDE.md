@@ -255,6 +255,12 @@ val name : t -> string
 ```
 
 
+**Opam Metadata**: Every package's opam file must declare `tags:` with an `org:*` marker and one or more topics from the canonical vocabulary configured in `.merlint`. The tag vocabulary powers topic-grouped indexes across the monorepo, so consistency matters.
+
+### [E915] Opam tag metadata
+
+Every *.opam file must declare tags: ["org:blacksun" "<topic>" ...] where each topic is listed in the topics: field of .merlint. Edit the package's dune-project so dune regenerates the opam file.
+
 ## Command-Line Applications
 
 For command-line applications in the `bin/` directory, it's common to use a library like `Cmdliner`.

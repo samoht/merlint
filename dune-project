@@ -28,6 +28,7 @@
   fmt
   astring
   sexp
+  opam-file-format
   tty
   vlog
   (alcotest :with-test)))

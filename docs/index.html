@@ -1670,14 +1670,14 @@ pre code {
         <span class="error-code">E820</span>
         <span class="error-title">Hand-rolled CSV parsing</span>
     </div>
-    <div class="error-hint"><p>Use csvt (Csvt.decode_file with a Csvt.Row codec) for CSV trace parsing. Never hand-roll CSV readers with open_in/input_line/split_on_char.</p></div>
+    <div class="error-hint"><p>Use csv (Csv.decode_file with a Csv.Row codec) for CSV trace parsing. Never hand-roll CSV readers with open_in/input_line/split_on_char.</p></div>
 </div>
 <div class="error-card" id="E825">
     <div>
         <span class="error-code">E825</span>
-        <span class="error-title">Missing csvt dependency</span>
+        <span class="error-title">Missing csv dependency</span>
     </div>
-    <div class="error-hint"><p>Interop tests with CSV traces should use csvt for parsing. Add csvt to the (libraries ...) in the dune file and use Csvt.decode_file with a Row codec.</p></div>
+    <div class="error-hint"><p>Interop tests with CSV traces should use csv for parsing. Add csv to the (libraries ...) in the dune file and use Csv.decode_file with a Row codec.</p></div>
 </div>
 <div class="error-card" id="E830">
     <div>
@@ -1706,6 +1706,13 @@ pre code {
         <span class="error-title">Wire struct_/module_ in public API</span>
     </div>
     <div class="error-hint"><p>Move struct_, module_, c_stubs, ml_stubs out of the .mli. These belong in c/gen.ml where they are used to generate EverParse 3D files and C stubs. The codec is the public API; the 3D projection is a build artifact.</p></div>
+</div>
+<div class="error-card" id="E915">
+    <div>
+        <span class="error-code">E915</span>
+        <span class="error-title">Opam tag metadata</span>
+    </div>
+    <div class="error-hint"><p>Every *.opam file must declare tags: ["org:blacksun" "&lt;topic&gt;" ...] where each topic is listed in the topics: field of .merlint. Edit the package's dune-project so dune regenerates the opam file.</p></div>
 </div>
 
     <a href="#top" class="back-to-top">↑ Top</a>

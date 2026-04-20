@@ -12,6 +12,10 @@ type t = {
   allowed_words : string list;
       (** Words treated as atomic by naming rules (e.g. EdDSA, ECDSA). Parsed
           from [allowed_words] or [acronyms] in [.merlint]. *)
+  topics : string list;
+      (** Canonical opam tag vocabulary. Parsed from [topics] in [.merlint].
+          When non-empty, E915 rejects any opam tag not in this list (plus the
+          [org:*] namespace prefix which is always allowed). *)
   (* Style rules *)
   allow_obj_magic : bool;
   allow_str_module : bool;

@@ -1,0 +1,5 @@
+opam-version: "2.0"
+synopsis: "Unknown topic"
+tags: ["org:blacksun" "codec" "weird-new-topic"]
+maintainer: ["Test"]
+depends: ["ocaml"]
