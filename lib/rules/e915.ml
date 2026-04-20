@@ -1,14 +1,16 @@
 (** E915: Opam tag metadata enforcement.
 
     Every [*.opam] file must declare a [tags:] field that contains the
-    [org:blacksun] marker plus one or more topics from the canonical vocabulary
-    declared as [topics:] in [.merlint].
+    [org:blacksun] marker plus one or more topics from the canonical vocabulary.
 
-    A topic-grouped view of the monorepo (generated from these tags) only works
-    if the vocabulary is kept honest, so every finding is an error:
+    The vocabulary is loaded from [categories.toml] at the project root (each
+    table header is a slug, e.g. [codec], [codec.text]). If that file is absent,
+    falls back to the [topics:] list in [.merlint].
+
+    Every finding is an error:
     - No [tags:] field in the opam file.
     - [tags:] present but [org:blacksun] missing.
-    - A tag that is not [org:*] and not in the configured [topics:] list. *)
+    - A tag that is not [org:*] and not in the vocabulary. *)
 
 type finding = Missing_tags | Missing_org | Unknown_topic of string
 type payload = { package : string; opam : string; findings : finding list }
@@ -65,7 +67,9 @@ let list_opam_files pkg_dir =
 
 let check (ctx : Context.project) =
   let root = ctx.project_root in
-  let topics = ctx.config.topics in
+  let topics =
+    match Categories.load root with [] -> ctx.config.topics | slugs -> slugs
+  in
   let issues = ref [] in
   let try_readdir d =
     try Sys.readdir d |> Array.to_list with Sys_error _ -> []
@@ -98,6 +102,7 @@ let rule =
   Rule.v ~code:"E915" ~title:"Opam tag metadata"
     ~hint:
       "Every *.opam file must declare tags: [\"org:blacksun\" \"<topic>\" ...] \
-       where each topic is listed in the topics: field of .merlint. Edit the \
-       package's dune-project so dune regenerates the opam file."
+       where each topic is a slug declared in categories.toml at the project \
+       root (or listed in the topics: field of .merlint). Edit the package's \
+       dune-project so dune regenerates the opam file."
     ~category:Rule.Project_structure ~examples:[] ~pp (Project check)
