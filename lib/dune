@@ -6,6 +6,7 @@
  (libraries
   ocaml-merlin
   compiler-libs.common
+  merlin-lib.ocaml_typing
   eio
   re
   logs

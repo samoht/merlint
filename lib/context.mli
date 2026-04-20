@@ -16,6 +16,10 @@ type file = {
   content : string Lazy.t;  (** File content (lazy). *)
   functions : (string * Ast.expr) list Lazy.t;
       (** Functions extracted from parsetree (lazy). *)
+  cmt : Ocaml_typing.Cmt_format.cmt_infos option Lazy.t;
+      (** Typed signature/structure from [_build]'s [.cmt]/[.cmti] (lazy).
+          [None] when the project hasn't been built yet or when the cmt
+          file cannot be read. *)
 }
 
 type project = {
@@ -64,6 +68,11 @@ val content : file -> string
 
 val functions : file -> (string * Ast.expr) list
 (** [functions file] returns functions field. *)
+
+val cmt : file -> Ocaml_typing.Cmt_format.cmt_infos option
+(** [cmt file] returns the parsed [.cmt]/[.cmti] for [file] when
+    available, [None] otherwise. The result is cached on the context so
+    repeated rule queries share a single read. *)
 
 (** {2 Project context accessors} *)
 

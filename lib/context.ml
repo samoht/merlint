@@ -15,6 +15,7 @@ type file = {
   outline : Outline.t Lazy.t;
   content : string Lazy.t;
   functions : (string * Ast.expr) list Lazy.t;
+  cmt : Ocaml_typing.Cmt_format.cmt_infos option Lazy.t;
 }
 
 type project = {
@@ -55,6 +56,17 @@ let file ~filename ~config ~project_root ~outline ~dump =
          Log.debug (fun m ->
              m "Context: extracted %d functions" (List.length ast));
          ast);
+    cmt =
+      lazy
+        (match Merlin.Project.cmt filename with
+        | None -> None
+        | Some cmt_path -> (
+            try Some (Ocaml_typing.Cmt_format.read_cmt cmt_path)
+            with exn ->
+              Log.debug (fun m ->
+                  m "Context: failed to read cmt for %s: %s" filename
+                    (Printexc.to_string exn));
+              None));
   }
 
 let test_module_of_file f =
@@ -132,6 +144,7 @@ let dump ctx =
 let outline ctx = Lazy.force ctx.outline
 let content ctx = Lazy.force ctx.content
 let functions ctx = Lazy.force ctx.functions
+let cmt ctx = Lazy.force ctx.cmt
 
 (* Project context accessors *)
 let all_files ctx = Lazy.force ctx.all_files
