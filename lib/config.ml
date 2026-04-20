@@ -10,6 +10,7 @@ type t = {
   max_underscores_in_name : int;
   min_name_length_underscore : int;
   allowed_words : string list;
+  topics : string list;
   (* Style rules *)
   allow_obj_magic : bool;
   allow_str_module : bool;
@@ -32,6 +33,7 @@ let default =
     max_underscores_in_name = 3;
     min_name_length_underscore = 5;
     allowed_words = [];
+    topics = [];
     (* Style defaults - all issues enabled *)
     allow_obj_magic = false;
     allow_str_module = false;
@@ -63,6 +65,18 @@ let parse_int value =
 (** Normalize config key from kebab-case to snake_case *)
 let normalize_key key = String.map (function '-' -> '_' | c -> c) key
 
+(** Parse comma or space separated list, optionally wrapped in [...] *)
+let parse_list value =
+  let stripped =
+    let v = String.trim value in
+    if String.length v >= 2 && v.[0] = '[' && v.[String.length v - 1] = ']' then
+      String.sub v 1 (String.length v - 2)
+    else v
+  in
+  String.split_on_char ',' stripped
+  |> List.concat_map (fun s -> String.split_on_char ' ' (String.trim s))
+  |> List.filter (fun s -> s <> "")
+
 (** Apply a configuration key-value pair to the config *)
 let apply_config config key value : t =
   match normalize_key key with
@@ -79,19 +93,8 @@ let apply_config config key value : t =
   | "min_name_length_underscore" ->
       { config with min_name_length_underscore = parse_int value }
   | "allowed_words" | "acronyms" ->
-      (* Parse list: "[EdDSA, ECDSA, SHA]" or "EdDSA, ECDSA, SHA" *)
-      let stripped =
-        let v = String.trim value in
-        if String.length v >= 2 && v.[0] = '[' && v.[String.length v - 1] = ']'
-        then String.sub v 1 (String.length v - 2)
-        else v
-      in
-      let words =
-        String.split_on_char ',' stripped
-        |> List.concat_map (fun s -> String.split_on_char ' ' (String.trim s))
-        |> List.filter (fun s -> s <> "")
-      in
-      { config with allowed_words = words }
+      { config with allowed_words = parse_list value }
+  | "topics" -> { config with topics = parse_list value }
   (* Style rules *)
   | "allow_obj_magic" -> { config with allow_obj_magic = parse_bool value }
   | "allow_str_module" -> { config with allow_str_module = parse_bool value }
@@ -150,6 +153,7 @@ let equal a b =
   && a.max_underscores_in_name = b.max_underscores_in_name
   && a.min_name_length_underscore = b.min_name_length_underscore
   && a.allowed_words = b.allowed_words
+  && a.topics = b.topics
   && a.allow_obj_magic = b.allow_obj_magic
   && a.allow_str_module = b.allow_str_module
   && a.allow_catch_all_exceptions = b.allow_catch_all_exceptions
@@ -162,10 +166,12 @@ let pp ppf t =
   Fmt.pf ppf
     "@[<v>{ max_complexity = %d; max_function_length = %d; max_nesting = %d; \
      exempt_data_definitions = %b; max_underscores_in_name = %d; \
-     min_name_length_underscore = %d; allow_obj_magic = %b; allow_str_module = \
-     %b; allow_catch_all_exceptions = %b; require_ocamlformat_file = %b; \
-     require_mli_files = %b }@]"
+     min_name_length_underscore = %d; topics = [%s]; allow_obj_magic = %b; \
+     allow_str_module = %b; allow_catch_all_exceptions = %b; \
+     require_ocamlformat_file = %b; require_mli_files = %b }@]"
     t.max_complexity t.max_function_length t.max_nesting
     t.exempt_data_definitions t.max_underscores_in_name
-    t.min_name_length_underscore t.allow_obj_magic t.allow_str_module
-    t.allow_catch_all_exceptions t.require_ocamlformat_file t.require_mli_files
+    t.min_name_length_underscore
+    (String.concat "; " t.topics)
+    t.allow_obj_magic t.allow_str_module t.allow_catch_all_exceptions
+    t.require_ocamlformat_file t.require_mli_files

@@ -126,6 +126,13 @@ let content =
             "**Interface Files**: Create `.mli` files for all public modules \
              to define clear interfaces and hide implementation details.";
           Rule "E505";
+          Paragraph
+            "**Opam Metadata**: Every package's opam file must declare `tags:` \
+             with an `org:*` marker and one or more topics from the canonical \
+             vocabulary configured in `.merlint`. The tag vocabulary powers \
+             topic-grouped indexes across the monorepo, so consistency \
+             matters.";
+          Rule "E915";
         ] );
     Section
       ( "Command-Line Applications",
