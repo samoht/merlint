@@ -45,6 +45,8 @@ type library_info = {
   name : string; (* Internal library name *)
   public_name : string option; (* Public library name *)
   files : Fpath.t list;
+  private_modules : string list;
+      (* Module names listed in (private_modules ...) *)
 }
 (** Information about a library stanza *)
 

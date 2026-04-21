@@ -30,11 +30,11 @@ Test bad example - should find missing test files:
   ✗ Some checks failed. See details above.
   [1]
 
-Test good example - should find no issues (includes bin/common.ml which is an executable module, not a library):
+Test good example - should find no issues (includes bin/common.ml which is an executable module, not a library, and lib/internal.ml which is a private module):
   $ merlint -B -r E605 good/
   Running merlint analysis...
   
-  Analyzing 9 files
+  Analyzing 10 files
   
   ✓ Code Quality (0 total issues)
   ✓ Code Style (0 total issues)

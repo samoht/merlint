@@ -1,2 +1,3 @@
 (library
- (name myproject))
+ (name myproject)
+ (private_modules internal))

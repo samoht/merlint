@@ -17,6 +17,8 @@ type library_info = {
   name : string; (* Internal library name *)
   public_name : string option; (* Public library name *)
   files : Fpath.t list;
+  private_modules : string list;
+      (* Module names listed in (private_modules ...) *)
 }
 
 type describe = {
@@ -119,12 +121,21 @@ let extract_modules_field = function
       result
   | _ -> []
 
+(** Extract module names from a (private_modules ...) field *)
+let extract_private_modules_field = function
+  | Sexp.List (Sexp.Atom "private_modules" :: modules) ->
+      List.filter_map
+        (function Sexp.Atom name -> Some name | _ -> None)
+        modules
+  | _ -> []
+
 type project_item =
   | Library of {
       name : string;
       public_name : string option;
       dir : Fpath.t;
       modules : string list;
+      private_modules : string list;
     }
   | Executable of { names : string list; dir : Fpath.t; modules : string list }
   | Test of {
@@ -196,8 +207,13 @@ let extract_project_item dir = function
           fields
       in
       let modules = List.concat_map extract_modules_field fields in
+      let private_modules =
+        List.concat_map extract_private_modules_field fields
+      in
       match name with
-      | Some n -> Some (Library { name = n; public_name; dir; modules })
+      | Some n ->
+          Some
+            (Library { name = n; public_name; dir; modules; private_modules })
       | None -> None)
   | Sexp.List (Sexp.Atom kind :: fields)
     when kind = "executable" || kind = "executables" ->
@@ -440,11 +456,12 @@ let describe_impl project_root =
   let libraries =
     structure
     |> List.filter_map (function
-      | Library { name; public_name; dir; modules } ->
+      | Library { name; public_name; dir; modules; private_modules } ->
           let files =
-            item_files (Library { name; public_name; dir; modules })
+            item_files
+              (Library { name; public_name; dir; modules; private_modules })
           in
-          Some ({ name; public_name; files } : library_info)
+          Some ({ name; public_name; files; private_modules } : library_info)
       | _ -> None)
   in
   let executables =
@@ -547,6 +564,7 @@ let synthetic files =
               name = "merlint_synthetic";
               public_name = None;
               files = lib_files;
+              private_modules = [];
             }
              : library_info);
          ]);
