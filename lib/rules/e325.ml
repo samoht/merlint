@@ -21,6 +21,13 @@ let kind_to_string = function
 let returns_option return_type =
   String.ends_with ~suffix:"option" (String.trim return_type)
 
+(** Stdlib-aligned [find_*] names whose return shape is a collection (not an
+    option): [List.find_all], [Hashtbl.find_all], etc. The name-shape is a
+    stable signal (the stdlib enshrines the convention); do not flag these
+    for returning a non-option. *)
+let is_stdlib_find_collection_name name =
+  name = "find_all" || name = "find_many"
+
 (** Check if a type is a type variable (e.g. ['a], ['b]) meaning merlin could
     not resolve the concrete type. *)
 let is_type_variable s =
@@ -54,7 +61,12 @@ let check_single_function filename name kind type_sig location =
                       "find_" ^ suffix);
                })
         else if
-          (String.starts_with ~prefix:"find_" n || n = "find") && not is_option
+          (String.starts_with ~prefix:"find_" n || n = "find")
+          && (not is_option)
+          (* [find_all] / [find_many] are the stdlib collection aggregators
+             ([List.find_all], etc.); their non-option return shape is the
+             convention, not a warning. *)
+          && not (is_stdlib_find_collection_name n)
         then
           Some
             (Issue.v ~loc
