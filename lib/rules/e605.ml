@@ -97,6 +97,16 @@ let library_file_set dune_desc =
   |> List.concat_map (fun (lib : Dune.library_info) -> lib.files)
   |> List.map (fun p -> String.lowercase_ascii (Fpath.to_string p))
 
+(** Collect the union of module names listed in [(private_modules ...)] across
+    all libraries. Private modules are not exposed outside their library, so
+    they cannot be referenced from a [test_<module>.ml] in a sibling test
+    stanza, and should not be required to have a test file. *)
+let private_module_set dune_desc =
+  Dune.libraries dune_desc
+  |> List.concat_map (fun (lib : Dune.library_info) -> lib.private_modules)
+  |> List.map String.lowercase_ascii
+  |> List.sort_uniq String.compare
+
 (** Build a set of file paths that belong to executables. *)
 let executable_file_set dune_desc =
   Dune.executables dune_desc |> List.concat_map snd
@@ -109,6 +119,7 @@ let check (ctx : Context.project) =
   let dune_desc = Context.dune_describe ctx in
   let lib_files = library_file_set dune_desc in
   let exec_files = executable_file_set dune_desc in
+  let private_modules = private_module_set dune_desc in
 
   (* E605 checks if library modules have corresponding test files.
      First check dune metadata, then check actual files being analyzed. *)
@@ -176,6 +187,10 @@ let check (ctx : Context.project) =
       (fun lib_mod ->
         (* Skip if this is already a test module *)
         if String.starts_with ~prefix:"test_" lib_mod then None
+        else if List.mem (String.lowercase_ascii lib_mod) private_modules then (
+          Logs.debug (fun m ->
+              m "E605: Skipping module '%s' (listed in private_modules)" lib_mod);
+          None)
         else
           (* Find the source file for this module, preferring library files *)
           let module_file = find_lib_source lib_mod in
