@@ -1,0 +1,10 @@
+(library
+ (name gs_a)
+ (modules main_a site_mod)
+ (generate_sites_module
+  (module site_mod)
+  (sites mypkg)))
+
+(library
+ (name gs_b)
+ (modules main_b))

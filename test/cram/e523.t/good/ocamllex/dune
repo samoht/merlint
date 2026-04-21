@@ -1,0 +1,9 @@
+(ocamllex lexer)
+
+(library
+ (name lex_a)
+ (modules main_a lexer))
+
+(library
+ (name lex_b)
+ (modules main_b))

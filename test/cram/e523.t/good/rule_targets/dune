@@ -1,0 +1,11 @@
+(rule
+ (target gen.ml)
+ (action (write-file %{target} "let x = 1")))
+
+(library
+ (name rt_a)
+ (modules main_a gen))
+
+(library
+ (name rt_b)
+ (modules main_b))
