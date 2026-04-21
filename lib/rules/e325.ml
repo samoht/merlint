@@ -23,8 +23,8 @@ let returns_option return_type =
 
 (** Stdlib-aligned [find_*] names whose return shape is a collection (not an
     option): [List.find_all], [Hashtbl.find_all], etc. The name-shape is a
-    stable signal (the stdlib enshrines the convention); do not flag these
-    for returning a non-option. *)
+    stable signal (the stdlib enshrines the convention); do not flag these for
+    returning a non-option. *)
 let is_stdlib_find_collection_name name =
   name = "find_all" || name = "find_many"
 

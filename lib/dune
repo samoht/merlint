@@ -14,8 +14,7 @@
   fpath
   vlog
   tty
-  jsont
-  jsont.bytesrw
+  json
   opam
   opam.bytesrw
   bytesrw

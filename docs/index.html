@@ -1451,7 +1451,7 @@ pre code {
   <h4>BAD</h4>
   <pre><code><span class="kw">let</span> test_parse () =
   <span class="kw">match</span> parse input <span class="kw">with</span>
-  | <span class="cn">Error</span> e -&gt; <span class="cn">Alcotest</span>.fail (<span class="cn">Fmt</span>.str &quot;<span class="cn">Parse</span> error: %s&quot; e)
+  | <span class="cn">Error</span> e -&gt; <span class="cn">Alcotest</span>.fail (<span class="cn">Fmt</span>.str &quot;<span class="cn">Parse</span> error: %s&quot; (<span class="cn">Json</span>.<span class="cn">Error</span>.to_string e))
   | <span class="cn">Ok</span> _ -&gt; ()
 
 <span class="kw">let</span> test_invalid () =
@@ -1462,7 +1462,7 @@ pre code {
   <h4>GOOD</h4>
   <pre><code><span class="kw">let</span> test_parse () =
   <span class="kw">match</span> parse input <span class="kw">with</span>
-  | <span class="cn">Error</span> e -&gt; <span class="cn">Alcotest</span>.failf &quot;<span class="cn">Parse</span> error: %s&quot; e
+  | <span class="cn">Error</span> e -&gt; <span class="cn">Alcotest</span>.failf &quot;<span class="cn">Parse</span> error: %s&quot; (<span class="cn">Json</span>.<span class="cn">Error</span>.to_string e)
   | <span class="cn">Ok</span> _ -&gt; ()
 
 <span class="kw">let</span> test_invalid () =

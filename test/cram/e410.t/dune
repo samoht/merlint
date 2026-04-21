@@ -1,4 +1,3 @@
 (library
  (name test_e410)
- (modules bad good)
  (flags -w -32))

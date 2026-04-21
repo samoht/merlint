@@ -1,9 +1,9 @@
 (** E331: Redundant Function Prefixes *)
 
-(** Stdlib-aligned [find_*] names where stripping the [find_] prefix would
-    lose information: [List.find_all], [Hashtbl.find_all], [List.find_map],
-    etc. The bare suffix ([all], [map]) alone isn't descriptive enough, and
-    the stdlib precedent establishes the full name as the natural form. *)
+(** Stdlib-aligned [find_*] names where stripping the [find_] prefix would lose
+    information: [List.find_all], [Hashtbl.find_all], [List.find_map], etc. The
+    bare suffix ([all], [map]) alone isn't descriptive enough, and the stdlib
+    precedent establishes the full name as the natural form. *)
 let is_stdlib_find_alias name =
   name = "find_all" || name = "find_map" || name = "find_many"
   || name = "find_index" || name = "find_last" || name = "find_first"

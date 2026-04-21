@@ -49,7 +49,7 @@ let rule =
           code =
             {|let test_parse () =
   match parse input with
-  | Error e -> Alcotest.fail (Fmt.str "Parse error: %s" e)
+  | Error e -> Alcotest.fail (Fmt.str "Parse error: %s" (Json.Error.to_string e))
   | Ok _ -> ()
 
 let test_invalid () =
@@ -61,7 +61,7 @@ let test_invalid () =
           code =
             {|let test_parse () =
   match parse input with
-  | Error e -> Alcotest.failf "Parse error: %s" e
+  | Error e -> Alcotest.failf "Parse error: %s" (Json.Error.to_string e)
   | Ok _ -> ()
 
 let test_invalid () =

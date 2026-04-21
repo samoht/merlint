@@ -1,4 +1,3 @@
 (library
  (name test_e617)
- (modules test_config test_parser test_user_auth)
  (libraries alcotest))

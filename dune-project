@@ -18,8 +18,7 @@
   ocaml
   dune
   bytesrw
-  jsont
-  cmdliner
+  json  cmdliner
   eio
   ocaml-merlin
   re

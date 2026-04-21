@@ -1,4 +1,4 @@
 (library
  (name e710_good)
  (public_name e710-good)
- (modules parser))
+)
