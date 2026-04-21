@@ -1,4 +1,3 @@
 (library
  (name test_e216)
- (modules bad good)
  (libraries fmt))

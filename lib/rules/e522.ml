@@ -17,11 +17,52 @@
 
 type payload = { package : string; file : string }
 
+let try_readdir d = try Sys.readdir d |> Array.to_list with Sys_error _ -> []
+
+let read_file path =
+  try
+    let ic = open_in path in
+    let n = in_channel_length ic in
+    let s = really_input_string ic n in
+    close_in ic;
+    Some s
+  with Sys_error _ -> None
+
+(** Collect every module name that appears in a [(modules ...)] field of a
+    library/executable/test stanza in [dune_path]. These names are claimed by a
+    specific stanza (often a sublibrary) and should not be flagged as "wrong
+    place" by E522 — the prefix is encoding the sublib's public name. *)
+let modules_explicitly_claimed dune_path =
+  match read_file dune_path with
+  | None -> []
+  | Some contents -> (
+      match Sexp.Value.parse_string_many contents with
+      | Error _ -> []
+      | Ok stanzas ->
+          let is_module_stanza = function
+            | "library" | "executable" | "executables" | "test" | "tests" ->
+                true
+            | _ -> false
+          in
+          List.concat_map
+            (function
+              | Sexp.List (Sexp.Atom kind :: fields) when is_module_stanza kind
+                ->
+                  List.concat_map
+                    (function
+                      | Sexp.List (Sexp.Atom "modules" :: atoms) ->
+                          List.filter_map
+                            (function
+                              | Sexp.Atom a -> Some (String.lowercase_ascii a)
+                              | _ -> None)
+                            atoms
+                      | _ -> [])
+                    fields
+              | _ -> [])
+            stanzas)
+
 let check (ctx : Context.project) =
   let root = ctx.project_root in
-  let try_readdir d =
-    try Sys.readdir d |> Array.to_list with Sys_error _ -> []
-  in
   let issues = ref [] in
   let packages = try_readdir root in
   List.iter
@@ -42,6 +83,9 @@ let check (ctx : Context.project) =
           (* Dune mangles [-] to [_] in module names. *)
           String.map (fun c -> if c = '-' then '_' else c) p ^ "_"
         in
+        let claimed =
+          modules_explicitly_claimed (Filename.concat lib_dir "dune")
+        in
         let has_ml name = Filename.check_suffix name ".ml" in
         List.iter
           (fun name ->
@@ -50,8 +94,12 @@ let check (ctx : Context.project) =
               && String.length name > String.length prefix + 3
               && String.sub name 0 (String.length prefix) = prefix
             then
-              let path = Filename.concat (Filename.concat pkg "lib") name in
-              issues := Issue.v { package = pkg; file = path } :: !issues)
+              let mod_name =
+                String.lowercase_ascii (Filename.chop_suffix name ".ml")
+              in
+              if not (List.mem mod_name claimed) then
+                let path = Filename.concat (Filename.concat pkg "lib") name in
+                issues := Issue.v { package = pkg; file = path } :: !issues)
           (try_readdir lib_dir))
     packages;
   !issues

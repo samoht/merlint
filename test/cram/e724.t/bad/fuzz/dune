@@ -1,4 +1,3 @@
 (executable
  (name fuzz_parser)
- (modules fuzz_parser)
  (libraries alcobar))

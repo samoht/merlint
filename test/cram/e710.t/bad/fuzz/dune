@@ -1,4 +1,3 @@
 (executable
  (name fuzz)
- (modules fuzz fuzz_missing)
  (libraries alcobar))
