@@ -1,0 +1,7 @@
+(library
+ (name uncov_a)
+ (modules a))
+
+(library
+ (name uncov_b)
+ (modules b))

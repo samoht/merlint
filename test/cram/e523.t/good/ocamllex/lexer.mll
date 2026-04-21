@@ -1,0 +1,3 @@
+{}
+rule tok = parse
+  | eof { () }

@@ -1,0 +1,11 @@
+(library
+ (name sel_a)
+ (modules main_a)
+ (libraries
+  (select chooser.ml from
+   (re -> chooser_re.ml)
+   (-> chooser_default.ml))))
+
+(library
+ (name sel_b)
+ (modules main_b))

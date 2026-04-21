@@ -66,7 +66,7 @@ let classify_modules rest =
     | Sexp.Atom a :: _ when String.length a > 0 && a.[0] = ':' -> Standard
     | Sexp.Atom "\\" :: _ -> Standard
     | Sexp.Atom a :: tl -> loop (a :: acc) tl
-    | _ :: tl -> loop acc tl
+    | Sexp.List _ :: _ -> Standard
   in
   loop [] rest
 
@@ -79,23 +79,87 @@ let stanza_modules = function
       Some (List.filter_map extract_modules_field fields)
   | _ -> None
 
+let module_of_atom atom =
+  let a = match atom with Sexp.Atom a -> a | _ -> "" in
+  if Filename.check_suffix a ".ml" || Filename.check_suffix a ".mli" then
+    [ Filename.remove_extension a ]
+  else []
+
+(** Pull module names produced by a [(select target from (cond -> branch) ...)]
+    form inside a [(libraries ...)] field. Both the generated [target] and every
+    source-side [branch] file are added, since both sit on disk (branches as
+    source, target as build output) and neither should trip the uncovered check.
+*)
+let select_modules libs =
+  let from_branch = function
+    | Sexp.List items ->
+        List.concat_map
+          (function Sexp.Atom a -> module_of_atom (Sexp.Atom a) | _ -> [])
+          items
+    | _ -> []
+  in
+  List.concat_map
+    (function
+      | Sexp.List (Sexp.Atom "select" :: Sexp.Atom target :: rest) ->
+          module_of_atom (Sexp.Atom target) @ List.concat_map from_branch rest
+      | _ -> [])
+    libs
+
+(** Module name produced by [(generate_sites_module (module foo) ...)]. *)
+let generate_sites_module_name fields =
+  List.concat_map
+    (function
+      | Sexp.List [ Sexp.Atom "module"; Sexp.Atom name ] -> [ name ] | _ -> [])
+    fields
+
+(** Modules pulled in by a single [library]/[executable(s)]/[test(s)] stanza's
+    sub-fields (select targets, generate_sites_module, copy_files outputs). *)
+let stanza_generator_modules fields =
+  List.concat_map
+    (function
+      | Sexp.List (Sexp.Atom "libraries" :: libs) -> select_modules libs
+      | Sexp.List (Sexp.Atom "generate_sites_module" :: gs) ->
+          generate_sites_module_name gs
+      | _ -> [])
+    fields
+
+(** Modules from [(copy_files ...)] / [(copy_files# ...)] stanzas. The source
+    argument may be a plain atom [../a/foo.ml] or [(files ../a/foo.ml)]. Globs
+    like [../a/*.ml] are not expanded — the result is approximate but errs on
+    the side of not flagging real generated files. *)
+let copy_files_modules rest =
+  let from_atom = function
+    | Sexp.Atom a when not (String.contains a '*') ->
+        module_of_atom (Sexp.Atom (Filename.basename a))
+    | _ -> []
+  in
+  List.concat_map
+    (function
+      | Sexp.Atom _ as a -> from_atom a
+      | Sexp.List (Sexp.Atom "files" :: atoms) ->
+          List.concat_map from_atom atoms
+      | Sexp.List _ -> [])
+    rest
+
 (** Collect generator-produced module names so they are not falsely reported as
-    uncovered. [(ocamllex x)] and [(menhir (modules x))] both produce [x.ml]; a
-    [(rule (target foo.ml) ...)] or [(rule (targets a.ml b.ml) ...)] likewise
-    produces one or more [.ml] files. *)
+    uncovered. Covered dune constructs:
+
+    - [(ocamllex x)] / [(menhir (modules x))] produce [x.ml].
+    - [(rule (target foo.ml) ...)] / [(rule (targets a.ml b.ml) ...)] produce
+      the listed [.ml] files.
+    - [(libraries (select t from (c -> b) ...))] inside a stanza produces the
+      [t] target and every branch file [b].
+    - [(generate_sites_module (module foo) ...)] inside a library stanza
+      produces [foo.ml].
+    - [(copy_files foo.ml)] / [(copy_files (files foo.ml))] drops [foo.ml] into
+      the current directory. *)
 let generator_modules stanzas =
   let from_rule fields =
-    let target_name atom =
-      let a = match atom with Sexp.Atom a -> a | _ -> "" in
-      if Filename.check_suffix a ".ml" || Filename.check_suffix a ".mli" then
-        [ Filename.remove_extension a ]
-      else []
-    in
     List.concat_map
       (function
-        | Sexp.List [ Sexp.Atom "target"; a ] -> target_name a
+        | Sexp.List [ Sexp.Atom "target"; a ] -> module_of_atom a
         | Sexp.List (Sexp.Atom "targets" :: atoms) ->
-            List.concat_map target_name atoms
+            List.concat_map module_of_atom atoms
         | _ -> [])
       fields
   in
@@ -113,7 +177,26 @@ let generator_modules stanzas =
               | _ -> [])
             fields
       | Sexp.List (Sexp.Atom "rule" :: fields) -> from_rule fields
+      | Sexp.List (Sexp.Atom kind :: fields) when is_module_stanza kind ->
+          stanza_generator_modules fields
+      | Sexp.List (Sexp.Atom cf :: rest)
+        when cf = "copy_files" || cf = "copy_files#" ->
+          copy_files_modules rest
       | _ -> [])
+    stanzas
+
+(** Directory-scanning directives that invalidate single-directory assumptions.
+    When [(include_subdirs unqualified)] or [(include_subdirs qualified)] is
+    present, modules in subdirectories belong to the stanza; we cannot decide
+    coverage without walking them, so the rule bails out. [(include_subdirs no)]
+    is the default and does not affect anything. *)
+let has_nontrivial_include_subdirs stanzas =
+  List.exists
+    (function
+      | Sexp.List [ Sexp.Atom "include_subdirs"; Sexp.Atom mode ]
+        when mode = "unqualified" || mode = "qualified" ->
+          true
+      | _ -> false)
     stanzas
 
 let ml_modules_in_dir dir =
@@ -128,6 +211,7 @@ let ml_modules_in_dir dir =
 let check_dune path contents =
   match Sexp.Value.parse_string_many contents with
   | Error _ -> None
+  | Ok stanzas when has_nontrivial_include_subdirs stanzas -> None
   | Ok stanzas -> (
       let module_stanzas = List.filter_map stanza_modules stanzas in
       match module_stanzas with
@@ -138,14 +222,19 @@ let check_dune path contents =
             Some (Issue.v { dune = path; kind = Redundant })
           else None
       | _ :: _ :: _ ->
-          (* Multiple module-accepting stanzas share a directory. Check that
-             every .ml in the dir is covered by some stanza's (modules ...)
-             field; if any stanza uses :standard we cannot evaluate it. *)
+          (* Multiple module-accepting stanzas share a directory. If any
+             stanza has no [(modules ...)] field at all, it implicitly claims
+             every remaining file via dune's auto-discovery, so coverage is
+             trivially complete. Likewise if any stanza uses [:standard] we
+             cannot evaluate it. *)
+          let any_implicit =
+            List.exists (function [] -> true | _ -> false) module_stanzas
+          in
           let all_specs = List.concat module_stanzas in
           let any_standard =
             List.exists (function Standard -> true | _ -> false) all_specs
           in
-          if any_standard then None
+          if any_implicit || any_standard then None
           else
             let covered =
               List.concat_map

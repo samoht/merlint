@@ -1,0 +1,9 @@
+(copy_files ../src/helpers.ml)
+
+(library
+ (name cf_a)
+ (modules main_a))
+
+(library
+ (name cf_b)
+ (modules main_b))
