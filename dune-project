@@ -30,4 +30,5 @@
   opam
   tty
   vlog
-  (alcotest :with-test)))
+  (alcotest :with-test)
+  loc))

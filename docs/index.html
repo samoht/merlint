@@ -1385,6 +1385,13 @@ pre code {
     </div>
     <div class="error-hint"><p>Create &lt;package&gt;/dune containing (env (dev (flags :standard %{dune-warnings}))), and bump &lt;package&gt;/dune-project to (lang dune 3.21) or newer. This mirrors the workspace-root dune so that a standalone opam build of the package still enforces strict warnings under the dev profile. Reference: alcobar/dune.</p></div>
 </div>
+<div class="error-card" id="E526">
+    <div>
+        <span class="error-code">E526</span>
+        <span class="error-title">Package dune-project must disable implicit transitive deps</span>
+    </div>
+    <div class="error-hint"><p>Add (implicit_transitive_deps false) to &lt;package&gt;/dune-project (or (implicit_transitive_deps false-if-hidden-includes-supported) if you need to keep compatibility with OCaml &lt; 5.2). Then audit each (libraries ...) clause to list any transitive deps the package actually uses directly. This makes (re_export ...) meaningful again and prevents deps from leaking into downstream opam depends via META requires.</p></div>
+</div>
 <h2 id="testing">Testing</h2>
 <div class="category">E600-E699 • Test coverage and test quality issues</div>
 <div class="error-card" id="E600">
