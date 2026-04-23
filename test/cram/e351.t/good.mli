@@ -13,3 +13,9 @@ val get_count : unit -> int
 val cache_get : int -> int option
 val cache_set : int -> int -> unit
 val cache_clear : unit -> unit
+
+(** User-defined [array] type shadowing Stdlib's - not a mutable primitive,
+    must not be flagged. *)
+type 'a array = Nil | Cons of 'a
+
+val users : int array
