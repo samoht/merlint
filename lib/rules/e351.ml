@@ -20,11 +20,9 @@ type payload = { kind : string; name : string }
 (** Payload for mutable state issues *)
 
 let is_stdlib_mutable (path : Merlin.Dump.name) =
-  match path.prefix with
-  | [ "Stdlib" ] ->
-      if path.base = "ref" then Some "ref"
-      else if path.base = "array" then Some "array"
-      else None
+  match (path.prefix, path.base) with
+  | [ "Stdlib" ], "ref" -> Some "ref"
+  | [ "Stdlib" ], "array" -> Some "array"
   | _ -> None
 
 let check (ctx : Context.file) =
