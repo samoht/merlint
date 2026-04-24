@@ -1,4 +1,5 @@
 (lang dune 3.21)
+(using mdx 0.4)
 (using directory-targets 0.1)
 (name merlint)
 (generate_opam_files true)
@@ -31,4 +32,5 @@
   tty
   vlog
   (alcotest :with-test)
+  (mdx :with-test)
   loc))
