@@ -61,25 +61,45 @@ Summary: ✗ 5 total issues
 ## Quick Start
 
 ### Installation
-```bash
-opam install . --deps-only
-dune build
-dune install
+
+Install with opam:
+
+```sh
+$ opam install merlint
+```
+
+If opam cannot find the package, it may not yet be released in the public
+`opam-repository`. Add the overlay repository, then install it:
+
+```sh
+$ opam repo add samoht https://tangled.org/gazagnaire.org/opam-overlay.git
+$ opam update
+$ opam install merlint
+```
+
+To build from source instead:
+
+<!-- $MDX non-deterministic=command -->
+```sh
+$ opam install . --deps-only
+$ dune build
+$ dune install
 ```
 
 ### Usage
-```bash
-# Analyse the entire project
-merlint
+<!-- $MDX non-deterministic=command -->
+```sh
+$ # Analyse the entire project
+$ merlint
 
-# Analyse specific files or directories
-merlint src/ lib/
+$ # Analyse specific files or directories
+$ merlint src/ lib/
 
-# Exclude directories
-merlint --exclude test/
+$ # Exclude directories
+$ merlint --exclude test/
 
-# Filter rules (e.g., run all rules except E110)
-merlint --rules A-E110
+$ # Filter rules (e.g., run all rules except E110)
+$ merlint --rules A-E110
 ```
 
 ## Configuration
@@ -118,19 +138,20 @@ documentation](https://samoht.github.io/merlint/)**.
 ## Integration
 
 ### Git Pre-commit Hook
-```bash
-# Add to .git/hooks/pre-commit
-#!/bin/bash
-echo "Running merlint analysis..."
-if command -v merlint >/dev/null 2>&1; then
-    merlint --exclude test/
-    if [ $? -ne 0 ]; then
-        echo "❌ Merlint found issues. Please fix them before committing."
-        exit 1
-    fi
-else
-    echo "⚠️  Warning: merlint not found. Skipping analysis."
-fi
+<!-- $MDX non-deterministic=command -->
+```sh
+$ # Add to .git/hooks/pre-commit
+$ #!/bin/bash
+$ echo "Running merlint analysis..."
+$ if command -v merlint >/dev/null 2>&1; then
+$     merlint --exclude test/
+$     if [ $? -ne 0 ]; then
+$         echo "❌ Merlint found issues. Please fix them before committing."
+$         exit 1
+$     fi
+$ else
+$     echo "⚠️  Warning: merlint not found. Skipping analysis."
+$ fi
 ```
 
 ### CI/CD
@@ -148,15 +169,16 @@ Merlint, see the official **[Style Guide](docs/STYLE_GUIDE.md)**.
 
 ## Development
 
-```bash
-# Run tests
-dune runtest
+<!-- $MDX non-deterministic=command -->
+```sh
+$ # Run tests
+$ dune runtest
 
-# Format code
-dune fmt
+$ # Format code
+$ dune fmt
 
-# Test on the codebase itself
-merlint lib/ bin/
+$ # Test on the codebase itself
+$ merlint lib/ bin/
 ```
 
 ### Architecture
