@@ -22,8 +22,9 @@ This script installs pre-commit and commit-msg hooks that ensure code quality be
 
 Run from the project root:
 
-```bash
-./scripts/setup-hooks.sh
+<!-- $MDX non-deterministic=command -->
+```sh
+$ ./scripts/setup-hooks.sh
 ```
 
 ### Notes
