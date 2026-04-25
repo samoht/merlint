@@ -9,9 +9,9 @@
   fpath
   fmt
   vlog
-  tty
+  nox-tty
   monopam-info
-  memtrace))
+  nox-memtrace))
 
 (executable
  (public_name merlint-doc-gen)

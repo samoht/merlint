@@ -27,13 +27,13 @@
   logs
   fmt
   astring
-  sexp
+  nox-sexp
   opam
-  tty
+  nox-tty
   vlog
   eio_main
-  memtrace
+  nox-memtrace
   monopam-info
   (alcotest :with-test)
   (mdx :with-test)
-  loc))
+  nox-loc))
