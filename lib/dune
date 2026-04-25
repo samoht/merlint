@@ -13,12 +13,12 @@
   astring
   fpath
   vlog
-  tty
+  nox-tty
   json
   opam
   opam.bytesrw
   bytesrw
-  sexp))
+  nox-sexp))
 
 (rule
  (target examples.ml)
