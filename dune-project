@@ -31,6 +31,9 @@
   opam
   tty
   vlog
+  eio_main
+  memtrace
+  monopam-info
   (alcotest :with-test)
   (mdx :with-test)
   loc))
