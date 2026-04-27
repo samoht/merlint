@@ -19,7 +19,7 @@
   ocaml
   dune
   bytesrw
-  json  cmdliner
+  nox-json  cmdliner
   eio
   ocaml-merlin
   re
@@ -28,7 +28,7 @@
   fmt
   astring
   nox-sexp
-  opam
+  nox-opam
   nox-tty
   vlog
   eio_main

@@ -14,9 +14,9 @@
   fpath
   vlog
   nox-tty
-  json
-  opam
-  opam.bytesrw
+  nox-json
+  nox-opam
+  nox-opam.bytesrw
   bytesrw
   nox-sexp))
 

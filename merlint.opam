@@ -13,7 +13,7 @@ depends: [
   "ocaml"
   "dune" {>= "3.21"}
   "bytesrw"
-  "json"
+  "nox-json"
   "cmdliner"
   "eio"
   "ocaml-merlin"
@@ -23,7 +23,7 @@ depends: [
   "fmt"
   "astring"
   "nox-sexp"
-  "opam"
+  "nox-opam"
   "nox-tty"
   "vlog"
   "eio_main"
