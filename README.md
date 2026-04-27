@@ -64,6 +64,7 @@ Summary: ✗ 5 total issues
 
 Install with opam:
 
+<!-- $MDX skip -->
 ```sh
 $ opam install merlint
 ```
@@ -71,6 +72,7 @@ $ opam install merlint
 If opam cannot find the package, it may not yet be released in the public
 `opam-repository`. Add the overlay repository, then install it:
 
+<!-- $MDX skip -->
 ```sh
 $ opam repo add samoht https://tangled.org/gazagnaire.org/opam-overlay.git
 $ opam update
@@ -79,7 +81,7 @@ $ opam install merlint
 
 To build from source instead:
 
-<!-- $MDX non-deterministic=command -->
+<!-- $MDX skip -->
 ```sh
 $ opam install . --deps-only
 $ dune build
