@@ -1,0 +1,6 @@
+(test
+ (name test))
+
+(rule
+ (alias regen-traces)
+ (action (run sh scripts/generate.sh)))
