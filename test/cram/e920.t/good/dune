@@ -1,0 +1,6 @@
+(env
+ (dev
+  (flags :standard %{dune-warnings})))
+
+(mdx
+ (files README.md))

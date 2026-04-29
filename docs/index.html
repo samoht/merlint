@@ -1749,6 +1749,13 @@ pre code {
     </div>
     <div class="error-hint"><p>Every *.opam file must declare tags: ["org:blacksun" "&lt;topic&gt;" ...] where each topic is a slug declared in categories.toml at the project root (or listed in the topics: field of .merlint). Edit the package's dune-project so dune regenerates the opam file.</p></div>
 </div>
+<div class="error-card" id="E920">
+    <div>
+        <span class="error-code">E920</span>
+        <span class="error-title">Untested OCaml code in documentation</span>
+    </div>
+    <div class="error-hint"><p>When a README.md, .mli or .mld contains OCaml code blocks (```ocaml fenced or {[ ... ]} odoc), add an (mdx (files &lt;file&gt;)) stanza to the same directory's dune file so the snippets are type-checked and run during dune test.</p></div>
+</div>
 
     <a href="#top" class="back-to-top">↑ Top</a>
 </body>
