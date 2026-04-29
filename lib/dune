@@ -12,9 +12,7 @@
   fmt
   astring
   fpath
-  vlog
   nox-tty
-  nox-json
   nox-opam
   nox-opam.bytesrw
   bytesrw
