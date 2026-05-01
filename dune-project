@@ -19,7 +19,7 @@
   ocaml
   dune
   bytesrw
-  nox-json  cmdliner
+  cmdliner
   eio
   ocaml-merlin
   re
