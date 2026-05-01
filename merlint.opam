@@ -13,7 +13,6 @@ depends: [
   "ocaml"
   "dune" {>= "3.21"}
   "bytesrw"
-  "nox-json"
   "cmdliner"
   "eio"
   "ocaml-merlin"
