@@ -15,7 +15,7 @@ Test bad example - generate.sh uses pip install --break-system-packages:
     Python deps must live in a venv. Never use pip install
     --break-system-packages. The generate.sh wrapper should create/reuse a venv
     automatically.
-    - (global) bad/foo/test/interop/oracle/scripts/generate.sh uses --break-system-packages
+    - bad/foo/test/interop/oracle/scripts/generate.sh:1:0: bad/foo/test/interop/oracle/scripts/generate.sh uses --break-system-packages
   ✓ Code Generation (0 total issues)
   
   ╭─────────────────┬───────────────────────────────────────────╮

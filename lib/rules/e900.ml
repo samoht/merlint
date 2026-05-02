@@ -41,7 +41,8 @@ let check (ctx : Context.project) =
           if has_wire then
             let c_dir = Filename.concat pkg_dir "c" in
             if not (Sys.file_exists c_dir && Sys.is_directory c_dir) then
-              issues := Issue.v { package = pkg } :: !issues)
+              let loc = Location.in_file (Filename.concat pkg "dune-project") in
+              issues := Issue.v ~loc { package = pkg } :: !issues)
     packages;
   !issues
 

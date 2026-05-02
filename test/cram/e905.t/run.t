@@ -16,7 +16,7 @@ Test bad example - foo.mli exposes Wire.struct_ symbol:
     Move struct_, module_, c_stubs, ml_stubs out of the .mli. These belong in
     c/gen.ml where they are used to generate EverParse 3D files and C stubs. The
     codec is the public API; the 3D projection is a build artifact.
-    - (global) foo/foo.mli exposes Wire EverParse symbol `struct_` in public API
+    - foo/foo.mli:1:0: foo/foo.mli exposes Wire EverParse symbol `struct_` in public API
   
   ╭─────────────────┬──────────────────────────────────────────╮
   │ Category        │ Issues                                   │

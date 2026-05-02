@@ -17,7 +17,8 @@ let check (ctx : Context.project) =
         if has_csv then
           let dune = Interop.dune_content d.path in
           if not (Astring.String.is_infix ~affix:"csv" dune) then
-            Some (Issue.v { dir = d.path })
+            let loc = Location.in_file (Filename.concat d.path "dune") in
+            Some (Issue.v ~loc { dir = d.path })
           else None
         else None
       else None)

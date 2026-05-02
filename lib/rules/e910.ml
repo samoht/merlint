@@ -108,7 +108,9 @@ let check (ctx : Context.project) =
                 findings := Undeclared feature :: !findings)
             detected;
           if !findings <> [] then
-            issues := Issue.v { package = pkg; findings = !findings } :: !issues))
+            let loc = Location.in_file (Filename.concat pkg "dune-project") in
+            issues :=
+              Issue.v ~loc { package = pkg; findings = !findings } :: !issues))
     packages;
   !issues
 

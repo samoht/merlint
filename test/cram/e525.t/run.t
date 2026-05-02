@@ -15,7 +15,7 @@ Test bad example - foo/ has .opam but no foo/dune with %{dune-warnings}:
     newer. This mirrors the workspace-root dune so that a standalone opam build of
     the package still enforces strict warnings under the dev profile. Reference:
     alcobar/dune.
-    - (global) foo has no root dune file; add foo/dune with (env (dev (flags :standard %{dune-warnings}))) so standalone opam builds fail on warnings
+    - bad/foo/dune:1:0: foo has no root dune file; add foo/dune with (env (dev (flags :standard %{dune-warnings}))) so standalone opam builds fail on warnings
   ✓ Test Quality (0 total issues)
   ✓ Interop Testing (0 total issues)
   ✓ Code Generation (0 total issues)

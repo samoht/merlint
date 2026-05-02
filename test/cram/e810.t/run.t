@@ -14,7 +14,7 @@ Test bad example - dune missing regen-traces alias:
     [E810] Missing regen-traces alias (1 issue)
     Every interop test dune file must define a regen-traces alias as the single
     trigger for refreshing traces: `(rule (alias regen-traces) ...)`.
-    - (global) Interop test bad/foo/test/interop/oracle/dune missing regen-traces alias
+    - bad/foo/test/interop/oracle/dune:1:0: Interop test bad/foo/test/interop/oracle/dune missing regen-traces alias
   ✓ Code Generation (0 total issues)
   
   ╭─────────────────┬──────────────────────────────────╮

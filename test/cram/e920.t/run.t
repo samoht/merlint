@@ -13,8 +13,8 @@ Bad: README.md and lib/foo.mli have OCaml code blocks but no mdx stanza referenc
     When a README.md, .mli or .mld contains OCaml code blocks (```ocaml fenced or
     {[ ... ]} odoc), add an (mdx (files <file>)) stanza to the same directory's
     dune file so the snippets are type-checked and run during dune test.
-    - (global) bad/lib/foo.mli: contains OCaml code blocks but bad/lib/dune has no (mdx ...) stanza
-    - (global) bad/README.md: contains OCaml code blocks but bad/dune has no (mdx ...) stanza
+    - bad/README.md:1:0: bad/README.md: contains OCaml code blocks but bad/dune has no (mdx ...) stanza
+    - bad/lib/foo.mli:1:0: bad/lib/foo.mli: contains OCaml code blocks but bad/lib/dune has no (mdx ...) stanza
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   ✓ Interop Testing (0 total issues)

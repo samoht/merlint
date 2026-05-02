@@ -15,7 +15,7 @@ Test bad example - rust script without Cargo.toml:
     Rust oracles must pin the upstream crate in Cargo.toml with a tagged version
     or git rev. This ensures reproducible trace generation without depending on
     local checkouts.
-    - (global) Rust oracle bad/foo/test/interop/oracle/scripts/ missing Cargo.toml
+    - bad/foo/test/interop/oracle/scripts/Cargo.toml:1:0: Rust oracle bad/foo/test/interop/oracle/scripts/ missing Cargo.toml
   ✓ Code Generation (0 total issues)
   
   ╭─────────────────┬──────────────────────────╮

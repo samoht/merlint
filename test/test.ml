@@ -8,6 +8,7 @@ let () = setup_log (Some Debug)
 let () =
   let suites =
     [
+      Test_categories.suite;
       Test_config.suite;
       Test_config_parser.suite;
       Test_rule_config.suite;

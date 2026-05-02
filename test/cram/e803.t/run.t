@@ -15,7 +15,7 @@ Test bad example - test.ml calls Sys.command:
     Interop tests must run from committed traces without needing the external tool
     at test time. The test.ml should only read trace files, never shell out to run
     the oracle. If you need the oracle, put it in the generator script.
-    - (global) Interop test bad/foo/test/interop/oracle/test.ml calls Sys.command — test must run from traces alone
+    - bad/foo/test/interop/oracle/test.ml:1:0: Interop test bad/foo/test/interop/oracle/test.ml calls Sys.command — test must run from traces alone
   ✓ Code Generation (0 total issues)
   
   ╭─────────────────┬───────────────────────────────────────────╮

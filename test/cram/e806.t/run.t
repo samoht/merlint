@@ -15,7 +15,7 @@ Test bad example - go script without go.mod:
     Go oracles must pin the upstream module in go.mod with a tagged version or
     pseudo-version. This ensures reproducible trace generation without depending
     on $GOPATH or local clones.
-    - (global) Go oracle bad/foo/test/interop/oracle/scripts/ missing go.mod
+    - bad/foo/test/interop/oracle/scripts/go.mod:1:0: Go oracle bad/foo/test/interop/oracle/scripts/ missing go.mod
   ✓ Code Generation (0 total issues)
   
   ╭─────────────────┬──────────────────────╮

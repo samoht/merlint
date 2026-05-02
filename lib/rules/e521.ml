@@ -41,9 +41,9 @@ let check (ctx : Context.project) =
             let full = Filename.concat test_dir name in
             let ok = try is_cram name full with Sys_error _ -> false in
             if ok then
-              issues :=
-                Issue.v { package = pkg; path = Filename.concat "test" name }
-                :: !issues)
+              let path = Filename.concat "test" name in
+              let loc = Location.in_file (Filename.concat pkg path) in
+              issues := Issue.v ~loc { package = pkg; path } :: !issues)
           entries)
     packages;
   !issues

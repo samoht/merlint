@@ -26,7 +26,10 @@ let check_mli_documentation_content ~module_name ~filename content =
   let rec check_first_non_empty = function
     | [] ->
         (* Empty file - missing documentation *)
-        Some (Issue.v { module_name; file = filename })
+        Some
+          (Issue.v
+             ~loc:(Location.in_file filename)
+             { module_name; file = filename })
     | line :: rest ->
         let trimmed = String.trim line in
         if trimmed = "" then check_first_non_empty rest
@@ -35,7 +38,11 @@ let check_mli_documentation_content ~module_name ~filename content =
           (* Regular comment - skip it and continue looking *)
           if ends_with "*)" trimmed then check_first_non_empty rest
           else check_first_non_empty (skip_comment rest)
-        else Some (Issue.v { module_name; file = filename })
+        else
+          Some
+            (Issue.v
+               ~loc:(Location.in_file filename)
+               { module_name; file = filename })
   in
   check_first_non_empty lines
 

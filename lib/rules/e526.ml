@@ -79,14 +79,16 @@ let check (ctx : Context.project) =
         if (not (is_dir pkg_dir)) || not (has_opam_file pkg_dir) then []
         else
           let dp_path = Filename.concat pkg_dir "dune-project" in
+          let loc = Location.in_file dp_path in
           match read_file dp_path with
           | None -> []
           | Some c -> (
               match find_setting c with
               | Some "false" | Some "false-if-hidden-includes-supported" -> []
               | Some "true" ->
-                  [ Issue.v { package = name; kind = Set_to_true } ]
-              | Some _ | None -> [ Issue.v { package = name; kind = Missing } ]))
+                  [ Issue.v ~loc { package = name; kind = Set_to_true } ]
+              | Some _ | None ->
+                  [ Issue.v ~loc { package = name; kind = Missing } ]))
     (try_readdir root)
 
 let pp ppf { package; kind } =

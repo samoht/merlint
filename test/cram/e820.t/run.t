@@ -14,7 +14,7 @@ Test bad example - test.ml hand-rolls CSV parsing:
     [E820] Hand-rolled CSV parsing (1 issue)
     Use csv (Csv.decode_file with a Csv.Row codec) for CSV trace parsing. Never
     hand-roll CSV readers with open_in/input_line/split_on_char.
-    - (global) Interop test bad/foo/test/interop/oracle/test.ml hand-rolls CSV parsing instead of csv
+    - bad/foo/test/interop/oracle/test.ml:1:0: Interop test bad/foo/test/interop/oracle/test.ml hand-rolls CSV parsing instead of csv
   ✓ Code Generation (0 total issues)
   
   ╭─────────────────┬───────────────────────────────╮

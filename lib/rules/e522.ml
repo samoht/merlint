@@ -99,7 +99,8 @@ let check (ctx : Context.project) =
               in
               if not (List.mem mod_name claimed) then
                 let path = Filename.concat (Filename.concat pkg "lib") name in
-                issues := Issue.v { package = pkg; file = path } :: !issues)
+                let loc = Location.in_file path in
+                issues := Issue.v ~loc { package = pkg; file = path } :: !issues)
           (try_readdir lib_dir))
     packages;
   !issues

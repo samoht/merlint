@@ -79,7 +79,9 @@ let scan_dir dune_path =
       in
       if (not is_doc) || List.mem name covered then None
       else if has_ocaml_code path then
-        Some (Issue.v { dune_file = dune_path; doc_file = name })
+        Some
+          (Issue.v ~loc:(Location.in_file path)
+             { dune_file = dune_path; doc_file = name })
       else None)
     entries
 

@@ -21,8 +21,10 @@ let check (ctx : Context.project) =
             with Sys_error _ -> false
         with Sys_error _ -> false
       in
-      let has_cargo = Sys.file_exists (Filename.concat scripts "Cargo.toml") in
-      if has_rust && not has_cargo then Some (Issue.v { dir = d.path })
+      let cargo = Filename.concat scripts "Cargo.toml" in
+      let has_cargo = Sys.file_exists cargo in
+      if has_rust && not has_cargo then
+        Some (Issue.v ~loc:(Location.in_file cargo) { dir = d.path })
       else None)
     dirs
 

@@ -12,7 +12,9 @@ let check (ctx : Context.project) =
           not
             (Astring.String.is_infix ~affix:"regen-traces" content
             || Astring.String.is_infix ~affix:"regen_traces" content)
-        then Some (Issue.v { dir = d.path })
+        then
+          let loc = Location.in_file (Filename.concat d.path "dune") in
+          Some (Issue.v ~loc { dir = d.path })
         else None
       else None)
     dirs

@@ -19,7 +19,8 @@ let check (ctx : Context.project) =
           && Astring.String.is_infix ~affix:"','" content
         in
         if has_open_in && has_input_line && has_split_comma then
-          Some (Issue.v { dir = d.path })
+          let loc = Location.in_file (Filename.concat d.path "test.ml") in
+          Some (Issue.v ~loc { dir = d.path })
         else None
       else None)
     dirs

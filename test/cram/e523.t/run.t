@@ -19,8 +19,8 @@ directory silently drop files from the build:
     otherwise some module is silently dropped. Prefer splitting into sibling
     directories when the stanza split is a design choice rather than a build
     requirement.
-    - (global) bad/uncovered/dune has multiple stanzas but the (modules ...) fields do not cover c; those .ml files are silently excluded from the build
-    - (global) bad/redundant/dune has a single stanza with a redundant (modules ...) field; drop it and let dune auto-discover the .ml files
+    - bad/redundant/dune:1:0: bad/redundant/dune has a single stanza with a redundant (modules ...) field; drop it and let dune auto-discover the .ml files
+    - bad/uncovered/dune:1:0: bad/uncovered/dune has multiple stanzas but the (modules ...) fields do not cover c; those .ml files are silently excluded from the build
   ✓ Test Quality (0 total issues)
   ✓ Interop Testing (0 total issues)
   ✓ Code Generation (0 total issues)

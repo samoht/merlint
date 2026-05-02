@@ -16,7 +16,11 @@ let check (ctx : Context.project) =
       let has_requirements =
         Sys.file_exists (Filename.concat scripts "requirements.txt")
       in
-      if has_python && not has_requirements then Some (Issue.v { dir = d.path })
+      if has_python && not has_requirements then
+        let loc =
+          Location.in_file (Filename.concat scripts "requirements.txt")
+        in
+        Some (Issue.v ~loc { dir = d.path })
       else None)
     dirs
 
