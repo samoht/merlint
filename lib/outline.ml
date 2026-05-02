@@ -18,7 +18,6 @@ type kind = Merlin.symbol_kind =
   | Method
   | Label
 
-type position = Merlin.position = { line : int; col : int }
 type item = Merlin.outline_item
 type t = Merlin.outline
 
@@ -34,8 +33,6 @@ let count_parameters = Merlin.count_parameters
 (* {2 Merlint-specific helpers} *)
 
 let pp = Merlin.pp_outline
-let pp_item = Merlin.pp_outline_item
-let pp_kind = Merlin.pp_symbol_kind
 
 let location filename (item : item) =
   let loc = item.location in

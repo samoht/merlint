@@ -18,9 +18,6 @@ type kind = Merlin.symbol_kind =
   | Method
   | Label
 
-type position = Merlin.position = { line : int; col : int }
-(** Position in file. *)
-
 type item = Merlin.outline_item
 (** Outline item. *)
 
@@ -52,12 +49,6 @@ val count_parameters : string -> string -> int
 
 val pp : t Fmt.t
 (** [pp] is a pretty-printer for outline. *)
-
-val pp_item : item Fmt.t
-(** [pp_item] is a pretty-printer for outline item. *)
-
-val pp_kind : kind Fmt.t
-(** [pp_kind] is a pretty-printer for symbol kind. *)
 
 val location : string -> item -> Location.t option
 (** [location filename item] extracts location for merlint's Location.t. *)
