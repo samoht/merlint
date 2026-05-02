@@ -70,9 +70,6 @@ module Nesting : sig
       node. *)
 end
 
-val pp_expr : expr Fmt.t
-(** [pp_expr] pretty-prints an AST expression for debugging. *)
-
 val trailing_record_fields : expr -> int
 (** [trailing_record_fields expr] returns the number of fields in a trailing
     record literal at the tail position of [expr]. Returns 0 if the expression

@@ -284,24 +284,6 @@ let extract_functions filename =
         m "Failed to parse %s: %s" filename (Printexc.to_string exn));
     []
 
-let rec pp_expr ppf = function
-  | If_then_else { cond; then_expr; else_expr } ->
-      Fmt.pf ppf "If(%a, %a, %a)" pp_expr cond pp_expr then_expr
-        (Fmt.option pp_expr) else_expr
-  | Match { cases; _ } -> Fmt.pf ppf "Match(%d)" cases
-  | Try { expr; handlers } -> Fmt.pf ppf "Try(%a, %d)" pp_expr expr handlers
-  | Function { params; body } -> Fmt.pf ppf "Fun(%d, %a)" params pp_expr body
-  | Let { bindings; body } ->
-      Fmt.pf ppf "Let([%a], %a)"
-        (Fmt.list ~sep:Fmt.comma (fun ppf (n, e) ->
-             Fmt.pf ppf "%s=%a" n pp_expr e))
-        bindings pp_expr body
-  | Sequence exprs ->
-      Fmt.pf ppf "Seq[%a]" (Fmt.list ~sep:Fmt.comma pp_expr) exprs
-  | List -> Fmt.pf ppf "List"
-  | Record { fields } -> Fmt.pf ppf "Record(%d)" fields
-  | Other -> Fmt.pf ppf "Other"
-
 (** Standard functions for type t *)
 let equal a b = a.functions = b.functions
 
