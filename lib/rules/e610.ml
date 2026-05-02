@@ -81,12 +81,21 @@ let check ctx =
   in
 
   (* Check if [module_name] (e.g. "Dump") is referenced as a module in any
-     library source file. Looks for patterns like [Foo.Dump.] or
-     [module Dump]. *)
+     library source file. Looks for the three textual forms a library can take
+     to use the module:
+     - [Foo.Dump.…] / [Dump.…]    — direct member access
+     - [module Dump = …]           — defines it
+     - [… = Dump] / [… : Dump]     — re-exports it via [module X = Dump] or
+                                     [module X : module type of Dump]; the
+                                     wrapper-alias case where [Dump] is the
+                                     RHS, never appearing with a trailing
+                                     dot. *)
   let is_referenced_in_library module_name =
     let cap_name = String.capitalize_ascii module_name in
     let pattern_dot = cap_name ^ "." in
     let pattern_module = "module " ^ cap_name in
+    let pattern_eq = "= " ^ cap_name in
+    let pattern_colon = ": " ^ cap_name in
     List.exists
       (fun src_path ->
         try
@@ -95,6 +104,8 @@ let check ctx =
           in
           Astring.String.is_infix ~affix:pattern_dot content
           || Astring.String.is_infix ~affix:pattern_module content
+          || Astring.String.is_infix ~affix:pattern_eq content
+          || Astring.String.is_infix ~affix:pattern_colon content
         with _ -> false)
       library_source_files
   in
@@ -123,11 +134,29 @@ let check ctx =
                         expected_path);
                   let found =
                     let expected_lc = String.lowercase_ascii expected_path in
+                    let expected_dir =
+                      String.lowercase_ascii (Filename.dirname expected_path)
+                    in
+                    let expected_base =
+                      String.lowercase_ascii (Filename.basename expected_path)
+                    in
                     List.exists
                       (fun lib_path ->
-                        String.lowercase_ascii lib_path = expected_lc
-                        || String.lowercase_ascii (Filename.basename lib_path)
-                           = expected_lc)
+                        let lib_lc = String.lowercase_ascii lib_path in
+                        lib_lc = expected_lc
+                        ||
+                        (* Same module basename and same sublib bucket:
+                           a sublib subdir like [lib/<sub>/<dir>/<mod>.ml] is
+                           an acceptable home for a test at
+                           [test/<sub>/test_<mod>.ml]. *)
+                        let lib_base =
+                          String.lowercase_ascii (Filename.basename lib_path)
+                        in
+                        lib_base = expected_base
+                        && (expected_dir = "."
+                           || String.starts_with ~prefix:(expected_dir ^ "/")
+                                lib_lc
+                           || (expected_dir = "" && lib_lc = lib_base)))
                       library_module_paths
                   in
                   (* Also check if the expected module name is referenced as a
