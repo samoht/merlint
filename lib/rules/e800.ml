@@ -9,7 +9,7 @@ let check (ctx : Context.project) =
       if d.has_scripts then
         let generate_sh = Filename.concat d.path "scripts/generate.sh" in
         if not (Sys.file_exists generate_sh) then
-          Some (Issue.v { dir = d.path })
+          Some (Issue.v ~loc:(Location.in_file generate_sh) { dir = d.path })
         else None
       else None)
     dirs

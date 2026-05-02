@@ -15,7 +15,7 @@ Test bad example - python script without requirements.txt:
     Python oracles must pin dependencies in requirements.txt with exact versions
     (e.g. crcmod==1.7). This ensures reproducible trace generation without
     depending on local installs.
-    - (global) Python oracle bad/foo/test/interop/oracle/scripts/ missing requirements.txt
+    - bad/foo/test/interop/oracle/scripts/requirements.txt:1:0: Python oracle bad/foo/test/interop/oracle/scripts/ missing requirements.txt
   ✓ Code Generation (0 total issues)
   
   ╭─────────────────┬────────────────────────────────╮

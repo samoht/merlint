@@ -28,7 +28,9 @@ let check (ctx : Context.project) =
         in
         match bad with
         | [] -> None
-        | file :: _ -> Some (Issue.v { dir = d.path; file }))
+        | file :: _ ->
+            let loc = Location.in_file (Filename.concat scripts file) in
+            Some (Issue.v ~loc { dir = d.path; file }))
     dirs
 
 let pp ppf { dir; file } =

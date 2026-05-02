@@ -16,7 +16,7 @@ Test bad example - foo uses Wire.Codec but has no c/ directory:
     Add a c/ directory with gen.ml that calls Wire_3d.main to generate .3d files
     and C validators from the Wire codec definitions. See ocaml-clcw/c/ for the
     pattern.
-    - (global) foo uses Wire.Codec but has no c/ directory for EverParse 3D generation
+    - foo/dune-project:1:0: foo uses Wire.Codec but has no c/ directory for EverParse 3D generation
   
   ╭─────────────────┬───────────────────────────────────────╮
   │ Category        │ Issues                                │

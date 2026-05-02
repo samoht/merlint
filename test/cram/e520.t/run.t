@@ -13,7 +13,7 @@ Test bad example - package uses src/ instead of lib/:
     The monorepo convention is lib/ for library code. Rename src/ to lib/ with
     `git mv`; no dune changes are needed because dune auto-discovers modules in
     either directory.
-    - (global) pkg uses src/ for its library; rename to lib/ to match the monorepo convention
+    - pkg/dune-project:1:0: pkg uses src/ for its library; rename to lib/ to match the monorepo convention
   ✓ Test Quality (0 total issues)
   ✓ Interop Testing (0 total issues)
   ✓ Code Generation (0 total issues)

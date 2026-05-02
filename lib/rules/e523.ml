@@ -219,7 +219,9 @@ let check_dune path contents =
       | [ specs ] ->
           (* Single module-accepting stanza. An explicit list is redundant. *)
           if List.exists (function Explicit _ -> true | _ -> false) specs then
-            Some (Issue.v { dune = path; kind = Redundant })
+            Some
+              (Issue.v ~loc:(Location.in_file path)
+                 { dune = path; kind = Redundant })
           else None
       | _ :: _ :: _ ->
           (* Multiple module-accepting stanzas share a directory. If any
@@ -255,7 +257,10 @@ let check_dune path contents =
                 files
             in
             if missing = [] then None
-            else Some (Issue.v { dune = path; kind = Uncovered missing }))
+            else
+              Some
+                (Issue.v ~loc:(Location.in_file path)
+                   { dune = path; kind = Uncovered missing }))
 
 let check (ctx : Context.project) =
   let dunes = find_dune_files ctx.project_root in

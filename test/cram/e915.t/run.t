@@ -14,9 +14,9 @@ Test bad example - three packages each with a different tag problem:
     topic is a slug declared in categories.toml at the project root (or listed in
     the topics: field of .merlint). Edit the package's dune-project so dune
     regenerates the opam file.
-    - (global) pkg3/pkg3.opam: unknown topic "weird-new-topic"
-    - (global) pkg2/pkg2.opam: tags: missing org:blacksun marker
-    - (global) pkg1/pkg1.opam: missing tags: field
+    - pkg1/pkg1.opam:1:0: pkg1/pkg1.opam: missing tags: field
+    - pkg2/pkg2.opam:1:0: pkg2/pkg2.opam: tags: missing org:blacksun marker
+    - pkg3/pkg3.opam:1:0: pkg3/pkg3.opam: unknown topic "weird-new-topic"
   ✓ Test Quality (0 total issues)
   ✓ Interop Testing (0 total issues)
   ✓ Code Generation (0 total issues)

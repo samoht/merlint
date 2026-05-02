@@ -16,59 +16,29 @@
     [cmd_verse/] with one file per leaf, or use [cmd_verse_<name>.ml] siblings).
 *)
 
-type payload = { file : string; count : int }
+type payload = { count : int }
 
-let cmd_v_re =
-  Re.compile (Re.seq [ Re.bow; Re.str "Cmd"; Re.char '.'; Re.str "v"; Re.eow ])
+let count_cmd_v_in_dump (dump : Merlin.Dump.t) =
+  List.fold_left
+    (fun acc (elt : Merlin.Dump.elt) ->
+      match (elt.name.prefix, elt.name.base) with
+      | [ "Cmd" ], "v" -> acc + 1
+      | _ -> acc)
+    0 dump.identifiers
 
-let count_cmd_v contents = Re.all cmd_v_re contents |> List.length
+let check (ctx : Context.file) =
+  if not (Filename.check_suffix ctx.filename ".ml") then []
+  else
+    let count = count_cmd_v_in_dump (Context.dump ctx) in
+    if count >= 2 then
+      [ Issue.v ~loc:(Location.in_file ctx.filename) { count } ]
+    else []
 
-let read_file path =
-  try
-    let ic = open_in path in
-    let n = in_channel_length ic in
-    let s = really_input_string ic n in
-    close_in ic;
-    Some s
-  with Sys_error _ -> None
-
-let find_ml_files root =
-  let try_readdir d =
-    try Sys.readdir d |> Array.to_list with Sys_error _ -> []
-  in
-  let is_dir p = try Sys.is_directory p with Sys_error _ -> false in
-  let rec walk dir acc =
-    List.fold_left
-      (fun acc name ->
-        if
-          name = "_build" || name = "_opam" || name = ".git"
-          || String.starts_with ~prefix:"." name
-        then acc
-        else
-          let p = Filename.concat dir name in
-          if is_dir p then walk p acc
-          else if Filename.check_suffix name ".ml" then p :: acc
-          else acc)
-      acc (try_readdir dir)
-  in
-  walk root []
-
-let check (ctx : Context.project) =
-  let files = find_ml_files ctx.project_root in
-  List.filter_map
-    (fun path ->
-      match read_file path with
-      | None -> None
-      | Some contents ->
-          let count = count_cmd_v contents in
-          if count >= 2 then Some (Issue.v { file = path; count }) else None)
-    files
-
-let pp ppf { file; count } =
+let pp ppf { count } =
   Fmt.pf ppf
-    "%s defines %d Cmdliner subcommands in one file; split them into one file \
-     per subcommand"
-    file count
+    "defines %d Cmdliner subcommands in one file; split them into one file per \
+     subcommand"
+    count
 
 let rule =
   Rule.v ~code:"E524" ~title:"Multiple Cmdliner subcommands in one file"
@@ -79,4 +49,4 @@ let rule =
        reference it from main.ml's Cmd.group. Sub-subcommands of a grouped \
        subcommand follow the same rule — use cmd_<parent>/<leaf>.ml or \
        cmd_<parent>_<leaf>.ml siblings."
-    ~examples:[] ~pp (Project check)
+    ~examples:[] ~pp (File check)

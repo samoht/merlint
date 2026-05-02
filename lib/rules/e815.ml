@@ -9,7 +9,8 @@ let check (ctx : Context.project) =
       if d.has_dune then
         let content = Interop.dune_content d.path in
         if Astring.String.is_infix ~affix:"REGEN_TRACES" content then
-          Some (Issue.v { dir = d.path })
+          let loc = Location.in_file (Filename.concat d.path "dune") in
+          Some (Issue.v ~loc { dir = d.path })
         else None
       else None)
     dirs

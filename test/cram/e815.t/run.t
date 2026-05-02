@@ -15,7 +15,7 @@ Test bad example - dune uses REGEN_TRACES env sentinel:
     The regen-traces alias should be the single entry point — no REGEN_TRACES=1
     env var sentinel. Remove the (enabled_if ...) guard so `dune build
     @regen-traces` works directly.
-    - (global) Interop test bad/foo/test/interop/oracle/dune uses REGEN_TRACES sentinel
+    - bad/foo/test/interop/oracle/dune:1:0: Interop test bad/foo/test/interop/oracle/dune uses REGEN_TRACES sentinel
   ✓ Code Generation (0 total issues)
   
   ╭─────────────────┬─────────────────────────────────────╮

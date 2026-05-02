@@ -14,7 +14,7 @@ Test bad example - foo/lib/foo_bar.ml has package-prefixed module name:
     similarly). Dune's default wrapped mode will expose it as <Pkg>.Foo. For
     something that really needs its own public name, create a sublib directory
     (<pkg>/lib_foo/ with its own dune) instead.
-    - (global) foo/lib/foo_bar.ml uses package-prefixed module name; drop the prefix and let dune's wrapping expose it as a submodule, or move it into a sublib directory
+    - foo/lib/foo_bar.ml:1:0: foo/lib/foo_bar.ml uses package-prefixed module name; drop the prefix and let dune's wrapping expose it as a submodule, or move it into a sublib directory
   ✓ Test Quality (0 total issues)
   ✓ Interop Testing (0 total issues)
   ✓ Code Generation (0 total issues)

@@ -14,7 +14,7 @@ Test bad example - foo/test/interop/oracle/scripts/ exists but no generate.sh:
     [E800] Missing generate.sh (1 issue)
     Every interop test must have scripts/generate.sh as the single entry point for
     trace regeneration via `dune build @regen-traces`.
-    - (global) Interop test bad/foo/test/interop/oracle/scripts/ is missing generate.sh
+    - bad/foo/test/interop/oracle/scripts/generate.sh:1:0: Interop test bad/foo/test/interop/oracle/scripts/ is missing generate.sh
   ✓ Code Generation (0 total issues)
   
   ╭─────────────────┬───────────────────────────╮

@@ -13,7 +13,7 @@ Test bad example - cram test at test/ rather than test/cram/:
     Move cram tests (.t files or .t/ directories) under the package's test/cram/
     umbrella. Shared driver exes go in test/cram/helpers/; shell setup goes in
     test/cram/helpers.sh (sourced via (setup_scripts helpers.sh)).
-    - (global) pkg/test/foo.t should live under pkg/test/cram/
+    - pkg/test/foo.t:1:0: pkg/test/foo.t should live under pkg/test/cram/
   ✓ Test Quality (0 total issues)
   ✓ Interop Testing (0 total issues)
   ✓ Code Generation (0 total issues)

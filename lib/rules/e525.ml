@@ -91,24 +91,30 @@ let check (ctx : Context.project) =
         let pkg_dir = Filename.concat root name in
         if (not (is_dir pkg_dir)) || not (has_opam_file pkg_dir) then []
         else
+          let dune_path = Filename.concat pkg_dir "dune" in
+          let dp_path = Filename.concat pkg_dir "dune-project" in
+          let dune_loc = Location.in_file dune_path in
+          let dp_loc = Location.in_file dp_path in
           let dune_issue =
-            let dune_path = Filename.concat pkg_dir "dune" in
             if not (Sys.file_exists dune_path) then
-              [ Issue.v { package = name; kind = Missing_dune } ]
+              [ Issue.v ~loc:dune_loc { package = name; kind = Missing_dune } ]
             else
               match read_file dune_path with
               | Some c when contains_warnings c -> []
-              | _ -> [ Issue.v { package = name; kind = Missing_warnings } ]
+              | _ ->
+                  [
+                    Issue.v ~loc:dune_loc
+                      { package = name; kind = Missing_warnings };
+                  ]
           in
           let lang_issue =
-            let dp_path = Filename.concat pkg_dir "dune-project" in
             match read_file dp_path with
             | None -> []
             | Some c -> (
                 match parse_lang_version c with
                 | Some v when version_too_old v ->
                     [
-                      Issue.v
+                      Issue.v ~loc:dp_loc
                         { package = name; kind = Lang_too_old { version = v } };
                     ]
                 | _ -> [])

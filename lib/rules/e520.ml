@@ -23,7 +23,9 @@ let check (ctx : Context.project) =
         let has_ml f = Filename.check_suffix f ".ml" in
         if Sys.file_exists src_dir && Sys.is_directory src_dir then
           let src_has_ml = List.exists has_ml (try_readdir src_dir) in
-          if src_has_ml then issues := Issue.v { package = pkg } :: !issues)
+          if src_has_ml then
+            let loc = Location.in_file (Filename.concat pkg "dune-project") in
+            issues := Issue.v ~loc { package = pkg } :: !issues)
     packages;
   !issues
 

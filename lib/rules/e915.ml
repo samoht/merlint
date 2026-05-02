@@ -84,7 +84,9 @@ let check (ctx : Context.project) =
           (fun opam ->
             let findings = check_opam_file ~topics pkg_dir opam in
             if findings <> [] then
-              issues := Issue.v { package = pkg; opam; findings } :: !issues)
+              let loc = Location.in_file (Filename.concat pkg opam) in
+              issues :=
+                Issue.v ~loc { package = pkg; opam; findings } :: !issues)
           (list_opam_files pkg_dir))
     packages;
   !issues

@@ -16,7 +16,7 @@ Test bad example - foo/dune-project lacks (implicit_transitive_deps false):
     to list any transitive deps the package actually uses directly. This makes
     (re_export ...) meaningful again and prevents deps from leaking into
     downstream opam depends via META requires.
-    - (global) foo/dune-project is missing (implicit_transitive_deps false); transitive deps leak into downstream META requires and pollute consumers' opam depends
+    - bad/foo/dune-project:1:0: foo/dune-project is missing (implicit_transitive_deps false); transitive deps leak into downstream META requires and pollute consumers' opam depends
   ✓ Test Quality (0 total issues)
   ✓ Interop Testing (0 total issues)
   ✓ Code Generation (0 total issues)

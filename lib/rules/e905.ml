@@ -55,9 +55,9 @@ let check (ctx : Context.project) =
                     (fun sym ->
                       let pattern = "val " ^ sym in
                       if Astring.String.is_infix ~affix:pattern content then
-                        issues :=
-                          Issue.v { file = Filename.concat pkg f; symbol = sym }
-                          :: !issues)
+                        let file = Filename.concat pkg f in
+                        let loc = Location.in_file file in
+                        issues := Issue.v ~loc { file; symbol = sym } :: !issues)
                     wire_symbols
                 with _ -> ())
               mli_files)
