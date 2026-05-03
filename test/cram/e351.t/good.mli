@@ -19,3 +19,13 @@ val cache_clear : unit -> unit
 type 'a array = Nil | Cons of 'a
 
 val users : int array
+
+(** Functions that take or return [Stdlib.array] / [Stdlib.ref] are NOT
+    exposed mutable state — the array/ref is a transient parameter or
+    return value, not a module-level singleton. Only top-level non-function
+    [val] declarations of array/ref type are flagged. *)
+val process : float Stdlib.array -> int Stdlib.array -> int
+
+val build : int -> float Stdlib.array
+
+val update_counter : int Stdlib.ref -> unit
