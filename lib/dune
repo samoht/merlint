@@ -16,7 +16,8 @@
   nox-opam
   nox-opam.bytesrw
   bytesrw
-  nox-sexp))
+  nox-sexp
+  unix))
 
 (rule
  (target examples.ml)

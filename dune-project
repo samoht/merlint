@@ -3,6 +3,7 @@
 (using directory-targets 0.1)
 (name merlint)
 (generate_opam_files true)
+(implicit_transitive_deps false)
 
 
 (source (tangled gazagnaire.org/merlint))

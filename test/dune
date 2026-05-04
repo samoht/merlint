@@ -1,6 +1,16 @@
 (test
  (name test)
- (libraries merlint alcotest eio_main logs.fmt fmt fmt.tty))
+ (libraries
+  merlint
+  ocaml-merlin
+  alcotest
+  eio
+  eio_main
+  fpath
+  unix
+  logs.fmt
+  fmt
+  fmt.tty))
 
 ; TODO: Re-enable merlint self-check after fixing all issues
 ; (rule
