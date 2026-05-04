@@ -5,9 +5,11 @@
  (libraries
   merlint
   cmdliner
+  eio
   eio_main
   fpath
   fmt
+  logs
   vlog
   nox-tty
   monopam-info
@@ -17,7 +19,7 @@
  (public_name merlint-doc-gen)
  (name generate_docs)
  (modules generate_docs)
- (libraries merlint unix re))
+ (libraries merlint unix re fmt))
 
 (executable
  (public_name merlint-style-gen)
@@ -33,4 +35,4 @@
 (executable
  (name check_test_integrity)
  (modules check_test_integrity)
- (libraries merlint unix re))
+ (libraries merlint unix re fmt))
