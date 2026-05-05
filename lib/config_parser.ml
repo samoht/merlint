@@ -29,13 +29,22 @@ let parse_setting line =
       Some (key, value)
   | _ -> None
 
+(** Strip surrounding double or single quotes if both present. *)
+let strip_quotes s =
+  let n = String.length s in
+  if
+    n >= 2
+    && ((s.[0] = '"' && s.[n - 1] = '"') || (s.[0] = '\'' && s.[n - 1] = '\''))
+  then String.sub s 1 (n - 2)
+  else s
+
 (** Parse a rule entry in YAML list format *)
 let parse_rule_yaml line =
   (* Format: "  - files: lib/prose*.ml" or "    exclude: [E330, E410]" *)
   let line = String.trim line in
   if String.starts_with ~prefix:"- files:" line then
     let files_pattern =
-      String.sub line 8 (String.length line - 8) |> String.trim
+      String.sub line 8 (String.length line - 8) |> String.trim |> strip_quotes
     in
     Some (`Files files_pattern)
   else if String.starts_with ~prefix:"exclude:" line then
