@@ -1,0 +1,13 @@
+# Cram fixtures are intentional good/bad samples that cram tests run
+# merlint against; they are not merlint source.
+rules:
+  - files: "**/*.ml"
+    exclude: [*]
+  - files: "**/*.mli"
+    exclude: [*]
+  - files: "**/dune"
+    exclude: [*]
+  - files: "**/*.md"
+    exclude: [*]
+  - files: "**/*.mld"
+    exclude: [*]

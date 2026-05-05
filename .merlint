@@ -2,32 +2,8 @@
 settings:
   max-complexity: 12
   max-function-length: 80
-  
+
 rules:
   # Test example for demonstration
   - files: lib/rules/test*.ml
     exclude: [E100]
-  # Cram fixtures under test/cram/*.t/ are intentional good/bad samples
-  # that cram tests run merlint against; they are not merlint source.
-  # File paths come through workspace-relative when run from outside merlint/,
-  # hence the merlint/ prefix.
-  - files: merlint/test/cram/**/*.ml
-    exclude: [*]
-  - files: merlint/test/cram/**/*.mli
-    exclude: [*]
-  - files: merlint/test/cram/**/dune
-    exclude: [*]
-  - files: merlint/test/cram/**/*.md
-    exclude: [*]
-  - files: merlint/test/cram/**/*.mld
-    exclude: [*]
-  - files: test/cram/**/*.ml
-    exclude: [*]
-  - files: test/cram/**/*.mli
-    exclude: [*]
-  - files: test/cram/**/dune
-    exclude: [*]
-  - files: test/cram/**/*.md
-    exclude: [*]
-  - files: test/cram/**/*.mld
-    exclude: [*]
