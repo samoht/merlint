@@ -126,6 +126,10 @@ let load_from_path path =
       | None -> acc)
     default config_files
 
+let for_file file =
+  let dir = if Sys.file_exists file then Filename.dirname file else file in
+  load_from_path dir
+
 (** Standard functions for type t *)
 let equal a b =
   a.max_complexity = b.max_complexity

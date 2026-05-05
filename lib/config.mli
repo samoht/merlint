@@ -48,3 +48,8 @@ val load_from_path : string -> t
 (** [load_from_path path] loads and merges all .merlint config files from [path]
     up to the workspace root. Settings from closer files override outer ones;
     rule exclusions accumulate. *)
+
+val for_file : string -> t
+(** [for_file file] returns the config that applies to [file], merging .merlint
+    files from [file]'s directory up to the workspace root. Settings from closer
+    files override outer ones; rule exclusions accumulate. *)
