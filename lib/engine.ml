@@ -66,8 +66,19 @@ let setup_analysis ~filter ~dune_describe project_root =
   in
   (config, files_to_analyze, project_ctx, enabled_rules)
 
+let config_lookup () =
+  let cache = Hashtbl.create 32 in
+  fun file ->
+    let dir = if Sys.file_exists file then Filename.dirname file else file in
+    match Hashtbl.find_opt cache dir with
+    | Some c -> c
+    | None ->
+        let c = Config.for_file file in
+        Hashtbl.add cache dir c;
+        c
+
 let run_project_rules ?profiling enabled_rules project_ctx =
-  let config = project_ctx.Context.config in
+  let config_for = config_lookup () in
   let excluded_acc = ref [] in
   let issues =
     enabled_rules
@@ -80,8 +91,9 @@ let run_project_rules ?profiling enabled_rules project_ctx =
             match Rule.Run.location r with
             | Some loc ->
                 let file = loc.Location.file in
+                let cfg = config_for file in
                 let skip =
-                  Rule_config.should_exclude config.exclusions ~rule:code ~file
+                  Rule_config.should_exclude cfg.exclusions ~rule:code ~file
                 in
                 if skip then
                   excluded_acc := { rule = code; file } :: !excluded_acc;
@@ -91,9 +103,10 @@ let run_project_rules ?profiling enabled_rules project_ctx =
   in
   (issues, List.rev !excluded_acc)
 
-let analyze_single_file ?profiling ~backend ~config ~project_root ~file_rules
-    filepath =
+let analyze_single_file ?profiling ~backend ~config_for ~project_root
+    ~file_rules filepath =
   let filename = Fpath.to_string filepath in
+  let config = config_for filename in
   let excluded_acc = ref [] in
   let issues =
     try
@@ -135,7 +148,7 @@ let analyze_single_file ?profiling ~backend ~config ~project_root ~file_rules
 
 let run ~filter ~dune_describe ?profiling project_root =
   Log.info (fun m -> m "Starting analysis of %s" project_root);
-  let config, files_to_analyze, project_ctx, enabled_rules =
+  let _config, files_to_analyze, project_ctx, enabled_rules =
     setup_analysis ~filter ~dune_describe project_root
   in
   let project_issues, project_excluded =
@@ -143,8 +156,10 @@ let run ~filter ~dune_describe ?profiling project_root =
   in
   let file_rules = List.filter Rule.is_file_scoped enabled_rules in
   let backend = Merlin.v () in
+  let config_for = config_lookup () in
   let analyze_file =
-    analyze_single_file ?profiling ~backend ~config ~project_root ~file_rules
+    analyze_single_file ?profiling ~backend ~config_for ~project_root
+      ~file_rules
   in
   let file_results = List.map analyze_file files_to_analyze in
   Merlin.close backend;
