@@ -1061,7 +1061,7 @@ pre code {
 
 <span class="kw">let</span> int_to_string n = string_of_int n
 
-<span class="kw">let</span> bytes_to_hex (b : bytes) =
+<span class="kw">let</span> hex_of_bytes (b : bytes) =
   <span class="kw">let</span> buf = <span class="cn">Buffer</span>.create (<span class="cn">Bytes</span>.length b * <span class="nu">2</span>) <span class="kw">in</span>
   <span class="cn">Bytes</span>.iter (<span class="kw">fun</span> c -&gt; <span class="cn">Buffer</span>.add_string buf (<span class="cn">Printf</span>.sprintf &quot;%02x&quot; (<span class="cn">Char</span>.code c))) b;
   <span class="cn">Buffer</span>.contents buf

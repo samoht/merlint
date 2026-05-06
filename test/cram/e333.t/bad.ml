@@ -2,7 +2,7 @@
 
 let int_to_string n = string_of_int n
 
-let bytes_to_hex (b : bytes) =
+let hex_of_bytes (b : bytes) =
   let buf = Buffer.create (Bytes.length b * 2) in
   Bytes.iter (fun c -> Buffer.add_string buf (Printf.sprintf "%02x" (Char.code c))) b;
   Buffer.contents buf
