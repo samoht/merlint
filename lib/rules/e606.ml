@@ -4,7 +4,7 @@ type payload = { test_module : string; library_name : string }
 
 let check (ctx : Context.project) =
   let dune_describe = Context.dune_describe ctx in
-  let mod_to_libs = Dune.module_to_libraries dune_describe in
+  let mod_to_libs = Dune.libraries_of_module dune_describe in
   let issues = ref [] in
   List.iter
     (fun (test_info : Dune.test_info) ->

@@ -263,7 +263,7 @@ let scan_directory_for_ml_files item_type dir =
       m "%s in %a found %d files" item_type Fpath.pp dir (List.length !files));
   !files
 
-let modules_to_files dir modules =
+let files_of_modules dir modules =
   List.concat_map
     (fun m ->
       let ml = Fpath.(dir / (m ^ ".ml")) |> Fpath.normalize in
@@ -279,7 +279,7 @@ let item_files = function
             m "Library in %a has explicit modules: %a" Fpath.pp dir
               Fmt.(list ~sep:comma string)
               modules);
-        modules_to_files dir modules)
+        files_of_modules dir modules)
   | Executable { names = _; dir; modules } ->
       if modules = [] then scan_directory_for_ml_files "Executable" dir
       else (
@@ -287,7 +287,7 @@ let item_files = function
             m "Executable in %a has explicit modules: %a" Fpath.pp dir
               Fmt.(list ~sep:comma string)
               modules);
-        modules_to_files dir modules)
+        files_of_modules dir modules)
   | Test { dir; modules; _ } ->
       if modules = [] then scan_directory_for_ml_files "Test" dir
       else (
@@ -295,7 +295,7 @@ let item_files = function
             m "Test in %a has explicit modules: %a" Fpath.pp dir
               Fmt.(list ~sep:comma string)
               modules);
-        modules_to_files dir modules)
+        files_of_modules dir modules)
   | Cram_test _ -> []
 
 (** Get all project source files from describe *)
@@ -592,7 +592,7 @@ let add_module_lib acc lib_name file =
     | None -> (module_name, [ lib_name ]) :: acc
   else acc
 
-let module_to_libraries describe =
+let libraries_of_module describe =
   List.fold_left
     (fun acc (lib_info : library_info) ->
       List.fold_left

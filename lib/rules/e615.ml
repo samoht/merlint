@@ -6,7 +6,7 @@ type payload = { test_module : string; test_runner_file : string }
 let should_exclude_test_file dune_describe test_file declared_libraries =
   if declared_libraries = [] then false
   else
-    let mod_to_libs = Dune.module_to_libraries dune_describe in
+    let mod_to_libs = Dune.libraries_of_module dune_describe in
     let resolved =
       List.map (Dune.resolve_library dune_describe) declared_libraries
     in

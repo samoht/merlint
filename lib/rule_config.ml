@@ -13,7 +13,7 @@ let add pattern exclusions = pattern :: exclusions
 let merge a b = a @ b
 
 (** Convert glob pattern to regex pattern *)
-let glob_to_regex pattern =
+let regex_of_glob pattern =
   let rec convert acc = function
     | [] -> List.rev acc
     | '*' :: '*' :: '/' :: rest ->
@@ -48,7 +48,7 @@ let glob_to_regex pattern =
 (** Check if a file path matches a glob pattern *)
 let matches_pattern pattern file =
   try
-    let regex_pattern = glob_to_regex pattern in
+    let regex_pattern = regex_of_glob pattern in
     let regex = Re.compile (Re.Perl.re regex_pattern) in
     Re.execp regex file
   with Re.Perl.Parse_error | Re.Perl.Not_supported ->
