@@ -137,7 +137,15 @@ let check (ctx : Context.file) =
       let name = item.name in
       match (item.kind, Outline.location filename item) with
       | Outline.Value, Some loc -> (
-          if List.mem name allowed then None
+          if
+            (* Names starting with underscore are deliberately marked as
+             unused (warning 32). Renaming them yields a still-leading-_
+             name, which keeps the warning, OR a name without _ which
+             trips warning 32. Either way the rename isn't safe — leave
+             these alone. *)
+            List.mem name allowed
+          then None
+          else if String.length name > 0 && name.[0] = '_' then None
           else
             match split_to_pattern name with
             | Some pair when is_action_name pair -> None
