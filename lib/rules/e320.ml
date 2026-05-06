@@ -4,8 +4,9 @@ open Examples
 type payload = { name : string; kind : string; length : int; max_length : int }
 (** Payload for long identifier name *)
 
-let check ctx =
+let check (ctx : Context.file) =
   let max_underscores = 4 in
+  let allowed = ctx.config.allowed_words in
   let ast = Context.dump ctx in
   let all_elts =
     ast.identifiers @ ast.patterns @ ast.modules @ ast.types @ ast.exceptions
@@ -20,7 +21,11 @@ let check ctx =
           (fun count c -> if c = '_' then count + 1 else count)
           0 base_name
       in
-      if underscore_count > max_underscores && String.length base_name > 5 then
+      if
+        underscore_count > max_underscores
+        && String.length base_name > 5
+        && not (List.mem base_name allowed)
+      then
         match Merlin.Dump.location elt with
         | Some loc ->
             (* Use full name for display but count underscores only in base *)
