@@ -156,7 +156,16 @@ let check ctx =
                         && (expected_dir = "."
                            || String.starts_with ~prefix:(expected_dir ^ "/")
                                 lib_lc
-                           || (expected_dir = "" && lib_lc = lib_base)))
+                           || (expected_dir = "" && lib_lc = lib_base)
+                           ||
+                           (* Sublibs that don't sit under a [lib/] dir
+                              (e.g. [ocaml-tls/eio/]) keep their package
+                              prefix in [lib_lc]. Match when the
+                              expected [<dir>/<base>] appears as a path
+                              segment anywhere in the library path. *)
+                           Astring.String.is_infix
+                             ~affix:("/" ^ expected_dir ^ "/" ^ expected_base)
+                             lib_lc))
                       library_module_paths
                   in
                   (* Also check if the expected module name is referenced as a
