@@ -36,7 +36,11 @@ let split_to_pattern name =
           (* [src] starts with [to_] (e.g. [to_first_and]) — likely a name
            composed around an existing [to_X] function rather than a
            [src_to_dst] conversion. *)
-        else if String.starts_with ~prefix:"to_" src then None
+        else if String.starts_with ~prefix:"to_" src then
+          None
+          (* [dst] starts with a digit (e.g. [image_to_2d]) — swapping
+           would yield [2d_of_image], not a valid OCaml identifier. *)
+        else if dst.[0] >= '0' && dst.[0] <= '9' then None
         else Some (src, dst)
 
 (** Action verbs that take [_to_<noun>] without being conversions: [add_to_set],
