@@ -8,7 +8,7 @@ let check ctx =
   let underscore_bindings =
     List.filter_map
       (fun (elt : Merlin.Dump.elt) ->
-        let name = Merlin.Dump.name_to_string elt.name in
+        let name = Merlin.Dump.string_of_name elt.name in
         if
           String.length name > 0
           && name.[0] = '_'
@@ -29,7 +29,7 @@ let check ctx =
       let usage_locations =
         List.filter_map
           (fun (elt : Merlin.Dump.elt) ->
-            let ident_name = Merlin.Dump.name_to_string elt.name in
+            let ident_name = Merlin.Dump.string_of_name elt.name in
             if ident_name = binding_name then Merlin.Dump.location elt else None)
           (Context.dump ctx).identifiers
       in

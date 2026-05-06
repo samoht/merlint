@@ -29,7 +29,7 @@ let check (ctx : Context.file) =
         match Merlin.Dump.location elt with
         | Some loc ->
             (* Use full name for display but count underscores only in base *)
-            let full_name = Merlin.Dump.name_to_string elt.name in
+            let full_name = Merlin.Dump.string_of_name elt.name in
             Some
               (Issue.v ~loc
                  {

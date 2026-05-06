@@ -38,7 +38,7 @@ let check (ctx : Context.file) =
             | Some kind ->
                 Some
                   (Issue.v ~loc
-                     { kind; name = Merlin.Dump.name_to_string s.name }))
+                     { kind; name = Merlin.Dump.string_of_name s.name }))
         | _ -> None)
       dump.value_sigs
 
