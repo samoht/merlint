@@ -9,21 +9,35 @@ type payload = { function_name : string; suggested : string }
     [None] otherwise — we only flag canonical conversion names, not action verbs
     like [add_to_set] / [walk_to_root]. *)
 let split_to_pattern name =
+  let pat = "_to_" in
+  let plen = String.length pat in
+  let rec count_occurrences i n =
+    if i + plen > String.length name then n
+    else if String.sub name i plen = pat then count_occurrences (i + 1) (n + 1)
+    else count_occurrences (i + 1) n
+  in
   let rec find_last_to i acc =
-    let pat = "_to_" in
-    let len = String.length pat in
-    if i + len > String.length name then acc
-    else if String.sub name i len = pat then find_last_to (i + 1) (Some i)
+    if i + plen > String.length name then acc
+    else if String.sub name i plen = pat then find_last_to (i + 1) (Some i)
     else find_last_to (i + 1) acc
   in
-  match find_last_to 0 None with
-  | None -> None
-  | Some i ->
-      let src = String.sub name 0 i in
-      let dst = String.sub name (i + 4) (String.length name - i - 4) in
-      if src = "" || dst = "" then None
-      else if String.contains dst '_' then None
-      else Some (src, dst)
+  (* Multiple [_to_] occurrences suggest a conjunctive name like
+     [to_first_and_to_last] — not a single conversion. Skip. *)
+  if count_occurrences 0 0 <> 1 then None
+  else
+    match find_last_to 0 None with
+    | None -> None
+    | Some i ->
+        let src = String.sub name 0 i in
+        let dst = String.sub name (i + plen) (String.length name - i - plen) in
+        if src = "" || dst = "" then None
+        else if String.contains dst '_' then
+          None
+          (* [src] starts with [to_] (e.g. [to_first_and]) — likely a name
+           composed around an existing [to_X] function rather than a
+           [src_to_dst] conversion. *)
+        else if String.starts_with ~prefix:"to_" src then None
+        else Some (src, dst)
 
 (** Action verbs that take [_to_<noun>] without being conversions: [add_to_set],
     [walk_to_root], [print_to_buffer], [layer_write_to_top], [scroll_to_bottom].
