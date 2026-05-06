@@ -11,9 +11,9 @@ type t = {
   min_name_length_underscore : int;
   allowed_words : string list;
       (** Words treated as atomic by naming rules (e.g. EdDSA, ECDSA). Parsed
-          from [allowed_words] or [acronyms] in [.merlint]. *)
+          from [allowed_words] or [acronyms] in [merlint.toml]. *)
   topics : string list;
-      (** Canonical opam tag vocabulary. Parsed from [topics] in [.merlint].
+      (** Canonical opam tag vocabulary. Parsed from [topics] in [merlint.toml].
           When non-empty, E915 rejects any opam tag not in this list (plus the
           [org:*] namespace prefix which is always allowed). *)
   (* Style rules *)
@@ -42,14 +42,16 @@ val pp : t Fmt.t
 (** Configuration file loading. *)
 
 val file : string -> string option
-(** [file path] finds the outermost .merlint config file from the given path. *)
+(** [file path] finds the outermost merlint.toml config file from the given
+    path. *)
 
 val load_from_path : string -> t
-(** [load_from_path path] loads and merges all .merlint config files from [path]
-    up to the workspace root. Settings from closer files override outer ones;
-    rule exclusions accumulate. *)
+(** [load_from_path path] loads and merges all merlint.toml config files from
+    [path] up to the workspace root. Settings from closer files override outer
+    ones; rule exclusions accumulate. *)
 
 val for_file : string -> t
-(** [for_file file] returns the config that applies to [file], merging .merlint
-    files from [file]'s directory up to the workspace root. Settings from closer
-    files override outer ones; rule exclusions accumulate. *)
+(** [for_file file] returns the config that applies to [file], merging
+    merlint.toml files from [file]'s directory up to the workspace root.
+    Settings from closer files override outer ones; rule exclusions accumulate.
+*)

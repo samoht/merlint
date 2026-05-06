@@ -129,8 +129,8 @@ let content =
           Paragraph
             "**Opam Metadata**: Every package's opam file must declare `tags:` \
              with an `org:*` marker and one or more topics from the canonical \
-             vocabulary configured in `.merlint`. The tag vocabulary powers \
-             topic-grouped indexes across the monorepo, so consistency \
+             vocabulary configured in `merlint.toml`. The tag vocabulary \
+             powers topic-grouped indexes across the monorepo, so consistency \
              matters.";
           Rule "E915";
         ] );

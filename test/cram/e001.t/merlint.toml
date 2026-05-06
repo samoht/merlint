@@ -1,3 +1,2 @@
 # Configuration for E001 test
-settings:
-  max-complexity: 5
+max-complexity = 5

@@ -1,4 +1,4 @@
-(** Configuration file parser for .merlint files with YAML-like syntax. *)
+(** Configuration file parser for [merlint.toml] (TOML 1.1). *)
 
 type parsed_config = {
   settings : (string * string) list;
@@ -7,8 +7,9 @@ type parsed_config = {
 (** [parsed_config] represents parsed configuration data. *)
 
 val parse : string -> parsed_config
-(** [parse content] parses configuration content and returns parsed data. *)
+(** [parse content] parses TOML content. Raises [Failure] on a malformed
+    document. *)
 
 val parse_file : string -> parsed_config option
 (** [parse_file path] loads and parses a configuration file at the given path.
-*)
+    Returns [None] when the file does not exist. *)

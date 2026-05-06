@@ -15,6 +15,7 @@
   nox-tty
   nox-opam
   nox-opam.bytesrw
+  nox-toml
   bytesrw
   nox-sexp
   unix))
