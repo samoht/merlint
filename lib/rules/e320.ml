@@ -5,7 +5,7 @@ type payload = { name : string; kind : string; length : int; max_length : int }
 (** Payload for long identifier name *)
 
 let check (ctx : Context.file) =
-  let max_underscores = 4 in
+  let max_underscores = ctx.config.max_underscores_in_name in
   let allowed = ctx.config.allowed_words in
   let ast = Context.dump ctx in
   let all_elts =

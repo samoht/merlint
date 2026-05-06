@@ -30,7 +30,7 @@ let default =
     max_nesting = 4;
     exempt_data_definitions = true;
     (* Naming defaults *)
-    max_underscores_in_name = 3;
+    max_underscores_in_name = 4;
     min_name_length_underscore = 5;
     allowed_words = [];
     topics = [];
