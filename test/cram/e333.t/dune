@@ -1,0 +1,9 @@
+(executable
+ (name bad)
+ (modules bad)
+ (flags -w -32-69))
+
+(executable
+ (name good)
+ (modules good)
+ (flags -w -32-69))
