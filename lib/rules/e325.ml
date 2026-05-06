@@ -4,7 +4,7 @@ type payload = { function_name : string; expected : string }
 (** Payload for bad function naming *)
 
 (** Convert Outline.kind to string *)
-let kind_to_string = function
+let string_of_kind = function
   | Outline.Value -> "Value"
   | Outline.Type -> "Type"
   | Outline.Module -> "Module"
@@ -88,7 +88,7 @@ let check ctx =
     (fun item ->
       let location = Outline.location filename item in
       check_single_function filename (Some item.name)
-        (Some (kind_to_string item.kind))
+        (Some (string_of_kind item.kind))
         item.type_sig location)
     outline_data
 

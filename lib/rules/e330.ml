@@ -4,7 +4,7 @@ type payload = { item_name : string; module_name : string; item_type : string }
 (** Payload for redundant module name issues *)
 
 (** Convert Outline.kind to string *)
-let kind_to_string = function
+let string_of_kind = function
   | Outline.Value -> "Value"
   | Outline.Type -> "Type"
   | Outline.Module -> "Module"
@@ -54,7 +54,7 @@ let check (ctx : Context.file) =
       let location = Outline.location filename item in
       let item_name_lower = String.lowercase_ascii name in
       if has_redundant_prefix item_name_lower module_name filename then
-        match (kind_to_string item.kind, item.type_sig, location) with
+        match (string_of_kind item.kind, item.type_sig, location) with
         | "Value", Some ts, Some loc when is_function_type ts ->
             Some (create_redundant_name_issue name module_name loc "function")
         | "Value", Some _, Some loc ->
