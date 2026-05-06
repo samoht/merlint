@@ -291,7 +291,7 @@ let extract_location_info loc_start loc_end =
 (** Get the string representation of a core type. The [~wrap_arrows] parameter
     controls whether arrow types should be wrapped in parentheses (used for
     function-typed arguments). *)
-let rec core_type_to_string ?(wrap_arrows = false) (typ : Parsetree.core_type) =
+let rec string_of_core_type ?(wrap_arrows = false) (typ : Parsetree.core_type) =
   match typ.ptyp_desc with
   | Ptyp_var name -> "'" ^ name
   | Ptyp_constr ({ txt = Lident name; _ }, []) -> name
@@ -299,13 +299,13 @@ let rec core_type_to_string ?(wrap_arrows = false) (typ : Parsetree.core_type) =
   | Ptyp_arrow (label, t1, t2) ->
       (* When processing arguments, wrap arrow types in parentheses *)
       let label_prefix = match label with Optional _ -> "?" | _ -> "" in
-      let arg_str = core_type_to_string ~wrap_arrows:true t1 in
-      let ret_str = core_type_to_string t2 in
+      let arg_str = string_of_core_type ~wrap_arrows:true t1 in
+      let ret_str = string_of_core_type t2 in
       let result = label_prefix ^ arg_str ^ " -> " ^ ret_str in
       if wrap_arrows then "(" ^ result ^ ")" else result
   | Ptyp_tuple types ->
       let type_strs =
-        List.map (fun (_, t) -> core_type_to_string ~wrap_arrows:true t) types
+        List.map (fun (_, t) -> string_of_core_type ~wrap_arrows:true t) types
       in
       String.concat " * " type_strs
   | _ -> "<complex type>"
@@ -334,7 +334,7 @@ let regular_comments lines =
 let process_value_declaration (vd : Parsetree.value_description)
     ~regular_comments ~last_floating_doc =
   let value_name = vd.pval_name.txt in
-  let signature = core_type_to_string vd.pval_type in
+  let signature = string_of_core_type vd.pval_type in
   let val_line, _ =
     extract_location_info vd.pval_loc.loc_start vd.pval_loc.loc_end
   in

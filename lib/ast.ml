@@ -148,12 +148,12 @@ let rec trailing_record_fields = function
   | Match _ | List | Other -> 0
 
 (** Pretty-print expression for debugging *)
-let expr_to_string (expr : Parsetree.expression) =
+let string_of_expr (expr : Parsetree.expression) =
   Fmt.str "%a" Pprintast.expression expr
 
 (** Convert Parsetree expression to our AST representation *)
-let rec parsetree_expr_to_ast (expr : Parsetree.expression) : expr =
-  Log.debug (fun m -> m "parsetree_expr_to_ast: %s" (expr_to_string expr));
+let rec ast_of_parsetree_expr (expr : Parsetree.expression) : expr =
+  Log.debug (fun m -> m "ast_of_parsetree_expr: %s" (string_of_expr expr));
   Log.debug (fun m ->
       m "Expression type: %s"
         (match expr.pexp_desc with
@@ -168,14 +168,14 @@ let rec parsetree_expr_to_ast (expr : Parsetree.expression) : expr =
   | Pexp_ifthenelse (cond, then_expr, else_expr) ->
       If_then_else
         {
-          cond = parsetree_expr_to_ast cond;
-          then_expr = parsetree_expr_to_ast then_expr;
-          else_expr = Option.map parsetree_expr_to_ast else_expr;
+          cond = ast_of_parsetree_expr cond;
+          then_expr = ast_of_parsetree_expr then_expr;
+          else_expr = Option.map ast_of_parsetree_expr else_expr;
         }
   | Pexp_match (expr, cases) ->
-      Match { expr = parsetree_expr_to_ast expr; cases = List.length cases }
+      Match { expr = ast_of_parsetree_expr expr; cases = List.length cases }
   | Pexp_try (expr, cases) ->
-      Try { expr = parsetree_expr_to_ast expr; handlers = List.length cases }
+      Try { expr = ast_of_parsetree_expr expr; handlers = List.length cases }
   | Pexp_function (params, _, body) ->
       (* In OCaml 5, multi-parameter functions have all params here *)
       Log.debug (fun m -> m "Pexp_function: %d params" (List.length params));
@@ -184,7 +184,7 @@ let rec parsetree_expr_to_ast (expr : Parsetree.expression) : expr =
         match body with
         | Pfunction_body expr ->
             Log.debug (fun m -> m "Found Pfunction_body");
-            parsetree_expr_to_ast expr
+            ast_of_parsetree_expr expr
         | Pfunction_cases (cases, _, _) ->
             Log.debug (fun m ->
                 m "Found Pfunction_cases with %d cases" (List.length cases));
@@ -201,30 +201,30 @@ let rec parsetree_expr_to_ast (expr : Parsetree.expression) : expr =
         List.map
           (fun (vb : Parsetree.value_binding) ->
             match vb.pvb_pat.ppat_desc with
-            | Ppat_var { txt; _ } -> (txt, parsetree_expr_to_ast vb.pvb_expr)
-            | _ -> ("_", parsetree_expr_to_ast vb.pvb_expr))
+            | Ppat_var { txt; _ } -> (txt, ast_of_parsetree_expr vb.pvb_expr)
+            | _ -> ("_", ast_of_parsetree_expr vb.pvb_expr))
           bindings
       in
-      Let { bindings; body = parsetree_expr_to_ast body }
+      Let { bindings; body = ast_of_parsetree_expr body }
   | Pexp_sequence (e1, e2) ->
-      Sequence [ parsetree_expr_to_ast e1; parsetree_expr_to_ast e2 ]
+      Sequence [ ast_of_parsetree_expr e1; ast_of_parsetree_expr e2 ]
   | Pexp_construct ({ txt = Lident "[]"; _ }, None) -> List (* Empty list *)
   | Pexp_construct ({ txt = Lident "::"; _ }, Some _) -> List (* List cons *)
   | Pexp_construct (_, Some arg) ->
-      parsetree_expr_to_ast arg (* Ok/Some/constructor wrapping *)
+      ast_of_parsetree_expr arg (* Ok/Some/constructor wrapping *)
   | Pexp_array _ -> List (* Array literal *)
   | Pexp_record (fields, _) ->
       Record { fields = List.length fields } (* Record literal *)
   | Pexp_apply (func, args) ->
       (* Parse function applications to find nested pattern matches *)
       Log.debug (fun m -> m "Pexp_apply with %d args" (List.length args));
-      let func_ast = parsetree_expr_to_ast func in
+      let func_ast = ast_of_parsetree_expr func in
       let args_asts =
-        List.map (fun (_, arg) -> parsetree_expr_to_ast arg) args
+        List.map (fun (_, arg) -> ast_of_parsetree_expr arg) args
       in
       (* Treat the whole apply as a sequence containing func and all args *)
       Sequence (func_ast :: args_asts)
-  | Pexp_open (_, body) -> parsetree_expr_to_ast body (* let open M in expr *)
+  | Pexp_open (_, body) -> ast_of_parsetree_expr body (* let open M in expr *)
   | _ -> Other
 
 (** Extract function definitions from structure items *)
@@ -239,7 +239,7 @@ let extract_functions_from_structure (structure : Parsetree.structure) =
             match vb.pvb_pat.ppat_desc with
             | Ppat_var { txt = name; _ } ->
                 Log.debug (fun m -> m "Processing binding: %s" name);
-                let expr = parsetree_expr_to_ast vb.pvb_expr in
+                let expr = ast_of_parsetree_expr vb.pvb_expr in
                 Log.debug (fun m -> m "Converted %s to AST" name);
                 functions := (name, expr) :: !functions
             | _ -> ())

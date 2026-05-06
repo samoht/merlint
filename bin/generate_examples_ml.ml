@@ -14,7 +14,7 @@ let extract_error_code dir_name =
   else None
 
 (* Convert filename to valid OCaml identifier *)
-let filename_to_identifier filename =
+let identifier_of_filename filename =
   (* Replace dots and non-alphanumeric chars with underscore *)
   let buf = Buffer.create (String.length filename) in
   String.iter
@@ -94,7 +94,7 @@ let sanitize_module_name dir =
 let print_file_content indent filename full_path =
   match read_file full_path with
   | Some content ->
-      let var_name = filename_to_identifier filename in
+      let var_name = identifier_of_filename filename in
       Fmt.pr "%s  let %s = {|%s|}\n" indent var_name content
   | None -> ()
 

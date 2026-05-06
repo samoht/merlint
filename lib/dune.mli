@@ -69,8 +69,8 @@ val tests : describe -> test_info list
 (** [tests describe] returns the list of test stanzas with their files and
     library dependencies. *)
 
-val module_to_libraries : describe -> (string * string list) list
-(** [module_to_libraries describe] maps module basenames to the libraries that
+val libraries_of_module : describe -> (string * string list) list
+(** [libraries_of_module describe] maps module basenames to the libraries that
     contain them. *)
 
 val resolve_library : describe -> string -> string
