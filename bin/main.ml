@@ -236,7 +236,7 @@ let run_analysis project_root dune_describe rule_filter show_profile =
         let prev = try Hashtbl.find by_rule e.rule with Not_found -> 0 in
         Hashtbl.replace by_rule e.rule (prev + 1))
       all_excluded;
-    Fmt.pr "@[<v>%a %d issues suppressed by .merlintrc exclusions:@,"
+    Fmt.pr "@[<v>%a %d issues suppressed by merlint.toml exclusions:@,"
       Fmt.(styled `Yellow string)
       "!" n;
     Hashtbl.iter
@@ -436,42 +436,39 @@ let man_config_section =
   [
     `S "CONFIGURATION FILE";
     `P
-      "$(tname) looks for $(b,.merlint) configuration files by searching \
+      "$(tname) looks for $(b,merlint.toml) configuration files by searching \
        upward from the analyzed path to the workspace root (outermost \
        dune-project). All found files are merged: settings from closer files \
-       override outer ones, while rule exclusions accumulate. This allows a \
-       single config at a monorepo root to govern all subdirectories.";
-    `P "The file uses a YAML-like syntax with two sections:";
-    `P "$(b,settings:) — Override default thresholds and toggles.";
-    `Pre
-      "settings:\n\
-      \  max-complexity: 15\n\
-      \  max-function-length: 80\n\
-      \  allow-obj-magic: true";
-    `P "$(b,rules:) — Exclude specific rules for files matching a glob pattern.";
-    `Pre
-      "rules:\n\
-      \  - files: memtrace/src/trace.ml\n\
-      \    exclude: [E100]\n\
-      \  - files: lib/generated/*.ml\n\
-      \    exclude: [E200, E300]";
+       override outer ones, while rule exclusions accumulate.";
+    `P "Top-level keys override default thresholds and toggles:";
+    `Pre "max-complexity = 15\nmax-function-length = 80\nallow-obj-magic = true";
     `P
-      "Rule patterns support wildcards: $(b,[*]) excludes all rules for \
-       matching files, and $(b,[E1*]) excludes all rules starting with E1. Use \
-       this to completely skip a file:";
-    `Pre "rules:\n  - files: vendor/**/*.ml\n    exclude: [*]";
+      "Rules are an array of tables; each excludes specific rule codes for \
+       files matching a glob pattern:";
+    `Pre
+      "[[rules]]\n\
+       files = \"memtrace/src/trace.ml\"\n\
+       exclude = [\"E100\"]\n\n\
+       [[rules]]\n\
+       files = \"lib/generated/*.ml\"\n\
+       exclude = [\"E200\", \"E300\"]";
+    `P
+      "Rule patterns support wildcards: $(b,\"*\") excludes all rules for \
+       matching files, and $(b,\"E1*\") excludes all rules starting with E1. \
+       Use this to completely skip a file:";
+    `Pre "[[rules]]\nfiles = \"vendor/**/*.ml\"\nexclude = [\"*\"]";
     `P
       "File patterns support $(b,*) (any filename), $(b,**/) (any directory \
        depth), and $(b,?) (single character). Use $(b,--show-config) to verify \
        the loaded configuration.";
     `P
-      "$(b,allowed_words:) — Names that should be accepted as-is by naming \
-       rules (E300, E331, etc.). For example, $(b,create_table) would normally \
-       trigger E331 (redundant prefix) but can be exempted:";
-    `Pre "allowed_words: [create_table]";
+      "$(b,allowed_words) — names accepted as-is by naming rules (E300, E331, \
+       etc.). For example $(b,create_table) would normally trigger E331 \
+       (redundant prefix) but can be exempted:";
+    `Pre "allowed_words = [\"create_table\"]";
     `P
-      "$(b,acronyms:) is an alias for $(b,allowed_words) — both add to the \
-       same allowlist.";
+      "$(b,acronyms) is an alias for $(b,allowed_words) — both add to the same \
+       allowlist.";
     `P
       "Available settings: $(b,max-complexity), $(b,max-function-length), \
        $(b,max-nesting), $(b,exempt-data-definitions), \

@@ -1,126 +1,95 @@
-(** Configuration file parser for .merlint files with YAML-like syntax *)
+(** Configuration file parser for [merlint.toml] (TOML 1.1).
+
+    Parses with {!Toml.Value.codec} to a TOML AST and projects to
+    {!parsed_config}: settings as a [(key, string)] list plus a list of
+    file/exclude rule patterns. {!Config.apply_config} re-parses the string
+    values through {!Config.parse_bool} / {!Config.parse_int} /
+    {!Config.parse_list}. *)
 
 type parsed_config = {
   settings : (string * string) list;
   exclusions : Rule_config.t;
 }
 
-type section = Rules | Settings
+let rec scalar_to_string : Toml.Value.t -> string = function
+  | String (s, _) -> s
+  | Int (i, _) -> Int64.to_string i
+  | Float (f, _) -> string_of_float f
+  | Bool (true, _) -> "true"
+  | Bool (false, _) -> "false"
+  | Datetime (s, _)
+  | Datetime_local (s, _)
+  | Date_local (s, _)
+  | Time_local (s, _) ->
+      s
+  | Array (items, _) -> String.concat ", " (List.map scalar_to_string items)
+  | Table _ -> Fmt.failwith "merlint config: unexpected nested table value"
 
-(** Determine section from header line *)
-let parse_section_header line =
-  let line = String.trim line in
-  if line = "rules:" then Some Rules
-  else if line = "settings:" then Some Settings
-  else None
+(* Project a top-level (key, value) pair to either:
+   - (key, string) settings entries, or
+   - rule-pattern entries when the key is "rules" and the value is an array of
+     tables. *)
+let project_setting (key, (value : Toml.Value.t)) =
+  match (key, value) with
+  | "rules", Array (entries, _) ->
+      let extract_pattern (entry : Toml.Value.t) =
+        match entry with
+        | Table (members, _) ->
+            let lookup name =
+              List.find_map
+                (fun ((k, _), v) -> if k = name then Some v else None)
+                members
+            in
+            let files =
+              match lookup "files" with
+              | Some (String (s, _)) -> s
+              | _ -> Fmt.failwith "merlint config: rule missing string 'files'"
+            in
+            let rules =
+              match lookup "exclude" with
+              | Some (Array (items, _)) ->
+                  List.map
+                    (function
+                      | Toml.Value.String (s, _) -> s
+                      | _ ->
+                          Fmt.failwith
+                            "merlint config: rule.exclude entries must be \
+                             strings")
+                    items
+              | Some _ ->
+                  Fmt.failwith "merlint config: rule.exclude must be a list"
+              | None -> Fmt.failwith "merlint config: rule missing 'exclude'"
+            in
+            { Rule_config.pattern = files; rules }
+        | _ -> Fmt.failwith "merlint config: rule entries must be tables"
+      in
+      `Rules (List.map extract_pattern entries)
+  | _ -> `Setting (key, scalar_to_string value)
 
-(** Strip inline comments from a value *)
-let strip_inline_comment value =
-  match String.split_on_char '#' value with
-  | [] -> value
-  | first :: _ -> String.trim first
-
-(** Parse a settings line *)
-let parse_setting line =
-  match String.split_on_char ':' line with
-  | [ key; value ] ->
-      let key = String.trim key in
-      let value = String.trim value |> strip_inline_comment in
-      Some (key, value)
-  | _ -> None
-
-(** Strip surrounding double or single quotes if both present. *)
-let strip_quotes s =
-  let n = String.length s in
-  if
-    n >= 2
-    && ((s.[0] = '"' && s.[n - 1] = '"') || (s.[0] = '\'' && s.[n - 1] = '\''))
-  then String.sub s 1 (n - 2)
-  else s
-
-(** Parse a rule entry in YAML list format *)
-let parse_rule_yaml line =
-  (* Format: "  - files: lib/prose*.ml" or "    exclude: [E330, E410]" *)
-  let line = String.trim line in
-  if String.starts_with ~prefix:"- files:" line then
-    let files_pattern =
-      String.sub line 8 (String.length line - 8) |> String.trim |> strip_quotes
-    in
-    Some (`Files files_pattern)
-  else if String.starts_with ~prefix:"exclude:" line then
-    let rules_str = String.sub line 8 (String.length line - 8) |> String.trim in
-    (* Remove brackets if present *)
-    let rules_str =
-      if
-        String.starts_with ~prefix:"[" rules_str
-        && String.ends_with ~suffix:"]" rules_str
-      then String.sub rules_str 1 (String.length rules_str - 2)
-      else rules_str
-    in
-    let rules =
-      rules_str |> String.split_on_char ',' |> List.map String.trim
-      |> List.filter (fun s -> String.length s > 0)
-    in
-    Some (`Exclude rules)
-  else None
-
-let finalize_rule current_rule exclusions =
-  match current_rule with
-  | Some (files, rules) when List.length rules > 0 ->
-      Rule_config.add { pattern = files; rules } exclusions
-  | _ -> exclusions
-
-(** Parse configuration content *)
 let parse content =
-  let lines = String.split_on_char '\n' content in
-  let rec process_lines current_section current_rule exclusions settings =
-    function
-    | [] ->
-        let exclusions = finalize_rule current_rule exclusions in
-        { settings; exclusions }
-    | line :: rest -> (
-        let trimmed = String.trim line in
-        (* Skip empty lines and comments *)
-        if String.length trimmed = 0 || String.get trimmed 0 = '#' then
-          process_lines current_section current_rule exclusions settings rest
-        (* Check for section headers *)
-          else
-          match parse_section_header trimmed with
-          | Some section ->
-              let exclusions = finalize_rule current_rule exclusions in
-              process_lines section None exclusions settings rest
-          | None -> (
-              (* Process based on current section *)
-              match current_section with
-              | Settings ->
-                  let new_settings =
-                    match parse_setting trimmed with
-                    | Some kv -> kv :: settings
-                    | None -> settings
-                  in
-                  process_lines current_section current_rule exclusions
-                    new_settings rest
-              | Rules -> (
-                  match parse_rule_yaml trimmed with
-                  | Some (`Files files_pattern) ->
-                      (* Save previous rule if any *)
-                      let exclusions = finalize_rule current_rule exclusions in
-                      process_lines current_section
-                        (Some (files_pattern, []))
-                        exclusions settings rest
-                  | Some (`Exclude rule_list) ->
-                      let current_rule =
-                        match current_rule with
-                        | Some (files, _) -> Some (files, rule_list)
-                        | None -> None
-                      in
-                      process_lines current_section current_rule exclusions
-                        settings rest
-                  | None ->
-                      process_lines current_section current_rule exclusions
-                        settings rest)))
+  let value =
+    match Toml.of_string Toml.Value.codec content with
+    | Ok v -> v
+    | Error e -> Fmt.failwith "merlint config: %s" (Toml.Error.to_string e)
   in
-  process_lines Settings None Rule_config.empty [] lines
+  let members =
+    match value with
+    | Table (members, _) -> members
+    | _ -> Fmt.failwith "merlint config: expected a TOML document (table)"
+  in
+  List.fold_left
+    (fun acc ((key, _), v) ->
+      match project_setting (key, v) with
+      | `Setting (k, s) -> { acc with settings = (k, s) :: acc.settings }
+      | `Rules patterns ->
+          let exclusions =
+            List.fold_left
+              (fun excl p -> Rule_config.add p excl)
+              acc.exclusions patterns
+          in
+          { acc with exclusions })
+    { settings = []; exclusions = Rule_config.empty }
+    members
 
 let parse_file path =
   if Sys.file_exists path then

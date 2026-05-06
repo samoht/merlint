@@ -62,24 +62,23 @@ let test_config_files_empty () =
 let test_config_files_single () =
   with_temp_tree @@ fun tmp ->
   write_file (Filename.concat tmp "dune-project") "(lang dune 3.0)";
-  write_file (Filename.concat tmp ".merlint") "settings:\n  max-complexity: 5";
+  write_file (Filename.concat tmp "merlint.toml") "max-complexity = 5";
   let configs = Project.config_files tmp in
   Alcotest.(check int) "one config" 1 (List.length configs);
   Alcotest.(check bool)
-    "is .merlint" true
-    (Filename.basename (List.hd configs) = ".merlint")
+    "is merlint.toml" true
+    (Filename.basename (List.hd configs) = "merlint.toml")
 
 let test_config_files_nested () =
   with_temp_tree @@ fun tmp ->
-  (* Create a monorepo-like structure *)
   let sub = Filename.concat tmp "sub" in
   Unix.mkdir sub 0o755;
   write_file (Filename.concat tmp "dune-project") "(lang dune 3.0)";
   write_file
-    (Filename.concat tmp ".merlint")
-    "rules:\n  - files: sub/bad.ml\n    exclude: [E100]";
+    (Filename.concat tmp "merlint.toml")
+    "[[rules]]\nfiles = \"sub/bad.ml\"\nexclude = [\"E100\"]";
   write_file (Filename.concat sub "dune-project") "(lang dune 3.0)";
-  write_file (Filename.concat sub ".merlint") "settings:\n  max-complexity: 15";
+  write_file (Filename.concat sub "merlint.toml") "max-complexity = 15";
   let configs = Project.config_files sub in
   Alcotest.(check int) "two configs" 2 (List.length configs);
   (* Outermost first *)
@@ -94,9 +93,8 @@ let test_config_files_workspace_boundary () =
   Unix.mkdir sub 0o755;
   write_file (Filename.concat tmp "dune-project") "(lang dune 3.0)";
   write_file
-    (Filename.concat tmp ".merlint")
-    "rules:\n  - files: sub/f.ml\n    exclude: [E200]";
-  (* sub has no dune-project but the .merlint should still be found *)
+    (Filename.concat tmp "merlint.toml")
+    "[[rules]]\nfiles = \"sub/f.ml\"\nexclude = [\"E200\"]";
   let configs = Project.config_files sub in
   Alcotest.(check int) "root config found" 1 (List.length configs)
 
@@ -105,9 +103,9 @@ let test_config_merge_settings () =
   let sub = Filename.concat tmp "sub" in
   Unix.mkdir sub 0o755;
   write_file (Filename.concat tmp "dune-project") "(lang dune 3.0)";
-  write_file (Filename.concat tmp ".merlint") "settings:\n  max-complexity: 20";
+  write_file (Filename.concat tmp "merlint.toml") "max-complexity = 20";
   write_file (Filename.concat sub "dune-project") "(lang dune 3.0)";
-  write_file (Filename.concat sub ".merlint") "settings:\n  max-complexity: 5";
+  write_file (Filename.concat sub "merlint.toml") "max-complexity = 5";
   let config = Config.load_from_path sub in
   (* Closer config (sub) should override outer (root) *)
   Alcotest.(check int) "closer overrides" 5 config.max_complexity
@@ -118,12 +116,12 @@ let test_config_merge_exclusions () =
   Unix.mkdir sub 0o755;
   write_file (Filename.concat tmp "dune-project") "(lang dune 3.0)";
   write_file
-    (Filename.concat tmp ".merlint")
-    "rules:\n  - files: sub/a.ml\n    exclude: [E100]";
+    (Filename.concat tmp "merlint.toml")
+    "[[rules]]\nfiles = \"sub/a.ml\"\nexclude = [\"E100\"]";
   write_file (Filename.concat sub "dune-project") "(lang dune 3.0)";
   write_file
-    (Filename.concat sub ".merlint")
-    "rules:\n  - files: b.ml\n    exclude: [E200]";
+    (Filename.concat sub "merlint.toml")
+    "[[rules]]\nfiles = \"b.ml\"\nexclude = [\"E200\"]";
   let config = Config.load_from_path sub in
   (* Both exclusions should be present *)
   Alcotest.(check bool)

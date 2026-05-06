@@ -15,7 +15,7 @@ let workspace_root_and_configs path =
         else ws_root
       in
       let configs =
-        let p = Filename.concat dir ".merlint" in
+        let p = Filename.concat dir "merlint.toml" in
         if Sys.file_exists p then p :: configs else configs
       in
       (ws_root, configs))

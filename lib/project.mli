@@ -12,6 +12,6 @@ val workspace_root : string -> string
     subdirectory's own project root. *)
 
 val config_files : string -> string list
-(** [config_files path] returns all [.merlint] config file paths from [path] up
-    to the workspace root, ordered outermost-first. Closer configs override
+(** [config_files path] returns all [merlint.toml] config file paths from [path]
+    up to the workspace root, ordered outermost-first. Closer configs override
     settings from outer ones; exclusions accumulate. *)
