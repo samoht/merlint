@@ -91,7 +91,9 @@ let apply_config config key value : t =
   | "min_name_length_underscore" ->
       { config with min_name_length_underscore = parse_int value }
   | "allowed_words" | "acronyms" ->
-      { config with allowed_words = parse_list value }
+      (* Accumulate across nested configs: a closer merlint.toml extends the
+         outer allowlist rather than replacing it. *)
+      { config with allowed_words = config.allowed_words @ parse_list value }
   | "topics" -> { config with topics = parse_list value }
   (* Style rules *)
   | "allow_obj_magic" -> { config with allow_obj_magic = parse_bool value }
