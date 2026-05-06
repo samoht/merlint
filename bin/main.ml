@@ -202,32 +202,17 @@ let print_summary all_issues enabled_rule_count =
     Fmt.pr "%s Some checks failed. See details above.@."
       (Merlint.Report.print_color false "✗")
 
-let run_analysis project_root dune_describe rule_filter show_profile =
-  (* Create profiling state if enabled *)
-  let profiling_state =
-    if show_profile then Some (Merlint.Profiling.v ()) else None
-  in
+let run_engine ?profiling rule_filter dune_describe project_root =
+  match rule_filter with
+  | Some filter ->
+      Merlint.Engine.run ~filter ~dune_describe ?profiling project_root
+  | None -> (
+      match Merlint.Filter.parse "all" with
+      | Ok filter ->
+          Merlint.Engine.run ~filter ~dune_describe ?profiling project_root
+      | Error _ -> { Merlint.Engine.issues = []; excluded = [] })
 
-  let files_count = List.length (Merlint.Dune.project_files dune_describe) in
-  Log.info (fun m -> m "Starting visual analysis on %d files" files_count);
-
-  (* Run the engine to get all issues *)
-  let { Merlint.Engine.issues = all_issues; excluded = all_excluded } =
-    match rule_filter with
-    | Some filter ->
-        Merlint.Engine.run ~filter ~dune_describe ?profiling:profiling_state
-          project_root
-    | None -> (
-        match Merlint.Filter.parse "all" with
-        | Ok filter ->
-            Merlint.Engine.run ~filter ~dune_describe ?profiling:profiling_state
-              project_root
-        | Error _ -> { Merlint.Engine.issues = []; excluded = [] })
-  in
-
-  Fmt.pr "Running merlint analysis...@.@.Analyzing %d files@.@." files_count;
-
-  (* Show exclusion stats so suppressed issues are visible *)
+let print_exclusion_stats all_excluded =
   if all_excluded <> [] then begin
     let n = List.length all_excluded in
     let by_rule = Hashtbl.create 16 in
@@ -243,7 +228,19 @@ let run_analysis project_root dune_describe rule_filter show_profile =
       (fun rule count -> Fmt.pr "  [%s] %d suppressed@," rule count)
       by_rule;
     Fmt.pr "@]@."
-  end;
+  end
+
+let run_analysis project_root dune_describe rule_filter show_profile =
+  let profiling_state =
+    if show_profile then Some (Merlint.Profiling.v ()) else None
+  in
+  let files_count = List.length (Merlint.Dune.project_files dune_describe) in
+  Log.info (fun m -> m "Starting visual analysis on %d files" files_count);
+  let { Merlint.Engine.issues = all_issues; excluded = all_excluded } =
+    run_engine ?profiling:profiling_state rule_filter dune_describe project_root
+  in
+  Fmt.pr "Running merlint analysis...@.@.Analyzing %d files@.@." files_count;
+  print_exclusion_stats all_excluded;
 
   (* Group issues by category for reporting *)
   let issues_by_category = group_issues_by_category all_issues in
