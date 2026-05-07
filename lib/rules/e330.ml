@@ -24,8 +24,10 @@ let has_redundant_prefix item_name_lower module_name filename =
     (item_name_lower = "pp" && module_name = "pp")
     || (item_name_lower = "main" && module_name = "main")
     ||
-    (* Test functions in test files are entry points and idiomatic *)
-    String.starts_with ~prefix:"test_" module_name
+    (* Test functions in test files are entry points and idiomatic. Match
+       both `test_foo.ml` (module `test_foo`, items `test_*`) and the bare
+       `test.ml` convention (module `test`, items `test_*`). *)
+    (String.starts_with ~prefix:"test_" module_name || module_name = "test")
     && String.starts_with ~prefix:"test_" item_name_lower
     && String.ends_with ~suffix:".ml" filename
   then false
