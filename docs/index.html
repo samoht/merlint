@@ -703,7 +703,8 @@ pre code {
         <span class="error-title">Prefer the matching Fmt helper over (Fmt.str ...)</span>
     </div>
     <div class="error-hint"><p>Most calls of the shape [&lt;f&gt; (Fmt.str ...)] have a direct [Fmt.X] equivalent that avoids the intermediate [Fmt.str] string allocation and reads better:
-  - [Buffer.add_string buf (Fmt.str ...)] -&gt; [Fmt.bprintf buf "..."];
+  - [Buffer.add_string buf (Fmt.str ...)] -&gt; [Fmt.pf (Fmt.with_buffer buf) "..."]
+    (hoist the formatter outside any hot loop to avoid re-allocating);
   - [print_endline (Fmt.str ...)] -&gt; [Fmt.pr "...@."];
   - [print_string (Fmt.str ...)] -&gt; [Fmt.pr "..."];
   - [prerr_endline (Fmt.str ...)] -&gt; [Fmt.epr "...@."];

@@ -19,7 +19,9 @@ let handled_by_specialized_rule fn =
     continuation. *)
 let suggestion_for_apply fn =
   match Longident.flatten fn with
-  | [ "Buffer"; "add_string" ] -> "Fmt.bprintf buf \"...\""
+  | [ "Buffer"; "add_string" ] ->
+      "Fmt.pf (Fmt.with_buffer buf) \"...\" (hoist the formatter outside hot \
+       loops)"
   | [ "print_endline" ] -> "Fmt.pr \"...@.\""
   | [ "print_string" ] -> "Fmt.pr \"...\""
   | [ "prerr_endline" ] -> "Fmt.epr \"...@.\""
@@ -72,7 +74,9 @@ let rule =
       "Most calls of the shape [<f> (Fmt.str ...)] have a direct [Fmt.X] \
        equivalent that avoids the intermediate [Fmt.str] string allocation and \
        reads better:\n\
-      \  - [Buffer.add_string buf (Fmt.str ...)] -> [Fmt.bprintf buf \"...\"];\n\
+      \  - [Buffer.add_string buf (Fmt.str ...)] -> [Fmt.pf (Fmt.with_buffer \
+       buf) \"...\"]\n\
+      \    (hoist the formatter outside any hot loop to avoid re-allocating);\n\
       \  - [print_endline (Fmt.str ...)] -> [Fmt.pr \"...@.\"];\n\
       \  - [print_string (Fmt.str ...)] -> [Fmt.pr \"...\"];\n\
       \  - [prerr_endline (Fmt.str ...)] -> [Fmt.epr \"...@.\"];\n\
