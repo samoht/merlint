@@ -79,3 +79,31 @@ val trailing_record_fields : expr -> int
 val extract_functions : string -> (string * expr) list
 (** [extract_functions source] extracts functions with their control flow from a
     source file. Returns a list of (function_name, control_flow_ast) pairs. *)
+
+val parse_structure : filename:string -> string -> Parsetree.structure option
+(** [parse_structure ~filename content] parses [content] into a Parsetree
+    structure. Returns [None] for [.mli] files and on parse error. *)
+
+val loc_to_merlint : filename:string -> Warnings.loc -> Location.t
+(** [loc_to_merlint ~filename loc] converts a compiler-libs location into a
+    merlint location. *)
+
+val iter_apply :
+  Parsetree.structure ->
+  (Parsetree.expression ->
+  Longident.t ->
+  (Asttypes.arg_label * Parsetree.expression) list ->
+  unit) ->
+  unit
+(** [iter_apply structure f] calls [f expr fn args] for every
+    [Pexp_apply (Pexp_ident fn, args)] node in [structure]. The [expr] carries
+    the surrounding expression's location. *)
+
+val is_apply_of : string list -> Parsetree.expression -> bool
+(** [is_apply_of path expr] is [true] when [expr] is
+    [Pexp_apply (Pexp_ident path, _)]. *)
+
+val lident_last_eq : string -> Longident.t -> bool
+(** [lident_last_eq name lid] is [true] when [lid]'s rightmost segment equals
+    [name]. Matches both unqualified ([invalid_arg]) and module-qualified
+    ([Stdlib.invalid_arg]) usage. *)

@@ -9,7 +9,7 @@ Test bad example - should find failwith (Fmt.str) patterns:
     [E215] Use Fmt.failwith Instead of failwith (Fmt.str) (1 issue)
     Use Fmt.failwith instead of failwith (Fmt.str ...). Fmt.failwith provides
     printf-style formatting directly, making the code more concise and readable.
-    - bad.ml:3:0: Use Fmt.failwith instead of failwith (Fmt.str ...) - Fmt.failwith provides printf-style formatting directly
+    - bad.ml:3:4: Use Fmt.failwith instead of failwith (Fmt.str ...) - Fmt.failwith provides printf-style formatting directly
   ✓ Naming Conventions (0 total issues)
   ✓ Documentation (0 total issues)
   ✓ Project Structure (0 total issues)
