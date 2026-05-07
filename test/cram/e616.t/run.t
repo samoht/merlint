@@ -14,10 +14,10 @@ Test bad example - should find fail (Fmt.str) patterns:
     In test files, use Alcotest.failf or failf instead of Alcotest.fail (Fmt.str
     ...) or fail (Fmt.str ...). The failf function provides printf-style
     formatting directly, making the code more concise and readable.
-    - test_bad.ml:5:0: Use Alcotest.failf instead of Alcotest.fail (Fmt.str ...) - failf provides printf-style formatting directly
-    - test_bad.ml:11:0: Use Alcotest.failf instead of Alcotest.fail (Fmt.str ...) - failf provides printf-style formatting directly
-    - test_bad.ml:18:0: Use Alcotest.failf instead of Alcotest.fail (Fmt.str ...) - failf provides printf-style formatting directly
-    - test_bad.ml:23:0: Use Alcotest.failf instead of Alcotest.fail (Fmt.str ...) - failf provides printf-style formatting directly
+    - test_bad.ml:5:10: Use Alcotest.failf instead of Alcotest.fail (Fmt.str ...) - failf provides printf-style formatting directly
+    - test_bad.ml:11:12: Use Alcotest.failf instead of Alcotest.fail (Fmt.str ...) - failf provides printf-style formatting directly
+    - test_bad.ml:18:10: Use Alcotest.failf instead of Alcotest.fail (Fmt.str ...) - failf provides printf-style formatting directly
+    - test_bad.ml:23:10: Use Alcotest.failf instead of Alcotest.fail (Fmt.str ...) - failf provides printf-style formatting directly
   ✓ Interop Testing (0 total issues)
   ✓ Code Generation (0 total issues)
   

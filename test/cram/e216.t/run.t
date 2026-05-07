@@ -10,8 +10,8 @@ Test bad example - should find invalid_arg with Fmt.str:
     Use Fmt.invalid_arg instead of invalid_arg (Fmt.str ...). Fmt.invalid_arg
     provides printf-style formatting directly, making the code more concise and
     readable.
-    - bad.ml:3:0: Use Fmt.invalid_arg instead of invalid_arg (Fmt.str ...) - Fmt.invalid_arg provides printf-style formatting directly
-    - bad.ml:8:0: Use Fmt.invalid_arg instead of invalid_arg (Fmt.str ...) - Fmt.invalid_arg provides printf-style formatting directly
+    - bad.ml:3:4: Use Fmt.invalid_arg instead of invalid_arg (Fmt.str ...) - Fmt.invalid_arg provides printf-style formatting directly
+    - bad.ml:8:4: Use Fmt.invalid_arg instead of invalid_arg (Fmt.str ...) - Fmt.invalid_arg provides printf-style formatting directly
   ✓ Naming Conventions (0 total issues)
   ✓ Documentation (0 total issues)
   ✓ Project Structure (0 total issues)

@@ -2,16 +2,22 @@
 
 let check (ctx : Context.file) =
   let filename = ctx.filename in
-  let content = Lazy.force ctx.content in
-
-  Merlin.Dump.check_function_call_pattern content "invalid_arg" "Fmt.str"
-    (fun (line, line_num, _is_qualified) ->
-      let loc =
-        Location.v ~file:filename ~start_line:line_num ~start_col:0
-          ~end_line:line_num ~end_col:(String.length line)
-      in
-      Issue.v ~loc ())
-    filename
+  let content = Context.content ctx in
+  match Ast.parse_structure ~filename content with
+  | None -> []
+  | Some structure ->
+      let issues = ref [] in
+      Ast.iter_apply structure (fun expr fn args ->
+          if
+            Ast.lident_last_eq "invalid_arg" fn
+            && List.exists
+                 (fun (_, arg) -> Ast.is_apply_of [ "Fmt"; "str" ] arg)
+                 args
+          then
+            issues :=
+              Issue.v ~loc:(Ast.loc_to_merlint ~filename expr.pexp_loc) ()
+              :: !issues);
+      List.rev !issues
 
 let pp ppf () =
   Fmt.pf ppf

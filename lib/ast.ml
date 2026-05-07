@@ -284,6 +284,61 @@ let extract_functions filename =
         m "Failed to parse %s: %s" filename (Printexc.to_string exn));
     []
 
+(** Parse a source file into a [Parsetree.structure]. Returns [None] for [.mli]
+    files (no expressions) and on parse error. *)
+let parse_structure ~filename content =
+  if Filename.check_suffix filename ".mli" then None
+  else
+    try
+      let lexbuf = Lexing.from_string content in
+      lexbuf.lex_curr_p <- { lexbuf.lex_curr_p with pos_fname = filename };
+      Some (Parse.implementation lexbuf)
+    with exn ->
+      Log.debug (fun m ->
+          m "parse_structure: %s: %s" filename (Printexc.to_string exn));
+      None
+
+(** Convert a compiler-libs [Warnings.loc] into a merlint [Location.t]. *)
+let loc_to_merlint ~filename (loc : Warnings.loc) =
+  Location.v ~file:filename ~start_line:loc.loc_start.pos_lnum
+    ~start_col:(loc.loc_start.pos_cnum - loc.loc_start.pos_bol)
+    ~end_line:loc.loc_end.pos_lnum
+    ~end_col:(loc.loc_end.pos_cnum - loc.loc_end.pos_bol)
+
+(** [iter_apply structure f] walks [structure] and calls [f expr fn args] for
+    each [Pexp_apply (Pexp_ident fn, args)] node, with [expr] the surrounding
+    expression (carrying location). *)
+let iter_apply structure f =
+  let iter =
+    {
+      Ast_iterator.default_iterator with
+      expr =
+        (fun this expr ->
+          (match expr.pexp_desc with
+          | Pexp_apply ({ pexp_desc = Pexp_ident { txt = lid; _ }; _ }, args) ->
+              f expr lid args
+          | _ -> ());
+          Ast_iterator.default_iterator.expr this expr);
+    }
+  in
+  iter.structure iter structure
+
+(** [is_apply_of path expr] returns [true] when [expr] is
+    [Pexp_apply (Pexp_ident path, _)]. *)
+let is_apply_of path (expr : Parsetree.expression) =
+  match expr.pexp_desc with
+  | Pexp_apply ({ pexp_desc = Pexp_ident { txt = lid; _ }; _ }, _) ->
+      Longident.flatten lid = path
+  | _ -> false
+
+(** [lident_last_eq name lid] returns [true] when [lid]'s rightmost segment is
+    [name]. Matches both unqualified ([invalid_arg]) and module-qualified
+    ([Stdlib.invalid_arg]) usage. *)
+let lident_last_eq name lid =
+  match List.rev (Longident.flatten lid) with
+  | last :: _ -> last = name
+  | [] -> false
+
 (** Standard functions for type t *)
 let equal a b = a.functions = b.functions
 

@@ -1,9 +1,8 @@
-(** E616: Use failf instead of fail (Fmt.str *)
+(** E616: Use failf instead of fail (Fmt.str ...) *)
 
 type payload = { is_alcotest : bool }
 
 let check (ctx : Context.file) =
-  (* Only check test files (those starting with test_) *)
   let filename = ctx.filename in
   let basename = Filename.basename filename in
   if
@@ -12,17 +11,27 @@ let check (ctx : Context.file) =
       && String.ends_with ~suffix:".ml" basename)
   then []
   else
-    let content = Lazy.force ctx.content in
-
-    (* Use the new dump function to find fail (Fmt.str patterns *)
-    Merlin.Dump.check_function_call_pattern content "fail" "Fmt.str"
-      (fun (line, line_num, is_qualified) ->
-        let loc =
-          Location.v ~file:filename ~start_line:line_num ~start_col:0
-            ~end_line:line_num ~end_col:(String.length line)
-        in
-        Issue.v ~loc { is_alcotest = is_qualified })
-      filename
+    let content = Context.content ctx in
+    match Ast.parse_structure ~filename content with
+    | None -> []
+    | Some structure ->
+        let issues = ref [] in
+        Ast.iter_apply structure (fun expr fn args ->
+            let path = Longident.flatten fn in
+            let is_alcotest_fail = path = [ "Alcotest"; "fail" ] in
+            let is_bare_fail = path = [ "fail" ] in
+            if
+              (is_alcotest_fail || is_bare_fail)
+              && List.exists
+                   (fun (_, arg) -> Ast.is_apply_of [ "Fmt"; "str" ] arg)
+                   args
+            then
+              issues :=
+                Issue.v
+                  ~loc:(Ast.loc_to_merlint ~filename expr.pexp_loc)
+                  { is_alcotest = is_alcotest_fail }
+                :: !issues);
+        List.rev !issues
 
 let pp ppf { is_alcotest } =
   if is_alcotest then
