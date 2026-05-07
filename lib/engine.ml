@@ -52,7 +52,7 @@ let run_project_rule ?profiling ctx rule =
   res
 
 let setup_analysis ~filter ~dune_describe project_root =
-  let config = Config.load_from_path project_root in
+  let config = Config.load project_root in
   let files_to_analyze = Dune.project_files dune_describe in
   let files_to_analyze_str = List.map Fpath.to_string files_to_analyze in
   let project_ctx =

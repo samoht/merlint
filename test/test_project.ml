@@ -106,7 +106,7 @@ let test_config_merge_settings () =
   write_file (Filename.concat tmp "merlint.toml") "max-complexity = 20";
   write_file (Filename.concat sub "dune-project") "(lang dune 3.0)";
   write_file (Filename.concat sub "merlint.toml") "max-complexity = 5";
-  let config = Config.load_from_path sub in
+  let config = Config.load sub in
   (* Closer config (sub) should override outer (root) *)
   Alcotest.(check int) "closer overrides" 5 config.max_complexity
 
@@ -122,7 +122,7 @@ let test_config_merge_exclusions () =
   write_file
     (Filename.concat sub "merlint.toml")
     "[[rules]]\nfiles = \"b.ml\"\nexclude = [\"E200\"]";
-  let config = Config.load_from_path sub in
+  let config = Config.load sub in
   (* Both exclusions should be present *)
   Alcotest.(check bool)
     "E100 excluded for sub/a.ml" true
