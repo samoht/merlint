@@ -697,6 +697,26 @@ pre code {
 </div>
 </div></div>
 </div>
+<div class="error-card" id="E217">
+    <div>
+        <span class="error-code">E217</span>
+        <span class="error-title">Use Fmt.kstr f Instead of f (Fmt.str)</span>
+    </div>
+    <div class="error-hint"><p>Use Fmt.kstr f instead of f (Fmt.str ...). Fmt.kstr is the continuation-passing variant of Fmt.str: it formats and hands the resulting string to its first argument. The [&lt;fn&gt; (Fmt.str ...)] pattern is dominated by [Fmt.kstr &lt;fn&gt; ...] for any single-argument function or constructor. Specialized cases ([failwith], [invalid_arg], [Alcotest.fail], [fail]) have dedicated helpers — see E215, E216, E616.</p><div class="examples-grid">
+<div class="example bad">
+  <h4>BAD</h4>
+  <pre><code><span class="kw">let</span> parse s =
+  <span class="kw">if</span> s = &quot;&quot; <span class="kw">then</span> <span class="cn">Error</span> (<span class="cn">Fmt</span>.str &quot;empty input&quot;)
+  <span class="kw">else</span> <span class="cn">Ok</span> s</code></pre>
+</div>
+<div class="example good">
+  <h4>GOOD</h4>
+  <pre><code><span class="kw">let</span> parse s =
+  <span class="kw">if</span> s = &quot;&quot; <span class="kw">then</span> <span class="cn">Fmt</span>.kstr (<span class="kw">fun</span> e -&gt; <span class="cn">Error</span> e) &quot;empty input&quot;
+  <span class="kw">else</span> <span class="cn">Ok</span> s</code></pre>
+</div>
+</div></div>
+</div>
 <h2 id="naming conventions">Naming Conventions</h2>
 <div class="category">E300-E399 • Identifier naming convention violations</div>
 <div class="error-card" id="E300">

@@ -99,6 +99,11 @@ val iter_apply :
     [Pexp_apply (Pexp_ident fn, args)] node in [structure]. The [expr] carries
     the surrounding expression's location. *)
 
+val iter_expressions :
+  Parsetree.structure -> (Parsetree.expression -> unit) -> unit
+(** [iter_expressions structure f] calls [f expr] for every expression node in
+    [structure]. *)
+
 val is_apply_of : string list -> Parsetree.expression -> bool
 (** [is_apply_of path expr] is [true] when [expr] is
     [Pexp_apply (Pexp_ident path, _)]. *)
