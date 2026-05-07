@@ -9,7 +9,12 @@ let hex_of_bytes (b : bytes) =
 
 let uri_of_path p = "file://" ^ p
 
+let value_of_string s = int_of_string s
+let bytes_of_hex h = Bytes.of_string h
+
 (* Action-verb prefixes are fine and remain unflagged. *)
 let add_to_set s x = x :: s
 let walk_to_root tree = tree
 let print_to_buffer buf x = Buffer.add_string buf x
+let read_from_buffer buf = Buffer.contents buf
+let recover_from_error e = ignore e
