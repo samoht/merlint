@@ -228,7 +228,7 @@ let rec ast_of_parsetree_expr (expr : Parsetree.expression) : expr =
   | _ -> Other
 
 (** Extract function definitions from structure items *)
-let extract_functions_from_structure (structure : Parsetree.structure) =
+let functions_of_structure (structure : Parsetree.structure) =
   let functions = ref [] in
 
   let rec process_structure_item (item : Parsetree.structure_item) =
@@ -274,7 +274,7 @@ let extract_functions filename =
       [])
     else
       let structure = Parse.implementation lexbuf in
-      let functions = extract_functions_from_structure structure in
+      let functions = functions_of_structure structure in
 
       Log.debug (fun m ->
           m "Extracted %d functions from %s" (List.length functions) filename);

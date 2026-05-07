@@ -3,169 +3,95 @@
 type payload = { function_name : string; suggested : string }
 (** Payload for [_to_]- and [_from_]-style conversion names. *)
 
-(** Split [name] at its last occurrence of [sep]. Returns [Some (left, right)]
-    when the name has the conversion shape [<left><sep><right>] with non-empty
-    halves and the [right] half is a single snake_case word (no further [_to_] /
-    [_of_] / [_from_]). Returns [None] otherwise — we only flag canonical
-    conversion names, not action verbs like [add_to_set] / [walk_to_root] /
-    [recover_from_error]. *)
+(** Split [name] on [sep]. Returns [Some (left, right)] when the name has
+    exactly one occurrence of [sep], non-empty halves, and [right] is a single
+    snake_case word not starting with a digit. *)
 let split_separator_pattern ~sep name =
-  let plen = String.length sep in
-  let rec count_occurrences i n =
-    if i + plen > String.length name then n
-    else if String.sub name i plen = sep then count_occurrences (i + 1) (n + 1)
-    else count_occurrences (i + 1) n
-  in
-  let rec find_last_sep i acc =
-    if i + plen > String.length name then acc
-    else if String.sub name i plen = sep then find_last_sep (i + 1) (Some i)
-    else find_last_sep (i + 1) acc
-  in
-  (* Multiple occurrences suggest a conjunctive name like
-     [to_first_and_to_last] — not a single conversion. Skip. *)
-  if count_occurrences 0 0 <> 1 then None
+  match Astring.String.cuts ~sep name with
+  | [ left; right ]
+    when left <> "" && right <> ""
+         && (not (String.contains right '_'))
+         && not (right.[0] >= '0' && right.[0] <= '9') ->
+      Some (left, right)
+  | _ -> None
+
+(** Count [->] occurrences at depth 0 (outside parens/brackets). *)
+let count_top_arrows s =
+  let n = String.length s in
+  let depth = ref 0 in
+  let count = ref 0 in
+  let i = ref 0 in
+  while !i < n do
+    (match s.[!i] with
+    | '(' | '[' -> incr depth
+    | ')' | ']' -> decr depth
+    | '-' when !depth = 0 && !i + 1 < n && s.[!i + 1] = '>' ->
+        incr count;
+        i := !i + 1
+    | _ -> ());
+    incr i
+  done;
+  !count
+
+(** If [s] starts with a [~lab:T] or [?lab:T] argument followed by a top-level
+    arrow, return the suffix after that arrow. *)
+let strip_one_label s =
+  let m = String.length s in
+  if m = 0 || (s.[0] <> '~' && s.[0] <> '?') then None
   else
-    match find_last_sep 0 None with
+    let depth = ref 0 in
+    let i = ref 0 in
+    let found = ref None in
+    while !found = None && !i < m - 1 do
+      (match s.[!i] with
+      | '(' | '[' -> incr depth
+      | ')' | ']' -> decr depth
+      | '-' when !depth = 0 && s.[!i + 1] = '>' -> found := Some (!i + 2)
+      | _ -> ());
+      incr i
+    done;
+    match !found with
+    | Some pos -> Some (String.trim (String.sub s pos (m - pos)))
     | None -> None
-    | Some i ->
-        let left = String.sub name 0 i in
-        let right =
-          String.sub name (i + plen) (String.length name - i - plen)
-        in
-        if left = "" || right = "" then None
-        else if String.contains right '_' then
-          None
-          (* [left] starts with the bare separator (e.g. [to_first_and] for
-             [_to_]) — likely a phrase-style name composed around an existing
-             [to_X] / [from_X] function, not a conversion. *)
-        else
-          let bare = String.sub sep 1 (plen - 2) ^ "_" in
-          if String.starts_with ~prefix:bare left then
-            None
-            (* [right] starts with a digit (e.g. [image_to_2d]) — swapping
-             would yield [2d_of_image], not a valid OCaml identifier. *)
-          else if right.[0] >= '0' && right.[0] <= '9' then None
-          else Some (left, right)
 
-(** Action verbs that take [_to_<noun>] / [_from_<noun>] without being
-    conversions: [add_to_set], [walk_to_root], [print_to_buffer],
-    [read_from_buffer], [recover_from_error]. We skip names whose split's sides
-    contain one of these. *)
-let action_verbs =
-  [
-    "accept";
-    "add";
-    "append";
-    "attach";
-    "belong";
-    "bind";
-    "broadcast";
-    "compare";
-    "connect";
-    "convert";
-    "copy";
-    "derive";
-    "descend";
-    "drop";
-    "dump";
-    "emit";
-    "export";
-    "extract";
-    "feed";
-    "fetch";
-    "flow";
-    "flush";
-    "forward";
-    "get";
-    "go";
-    "import";
-    "inherit";
-    "jump";
-    "lead";
-    "link";
-    "load";
-    "log";
-    "match";
-    "move";
-    "navigate";
-    "open";
-    "point";
-    "pop";
-    "post";
-    "print";
-    "pull";
-    "push";
-    "read";
-    "receive";
-    "recover";
-    "redirect";
-    "rename";
-    "render";
-    "respond";
-    "restore";
-    "route";
-    "save";
-    "scroll";
-    "send";
-    "serialise";
-    "serialize";
-    "set";
-    "skip";
-    "spill";
-    "step";
-    "stick";
-    "stream";
-    "submit";
-    "subscribe";
-    "switch";
-    "take";
-    "talk";
-    "through";
-    "transfer";
-    "transition";
-    "transmit";
-    "travel";
-    "walk";
-    "wire";
-    "write";
-  ]
+let rec strip_leading_labels s =
+  match strip_one_label s with Some s' -> strip_leading_labels s' | None -> s
 
-(** Sinks that the function is writing INTO rather than converting INTO.
-    [value_to_buffer] writes a [value] to a [Buffer]; the result is [unit], so
-    the [<dst>_of_<src>] form would be wrong. Only relevant for [_to_] (the sink
-    sits on the right). *)
-let output_sinks =
-  [ "buffer"; "channel"; "chan"; "file"; "formatter"; "writer"; "stream" ]
+(** Substring after the rightmost top-level arrow, trimmed. *)
+let return_type_of s =
+  let n = String.length s in
+  let depth = ref 0 in
+  let last_arrow = ref None in
+  let i = ref 0 in
+  while !i < n - 1 do
+    (match s.[!i] with
+    | '(' | '[' -> incr depth
+    | ')' | ']' -> decr depth
+    | '-' when !depth = 0 && s.[!i + 1] = '>' ->
+        last_arrow := Some !i;
+        i := !i + 1
+    | _ -> ());
+    incr i
+  done;
+  match !last_arrow with
+  | Some p -> String.trim (String.sub s (p + 2) (n - p - 2))
+  | None -> String.trim s
 
-let words s = String.split_on_char '_' s
+(** Drop the rightmost path-qualifier of a type expression: ["Bytes.t"] ->
+    ["t"], ["int"] -> ["int"]. *)
+let strip_module_qual s =
+  match String.rindex_opt s '.' with
+  | Some i -> String.sub s (i + 1) (String.length s - i - 1)
+  | None -> s
 
-(** A name is an action when ANY snake-case word on either side names a verb.
-    Examples that need this:
-
-    - [add_packages_to_map]: left has [add] (start).
-    - [layer_write_to_top]: left has [write] (end).
-    - [repos_to_push]: right is the gerund [push].
-    - [read_from_buffer]: left is the verb [read].
-    - [recover_from_error]: left is the verb [recover].
-
-    We also exempt:
-
-    - [test_X_to_Y] / [test_X_from_Y]: a test function named after the
-      conversion it exercises, not itself a conversion.
-    - [<X>_to_buffer / writer / channel / ...]: writes into a sink, the
-      [<dst>_of_<src>] form doesn't apply when the result is [unit]. Only
-      checked for [_to_] (sinks sit on the right of [_to_], not [_from_];
-      reading [value_from_buffer] IS a conversion).
-
-    Single-word noun sides ([int], [bytes], ...) never match the verb list, so
-    canonical conversions are still flagged. *)
-let is_action_name ~sep (left, right) =
-  let any_verb ws = List.exists (fun w -> List.mem w action_verbs) ws in
-  let starts_with_test s = s = "test" || String.starts_with ~prefix:"test_" s in
-  let sink_check = sep = "_to_" && List.mem right output_sinks in
-  starts_with_test left || sink_check
-  || any_verb (words left)
-  || any_verb (words right)
+(** Conversion shape: after stripping leading labeled/optional args, the type
+    has exactly one top-level arrow ([T1 -> T2]) and [T2] is not [unit]. *)
+let is_conversion_type type_sig =
+  let s = strip_leading_labels (String.trim type_sig) in
+  count_top_arrows s = 1
+  &&
+  let ret = return_type_of s |> strip_module_qual in
+  ret <> "unit"
 
 (** Suggested rename. For [_to_] (left=src, right=dst): [<dst>_of_<src>] swaps
     the sides. For [_from_] (left=dst, right=src): [<dst>_of_<src>] is just
@@ -178,9 +104,8 @@ let suggested_name ~sep (left, right) =
 
 let try_pattern ~sep name =
   match split_separator_pattern ~sep name with
-  | Some pair when not (is_action_name ~sep pair) ->
-      Some (suggested_name ~sep pair)
-  | _ -> None
+  | Some pair -> Some (suggested_name ~sep pair)
+  | None -> None
 
 let find_pattern name =
   match try_pattern ~sep:"_to_" name with
@@ -196,20 +121,19 @@ let check (ctx : Context.file) =
       let name = item.name in
       match (item.kind, Outline.location filename item) with
       | Outline.Value, Some loc -> (
-          if
+          if List.mem name allowed then
+            None
             (* Names starting with underscore are deliberately marked as
              unused (warning 32). Renaming them yields a still-leading-_
              name, which keeps the warning, OR a name without _ which
              trips warning 32. Either way the rename isn't safe — leave
              these alone. *)
-            List.mem name allowed
-          then None
           else if String.length name > 0 && name.[0] = '_' then None
           else
-            match find_pattern name with
-            | Some suggested ->
+            match (find_pattern name, item.type_sig) with
+            | Some suggested, Some ty when is_conversion_type ty ->
                 Some (Issue.v ~loc { function_name = name; suggested })
-            | None -> None)
+            | _ -> None)
       | _ -> None)
     outline_data
 
@@ -227,12 +151,11 @@ let rule =
       "Standalone conversion functions in OCaml use the [<dst>_of_<src>] form \
        ([int_of_string], [string_of_float], ...) — never [<src>_to_<dst>] or \
        [<dst>_from_<src>]. The convention reads as 'an X out of a Y' and \
-       matches the stdlib precedent. Module-method conversions \
-       ([Bytes.to_string], [Bytes.of_string]) are unaffected: the rule only \
-       flags identifiers that contain [_to_] / [_from_] inside the name \
-       itself, and skips action-verb prefixes ([add_to_set], [walk_to_root], \
-       [print_to_buffer], [read_from_buffer], [recover_from_error], etc.). Add \
-       domain-specific exceptions to [allowed_words]."
+       matches the stdlib precedent. The rule only flags single-arrow \
+       functions ([T1 -> T2] with non-unit [T2]), so multi-argument actions \
+       ([add_to_set : 'a -> 'a list -> 'a list]) and writes-into-sink \
+       functions ([print_to_buffer : Buffer.t -> string -> unit]) are skipped \
+       by their type. Add domain-specific exceptions to [allowed_words]."
     ~examples:
       [ Example.bad Examples.E333.bad_ml; Example.good Examples.E333.good_ml ]
     ~pp (File check)

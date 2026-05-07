@@ -108,7 +108,7 @@ let apply_config config key value : t =
       (* Unknown key - ignore for forward compatibility *)
       config
 
-let load_from_path path =
+let load path =
   let config_files = Project.config_files path in
   List.fold_left
     (fun acc path ->
@@ -130,7 +130,7 @@ let load_from_path path =
 
 let for_file file =
   let dir = if Sys.file_exists file then Filename.dirname file else file in
-  load_from_path dir
+  load dir
 
 (** Standard functions for type t *)
 let equal a b =

@@ -383,7 +383,7 @@ let show_configuration files =
   let project_root = Merlint.Project.root path in
   let workspace_root = Merlint.Project.workspace_root path in
   let config_files = Merlint.Project.config_files path in
-  let config = Merlint.Config.load_from_path path in
+  let config = Merlint.Config.load path in
   Fmt.pr "=== Merlint Configuration ===@.";
   Fmt.pr "Project root: %s@." project_root;
   Fmt.pr "Workspace root: %s@." workspace_root;

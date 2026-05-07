@@ -1054,11 +1054,11 @@ pre code {
         <span class="error-code">E333</span>
         <span class="error-title">Prefer _of_ over _to_ / _from_</span>
     </div>
-    <div class="error-hint"><p>Standalone conversion functions in OCaml use the [&lt;dst&gt;_of_&lt;src&gt;] form ([int_of_string], [string_of_float], ...) — never [&lt;src&gt;_to_&lt;dst&gt;] or [&lt;dst&gt;_from_&lt;src&gt;]. The convention reads as 'an X out of a Y' and matches the stdlib precedent. Module-method conversions ([Bytes.to_string], [Bytes.of_string]) are unaffected: the rule only flags identifiers that contain [_to_] / [_from_] inside the name itself, and skips action-verb prefixes ([add_to_set], [walk_to_root], [print_to_buffer], [read_from_buffer], [recover_from_error], etc.). Add domain-specific exceptions to [allowed_words].</p><div class="examples-grid">
+    <div class="error-hint"><p>Standalone conversion functions in OCaml use the [&lt;dst&gt;_of_&lt;src&gt;] form ([int_of_string], [string_of_float], ...) — never [&lt;src&gt;_to_&lt;dst&gt;] or [&lt;dst&gt;_from_&lt;src&gt;]. The convention reads as 'an X out of a Y' and matches the stdlib precedent. The rule only flags single-arrow functions ([T1 -&gt; T2] with non-unit [T2]), so multi-argument actions ([add_to_set : 'a -&gt; 'a list -&gt; 'a list]) and writes-into-sink functions ([print_to_buffer : Buffer.t -&gt; string -&gt; unit]) are skipped by their type. Add domain-specific exceptions to [allowed_words].</p><div class="examples-grid">
 <div class="example bad">
   <h4>BAD</h4>
-  <pre><code>(* <span class="cn">Bad</span> examples: standalone conversion functions named [&lt;src&gt;_to_&lt;dst&gt;] <span class="kw">or</span>
-   [&lt;dst&gt;_from_&lt;src&gt;] — both should be rewritten <span class="kw">to</span> [&lt;dst&gt;_of_&lt;src&gt;]. *)
+  <pre><code>(* <span class="cn">Bad</span> examples: single-arrow [<span class="cn">T1</span> -&gt; <span class="cn">T2</span>] <span class="kw">with</span> non-unit [<span class="cn">T2</span>] — these are
+   real conversions <span class="kw">and</span> should use the [&lt;dst&gt;_of_&lt;src&gt;] form. *)
 
 <span class="kw">let</span> int_to_string n = string_of_int n
 
@@ -1069,16 +1069,8 @@ pre code {
 
 <span class="kw">let</span> path_to_uri p = &quot;file://&quot; ^ p
 
-<span class="cm">(* [_from_] form: [&lt;dst&gt;_from_&lt;src&gt;] should rewrite to [&lt;dst&gt;_of_&lt;src&gt;]. *)</span>
 <span class="kw">let</span> value_from_string s = int_of_string s
 <span class="kw">let</span> bytes_from_hex h = <span class="cn">Bytes</span>.of_string h
-
-<span class="cm">(* These are NOT conversions — action-verb prefixes are exempt. *)</span>
-<span class="kw">let</span> add_to_set s x = x :: s
-<span class="kw">let</span> walk_to_root tree = tree
-<span class="kw">let</span> print_to_buffer buf x = <span class="cn">Buffer</span>.add_string buf x
-<span class="kw">let</span> read_from_buffer buf = <span class="cn">Buffer</span>.contents buf
-<span class="kw">let</span> recover_from_error e = ignore e
 </code></pre>
 </div>
 <div class="example good">
@@ -1097,12 +1089,17 @@ pre code {
 <span class="kw">let</span> value_of_string s = int_of_string s
 <span class="kw">let</span> bytes_of_hex h = <span class="cn">Bytes</span>.of_string h
 
-<span class="cm">(* Action-verb prefixes are fine and remain unflagged. *)</span>
+(* <span class="cn">These</span> have [_to_]/[_from_] <span class="kw">in</span> the name but are <span class="cn">NOT</span> conversions by <span class="kw">type</span>:
+   the <span class="kw">type</span>-shape check excludes multi-arrow <span class="kw">and</span> unit-return functions. *)
+
 <span class="kw">let</span> add_to_set s x = x :: s
-<span class="kw">let</span> walk_to_root tree = tree
+<span class="cm">(* val add_to_set : 'a list -&gt; 'a -&gt; 'a list — two arrows, not flagged. *)</span>
+
 <span class="kw">let</span> print_to_buffer buf x = <span class="cn">Buffer</span>.add_string buf x
-<span class="kw">let</span> read_from_buffer buf = <span class="cn">Buffer</span>.contents buf
+<span class="cm">(* val print_to_buffer : Buffer.t -&gt; string -&gt; unit — unit return, not flagged. *)</span>
+
 <span class="kw">let</span> recover_from_error e = ignore e
+<span class="cm">(* val recover_from_error : 'a -&gt; unit — unit return, not flagged. *)</span>
 </code></pre>
 </div>
 </div></div>

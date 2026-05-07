@@ -45,10 +45,10 @@ val file : string -> string option
 (** [file path] finds the outermost merlint.toml config file from the given
     path. *)
 
-val load_from_path : string -> t
-(** [load_from_path path] loads and merges all merlint.toml config files from
-    [path] up to the workspace root. Settings from closer files override outer
-    ones; rule exclusions accumulate. *)
+val load : string -> t
+(** [load path] loads and merges all merlint.toml config files from [path] up to
+    the workspace root. Settings from closer files override outer ones; rule
+    exclusions accumulate. *)
 
 val for_file : string -> t
 (** [for_file file] returns the config that applies to [file], merging

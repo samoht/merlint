@@ -12,9 +12,14 @@ let uri_of_path p = "file://" ^ p
 let value_of_string s = int_of_string s
 let bytes_of_hex h = Bytes.of_string h
 
-(* Action-verb prefixes are fine and remain unflagged. *)
+(* These have [_to_]/[_from_] in the name but are NOT conversions by type:
+   the type-shape check excludes multi-arrow and unit-return functions. *)
+
 let add_to_set s x = x :: s
-let walk_to_root tree = tree
+(* val add_to_set : 'a list -> 'a -> 'a list — two arrows, not flagged. *)
+
 let print_to_buffer buf x = Buffer.add_string buf x
-let read_from_buffer buf = Buffer.contents buf
+(* val print_to_buffer : Buffer.t -> string -> unit — unit return, not flagged. *)
+
 let recover_from_error e = ignore e
+(* val recover_from_error : 'a -> unit — unit return, not flagged. *)
