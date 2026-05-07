@@ -18,7 +18,7 @@ let v () = { timings = [] }
 let add_timing t timing = t.timings <- timing :: t.timings
 
 (** Get all timings in chronological order *)
-let timings_from_state t = List.rev t.timings
+let timings t = List.rev t.timings
 
 (** Reset timings in the state *)
 let reset_state t = t.timings <- []
@@ -103,7 +103,7 @@ let summary_rows ~merlin_time ~file_rules_time ~project_rules_time ~merlin_count
   List.rev !rows
 
 let print_summary t =
-  let timings = timings_from_state t in
+  let timings = timings t in
   if timings = [] then ()
   else
     let ( merlin_time,
@@ -183,7 +183,7 @@ let format_file_rows sorted =
     ]
 
 let print_file_summary t =
-  let timings = timings_from_state t in
+  let timings = timings t in
   if timings = [] then ()
   else
     let file_stats = aggregate_file_timings timings in
@@ -268,7 +268,7 @@ let format_rule_rows sorted =
     else rows
 
 let print_rule_summary t =
-  let timings = timings_from_state t in
+  let timings = timings t in
   if timings = [] then ()
   else
     let rule_stats = aggregate_rule_timings timings in

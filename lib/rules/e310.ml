@@ -25,7 +25,11 @@ let is_valid_snake_case_with_suffix ~allowed name =
 let check_value_name ~allowed name =
   (* Skip names starting with uppercase: these are first-class module bindings
      like (module M) which must be uppercase in OCaml *)
-  if name <> "" && name.[0] >= 'A' && name.[0] <= 'Z' then None
+  if name <> "" && name.[0] >= 'A' && name.[0] <= 'Z' then
+    None
+    (* Whole-name allowlist: spec-mandated identifiers (RFC ASN.1 field
+     names, IANA registry entries) keep their canonical mixed case. *)
+  else if List.mem name allowed then None
   else
     let expected = Naming.to_lowercase_snake_case name in
     if name <> expected && name <> String.lowercase_ascii name then
