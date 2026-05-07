@@ -5,17 +5,25 @@ Test bad example - should flag generic f (Fmt.str ...) but NOT specialized failw
   Analyzing 1 files
   
   ✓ Code Quality (0 total issues)
-  ✗ Code Style (3 total issues)
-    [E217] Use Fmt.kstr f Instead of f (Fmt.str) (3 issues)
-    Use Fmt.kstr f instead of f (Fmt.str ...). Fmt.kstr is the
-    continuation-passing variant of Fmt.str: it formats and hands the resulting
-    string to its first argument. The [<fn> (Fmt.str ...)] pattern is dominated by
-    [Fmt.kstr <fn> ...] for any single-argument function or constructor.
-    Specialized cases ([failwith], [invalid_arg], [Alcotest.fail], [fail]) have
-    dedicated helpers — see E215, E216, E616.
-    - bad.ml:2:22: Use Fmt.kstr f instead of f (Fmt.str ...) - Fmt.kstr threads the formatted string into the continuation in one step, no intermediate [Fmt.str] needed
-    - bad.ml:6:14: Use Fmt.kstr f instead of f (Fmt.str ...) - Fmt.kstr threads the formatted string into the continuation in one step, no intermediate [Fmt.str] needed
-    - bad.ml:9:14: Use Fmt.kstr f instead of f (Fmt.str ...) - Fmt.kstr threads the formatted string into the continuation in one step, no intermediate [Fmt.str] needed
+  ✗ Code Style (7 total issues)
+    [E217] Prefer the matching Fmt helper over (Fmt.str ...) (7 issues)
+    Most calls of the shape [<f> (Fmt.str ...)] have a direct [Fmt.X] equivalent
+    that avoids the intermediate [Fmt.str] string allocation and reads better: -
+    [Buffer.add_string buf (Fmt.str ...)] -> [Fmt.bprintf buf "..."]; -
+    [print_endline (Fmt.str ...)] -> [Fmt.pr "...@."]; - [print_string (Fmt.str
+    ...)] -> [Fmt.pr "..."]; - [prerr_endline (Fmt.str ...)] -> [Fmt.epr "...@."];
+    - [prerr_string (Fmt.str ...)] -> [Fmt.epr "..."]; - [Error (Fmt.str ...)] ->
+    [Fmt.kstr (fun e -> Error e) "..."], or a one-shot [error_msgf] helper in the
+    package; - any other [<f> (Fmt.str ...)] -> [Fmt.kstr <f> "..."]. Specialised
+    cases for [failwith], [invalid_arg], [Alcotest.fail], and bare [fail] are
+    handled by E215, E216, and E616 respectively.
+    - bad.ml:2:22: Wrap with [Fmt.kstr (fun s -> Error s) "..."] instead of [... (Fmt.str ...)]
+    - bad.ml:6:14: Wrap with [Fmt.kstr log "..."] instead of [... (Fmt.str ...)]
+    - bad.ml:9:14: Wrap with [Fmt.kstr (fun s -> Some s) "..."] instead of [... (Fmt.str ...)]
+    - bad.ml:13:2: Wrap with [Fmt.bprintf buf "..."] instead of [... (Fmt.str ...)]
+    - bad.ml:15:20: Wrap with [Fmt.pr "...@."] instead of [... (Fmt.str ...)]
+    - bad.ml:16:20: Wrap with [Fmt.epr "...@."] instead of [... (Fmt.str ...)]
+    - bad.ml:17:19: Wrap with [Fmt.pr "..."] instead of [... (Fmt.str ...)]
   ✓ Naming Conventions (0 total issues)
   ✓ Documentation (0 total issues)
   ✓ Project Structure (0 total issues)
@@ -23,14 +31,15 @@ Test bad example - should flag generic f (Fmt.str ...) but NOT specialized failw
   ✓ Interop Testing (0 total issues)
   ✓ Code Generation (0 total issues)
   
-  ╭────────────┬─────────────────────────────────────────────╮
-  │ Category   │ Issues                                      │
-  ├────────────┼─────────────────────────────────────────────┤
-  │ Code Style │ 3 (3 use fmt.kstr f instead of f (fmt.str)) │
-  ╰────────────┴─────────────────────────────────────────────╯
+  ╭────────────┬────────────────────────────────────────────────────────╮
+  │ Category   │ Issues                                                 │
+  ├────────────┼────────────────────────────────────────────────────────┤
+  │ Code Style │ 7 (7 prefer the matching fmt helper over (fmt.str      │
+  │            │ ...))                                                  │
+  ╰────────────┴────────────────────────────────────────────────────────╯
   
   
-  Summary: ✗ 3 total issues (applied 1 rule)
+  Summary: ✗ 7 total issues (applied 1 rule)
   ✗ Some checks failed. See details above.
   [1]
 

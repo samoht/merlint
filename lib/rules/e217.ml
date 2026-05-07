@@ -1,4 +1,6 @@
-(** E217: Use Fmt.kstr f instead of f (Fmt.str ...) *)
+(** E217: f (Fmt.str ...) — prefer the matching Fmt helper *)
+
+type payload = { suggested : string }
 
 (** Outer applications already covered by a more specific rule with a dedicated
     [Fmt.X] helper. Skip them here so the user sees only the specialized hint,
@@ -10,6 +12,29 @@ let handled_by_specialized_rule fn =
   let path = Longident.flatten fn in
   path = [ "Alcotest"; "fail" ] || path = [ "fail" ]
 
+(** Helper that matches the outer's purpose: [Buffer.add_string] writes into a
+    buffer, so the right rewrite uses [Fmt.bprintf]; [print_endline] writes to
+    [stdout] with a newline, so [Fmt.pr "...@."]; etc. Everything else falls
+    back to [Fmt.kstr], which threads the formatted string through any
+    continuation. *)
+let suggestion_for_apply fn =
+  match Longident.flatten fn with
+  | [ "Buffer"; "add_string" ] -> "Fmt.bprintf buf \"...\""
+  | [ "print_endline" ] -> "Fmt.pr \"...@.\""
+  | [ "print_string" ] -> "Fmt.pr \"...\""
+  | [ "prerr_endline" ] -> "Fmt.epr \"...@.\""
+  | [ "prerr_string" ] -> "Fmt.epr \"...\""
+  | path -> Fmt.str "Fmt.kstr %s \"...\"" (String.concat "." path)
+
+let suggestion_for_construct lid =
+  match List.rev (Longident.flatten lid) with
+  | last :: _ -> Fmt.str "Fmt.kstr (fun s -> %s s) \"...\"" last
+  | [] -> "Fmt.kstr (fun s -> _ s) \"...\""
+
+let last_positional_arg args =
+  let positional = List.filter (fun (lbl, _) -> lbl = Asttypes.Nolabel) args in
+  match List.rev positional with (_, last) :: _ -> Some last | [] -> None
+
 let check (ctx : Context.file) =
   let filename = ctx.filename in
   let content = Context.content ctx in
@@ -17,39 +42,46 @@ let check (ctx : Context.file) =
   | None -> []
   | Some structure ->
       let issues = ref [] in
+      let is_fmt_str = Ast.is_apply_of [ "Fmt"; "str" ] in
       Ast.iter_expressions structure (fun expr ->
-          let is_fmt_str = Ast.is_apply_of [ "Fmt"; "str" ] in
-          let flag () =
+          let flag suggested =
             issues :=
-              Issue.v ~loc:(Ast.loc_to_merlint ~filename expr.pexp_loc) ()
+              Issue.v
+                ~loc:(Ast.loc_to_merlint ~filename expr.pexp_loc)
+                { suggested }
               :: !issues
           in
           match expr.pexp_desc with
-          | Pexp_apply
-              ( { pexp_desc = Pexp_ident { txt = fn; _ }; _ },
-                [ (Asttypes.Nolabel, arg) ] )
-            when is_fmt_str arg && not (handled_by_specialized_rule fn) ->
-              flag ()
-          | Pexp_construct (_, Some arg) when is_fmt_str arg -> flag ()
+          | Pexp_apply ({ pexp_desc = Pexp_ident { txt = fn; _ }; _ }, args)
+            when not (handled_by_specialized_rule fn) -> (
+              match last_positional_arg args with
+              | Some arg when is_fmt_str arg -> flag (suggestion_for_apply fn)
+              | _ -> ())
+          | Pexp_construct ({ txt = lid; _ }, Some arg) when is_fmt_str arg ->
+              flag (suggestion_for_construct lid)
           | _ -> ());
       List.rev !issues
 
-let pp ppf () =
-  Fmt.pf ppf
-    "Use Fmt.kstr f instead of f (Fmt.str ...) - Fmt.kstr threads the \
-     formatted string into the continuation in one step, no intermediate \
-     [Fmt.str] needed"
+let pp ppf { suggested } =
+  Fmt.pf ppf "Wrap with [%s] instead of [... (Fmt.str ...)]" suggested
 
 let rule =
-  Rule.v ~code:"E217" ~title:"Use Fmt.kstr f Instead of f (Fmt.str)"
+  Rule.v ~code:"E217" ~title:"Prefer the matching Fmt helper over (Fmt.str ...)"
     ~category:Style_modernization
     ~hint:
-      "Use Fmt.kstr f instead of f (Fmt.str ...). Fmt.kstr is the \
-       continuation-passing variant of Fmt.str: it formats and hands the \
-       resulting string to its first argument. The [<fn> (Fmt.str ...)] \
-       pattern is dominated by [Fmt.kstr <fn> ...] for any single-argument \
-       function or constructor. Specialized cases ([failwith], [invalid_arg], \
-       [Alcotest.fail], [fail]) have dedicated helpers — see E215, E216, E616."
+      "Most calls of the shape [<f> (Fmt.str ...)] have a direct [Fmt.X] \
+       equivalent that avoids the intermediate [Fmt.str] string allocation and \
+       reads better:\n\
+      \  - [Buffer.add_string buf (Fmt.str ...)] -> [Fmt.bprintf buf \"...\"];\n\
+      \  - [print_endline (Fmt.str ...)] -> [Fmt.pr \"...@.\"];\n\
+      \  - [print_string (Fmt.str ...)] -> [Fmt.pr \"...\"];\n\
+      \  - [prerr_endline (Fmt.str ...)] -> [Fmt.epr \"...@.\"];\n\
+      \  - [prerr_string (Fmt.str ...)] -> [Fmt.epr \"...\"];\n\
+      \  - [Error (Fmt.str ...)] -> [Fmt.kstr (fun e -> Error e) \"...\"], or \
+       a one-shot [error_msgf] helper in the package;\n\
+      \  - any other [<f> (Fmt.str ...)] -> [Fmt.kstr <f> \"...\"].\n\
+       Specialised cases for [failwith], [invalid_arg], [Alcotest.fail], and \
+       bare [fail] are handled by E215, E216, and E616 respectively."
     ~examples:
       [
         {
@@ -57,14 +89,24 @@ let rule =
           code =
             {|let parse s =
   if s = "" then Error (Fmt.str "empty input")
-  else Ok s|};
+  else Ok s
+
+let log_event buf ev =
+  Buffer.add_string buf (Fmt.str "[%s] %s\n" ev.kind ev.message)
+
+let trace n = print_endline (Fmt.str "n=%d" n)|};
         };
         {
           is_good = true;
           code =
             {|let parse s =
   if s = "" then Fmt.kstr (fun e -> Error e) "empty input"
-  else Ok s|};
+  else Ok s
+
+let log_event buf ev =
+  Fmt.bprintf buf "[%s] %s\n" ev.kind ev.message
+
+let trace n = Fmt.pr "n=%d@." n|};
         };
       ]
     ~pp (File check)

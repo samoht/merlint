@@ -700,20 +700,38 @@ pre code {
 <div class="error-card" id="E217">
     <div>
         <span class="error-code">E217</span>
-        <span class="error-title">Use Fmt.kstr f Instead of f (Fmt.str)</span>
+        <span class="error-title">Prefer the matching Fmt helper over (Fmt.str ...)</span>
     </div>
-    <div class="error-hint"><p>Use Fmt.kstr f instead of f (Fmt.str ...). Fmt.kstr is the continuation-passing variant of Fmt.str: it formats and hands the resulting string to its first argument. The [&lt;fn&gt; (Fmt.str ...)] pattern is dominated by [Fmt.kstr &lt;fn&gt; ...] for any single-argument function or constructor. Specialized cases ([failwith], [invalid_arg], [Alcotest.fail], [fail]) have dedicated helpers — see E215, E216, E616.</p><div class="examples-grid">
+    <div class="error-hint"><p>Most calls of the shape [&lt;f&gt; (Fmt.str ...)] have a direct [Fmt.X] equivalent that avoids the intermediate [Fmt.str] string allocation and reads better:
+  - [Buffer.add_string buf (Fmt.str ...)] -&gt; [Fmt.bprintf buf "..."];
+  - [print_endline (Fmt.str ...)] -&gt; [Fmt.pr "...@."];
+  - [print_string (Fmt.str ...)] -&gt; [Fmt.pr "..."];
+  - [prerr_endline (Fmt.str ...)] -&gt; [Fmt.epr "...@."];
+  - [prerr_string (Fmt.str ...)] -&gt; [Fmt.epr "..."];
+  - [Error (Fmt.str ...)] -&gt; [Fmt.kstr (fun e -&gt; Error e) "..."], or a one-shot [error_msgf] helper in the package;
+  - any other [&lt;f&gt; (Fmt.str ...)] -&gt; [Fmt.kstr &lt;f&gt; "..."].
+Specialised cases for [failwith], [invalid_arg], [Alcotest.fail], and bare [fail] are handled by E215, E216, and E616 respectively.</p><div class="examples-grid">
 <div class="example bad">
   <h4>BAD</h4>
   <pre><code><span class="kw">let</span> parse s =
   <span class="kw">if</span> s = &quot;&quot; <span class="kw">then</span> <span class="cn">Error</span> (<span class="cn">Fmt</span>.str &quot;empty input&quot;)
-  <span class="kw">else</span> <span class="cn">Ok</span> s</code></pre>
+  <span class="kw">else</span> <span class="cn">Ok</span> s
+
+<span class="kw">let</span> log_event buf ev =
+  <span class="cn">Buffer</span>.add_string buf (<span class="cn">Fmt</span>.str &quot;[%s] %s\n&quot; ev.kind ev.message)
+
+<span class="kw">let</span> trace n = print_endline (<span class="cn">Fmt</span>.str &quot;n=%d&quot; n)</code></pre>
 </div>
 <div class="example good">
   <h4>GOOD</h4>
   <pre><code><span class="kw">let</span> parse s =
   <span class="kw">if</span> s = &quot;&quot; <span class="kw">then</span> <span class="cn">Fmt</span>.kstr (<span class="kw">fun</span> e -&gt; <span class="cn">Error</span> e) &quot;empty input&quot;
-  <span class="kw">else</span> <span class="cn">Ok</span> s</code></pre>
+  <span class="kw">else</span> <span class="cn">Ok</span> s
+
+<span class="kw">let</span> log_event buf ev =
+  <span class="cn">Fmt</span>.bprintf buf &quot;[%s] %s\n&quot; ev.kind ev.message
+
+<span class="kw">let</span> trace n = <span class="cn">Fmt</span>.pr &quot;n=%d@.&quot; n</code></pre>
 </div>
 </div></div>
 </div>
