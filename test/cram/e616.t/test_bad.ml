@@ -22,3 +22,11 @@ let test_complex_format () =
   let items = [1; 2; 3] in
   let _ = Alcotest.fail (Fmt.str "Expected items: %s" "test") in
   ignore items
+
+(* Multi-line form: regex would have missed this — AST walk catches it. *)
+let test_multi_line () =
+  let _ =
+    Alcotest.fail
+      (Fmt.str "Multi-line %s call" "fail")
+  in
+  ()
