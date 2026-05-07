@@ -323,6 +323,20 @@ let iter_apply structure f =
   in
   iter.structure iter structure
 
+(** [iter_expressions structure f] walks [structure] and calls [f expr] for
+    every expression node. *)
+let iter_expressions structure f =
+  let iter =
+    {
+      Ast_iterator.default_iterator with
+      expr =
+        (fun this expr ->
+          f expr;
+          Ast_iterator.default_iterator.expr this expr);
+    }
+  in
+  iter.structure iter structure
+
 (** [is_apply_of path expr] returns [true] when [expr] is
     [Pexp_apply (Pexp_ident path, _)]. *)
 let is_apply_of path (expr : Parsetree.expression) =
