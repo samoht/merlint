@@ -9,7 +9,8 @@ Test bad example - should flag generic f (Fmt.str ...) but NOT specialized failw
     [E217] Prefer the matching Fmt helper over (Fmt.str ...) (7 issues)
     Most calls of the shape [<f> (Fmt.str ...)] have a direct [Fmt.X] equivalent
     that avoids the intermediate [Fmt.str] string allocation and reads better: -
-    [Buffer.add_string buf (Fmt.str ...)] -> [Fmt.bprintf buf "..."]; -
+    [Buffer.add_string buf (Fmt.str ...)] -> [Fmt.pf (Fmt.with_buffer buf) "..."]
+    (hoist the formatter outside any hot loop to avoid re-allocating); -
     [print_endline (Fmt.str ...)] -> [Fmt.pr "...@."]; - [print_string (Fmt.str
     ...)] -> [Fmt.pr "..."]; - [prerr_endline (Fmt.str ...)] -> [Fmt.epr "...@."];
     - [prerr_string (Fmt.str ...)] -> [Fmt.epr "..."]; - [Error (Fmt.str ...)] ->
@@ -20,7 +21,7 @@ Test bad example - should flag generic f (Fmt.str ...) but NOT specialized failw
     - bad.ml:2:22: Wrap with [Fmt.kstr (fun s -> Error s) "..."] instead of [... (Fmt.str ...)]
     - bad.ml:6:14: Wrap with [Fmt.kstr log "..."] instead of [... (Fmt.str ...)]
     - bad.ml:9:14: Wrap with [Fmt.kstr (fun s -> Some s) "..."] instead of [... (Fmt.str ...)]
-    - bad.ml:13:2: Wrap with [Fmt.bprintf buf "..."] instead of [... (Fmt.str ...)]
+    - bad.ml:13:2: Wrap with [Fmt.pf (Fmt.with_buffer buf) "..." (hoist the formatter outside hot loops)] instead of [... (Fmt.str ...)]
     - bad.ml:15:20: Wrap with [Fmt.pr "...@."] instead of [... (Fmt.str ...)]
     - bad.ml:16:20: Wrap with [Fmt.epr "...@."] instead of [... (Fmt.str ...)]
     - bad.ml:17:19: Wrap with [Fmt.pr "..."] instead of [... (Fmt.str ...)]

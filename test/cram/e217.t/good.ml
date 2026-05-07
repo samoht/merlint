@@ -6,7 +6,7 @@ let trace n = Fmt.kstr log "n=%d" n
 
 let maybe x = Fmt.kstr (fun s -> Some s) "value: %s" x
 
-let log_event buf kind msg = Fmt.bprintf buf "[%s] %s\n" kind msg
+let log_event buf kind msg = Fmt.pf (Fmt.with_buffer buf) "[%s] %s\n" kind msg
 let dump_stdout n = Fmt.pr "n=%d@." n
 let dump_stderr n = Fmt.epr "n=%d@." n
 let put_string s = Fmt.pr "%s" s
