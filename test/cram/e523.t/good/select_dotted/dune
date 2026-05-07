@@ -1,0 +1,11 @@
+(library
+ (name sel_dotted_a)
+ (modules main_dotted_a)
+ (libraries
+  (select c_tier.ml from
+   (everparse -> c_tier.everparse.ml)
+   (-> c_tier.none.ml))))
+
+(library
+ (name sel_dotted_b)
+ (modules main_dotted_b))

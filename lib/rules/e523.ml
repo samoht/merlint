@@ -199,12 +199,18 @@ let has_nontrivial_include_subdirs stanzas =
       | _ -> false)
     stanzas
 
+(** [.ml] files dune auto-discovers as modules. Files with extra dots in the
+    stem (e.g. [c_tier.everparse.ml]) are NOT modules — OCaml module names can't
+    contain dots, so dune treats them as plain text inputs consumed by
+    [(select target from (cond -> branch.ml) ...)]. Skip them here so they don't
+    trip the uncovered check. *)
 let ml_modules_in_dir dir =
   let entries = try Sys.readdir dir |> Array.to_list with Sys_error _ -> [] in
   List.filter_map
     (fun name ->
       if Filename.check_suffix name ".ml" then
-        Some (Filename.chop_suffix name ".ml")
+        let stem = Filename.chop_suffix name ".ml" in
+        if String.contains stem '.' then None else Some stem
       else None)
     entries
 

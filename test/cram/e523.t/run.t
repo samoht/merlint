@@ -49,7 +49,7 @@ because subdirectory modules merge into the stanza):
   $ merlint -B -r E523 good/
   Running merlint analysis...
   
-  Analyzing 12 files
+  Analyzing 14 files
   
   ✓ Code Quality (0 total issues)
   ✓ Code Style (0 total issues)
