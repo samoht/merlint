@@ -27,19 +27,13 @@ let is_unit (ct : Parsetree.core_type) =
   | Ptyp_constr ({ txt = Lident "unit"; _ }, []) -> true
   | _ -> false
 
-(** [(_, _) result] is the conventional return type for an imperative action
-    that may fail ([Slack.invite_to_channel], [Slack.kick_from_channel], the
-    Eio-fronting [pull_from_handle : ... -> unit -> (_, error) result], etc.).
-    Stdlib's parser/converter precedent ([int_of_string], [Float.of_string])
-    raises on failure or returns [option]; [result] is reserved for I/O, system,
-    and network operations -- i.e. verbs, not constructors of an ['a]. Skip
-    these to avoid the verb/constructor confusion. *)
-let is_result (ct : Parsetree.core_type) =
+(** [(unit, _) result] is the conventional return type for an imperative action
+    that may fail ([Slack.invite_to_channel], [Slack.kick_from_channel], ...).
+    Treat it like [unit] for naming purposes -- the function is a verb, not a
+    constructor of an [`a`]. *)
+let is_unit_result (ct : Parsetree.core_type) =
   match ct.ptyp_desc with
-  | Ptyp_constr
-      ({ txt = Lident "result" | Ldot (_, { txt = "result"; _ }); _ }, [ _; _ ])
-    ->
-      true
+  | Ptyp_constr ({ txt = Lident "result"; _ }, [ ok; _ ]) -> is_unit ok
   | _ -> false
 
 (** Conversion shape: after stripping leading labeled/optional args, the type
@@ -47,7 +41,7 @@ let is_result (ct : Parsetree.core_type) =
     non-arrow leaf type (so multi-argument functions don't qualify), is not
     [unit] (so writes-into-sink functions like [add_packages_to_map] and
     [respond_to_tool], which return [unit] after several args, don't qualify
-    either), and is not [(_, _) result] (imperative-action-with-error shape).
+    either), and is not [(unit, _) result] (imperative-action-with-error shape).
     The OCaml convention [<dst>_of_<src>] only fits genuine
     single-source/single-result conversions. *)
 let is_conversion_type ct =
@@ -55,7 +49,7 @@ let is_conversion_type ct =
   | Ptyp_arrow (Asttypes.Nolabel, _, ret) -> (
       match ret.ptyp_desc with
       | Ptyp_arrow _ -> false (* second arrow: multi-arg *)
-      | _ -> (not (is_unit ret)) && not (is_result ret))
+      | _ -> (not (is_unit ret)) && not (is_unit_result ret))
   | _ -> false
 
 (** Suggested rename. For [_to_] (left=src, right=dst): [<dst>_of_<src>] swaps
