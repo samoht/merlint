@@ -5,7 +5,8 @@ let src = Logs.Src.create "merlint.dune" ~doc:"Dune interface"
 module Log = (val Logs.src_log src : Logs.LOG)
 
 (* Error helper function *)
-let err_build_failed msg = Error (Fmt.str "Failed to build project: %s" msg)
+let err_build_failed msg =
+  Fmt.kstr (fun s -> Error s) "Failed to build project: %s" msg
 
 type test_info = {
   name : string;

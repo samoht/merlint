@@ -293,7 +293,7 @@ let add_pattern_segments pattern class_name escaped segments =
 let add_keyword_segments escaped segments =
   List.iter
     (fun kw ->
-      let pattern = Re.Perl.compile_pat (Fmt.str {|\b%s\b|} kw) in
+      let pattern = Fmt.kstr Re.Perl.compile_pat {|\b%s\b|} kw in
       Re.all pattern escaped
       |> List.iter (fun g ->
           let start = Re.Group.start g 0 in
@@ -331,14 +331,14 @@ let build_highlighted_text escaped segments =
         let parts = String.split_on_char '.' text in
         match parts with
         | [ m; f ] ->
-            result :=
-              !result
-              ^ Fmt.str
-                  {|<span class="md">%s</span>.<span class="fn">%s</span>|} m f
+            Fmt.kstr
+              (fun s -> result := !result ^ s)
+              {|<span class="md">%s</span>.<span class="fn">%s</span>|} m f
         | _ -> result := !result ^ text
       else
-        result :=
-          !result ^ Fmt.str {|<span class="%s">%s</span>|} class_name text;
+        Fmt.kstr
+          (fun s -> result := !result ^ s)
+          {|<span class="%s">%s</span>|} class_name text;
 
       last_pos := stop)
     segments;
