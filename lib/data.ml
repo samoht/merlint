@@ -26,6 +26,7 @@ let all_rules =
     E332.rule;
     E333.rule;
     E335.rule;
+    E336.rule;
     E340.rule;
     E350.rule;
     E351.rule;

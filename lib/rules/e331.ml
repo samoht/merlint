@@ -14,9 +14,9 @@ let is_stdlib_find_alias name =
     flag those. Uses structural type analysis via [Parse.core_type] rather than
     string-suffix matching, so [int -> ('a, 'b) result option] and friends are
     detected correctly. *)
-let is_find_option name type_sig =
+let is_find_option name (item : Outline.item) =
   String.starts_with ~prefix:"find_" (String.lowercase_ascii name)
-  && match type_sig with None -> false | Some ts -> Outline.returns_option ts
+  && Outline.returns_option item
 
 type prefix_type = Create | Make | Get | Find
 
@@ -87,7 +87,7 @@ let check (ctx : Context.file) =
       | Outline.Value, Some loc
         when (not (List.mem name allowed))
              && (not (is_stdlib_find_alias name))
-             && not (is_find_option name item.type_sig) -> (
+             && not (is_find_option name item) -> (
           (* Check for regular function prefix patterns *)
           match check_function_prefix name with
           | Some (prefix_type, suggested) ->

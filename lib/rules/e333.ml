@@ -15,83 +15,24 @@ let split_separator_pattern ~sep name =
       Some (left, right)
   | _ -> None
 
-(** Count [->] occurrences at depth 0 (outside parens/brackets). *)
-let count_top_arrows s =
-  let n = String.length s in
-  let depth = ref 0 in
-  let count = ref 0 in
-  let i = ref 0 in
-  while !i < n do
-    (match s.[!i] with
-    | '(' | '[' -> incr depth
-    | ')' | ']' -> decr depth
-    | '-' when !depth = 0 && !i + 1 < n && s.[!i + 1] = '>' ->
-        incr count;
-        i := !i + 1
-    | _ -> ());
-    incr i
-  done;
-  !count
+(** Strip leading [~lab:T] / [?lab:T] arguments from a type. *)
+let rec strip_labeled_args (ct : Parsetree.core_type) =
+  match ct.ptyp_desc with
+  | Ptyp_arrow ((Asttypes.Labelled _ | Asttypes.Optional _), _, rest) ->
+      strip_labeled_args rest
+  | _ -> ct
 
-(** If [s] starts with a [~lab:T] or [?lab:T] argument followed by a top-level
-    arrow, return the suffix after that arrow. *)
-let strip_one_label s =
-  let m = String.length s in
-  if m = 0 || (s.[0] <> '~' && s.[0] <> '?') then None
-  else
-    let depth = ref 0 in
-    let i = ref 0 in
-    let found = ref None in
-    while !found = None && !i < m - 1 do
-      (match s.[!i] with
-      | '(' | '[' -> incr depth
-      | ')' | ']' -> decr depth
-      | '-' when !depth = 0 && s.[!i + 1] = '>' -> found := Some (!i + 2)
-      | _ -> ());
-      incr i
-    done;
-    match !found with
-    | Some pos -> Some (String.trim (String.sub s pos (m - pos)))
-    | None -> None
-
-let rec strip_leading_labels s =
-  match strip_one_label s with Some s' -> strip_leading_labels s' | None -> s
-
-(** Substring after the rightmost top-level arrow, trimmed. *)
-let return_type_of s =
-  let n = String.length s in
-  let depth = ref 0 in
-  let last_arrow = ref None in
-  let i = ref 0 in
-  while !i < n - 1 do
-    (match s.[!i] with
-    | '(' | '[' -> incr depth
-    | ')' | ']' -> decr depth
-    | '-' when !depth = 0 && s.[!i + 1] = '>' ->
-        last_arrow := Some !i;
-        i := !i + 1
-    | _ -> ());
-    incr i
-  done;
-  match !last_arrow with
-  | Some p -> String.trim (String.sub s (p + 2) (n - p - 2))
-  | None -> String.trim s
-
-(** Drop the rightmost path-qualifier of a type expression: ["Bytes.t"] ->
-    ["t"], ["int"] -> ["int"]. *)
-let strip_module_qual s =
-  match String.rindex_opt s '.' with
-  | Some i -> String.sub s (i + 1) (String.length s - i - 1)
-  | None -> s
+let is_unit (ct : Parsetree.core_type) =
+  match ct.ptyp_desc with
+  | Ptyp_constr ({ txt = Lident "unit"; _ }, []) -> true
+  | _ -> false
 
 (** Conversion shape: after stripping leading labeled/optional args, the type
     has exactly one top-level arrow ([T1 -> T2]) and [T2] is not [unit]. *)
-let is_conversion_type type_sig =
-  let s = strip_leading_labels (String.trim type_sig) in
-  count_top_arrows s = 1
-  &&
-  let ret = return_type_of s |> strip_module_qual in
-  ret <> "unit"
+let is_conversion_type ct =
+  match (strip_labeled_args ct).ptyp_desc with
+  | Ptyp_arrow (Asttypes.Nolabel, _, ret) -> not (is_unit ret)
+  | _ -> false
 
 (** Suggested rename. For [_to_] (left=src, right=dst): [<dst>_of_<src>] swaps
     the sides. For [_from_] (left=dst, right=src): [<dst>_of_<src>] is just
@@ -130,8 +71,8 @@ let check (ctx : Context.file) =
              these alone. *)
           else if String.length name > 0 && name.[0] = '_' then None
           else
-            match (find_pattern name, item.type_sig) with
-            | Some suggested, Some ty when is_conversion_type ty ->
+            match (find_pattern name, Outline.parsed_type item) with
+            | Some suggested, Some ct when is_conversion_type ct ->
                 Some (Issue.v ~loc { function_name = name; suggested })
             | _ -> None)
       | _ -> None)

@@ -3,12 +3,12 @@
 open Merlint.Outline
 
 (* Helper to create test items *)
-let item ?(type_sig = None) ?(deprecated = false) ?(children = []) ~name ~kind
-    () =
+let item ?(type_string = None) ?(deprecated = false) ?(children = []) ~name
+    ~kind () =
   {
     Merlin.name;
     kind;
-    type_sig;
+    type_ = lazy (Option.bind type_string Merlin.parse_core_type);
     deprecated;
     location =
       {
@@ -39,9 +39,9 @@ let test_flatten_with_children () =
 let test_get_values () =
   let items =
     [
-      item ~name:"foo" ~kind:Value ~type_sig:(Some "int") ();
+      item ~name:"foo" ~kind:Value ~type_string:(Some "int") ();
       item ~name:"Bar" ~kind:Type ();
-      item ~name:"baz" ~kind:Value ~type_sig:(Some "string") ();
+      item ~name:"baz" ~kind:Value ~type_string:(Some "string") ();
     ]
   in
 
@@ -53,7 +53,7 @@ let test_get_values () =
 let test_find_by_name () =
   let items =
     [
-      item ~name:"foo" ~kind:Value ~type_sig:(Some "int") ();
+      item ~name:"foo" ~kind:Value ~type_string:(Some "int") ();
       item ~name:"Bar" ~kind:Type ();
     ]
   in
@@ -95,27 +95,36 @@ let test_all_kinds () =
     kinds
 
 let test_is_function_type () =
-  Alcotest.(check bool) "arrow is function" true (is_function_type "int -> int");
-  Alcotest.(check bool) "simple not function" false (is_function_type "int");
+  let mk ts = item ~name:"x" ~kind:Value ~type_string:(Some ts) () in
+  Alcotest.(check bool)
+    "arrow is function" true
+    (is_function_type (mk "int -> int"));
+  Alcotest.(check bool)
+    "simple not function" false
+    (is_function_type (mk "int"));
   Alcotest.(check bool)
     "multi arrow is function" true
-    (is_function_type "int -> int -> int")
+    (is_function_type (mk "int -> int -> int"))
 
-let test_extract_return_type () =
-  Alcotest.(check string)
-    "simple return" "string"
-    (extract_return_type "int -> string");
-  Alcotest.(check string)
-    "multi-arg return" "bool"
-    (extract_return_type "int -> string -> bool");
-  Alcotest.(check string) "no arrow" "int" (extract_return_type "int")
+let int_constr (ct : Parsetree.core_type) =
+  match ct.ptyp_desc with
+  | Ptyp_constr ({ txt = Lident "int"; _ }, []) -> true
+  | _ -> false
 
 let test_count_parameters () =
-  Alcotest.(check int) "one int" 1 (count_parameters "int -> string" "int");
+  let mk ts = item ~name:"x" ~kind:Value ~type_string:(Some ts) () in
+  Alcotest.(check int)
+    "one int" 1
+    (count_parameters (mk "int -> string") ~matches:int_constr);
   Alcotest.(check int)
     "two ints" 2
-    (count_parameters "int -> int -> string" "int");
-  Alcotest.(check int) "no match" 0 (count_parameters "int -> string" "bool")
+    (count_parameters (mk "int -> int -> string") ~matches:int_constr);
+  Alcotest.(check int)
+    "no match" 0
+    (count_parameters (mk "int -> string") ~matches:(fun ct ->
+         match ct.ptyp_desc with
+         | Ptyp_constr ({ txt = Lident "bool"; _ }, []) -> true
+         | _ -> false))
 
 let tests =
   [
@@ -127,7 +136,6 @@ let tests =
     Alcotest.test_case "find_nested" `Quick test_find_nested;
     Alcotest.test_case "all_kinds" `Quick test_all_kinds;
     Alcotest.test_case "is_function_type" `Quick test_is_function_type;
-    Alcotest.test_case "extract_return_type" `Quick test_extract_return_type;
     Alcotest.test_case "count_parameters" `Quick test_count_parameters;
   ]
 
