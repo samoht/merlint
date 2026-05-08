@@ -2,7 +2,7 @@
 
 type payload = { function_name : string; expected : string }
 
-(** Match [Format.formatter] (qualified or aliased to [formatter]). *)
+(* Match [Format.formatter] (qualified or aliased to [formatter]). *)
 let is_formatter (ct : Parsetree.core_type) =
   match ct.ptyp_desc with
   | Ptyp_constr
@@ -20,41 +20,8 @@ let is_unit (ct : Parsetree.core_type) =
   | Ptyp_constr ({ txt = Lident "unit"; _ }, []) -> true
   | _ -> false
 
-(** Stdlib base types where a single canonical pretty-printer doesn't exist.
-    There are many sensible ways to render a [string] (raw / quoted / styled in
-    different colours), a [float] (decimal / scientific / human-readable bytes),
-    an [int] (decimal / hex / binary), etc. -- so flagging
-    [styled_bold : string Fmt.t] as "should be [pp_string]" is wrong; the name
-    [styled_bold] is precisely what disambiguates one of many possible string
-    renderings. *)
-let is_generic_base_type = function
-  | "string" | "int" | "int32" | "int64" | "nativeint" | "float" | "bool"
-  | "char" | "bytes" | "unit" | "list" | "option" | "array" | "result"
-  | "lazy_t" | "ref" | "exn" ->
-      true
-  | _ -> false
-
-(** Stem of a value type for naming: ["t"] -> [`Bare] (use bare ["pp"]); a
-    user-named constructor or a path's tail produces the suffix. Returns [None]
-    for stdlib base types so we don't suggest [pp_string] / [pp_float] /
-    [pp_int] -- those names would collide with each other in any module that has
-    multiple base-type printers, and the rule's [pp_<type>] convention is meant
-    for {e the} canonical printer of a domain type, not for one-of-many
-    representations of a generic type. *)
-let stem_of_type (ct : Parsetree.core_type) =
-  match ct.ptyp_desc with
-  | Ptyp_constr ({ txt; _ }, _) -> (
-      match txt with
-      | Lident "t" -> Some `Bare
-      | Lident name when is_generic_base_type name -> None
-      | Lident name -> Some (`Suffix name)
-      | Ldot (_, { txt = "t"; _ }) -> Some `Bare
-      | Ldot (_, { txt = name; _ }) -> Some (`Suffix name)
-      | Lapply _ -> None)
-  | _ -> None
-
-(** Return [Some value_type] if the given core type matches a printer signature
-    [_ Fmt.t] or [Format.formatter -> _ -> unit]. *)
+(* Return [Some value_type] if the given core type matches a printer
+   signature [_ Fmt.t] or [Format.formatter -> _ -> unit]. *)
 let printer_value_type (ct : Parsetree.core_type) =
   match ct.ptyp_desc with
   | Ptyp_constr
@@ -67,18 +34,27 @@ let printer_value_type (ct : Parsetree.core_type) =
       | _ -> None)
   | _ -> None
 
-let expected_name value_type =
-  match stem_of_type value_type with
-  | Some `Bare -> Some "pp"
-  | Some (`Suffix s) -> Some ("pp_" ^ s)
-  | None -> None
+(* True when the printer is for the local module's main type [t] -- in that
+   case the canonical name is the bare [pp]. *)
+let is_local_t (ct : Parsetree.core_type) =
+  match ct.ptyp_desc with
+  | Ptyp_constr ({ txt = Lident "t"; _ }, _) -> true
+  | _ -> false
 
-(** Accept any name that follows the [pp]/[pp_*] shape. The type-driven
-    [expected] is only used as a suggestion in the error message, since type
-    aliases ([type t = int]) get elaborated away by merlin and would cause false
-    positives if matched exactly. *)
+(* Suggested rename. When the printer is for the local [t], canonical name
+   is [pp]. Otherwise prefix the existing name with [pp_] so the
+   developer's intended distinction (e.g. [dump] vs [render]) is preserved
+   as the suffix. *)
+let suggested_name ~name ~value_type =
+  if is_local_t value_type then "pp" else "pp_" ^ name
+
+(* [pp]/[pp_*] is the OCaml convention; [dump]/[dump_*] is also accepted as
+   an in-tree convention for human-readable diagnostic dumps. *)
 let name_matches_convention name =
-  name = "pp" || String.starts_with ~prefix:"pp_" name
+  name = "pp"
+  || String.starts_with ~prefix:"pp_" name
+  || name = "dump"
+  || String.starts_with ~prefix:"dump_" name
 
 let check (ctx : Context.file) =
   let outline_data = Context.outline ctx in
@@ -90,10 +66,11 @@ let check (ctx : Context.file) =
         when (not (name_matches_convention item.name))
              && Option.is_some (printer_value_type ct) -> (
           let value_type = Option.get (printer_value_type ct) in
-          match (expected_name value_type, Outline.location filename item) with
-          | Some expected, Some loc ->
+          let expected = suggested_name ~name:item.name ~value_type in
+          match Outline.location filename item with
+          | Some loc ->
               Some (Issue.v ~loc { function_name = item.name; expected })
-          | _ -> None)
+          | None -> None)
       | _ -> None)
     outline_data
 
