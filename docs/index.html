@@ -736,6 +736,51 @@ Specialised cases for [failwith], [invalid_arg], [Alcotest.fail], and bare [fail
 </div>
 </div></div>
 </div>
+<div class="error-card" id="E218">
+    <div>
+        <span class="error-code">E218</span>
+        <span class="error-title">Extract Fmt.kstr Error/raise wrappers into let err_/fail_ helpers</span>
+    </div>
+    <div class="error-hint"><p>When the same [Fmt.kstr (fun s -&gt; Error (Constructor s)) ...] or [Fmt.kstr (fun s -&gt; raise (Constructor s)) ...] lambda appears at multiple call sites, extract a small helper at the top of the file:
+
+  let err_x  fmt = Fmt.kstr (fun s -&gt; Error (Constructor s)) fmt
+  let fail_x fmt = Fmt.kstr (fun s -&gt; raise (Constructor s)) fmt
+
+and replace each call site with [err_x "..." args] / [fail_x "..." args]. The lambda reads as noise at the call site; the helper reads as the domain operation ("emit a wire error", "raise a parse failure"). For a single one-off site the inline form is fine — the helper is a deduplication tool. The rule only flags inline call sites (kstr with a literal-string format) and skips helper definitions, which thread a [fmt] parameter.</p><div class="examples-grid">
+<div class="example bad">
+  <h4>BAD</h4>
+  <pre><code><span class="kw">exception</span> <span class="cn">Parse_error</span> <span class="kw">of</span> string
+
+<span class="kw">let</span> parse_int s =
+  <span class="kw">match</span> int_of_string_opt s <span class="kw">with</span>
+  | <span class="cn">Some</span> n -&gt; n
+  | <span class="cn">None</span> -&gt; <span class="cn">Fmt</span>.kstr (<span class="kw">fun</span> s -&gt; <span class="kw">raise</span> (<span class="cn">Parse_error</span> s)) &quot;<span class="kw">not</span> an int: %<span class="cn">S</span>&quot; s
+
+<span class="kw">let</span> parse s =
+  <span class="kw">if</span> s = &quot;&quot; <span class="kw">then</span> <span class="cn">Fmt</span>.kstr (<span class="kw">fun</span> s -&gt; <span class="cn">Error</span> s) &quot;empty input&quot;
+  <span class="kw">else</span> <span class="kw">if</span> <span class="cn">String</span>.length s &gt; <span class="nu">100</span> <span class="kw">then</span>
+    <span class="cn">Fmt</span>.kstr (<span class="kw">fun</span> s -&gt; <span class="cn">Error</span> s) &quot;input too long: %d&quot; (<span class="cn">String</span>.length s)
+  <span class="kw">else</span> <span class="cn">Ok</span> s</code></pre>
+</div>
+<div class="example good">
+  <h4>GOOD</h4>
+  <pre><code><span class="kw">exception</span> <span class="cn">Parse_error</span> <span class="kw">of</span> string
+
+<span class="kw">let</span> fail_parse fmt = <span class="cn">Fmt</span>.kstr (<span class="kw">fun</span> s -&gt; <span class="kw">raise</span> (<span class="cn">Parse_error</span> s)) fmt
+<span class="kw">let</span> err fmt = <span class="cn">Fmt</span>.kstr (<span class="kw">fun</span> s -&gt; <span class="cn">Error</span> s) fmt
+
+<span class="kw">let</span> parse_int s =
+  <span class="kw">match</span> int_of_string_opt s <span class="kw">with</span>
+  | <span class="cn">Some</span> n -&gt; n
+  | <span class="cn">None</span> -&gt; fail_parse &quot;<span class="kw">not</span> an int: %<span class="cn">S</span>&quot; s
+
+<span class="kw">let</span> parse s =
+  <span class="kw">if</span> s = &quot;&quot; <span class="kw">then</span> err &quot;empty input&quot;
+  <span class="kw">else</span> <span class="kw">if</span> <span class="cn">String</span>.length s &gt; <span class="nu">100</span> <span class="kw">then</span> err &quot;input too long: %d&quot; (<span class="cn">String</span>.length s)
+  <span class="kw">else</span> <span class="cn">Ok</span> s</code></pre>
+</div>
+</div></div>
+</div>
 <h2 id="naming conventions">Naming Conventions</h2>
 <div class="category">E300-E399 • Identifier naming convention violations</div>
 <div class="error-card" id="E300">
