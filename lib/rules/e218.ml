@@ -63,13 +63,60 @@ let suggestion kind stem =
   Fmt.str "let %s fmt = %s    (call: %s \"...\")" helper body helper
 
 (** A literal-string format argument signals an inline call site. Helper
-    definitions thread a [fmt] parameter through, so the kstr's first positional
-    argument after the function is a [Pexp_ident], not a string constant — those
-    should not be flagged. *)
+    definitions that thread a [fmt] parameter use a [Pexp_ident] there instead —
+    those are skipped by the format check. *)
 let is_literal_format (expr : Parsetree.expression) =
   match expr.pexp_desc with
   | Pexp_constant { pconst_desc = Pconst_string _; _ } -> true
   | _ -> false
+
+(** [Fmt.kstr (fun s -> Error/raise _) "literal" args] applied to non-empty
+    args. Returns the kind of wrapper. *)
+let flagged_kstr (expr : Parsetree.expression) =
+  match expr.pexp_desc with
+  | Pexp_apply (_, args) when Ast.is_apply_of [ "Fmt"; "kstr" ] expr -> (
+      let positional =
+        List.filter_map
+          (fun (lbl, e) -> if lbl = Asttypes.Nolabel then Some e else None)
+          args
+      in
+      match positional with
+      | wrap_fn :: fmt_arg :: _ when is_literal_format fmt_arg ->
+          wraps_error_or_raise wrap_fn
+      | _ -> None)
+  | _ -> None
+
+(** Collect locations of expressions whose direct enclosing context is a let
+    binding's body — even through layers of [Pexp_function] for curried one-shot
+    wrappers like [let err_x x = Fmt.kstr ... "literal" x]. These are themselves
+    the right shape; flagging them would be circular. *)
+let rec body_of_function (expr : Parsetree.expression) =
+  match expr.pexp_desc with
+  | Pexp_function (_, _, Pfunction_body inner) -> body_of_function inner
+  | _ -> expr
+
+let collect_helper_locs structure =
+  let locs = ref [] in
+  let collect_binding (vb : Parsetree.value_binding) =
+    let body = body_of_function vb.pvb_expr in
+    if Option.is_some (flagged_kstr body) then locs := body.pexp_loc :: !locs
+  in
+  let rec walk_str_item (item : Parsetree.structure_item) =
+    match item.pstr_desc with
+    | Pstr_value (_, bindings) -> List.iter collect_binding bindings
+    | Pstr_module mb -> walk_module_expr mb.pmb_expr
+    | Pstr_recmodule mbs ->
+        List.iter
+          (fun (mb : Parsetree.module_binding) -> walk_module_expr mb.pmb_expr)
+          mbs
+    | _ -> ()
+  and walk_module_expr (me : Parsetree.module_expr) =
+    match me.pmod_desc with
+    | Pmod_structure s -> List.iter walk_str_item s
+    | _ -> ()
+  in
+  List.iter walk_str_item structure;
+  !locs
 
 let check (ctx : Context.file) =
   let filename = ctx.filename in
@@ -77,32 +124,23 @@ let check (ctx : Context.file) =
   match Ast.parse_structure ~filename content with
   | None -> []
   | Some structure ->
+      let helper_locs = collect_helper_locs structure in
+      let is_helper expr =
+        List.exists (fun loc -> loc = expr.Parsetree.pexp_loc) helper_locs
+      in
       let issues = ref [] in
       Ast.iter_expressions structure (fun expr ->
-          match expr.pexp_desc with
-          | Pexp_apply (_, args) when Ast.is_apply_of [ "Fmt"; "kstr" ] expr
-            -> (
-              let positional =
-                List.filter_map
-                  (fun (lbl, e) ->
-                    if lbl = Asttypes.Nolabel then Some e else None)
-                  args
-              in
-              match positional with
-              | wrap_fn :: fmt_arg :: _ when is_literal_format fmt_arg -> (
-                  match wraps_error_or_raise wrap_fn with
-                  | None -> ()
-                  | Some (kind, payload) ->
-                      let suggested =
-                        suggestion kind (stem_of_payload payload)
-                      in
-                      issues :=
-                        Issue.v
-                          ~loc:(Ast.loc_to_merlint ~filename expr.pexp_loc)
-                          { suggested }
-                        :: !issues)
-              | _ -> ())
-          | _ -> ());
+          if is_helper expr then ()
+          else
+            match flagged_kstr expr with
+            | None -> ()
+            | Some (kind, payload) ->
+                let suggested = suggestion kind (stem_of_payload payload) in
+                issues :=
+                  Issue.v
+                    ~loc:(Ast.loc_to_merlint ~filename expr.pexp_loc)
+                    { suggested }
+                  :: !issues);
       List.rev !issues
 
 let pp ppf { suggested } =
