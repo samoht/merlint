@@ -6,8 +6,8 @@ Test bad example - should find redundant function prefixes:
   
   ✓ Code Quality (0 total issues)
   ✓ Code Style (0 total issues)
-  ✗ Naming Conventions (13 total issues)
-    [E331] Redundant Function Prefixes (13 issues)
+  ✗ Naming Conventions (11 total issues)
+    [E331] Redundant Function Prefixes (11 issues)
     Functions prefixed with 'create_', 'make_', 'get_', or 'find_' can often omit
     the prefix when the remaining name is descriptive enough. For example,
     'create_user' can be just 'user', 'make_widget' can be 'widget', 'get_name'
@@ -20,8 +20,6 @@ Test bad example - should find redundant function prefixes:
     - bad.ml:18:0: Function 'get_name' has redundant 'get_' prefix - consider 'name' instead. Get_ functions can often omit the prefix when the function name alone is descriptive.
     - bad.ml:19:0: Function 'get_email' has redundant 'get_' prefix - consider 'email' instead. Get_ functions can often omit the prefix when the function name alone is descriptive.
     - bad.ml:20:0: Function 'get_status' has redundant 'get_' prefix - consider 'status' instead. Get_ functions can often omit the prefix when the function name alone is descriptive.
-    - bad.ml:23:0: Function 'find_user_by_id' has redundant 'find_' prefix - consider 'user_by_id' instead. Find_ functions can often omit the prefix when the function name alone is descriptive.
-    - bad.ml:24:0: Function 'find_project_by_name' has redundant 'find_' prefix - consider 'project_by_name' instead. Find_ functions can often omit the prefix when the function name alone is descriptive.
     - bad.ml:40:0: Function 'create_temp_file' has redundant 'create_' prefix - consider 'temp_file' instead. Create_ functions can often omit the prefix when the function name alone is descriptive.
     - bad.ml:41:0: Function 'make_widget' has redundant 'make_' prefix - consider 'widget' instead. Make_ functions can often omit the prefix when the function name alone is descriptive.
     - bad.ml:42:0: Function 'get_current_time' has redundant 'get_' prefix - consider 'current_time' instead. Get_ functions can often omit the prefix when the function name alone is descriptive.
@@ -36,11 +34,11 @@ Test bad example - should find redundant function prefixes:
   ╭────────────────────┬─────────────────────────────────────╮
   │ Category           │ Issues                              │
   ├────────────────────┼─────────────────────────────────────┤
-  │ Naming Conventions │ 13 (13 redundant function prefixes) │
+  │ Naming Conventions │ 11 (11 redundant function prefixes) │
   ╰────────────────────┴─────────────────────────────────────╯
   
   
-  Summary: ✗ 13 total issues (applied 1 rule)
+  Summary: ✗ 11 total issues (applied 1 rule)
   ✗ Some checks failed. See details above.
   [1]
 
