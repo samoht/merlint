@@ -20,13 +20,33 @@ let is_unit (ct : Parsetree.core_type) =
   | Ptyp_constr ({ txt = Lident "unit"; _ }, []) -> true
   | _ -> false
 
-(** Stem of a value type for naming: ["t"] -> [None] (use bare ["pp"]); a
-    user-named constructor or a path's tail produces the suffix. *)
+(** Stdlib base types where a single canonical pretty-printer doesn't exist.
+    There are many sensible ways to render a [string] (raw / quoted / styled in
+    different colours), a [float] (decimal / scientific / human-readable bytes),
+    an [int] (decimal / hex / binary), etc. -- so flagging
+    [styled_bold : string Fmt.t] as "should be [pp_string]" is wrong; the name
+    [styled_bold] is precisely what disambiguates one of many possible string
+    renderings. *)
+let is_generic_base_type = function
+  | "string" | "int" | "int32" | "int64" | "nativeint" | "float" | "bool"
+  | "char" | "bytes" | "unit" | "list" | "option" | "array" | "result"
+  | "lazy_t" | "ref" | "exn" ->
+      true
+  | _ -> false
+
+(** Stem of a value type for naming: ["t"] -> [`Bare] (use bare ["pp"]); a
+    user-named constructor or a path's tail produces the suffix. Returns [None]
+    for stdlib base types so we don't suggest [pp_string] / [pp_float] /
+    [pp_int] -- those names would collide with each other in any module that has
+    multiple base-type printers, and the rule's [pp_<type>] convention is meant
+    for {e the} canonical printer of a domain type, not for one-of-many
+    representations of a generic type. *)
 let stem_of_type (ct : Parsetree.core_type) =
   match ct.ptyp_desc with
   | Ptyp_constr ({ txt; _ }, _) -> (
       match txt with
       | Lident "t" -> Some `Bare
+      | Lident name when is_generic_base_type name -> None
       | Lident name -> Some (`Suffix name)
       | Ldot (_, { txt = "t"; _ }) -> Some `Bare
       | Ldot (_, { txt = name; _ }) -> Some (`Suffix name)
