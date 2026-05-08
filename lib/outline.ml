@@ -37,18 +37,23 @@ let rec final_arrow_target ct =
   | _ -> ct
 
 let returns_option signature =
-  try
-    let lexbuf = Lexing.from_string signature in
-    let core_type = Parse.core_type lexbuf in
-    let final = final_arrow_target core_type in
-    match final.ptyp_desc with
-    | Ptyp_constr ({ txt; _ }, [ _ ]) -> (
-        match txt with
-        | Longident.Lident "option" -> true
-        | Ldot (_, { txt = "option"; _ }) -> true
-        | _ -> false)
-    | _ -> false
-  with _ -> false
+  (* Catch only the parse-failure exceptions [Parse.core_type] can raise on
+     ill-formed type strings. Anything else (e.g. an internal compiler-libs
+     [assert false]) propagates so we don't mask real bugs. *)
+  match
+    try Some (Parse.core_type (Lexing.from_string signature))
+    with Syntaxerr.Error _ | Lexer.Error _ -> None
+  with
+  | None -> false
+  | Some core_type -> (
+      let final = final_arrow_target core_type in
+      match final.ptyp_desc with
+      | Ptyp_constr ({ txt; _ }, [ _ ]) -> (
+          match txt with
+          | Longident.Lident "option" -> true
+          | Ldot (_, { txt = "option"; _ }) -> true
+          | _ -> false)
+      | _ -> false)
 
 (* {2 Merlint-specific helpers} *)
 
