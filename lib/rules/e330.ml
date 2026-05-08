@@ -3,20 +3,6 @@
 type payload = { item_name : string; module_name : string; item_type : string }
 (** Payload for redundant module name issues *)
 
-(** Convert Outline.kind to string *)
-let string_of_kind = function
-  | Outline.Value -> "Value"
-  | Outline.Type -> "Type"
-  | Outline.Module -> "Module"
-  | Outline.Module_type -> "Module_type"
-  | Outline.Class -> "Class"
-  | Outline.Class_type -> "Class_type"
-  | Outline.Exception -> "Exception"
-  | Outline.Constructor -> "Constructor"
-  | Outline.Field -> "Field"
-  | Outline.Method -> "Method"
-  | Outline.Label -> "Label"
-
 (** Check if an item name has redundant module prefix *)
 let has_redundant_prefix item_name_lower module_name filename =
   (* Special cases that are idiomatic and should not be flagged *)
@@ -40,9 +26,6 @@ let create_redundant_name_issue item_name module_name location item_type =
   Issue.v ~loc:location
     { item_name; module_name = String.capitalize_ascii module_name; item_type }
 
-(* Helper to check if a type signature is a function type *)
-let is_function_type type_sig = String.contains type_sig '-'
-
 let check (ctx : Context.file) =
   let outline_data = Context.outline ctx in
   let filename = ctx.filename in
@@ -56,12 +39,13 @@ let check (ctx : Context.file) =
       let location = Outline.location filename item in
       let item_name_lower = String.lowercase_ascii name in
       if has_redundant_prefix item_name_lower module_name filename then
-        match (string_of_kind item.kind, item.type_sig, location) with
-        | "Value", Some ts, Some loc when is_function_type ts ->
-            Some (create_redundant_name_issue name module_name loc "function")
-        | "Value", Some _, Some loc ->
-            Some (create_redundant_name_issue name module_name loc "value")
-        | "Type", _, Some loc ->
+        match (item.kind, location) with
+        | Outline.Value, Some loc ->
+            let kind_label =
+              if Outline.is_function_type item then "function" else "value"
+            in
+            Some (create_redundant_name_issue name module_name loc kind_label)
+        | Outline.Type, Some loc ->
             Some (create_redundant_name_issue name module_name loc "type")
         | _ -> None
       else None)

@@ -1,2 +1,50 @@
 Test bad example - should flag a printer not named pp / pp_<type>:
   $ merlint -B -r E336 bad.ml
+  Running merlint analysis...
+  
+  Analyzing 1 files
+  
+  ✓ Code Quality (0 total issues)
+  ✓ Code Style (0 total issues)
+  ✗ Naming Conventions (2 total issues)
+    [E336] Pretty-printer naming (2 issues)
+    Pretty-printers — values of type [_ Fmt.t] or [Format.formatter -> _ ->
+    unit] — follow a fixed naming convention: [pp] when the value type is the
+    module's main type [t], and [pp_<type>] otherwise. The convention matches
+    [Fmt.pp_print_*] and [Format.pp_print_*] in the stdlib.
+    - bad.ml:4:0: Pretty-printer 'print' should be named 'pp_int' (functions of type [_ Fmt.t] or [Format.formatter -> _ -> unit] use the [pp]/[pp_<type>] convention)
+    - bad.ml:8:0: Pretty-printer 'dump_widget' should be named 'pp_widget' (functions of type [_ Fmt.t] or [Format.formatter -> _ -> unit] use the [pp]/[pp_<type>] convention)
+  ✓ Documentation (0 total issues)
+  ✓ Project Structure (0 total issues)
+  ✓ Test Quality (0 total issues)
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
+  
+  ╭────────────────────┬─────────────────────────────╮
+  │ Category           │ Issues                      │
+  ├────────────────────┼─────────────────────────────┤
+  │ Naming Conventions │ 2 (2 pretty-printer naming) │
+  ╰────────────────────┴─────────────────────────────╯
+  
+  
+  Summary: ✗ 2 total issues (applied 1 rule)
+  ✗ Some checks failed. See details above.
+  [1]
+
+Test good example - should find no issues:
+  $ merlint -B -r E336 good.ml
+  Running merlint analysis...
+  
+  Analyzing 1 files
+  
+  ✓ Code Quality (0 total issues)
+  ✓ Code Style (0 total issues)
+  ✓ Naming Conventions (0 total issues)
+  ✓ Documentation (0 total issues)
+  ✓ Project Structure (0 total issues)
+  ✓ Test Quality (0 total issues)
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
+  
+  Summary: ✓ 0 total issues (applied 1 rule)
+  ✓ All checks passed!

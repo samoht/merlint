@@ -4,6 +4,7 @@
   merlint
   ocaml-merlin
   alcotest
+  compiler-libs.common
   eio
   eio_main
   fpath

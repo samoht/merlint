@@ -1163,6 +1163,36 @@ Specialised cases for [failwith], [invalid_arg], [Alcotest.fail], and bare [fail
 </div>
 </div></div>
 </div>
+<div class="error-card" id="E336">
+    <div>
+        <span class="error-code">E336</span>
+        <span class="error-title">Pretty-printer naming</span>
+    </div>
+    <div class="error-hint"><p>Pretty-printers — values of type [_ Fmt.t] or [Format.formatter -&gt; _ -&gt; unit] — follow a fixed naming convention: [pp] when the value type is the module's main type [t], and [pp_&lt;type&gt;] otherwise. The convention matches [Fmt.pp_print_*] and [Format.pp_print_*] in the stdlib.</p><div class="examples-grid">
+<div class="example bad">
+  <h4>BAD</h4>
+  <pre><code><span class="kw">type</span> t = int
+
+<span class="cm">(* Should be [pp] — type signature is [Format.formatter -&gt; t -&gt; unit] *)</span>
+<span class="kw">let</span> print fmt v = <span class="cn">Format</span>.fprintf fmt &quot;%d&quot; v
+
+<span class="cm">(* Should be [pp_widget] — value type is [widget] *)</span>
+<span class="kw">type</span> widget = { x : int }
+<span class="kw">let</span> dump_widget fmt w = <span class="cn">Format</span>.fprintf fmt &quot;%d&quot; w.x
+</code></pre>
+</div>
+<div class="example good">
+  <h4>GOOD</h4>
+  <pre><code><span class="kw">type</span> t = int
+
+<span class="kw">let</span> pp fmt v = <span class="cn">Format</span>.fprintf fmt &quot;%d&quot; v
+
+<span class="kw">type</span> widget = { x : int }
+<span class="kw">let</span> pp_widget fmt w = <span class="cn">Format</span>.fprintf fmt &quot;%d&quot; w.x
+</code></pre>
+</div>
+</div></div>
+</div>
 <div class="error-card" id="E340">
     <div>
         <span class="error-code">E340</span>
