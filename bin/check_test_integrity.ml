@@ -157,7 +157,9 @@ let check_r_flag_usage parts rule_code =
   let rec find_r_flag = function
     | "-r" :: next :: _ ->
         if next <> rule_code then
-          Some (Fmt.str "Line uses '-r %s' instead of '-r %s'" next rule_code)
+          Fmt.kstr
+            (fun s -> Some s)
+            "Line uses '-r %s' instead of '-r %s'" next rule_code
         else None
     | _ :: rest -> find_r_flag rest
     | [] -> None

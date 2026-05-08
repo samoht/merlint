@@ -45,10 +45,9 @@ let file ~filename ~config ~project_root ~outline ~dump =
       lazy
         (try In_channel.with_open_text filename In_channel.input_all
          with exn ->
-           raise
-             (Analysis_error
-                (Fmt.str "Failed to read file %s: %s" filename
-                   (Printexc.to_string exn))));
+           Fmt.kstr
+             (fun s -> raise (Analysis_error s))
+             "Failed to read file %s: %s" filename (Printexc.to_string exn));
     functions =
       lazy
         (let ast = Ast.extract_functions filename in
