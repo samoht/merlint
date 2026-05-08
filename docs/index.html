@@ -1173,11 +1173,14 @@ Specialised cases for [failwith], [invalid_arg], [Alcotest.fail], and bare [fail
   <h4>BAD</h4>
   <pre><code><span class="kw">type</span> t = int
 
-<span class="cm">(* Should be [pp] — type signature is [Format.formatter -&gt; t -&gt; unit] *)</span>
+(* <span class="cn">Bad</span>: [print] is a printer-typed value but doesn't start <span class="kw">with</span> [pp]/[pp_]
+   <span class="kw">or</span> [dump]/[dump_]. *)
 <span class="kw">let</span> print fmt v = <span class="cn">Format</span>.fprintf fmt &quot;%d&quot; v
 
-<span class="cm">(* Should be [pp_widget] — value type is [widget] *)</span>
+(* <span class="cn">Good</span>: [dump_widget] is accepted <span class="kw">as</span> an <span class="kw">in</span>-tree convention <span class="kw">for</span> human-readable
+   diagnostic dumps. *)
 <span class="kw">type</span> widget = { x : int }
+
 <span class="kw">let</span> dump_widget fmt w = <span class="cn">Format</span>.fprintf fmt &quot;%d&quot; w.x
 </code></pre>
 </div>
