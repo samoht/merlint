@@ -30,6 +30,26 @@ let is_function_type = Merlin.is_function_type
 let extract_return_type = Merlin.extract_return_type
 let count_parameters = Merlin.count_parameters
 
+(* Walk through a chain of [t1 -> t2 -> ... -> tn] arrows and return [tn]. *)
+let rec final_arrow_target ct =
+  match ct.Parsetree.ptyp_desc with
+  | Ptyp_arrow (_, _, rhs) -> final_arrow_target rhs
+  | _ -> ct
+
+let returns_option signature =
+  try
+    let lexbuf = Lexing.from_string signature in
+    let core_type = Parse.core_type lexbuf in
+    let final = final_arrow_target core_type in
+    match final.ptyp_desc with
+    | Ptyp_constr ({ txt; _ }, [ _ ]) -> (
+        match txt with
+        | Longident.Lident "option" -> true
+        | Ldot (_, { txt = "option"; _ }) -> true
+        | _ -> false)
+    | _ -> false
+  with _ -> false
+
 (* {2 Merlint-specific helpers} *)
 
 let pp = Merlin.pp_outline

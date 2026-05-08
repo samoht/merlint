@@ -41,6 +41,13 @@ val is_function_type : string -> bool
 val extract_return_type : string -> string
 (** [extract_return_type signature] extracts the rightmost type after [->]. *)
 
+val returns_option : string -> bool
+(** [returns_option signature] is [true] when [signature] parses as a function
+    type whose final return position is [_ option] (or [Module.option]). Robust
+    against arrow chains, parens, labelled args, and nested constructors --
+    backed by [Parse.core_type], not string suffix matching. Returns [false] for
+    non-function types and on parse failure. *)
+
 val count_parameters : string -> string -> int
 (** [count_parameters signature param_type] counts occurrences of [param_type]
     in the [signature]. *)

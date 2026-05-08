@@ -8,6 +8,16 @@ let is_stdlib_find_alias name =
   name = "find_all" || name = "find_map" || name = "find_many"
   || name = "find_index" || name = "find_last" || name = "find_first"
 
+(** [find_*] functions returning [_ option] are the canonical naming for partial
+    lookups (matching E325, which positively recommends [find_] for option
+    returns). Stripping the prefix would strip the partiality signal, so do not
+    flag those. Uses structural type analysis via [Parse.core_type] rather than
+    string-suffix matching, so [int -> ('a, 'b) result option] and friends are
+    detected correctly. *)
+let is_find_option name type_sig =
+  String.starts_with ~prefix:"find_" (String.lowercase_ascii name)
+  && match type_sig with None -> false | Some ts -> Outline.returns_option ts
+
 type prefix_type = Create | Make | Get | Find
 
 type payload = {
@@ -75,8 +85,9 @@ let check (ctx : Context.file) =
 
       match (item.kind, location) with
       | Outline.Value, Some loc
-        when (not (List.mem name allowed)) && not (is_stdlib_find_alias name)
-        -> (
+        when (not (List.mem name allowed))
+             && (not (is_stdlib_find_alias name))
+             && not (is_find_option name item.type_sig) -> (
           (* Check for regular function prefix patterns *)
           match check_function_prefix name with
           | Some (prefix_type, suggested) ->
