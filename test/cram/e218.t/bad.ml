@@ -4,6 +4,10 @@ type wire_err = Of_wire_error of string
 
 exception Parse_error of string
 
+(* Mis-named helper: this raises but its name doesn't start with [fail_].
+   The rule should flag it and suggest a rename. *)
+let eval_errorf fmt = Fmt.kstr (fun s -> raise (Parse_error s)) fmt
+
 let parse_header s =
   if s = "" then Fmt.kstr (fun s -> Error (Of_wire_error s)) "empty header"
   else Ok s

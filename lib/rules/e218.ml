@@ -1,7 +1,8 @@
 (** E218: extract [Fmt.kstr (fun _ -> Error/raise ...) ...] into helpers *)
 
 type wrap_kind = Err | Fail
-type payload = { suggested : string }
+type variant = Inline | Rename
+type payload = { variant : variant; suggested : string }
 
 let is_error_construct (lid : Longident.t) =
   match List.rev (Longident.flatten lid) with
@@ -62,44 +63,70 @@ let suggestion kind stem =
   in
   Fmt.str "let %s fmt = %s    (call: %s \"...\")" helper body helper
 
-(** A literal-string format argument signals an inline call site. Helper
-    definitions that thread a [fmt] parameter use a [Pexp_ident] there instead —
-    those are skipped by the format check. *)
 let is_literal_format (expr : Parsetree.expression) =
   match expr.pexp_desc with
   | Pexp_constant { pconst_desc = Pconst_string _; _ } -> true
   | _ -> false
 
-(** [Fmt.kstr (fun s -> Error/raise _) "literal" args] applied to non-empty
-    args. Returns the kind of wrapper. *)
-let flagged_kstr (expr : Parsetree.expression) =
+let kstr_wrap_fn (expr : Parsetree.expression) =
   match expr.pexp_desc with
-  | Pexp_apply (_, args) when Ast.is_apply_of [ "Fmt"; "kstr" ] expr -> (
+  | Pexp_apply (_, args) when Ast.is_apply_of [ "Fmt"; "kstr" ] expr ->
       let positional =
         List.filter_map
           (fun (lbl, e) -> if lbl = Asttypes.Nolabel then Some e else None)
           args
       in
-      match positional with
-      | wrap_fn :: fmt_arg :: _ when is_literal_format fmt_arg ->
-          wraps_error_or_raise wrap_fn
-      | _ -> None)
+      Some positional
   | _ -> None
 
-(** Collect locations of expressions whose direct enclosing context is a let
-    binding's body — even through layers of [Pexp_function] for curried one-shot
-    wrappers like [let err_x x = Fmt.kstr ... "literal" x]. These are themselves
-    the right shape; flagging them would be circular. *)
+(** Match [Fmt.kstr (fun s -> Error/raise _) ...] regardless of whether the
+    format is a literal or a threaded [fmt] parameter. Returns the wrap kind
+    plus the [Error]/[raise] payload. *)
+let flagged_kstr_any (expr : Parsetree.expression) =
+  match kstr_wrap_fn expr with
+  | Some (wrap_fn :: _) -> wraps_error_or_raise wrap_fn
+  | _ -> None
+
+(** Inline call site: [Fmt.kstr (fun s -> Error/raise _) "literal" ...].
+    Distinguished from a helper definition (which threads a [fmt] parameter) by
+    the literal format. *)
+let flagged_kstr_inline (expr : Parsetree.expression) =
+  match kstr_wrap_fn expr with
+  | Some (wrap_fn :: fmt_arg :: _) when is_literal_format fmt_arg ->
+      wraps_error_or_raise wrap_fn
+  | _ -> None
+
+(** Descend through curried-function layers to the body of a let binding.
+    [let f x y = body] -> [body]; [let f = body] -> [body]. *)
 let rec body_of_function (expr : Parsetree.expression) =
   match expr.pexp_desc with
   | Pexp_function (_, _, Pfunction_body inner) -> body_of_function inner
   | _ -> expr
 
-let collect_helper_locs structure =
-  let locs = ref [] in
+(** Extract the name of a pattern binding, if it's a simple [Ppat_var]. *)
+let name_of_pattern (pat : Parsetree.pattern) =
+  match pat.ppat_desc with Ppat_var { txt; _ } -> Some txt | _ -> None
+
+(** Naming convention: an [Err]-wrapping helper should be [err] or [err_*]; a
+    [Fail]-wrapping helper should be [fail] or [fail_*]. *)
+let name_matches_kind name kind =
+  let prefix = match kind with Err -> "err" | Fail -> "fail" in
+  name = prefix || String.starts_with ~prefix:(prefix ^ "_") name
+
+(** Walk top-level [let] bindings (and module structures); for each binding
+    whose body is a flagged [Fmt.kstr ...] expression, return
+    [(body_loc, binding_name, kind, payload)]. The body location is so the
+    inline-call iterator can skip it; the name is so we can flag mis-named
+    helpers. *)
+let collect_helpers structure =
+  let helpers = ref [] in
   let collect_binding (vb : Parsetree.value_binding) =
     let body = body_of_function vb.pvb_expr in
-    if Option.is_some (flagged_kstr body) then locs := body.pexp_loc :: !locs
+    match flagged_kstr_any body with
+    | None -> ()
+    | Some (kind, payload) ->
+        let name = name_of_pattern vb.pvb_pat in
+        helpers := (body.pexp_loc, name, kind, payload) :: !helpers
   in
   let rec walk_str_item (item : Parsetree.structure_item) =
     match item.pstr_desc with
@@ -116,7 +143,14 @@ let collect_helper_locs structure =
     | _ -> ()
   in
   List.iter walk_str_item structure;
-  !locs
+  !helpers
+
+let mismatch_suggestion name kind =
+  let prefix = match kind with Err -> "err" | Fail -> "fail" in
+  Fmt.str
+    "rename '%s' to '%s_<x>' (helpers that wrap [Error]/[raise] should start \
+     with [err_]/[fail_])"
+    name prefix
 
 let check (ctx : Context.file) =
   let filename = ctx.filename in
@@ -124,30 +158,44 @@ let check (ctx : Context.file) =
   match Ast.parse_structure ~filename content with
   | None -> []
   | Some structure ->
-      let helper_locs = collect_helper_locs structure in
-      let is_helper expr =
-        List.exists (fun loc -> loc = expr.Parsetree.pexp_loc) helper_locs
-      in
+      let helpers = collect_helpers structure in
+      let helper_locs = List.map (fun (loc, _, _, _) -> loc) helpers in
       let issues = ref [] in
+      List.iter
+        (fun (loc, name, kind, _payload) ->
+          match name with
+          | Some n when not (name_matches_kind n kind) ->
+              let suggested = mismatch_suggestion n kind in
+              issues :=
+                Issue.v
+                  ~loc:(Ast.loc_to_merlint ~filename loc)
+                  { variant = Rename; suggested }
+                :: !issues
+          | _ -> ())
+        helpers;
       Ast.iter_expressions structure (fun expr ->
-          if is_helper expr then ()
+          let is_helper = List.mem expr.Parsetree.pexp_loc helper_locs in
+          if is_helper then ()
           else
-            match flagged_kstr expr with
+            match flagged_kstr_inline expr with
             | None -> ()
             | Some (kind, payload) ->
                 let suggested = suggestion kind (stem_of_payload payload) in
                 issues :=
                   Issue.v
                     ~loc:(Ast.loc_to_merlint ~filename expr.pexp_loc)
-                    { suggested }
+                    { variant = Inline; suggested }
                   :: !issues);
       List.rev !issues
 
-let pp ppf { suggested } =
-  Fmt.pf ppf
-    "Inline [Fmt.kstr (fun _ -> Error/raise _) ...] should be a top-of-file \
-     helper: %s"
-    suggested
+let pp ppf { variant; suggested } =
+  match variant with
+  | Inline ->
+      Fmt.pf ppf
+        "Inline [Fmt.kstr (fun _ -> Error/raise _) ...] should be a \
+         top-of-file helper: %s"
+        suggested
+  | Rename -> Fmt.pf ppf "Helper name doesn't match its body: %s" suggested
 
 let rule =
   Rule.v ~code:"E218"
