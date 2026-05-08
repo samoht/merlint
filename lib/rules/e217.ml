@@ -12,6 +12,12 @@ let handled_by_specialized_rule fn =
   let path = Longident.flatten fn in
   path = [ "Alcotest"; "fail" ] || path = [ "fail" ]
 
+(** [|>] threads a value left-to-right: [x |> Fmt.str "..." args] is a natural
+    pipeline, and the [Fmt.kstr g "..." args x] rewrite would reverse the data
+    flow. Skip pipe applications. ([@@] is precedence sugar for direct
+    application and stays flagged.) *)
+let is_pipe_operator fn = Longident.flatten fn = [ "|>" ]
+
 (** Helper that matches the outer's purpose: [Buffer.add_string] writes into a
     buffer, so the right rewrite uses [Fmt.bprintf]; [print_endline] writes to
     [stdout] with a newline, so [Fmt.pr "...@."]; etc. Everything else falls
@@ -55,7 +61,8 @@ let check (ctx : Context.file) =
           in
           match expr.pexp_desc with
           | Pexp_apply ({ pexp_desc = Pexp_ident { txt = fn; _ }; _ }, args)
-            when not (handled_by_specialized_rule fn) -> (
+            when (not (handled_by_specialized_rule fn))
+                 && not (is_pipe_operator fn) -> (
               match last_positional_arg args with
               | Some arg when is_fmt_str arg -> flag (suggestion_for_apply fn)
               | _ -> ())
