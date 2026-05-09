@@ -128,43 +128,41 @@ let enabled_rules rule_filter =
         Merlint.Data.all_rules
   | None -> Merlint.Data.all_rules
 
+(* Title of the rule with the given code, or the code itself if unknown. *)
+let rule_title_of_code code =
+  match
+    List.find_opt (fun r -> Merlint.Rule.code r = code) Merlint.Data.all_rules
+  with
+  | Some rule -> Merlint.Rule.title rule
+  | None -> code
+
+(* Format the per-code breakdown into a single string. *)
+let format_breakdown breakdown =
+  if List.length breakdown <= 2 then String.concat ", " breakdown
+  else
+    let first_two = List.filteri (fun i _ -> i < 2) breakdown in
+    Fmt.str "%s, ..." (String.concat ", " first_two)
+
+(* Build a summary row for one category, or None when there are no issues. *)
+let summary_row (category_name, issues) =
+  let count = List.length issues in
+  if count = 0 then None
+  else
+    let by_code = group_issues_by_code issues in
+    let breakdown =
+      List.map
+        (fun (code, code_issues) ->
+          let n = List.length code_issues in
+          let title = rule_title_of_code code in
+          Fmt.str "%d %s" n (String.lowercase_ascii title))
+        by_code
+    in
+    let details = format_breakdown breakdown in
+    Some [ category_name; Fmt.str "%d (%s)" count details ]
+
 (* Print summary table by category *)
 let print_summary_table issues_by_category =
-  (* Build summary data for each category *)
-  let rows =
-    List.filter_map
-      (fun (category_name, issues) ->
-        let count = List.length issues in
-        if count = 0 then None
-        else
-          (* Group by error code to get breakdown *)
-          let by_code = group_issues_by_code issues in
-          let breakdown =
-            List.map
-              (fun (code, code_issues) ->
-                let n = List.length code_issues in
-                (* Get the title from the rule *)
-                let title =
-                  match
-                    List.find_opt
-                      (fun r -> Merlint.Rule.code r = code)
-                      Merlint.Data.all_rules
-                  with
-                  | Some rule -> Merlint.Rule.title rule
-                  | None -> code
-                in
-                Fmt.str "%d %s" n (String.lowercase_ascii title))
-              by_code
-          in
-          let details =
-            if List.length breakdown <= 2 then String.concat ", " breakdown
-            else
-              let first_two = List.filteri (fun i _ -> i < 2) breakdown in
-              Fmt.str "%s, ..." (String.concat ", " first_two)
-          in
-          Some [ category_name; Fmt.str "%d (%s)" count details ])
-      issues_by_category
-  in
+  let rows = List.filter_map summary_row issues_by_category in
   if rows <> [] then (
     Fmt.pr "@.";
     let term_width = Tty.Width.terminal_width () in
