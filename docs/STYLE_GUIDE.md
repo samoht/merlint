@@ -715,10 +715,37 @@ let process x y z =
       else 0
     else 0
   else 0
+
+(* The "heavy work in else" pattern: depth grows on the else side too,
+   so a chain of three guards followed by a real else-block counts as
+   nesting depth 4. *)
+let classify_with_work x =
+  if x < 0 then `Negative
+  else
+    let abs_x = abs x in
+    if abs_x = 0 then `Zero
+    else if abs_x < 10 then `Small
+    else
+      let bucket =
+        if abs_x < 100 then `Medium
+        else if abs_x < 1000 then `Large
+        else `Huge
+      in
+      bucket
 ```
 
 **Good:**
 ```ocaml
+(* [else if] chains stay flat: each [else if] counts at the same level
+   as the surrounding [if], so a guard cascade isn't penalised for
+   reading as flat. *)
+let classify x =
+  if x < 0 then `Negative
+  else if x = 0 then `Zero
+  else if x < 10 then `Small
+  else if x < 100 then `Medium
+  else `Large
+
 let process x y z =
   if x <= 0 || y <= 0 || z <= 0 then 0
   else if x >= 100 then 0
