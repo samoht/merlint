@@ -16,3 +16,10 @@ let put_string s = Fmt.pr "%s" s
 let pp_int ppf n = Fmt.pf ppf "%d" n
 let printed n = n |> Fmt.str "%a" pp_int |> print_endline
 let chain n = n |> Fmt.str "%a" pp_int |> String.length
+
+(* Infix operators (e.g. [Bos.Cmd.( % )]) take their argument before the
+   string and cannot be wrapped as [Fmt.kstr op "..."]. The rule should
+   NOT flag these. *)
+let ( % ) cmd s = cmd ^ " " ^ s
+let cmd1 base name = base % Fmt.str "name=%s" name
+let cmd2 base region = base ^^ Fmt.str "region=%s" region

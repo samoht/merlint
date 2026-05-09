@@ -18,6 +18,36 @@ let handled_by_specialized_rule fn =
     application and stays flagged.) *)
 let is_pipe_operator fn = Longident.flatten fn = [ "|>" ]
 
+(** [true] when [name] is an OCaml operator identifier — same first-character
+    classification the lexer / [Pprintast.is_infix] use, plus the named infix
+    operators ([mod], [land], [lor], [lxor], [lsl], [lsr], [asr], [or]). *)
+let is_operator_name name =
+  match name with
+  | "" -> false
+  | "mod" | "land" | "lor" | "lxor" | "lsl" | "lsr" | "asr" | "or" | "&" -> true
+  | _ -> (
+      match name.[0] with
+      | '!' | '$' | '%' | '&' | '*' | '+' | '-' | '.' | '/' | ':' | '<' | '='
+      | '>' | '?' | '@' | '^' | '|' | '~' ->
+          true
+      | _ -> false)
+
+(** Infix operators take their formatted string as the second positional
+    argument, not as a continuation. Rewriting [cmd % Fmt.str "..."] as
+    [Fmt.kstr (%) "..."] does not typecheck because [(%)] expects its first
+    argument before the string, while [Fmt.kstr] only feeds the string. Skip
+    operator applications — the user can still hoist [Fmt.str] into a [let] if
+    they want to avoid the allocation.
+
+    The OCaml AST has no explicit "infix" flag; operator-ness is inferred from
+    the identifier's character class. Qualified forms ([Bos.Cmd.( % )]) flatten
+    to a path whose last segment is the operator, so look at the last component.
+*)
+let is_operator fn =
+  match List.rev (Longident.flatten fn) with
+  | last :: _ -> is_operator_name last
+  | [] -> false
+
 (** Helper that matches the outer's purpose: [Buffer.add_string] writes into a
     buffer, so the right rewrite uses [Fmt.bprintf]; [print_endline] writes to
     [stdout] with a newline, so [Fmt.pr "...@."]; etc. Everything else falls
@@ -62,7 +92,8 @@ let check (ctx : Context.file) =
           match expr.pexp_desc with
           | Pexp_apply ({ pexp_desc = Pexp_ident { txt = fn; _ }; _ }, args)
             when (not (handled_by_specialized_rule fn))
-                 && not (is_pipe_operator fn) -> (
+                 && (not (is_pipe_operator fn))
+                 && not (is_operator fn) -> (
               match last_positional_arg args with
               | Some arg when is_fmt_str arg -> flag (suggestion_for_apply fn)
               | _ -> ())
