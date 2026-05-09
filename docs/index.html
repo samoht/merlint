@@ -459,11 +459,38 @@ pre code {
         <span class="kw">else</span> <span class="nu">0</span>
       <span class="kw">else</span> <span class="nu">0</span>
     <span class="kw">else</span> <span class="nu">0</span>
-  <span class="kw">else</span> <span class="nu">0</span></code></pre>
+  <span class="kw">else</span> <span class="nu">0</span>
+
+(* <span class="cn">The</span> &quot;heavy work <span class="kw">in</span> <span class="kw">else</span>&quot; pattern: depth grows on the <span class="kw">else</span> side too,
+   so a chain <span class="kw">of</span> three guards followed by a real <span class="kw">else</span>-block counts <span class="kw">as</span>
+   nesting depth <span class="nu">4</span>. *)
+<span class="kw">let</span> classify_with_work x =
+  <span class="kw">if</span> x &lt; <span class="nu">0</span> <span class="kw">then</span> `<span class="cn">Negative</span>
+  <span class="kw">else</span>
+    <span class="kw">let</span> abs_x = abs x <span class="kw">in</span>
+    <span class="kw">if</span> abs_x = <span class="nu">0</span> <span class="kw">then</span> `<span class="cn">Zero</span>
+    <span class="kw">else</span> <span class="kw">if</span> abs_x &lt; <span class="nu">10</span> <span class="kw">then</span> `<span class="cn">Small</span>
+    <span class="kw">else</span>
+      <span class="kw">let</span> bucket =
+        <span class="kw">if</span> abs_x &lt; <span class="nu">100</span> <span class="kw">then</span> `<span class="cn">Medium</span>
+        <span class="kw">else</span> <span class="kw">if</span> abs_x &lt; <span class="nu">1000</span> <span class="kw">then</span> `<span class="cn">Large</span>
+        <span class="kw">else</span> `<span class="cn">Huge</span>
+      <span class="kw">in</span>
+      bucket</code></pre>
 </div>
 <div class="example good">
   <h4>GOOD</h4>
-  <pre><code><span class="kw">let</span> process x y z =
+  <pre><code>(* [<span class="kw">else</span> <span class="kw">if</span>] chains stay flat: each [<span class="kw">else</span> <span class="kw">if</span>] counts at the same level
+   <span class="kw">as</span> the surrounding [<span class="kw">if</span>], so a guard cascade isn't penalised <span class="kw">for</span>
+   reading <span class="kw">as</span> flat. *)
+<span class="kw">let</span> classify x =
+  <span class="kw">if</span> x &lt; <span class="nu">0</span> <span class="kw">then</span> `<span class="cn">Negative</span>
+  <span class="kw">else</span> <span class="kw">if</span> x = <span class="nu">0</span> <span class="kw">then</span> `<span class="cn">Zero</span>
+  <span class="kw">else</span> <span class="kw">if</span> x &lt; <span class="nu">10</span> <span class="kw">then</span> `<span class="cn">Small</span>
+  <span class="kw">else</span> <span class="kw">if</span> x &lt; <span class="nu">100</span> <span class="kw">then</span> `<span class="cn">Medium</span>
+  <span class="kw">else</span> `<span class="cn">Large</span>
+
+<span class="kw">let</span> process x y z =
   <span class="kw">if</span> x &lt;= <span class="nu">0</span> || y &lt;= <span class="nu">0</span> || z &lt;= <span class="nu">0</span> <span class="kw">then</span> <span class="nu">0</span>
   <span class="kw">else</span> <span class="kw">if</span> x &gt;= <span class="nu">100</span> <span class="kw">then</span> <span class="nu">0</span>
   <span class="kw">else</span> x + y + z</code></pre>

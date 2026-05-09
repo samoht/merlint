@@ -104,8 +104,14 @@ module Nesting = struct
           let d2 = depth_of new_depth then_expr in
           let d3 =
             match else_expr with
+            | Some (If_then_else _ as e) ->
+                (* [else if] chain: stay at the current level so guard
+                   cascades aren't penalised for what reads as flat. *)
+                depth_of current_depth e
             | Some e ->
-                depth_of current_depth e (* else branch at same level as if *)
+                (* Real else-block: counts as a new nesting level, same as
+                   the then-branch. *)
+                depth_of new_depth e
             | None -> new_depth
           in
           max (max d1 d2) d3
