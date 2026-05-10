@@ -6,6 +6,8 @@ module Log = (val Logs.src_log src : Logs.LOG)
 
 exception Analysis_error of string
 
+let fail_analysis fmt = Fmt.kstr (fun s -> raise (Analysis_error s)) fmt
+
 type file = {
   filename : string;
   config : Config.t;
@@ -34,20 +36,16 @@ let file ~filename ~config ~project_root ~outline ~dump =
     project_root;
     ast = lazy { Ast.functions = Ast.extract_functions filename };
     dump =
-      lazy
-        (match dump with Ok d -> d | Error msg -> raise (Analysis_error msg));
+      lazy (match dump with Ok d -> d | Error msg -> fail_analysis "%s" msg);
     outline =
       lazy
-        (match outline with
-        | Ok o -> o
-        | Error msg -> raise (Analysis_error msg));
+        (match outline with Ok o -> o | Error msg -> fail_analysis "%s" msg);
     content =
       lazy
         (try In_channel.with_open_text filename In_channel.input_all
          with exn ->
-           Fmt.kstr
-             (fun s -> raise (Analysis_error s))
-             "Failed to read file %s: %s" filename (Printexc.to_string exn));
+           fail_analysis "Failed to read file %s: %s" filename
+             (Printexc.to_string exn));
     functions =
       lazy
         (let ast = Ast.extract_functions filename in
