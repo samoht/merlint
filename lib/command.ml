@@ -4,19 +4,19 @@ let src = Logs.Src.create "merlint.command" ~doc:"Command execution"
 
 module Log = (val Logs.src_log src : Logs.LOG)
 
-let errorf fmt = Fmt.kstr (fun s -> Error s) fmt
+let err fmt = Fmt.kstr (fun s -> Error s) fmt
 
 let err_exit_code code =
   Log.err (fun m -> m "Command failed with exit code %d" code);
-  errorf "Command failed with exit code %d" code
+  err "Command failed with exit code %d" code
 
 let err_signal n =
   Log.err (fun m -> m "Command killed by signal %d" n);
-  errorf "Command killed by signal %d" n
+  err "Command killed by signal %d" n
 
 let err_exception exn =
   Log.err (fun m -> m "Exception running command: %s" (Printexc.to_string exn));
-  errorf "Exception: %s" (Printexc.to_string exn)
+  err "Exception: %s" (Printexc.to_string exn)
 
 let run mgr cmd =
   Log.info (fun m -> m "Running command: %s (cwd: %s)" cmd (Sys.getcwd ()));
