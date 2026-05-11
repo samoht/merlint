@@ -24,11 +24,13 @@ Test bad example - should flag a printer not named pp / pp_<type>:
   ├────────────────────┼─────────────────────────────┤
   │ Naming Conventions │ 1 (1 pretty-printer naming) │
   ╰────────────────────┴─────────────────────────────╯
-
-
-  Summary: ✗ 1 total issues (applied 1 rule)
+  
+  
+  Summary: ✗ 1 total issue (applied 1 rule)
   ✗ Some checks failed. See details above.
   [1]
+
+
 
 Test good example - should find no issues:
   $ merlint -B -r E336 good.ml

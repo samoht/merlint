@@ -28,7 +28,7 @@ let check (ctx : Context.file) =
             then
               issues :=
                 Issue.v
-                  ~loc:(Ast.loc_to_merlint ~filename expr.pexp_loc)
+                  ~loc:(Ast.merlint_of_loc ~filename expr.pexp_loc)
                   { is_alcotest = is_alcotest_fail }
                 :: !issues);
         List.rev !issues

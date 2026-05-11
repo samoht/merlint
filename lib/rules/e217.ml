@@ -85,7 +85,7 @@ let check (ctx : Context.file) =
           let flag suggested =
             issues :=
               Issue.v
-                ~loc:(Ast.loc_to_merlint ~filename expr.pexp_loc)
+                ~loc:(Ast.merlint_of_loc ~filename expr.pexp_loc)
                 { suggested }
               :: !issues
           in

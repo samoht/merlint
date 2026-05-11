@@ -15,7 +15,7 @@ let check (ctx : Context.file) =
                  args
           then
             issues :=
-              Issue.v ~loc:(Ast.loc_to_merlint ~filename expr.pexp_loc) ()
+              Issue.v ~loc:(Ast.merlint_of_loc ~filename expr.pexp_loc) ()
               :: !issues);
       List.rev !issues
 

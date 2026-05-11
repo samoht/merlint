@@ -303,7 +303,7 @@ let parse_structure ~filename content =
       None
 
 (** Convert a compiler-libs [Warnings.loc] into a merlint [Location.t]. *)
-let loc_to_merlint ~filename (loc : Warnings.loc) =
+let merlint_of_loc ~filename (loc : Warnings.loc) =
   Location.v ~file:filename ~start_line:loc.loc_start.pos_lnum
     ~start_col:(loc.loc_start.pos_cnum - loc.loc_start.pos_bol)
     ~end_line:loc.loc_end.pos_lnum

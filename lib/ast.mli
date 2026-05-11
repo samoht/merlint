@@ -84,8 +84,8 @@ val parse_structure : filename:string -> string -> Parsetree.structure option
 (** [parse_structure ~filename content] parses [content] into a Parsetree
     structure. Returns [None] for [.mli] files and on parse error. *)
 
-val loc_to_merlint : filename:string -> Warnings.loc -> Location.t
-(** [loc_to_merlint ~filename loc] converts a compiler-libs location into a
+val merlint_of_loc : filename:string -> Warnings.loc -> Location.t
+(** [merlint_of_loc ~filename loc] converts a compiler-libs location into a
     merlint location. *)
 
 val iter_apply :
