@@ -2,13 +2,17 @@
 
 open Merlint.Outline
 
+let parse_type s =
+  try Some (Parse.core_type (Lexing.from_string s))
+  with Syntaxerr.Error _ | Lexer.Error _ -> None
+
 (* Helper to create test items *)
 let item ?(type_string = None) ?(deprecated = false) ?(children = []) ~name
     ~kind () =
   {
-    Merlin.name;
+    Merlin.Outline.name;
     kind;
-    type_ = lazy (Option.bind type_string Merlin.parse_core_type);
+    type_ = lazy (Option.bind type_string parse_type);
     deprecated;
     location =
       {

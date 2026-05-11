@@ -1,6 +1,6 @@
 (** OCamlmerlin outline output - thin re-export over [Merlin.outline]. *)
 
-type kind = Merlin.symbol_kind =
+type kind = Merlin.Outline.symbol_kind =
   | Value
   | Type
   | Module
@@ -13,8 +13,8 @@ type kind = Merlin.symbol_kind =
   | Method
   | Label
 
-type item = Merlin.outline_item
-type t = Merlin.outline
+type item = Merlin.Outline.item
+type t = Merlin.Outline.t
 
 val flatten : t -> item list
 (** [flatten t] returns every item in [t] including nested children. *)
