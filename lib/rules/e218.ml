@@ -168,7 +168,7 @@ let check (ctx : Context.file) =
               let suggested = mismatch_suggestion n kind in
               issues :=
                 Issue.v
-                  ~loc:(Ast.loc_to_merlint ~filename loc)
+                  ~loc:(Ast.merlint_of_loc ~filename loc)
                   { variant = Rename; suggested }
                 :: !issues
           | _ -> ())
@@ -183,7 +183,7 @@ let check (ctx : Context.file) =
                 let suggested = suggestion kind (stem_of_payload payload) in
                 issues :=
                   Issue.v
-                    ~loc:(Ast.loc_to_merlint ~filename expr.pexp_loc)
+                    ~loc:(Ast.merlint_of_loc ~filename expr.pexp_loc)
                     { variant = Inline; suggested }
                   :: !issues);
       List.rev !issues

@@ -37,12 +37,28 @@ let check (ctx : Context.project) =
     is_exe || is_test || is_intf
   in
 
+  (* A virtual-module implementation lives in a library declared
+     [(implements <virt>)]. The interface is the abstract [.mli] alongside the
+     virtual library; dune forbids the implementation from carrying its own
+     [.mli]. Detect this by checking the closest dune file. *)
+  let implements_re =
+    Re.compile (Re.seq [ Re.str "(implements"; Re.set " \t\n" ])
+  in
+  let is_virtual_impl ml_file =
+    let dir = Filename.dirname ml_file in
+    let dune_path = Filename.concat dir "dune" in
+    match In_channel.with_open_text dune_path In_channel.input_all with
+    | exception _ -> false
+    | content -> Re.execp implements_re content
+  in
+
   (* For each ML file being analyzed, check if it has a corresponding MLI file *)
   List.filter_map
     (fun ml_file ->
       if String.ends_with ~suffix:".ml" ml_file then
         (* Only check for .mli files for library modules, not executables or test modules *)
-        if not (should_skip_module ml_file) then
+        if (not (should_skip_module ml_file)) && not (is_virtual_impl ml_file)
+        then
           let base_name = Filename.remove_extension ml_file in
           let mli_path = base_name ^ ".mli" in
           (* Check if the MLI file exists in the list of project files *)
