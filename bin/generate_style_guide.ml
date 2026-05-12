@@ -1,5 +1,23 @@
 open Merlint
 
+let format_example (ex : Rule.example) =
+  let label = if ex.is_good then "**Good:**" else "**Bad:**" in
+  Fmt.str "%s\n```ocaml\n%s\n```\n" label ex.code
+
+let examples_md = function
+  | [] -> ""
+  | examples ->
+      "\n\n**Examples:**\n\n"
+      ^ (List.map format_example examples |> String.concat "\n")
+
+let markdown_of_rule rule_code =
+  match List.find_opt (fun r -> Rule.code r = rule_code) Data.all_rules with
+  | None -> Fmt.str "### [%s] Rule not found\n\n" rule_code
+  | Some rule ->
+      Fmt.str "### [%s] %s\n\n%s%s\n" rule_code (Rule.title rule)
+        (Rule.hint rule)
+        (examples_md (Rule.examples rule))
+
 (** Generate markdown from guide elements *)
 let rec markdown_of_element = function
   | Guide.Title s -> Fmt.str "# %s\n" s
@@ -10,27 +28,7 @@ let rec markdown_of_element = function
       Fmt.str "## %s\n\n%s" title content
   | Paragraph s -> Fmt.str "%s\n" s
   | Code s -> Fmt.str "```ocaml\n%s\n```\n" s
-  | Rule rule_code -> (
-      (* Find the rule with matching code *)
-      let rule_opt =
-        List.find_opt (fun r -> Rule.code r = rule_code) Data.all_rules
-      in
-      match rule_opt with
-      | None -> Fmt.str "### [%s] Rule not found\n\n" rule_code
-      | Some rule ->
-          let examples_md =
-            match Rule.examples rule with
-            | [] -> ""
-            | examples ->
-                let format_example (ex : Rule.example) =
-                  let label = if ex.is_good then "**Good:**" else "**Bad:**" in
-                  Fmt.str "%s\n```ocaml\n%s\n```\n" label ex.code
-                in
-                "\n\n**Examples:**\n\n"
-                ^ (List.map format_example examples |> String.concat "\n")
-          in
-          Fmt.str "### [%s] %s\n\n%s%s\n" rule_code (Rule.title rule)
-            (Rule.hint rule) examples_md)
+  | Rule rule_code -> markdown_of_rule rule_code
 
 let generate () =
   let content =

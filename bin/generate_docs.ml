@@ -315,40 +315,33 @@ let remove_overlapping_segments segments =
     sorted_segments;
   List.rev !non_overlapping
 
-let build_highlighted_text escaped segments =
-  let result = ref "" in
-  let last_pos = ref 0 in
+let span_html class_name text =
+  Fmt.str {|<span class="%s">%s</span>|} class_name text
 
+let module_path_html text =
+  match String.split_on_char '.' text with
+  | [ m; f ] ->
+      Fmt.str {|<span class="md">%s</span>.<span class="fn">%s</span>|} m f
+  | _ -> text
+
+let render_segment class_name text =
+  if class_name = "module_path" then module_path_html text
+  else span_html class_name text
+
+let build_highlighted_text escaped segments =
+  let buf = Buffer.create (String.length escaped + 32) in
+  let last_pos = ref 0 in
   List.iter
     (fun (start, stop, class_name, text) ->
-      (* Add unprocessed text before this segment *)
       if start > !last_pos then
-        result := !result ^ String.sub escaped !last_pos (start - !last_pos);
-
-      (* Add the highlighted segment *)
-      if class_name = "module_path" then
-        (* Special handling for module paths *)
-        let parts = String.split_on_char '.' text in
-        match parts with
-        | [ m; f ] ->
-            Fmt.kstr
-              (fun s -> result := !result ^ s)
-              {|<span class="md">%s</span>.<span class="fn">%s</span>|} m f
-        | _ -> result := !result ^ text
-      else
-        Fmt.kstr
-          (fun s -> result := !result ^ s)
-          {|<span class="%s">%s</span>|} class_name text;
-
+        Buffer.add_substring buf escaped !last_pos (start - !last_pos);
+      Buffer.add_string buf (render_segment class_name text);
       last_pos := stop)
     segments;
-
-  (* Add any remaining text *)
   if !last_pos < String.length escaped then
-    result :=
-      !result ^ String.sub escaped !last_pos (String.length escaped - !last_pos);
-
-  !result
+    Buffer.add_substring buf escaped !last_pos
+      (String.length escaped - !last_pos);
+  Buffer.contents buf
 
 (* Simple but effective OCaml syntax highlighting *)
 let highlight_ocaml_code code =
