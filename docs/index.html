@@ -1165,7 +1165,7 @@ and replace each call site with [err_x "..." args] / [fail_x "..." args]. The la
         <span class="error-code">E333</span>
         <span class="error-title">Prefer _of_ over _to_ / _from_</span>
     </div>
-    <div class="error-hint"><p>Standalone conversion functions in OCaml use the [&lt;dst&gt;_of_&lt;src&gt;] form ([int_of_string], [string_of_float], ...) — never [&lt;src&gt;_to_&lt;dst&gt;] or [&lt;dst&gt;_from_&lt;src&gt;]. The convention reads as 'an X out of a Y' and matches the stdlib precedent. The rule only flags single-arrow functions ([T1 -&gt; T2] with non-unit [T2]), so multi-argument actions ([add_to_set : 'a -&gt; 'a list -&gt; 'a list]) and writes-into-sink functions ([print_to_buffer : Buffer.t -&gt; string -&gt; unit]) are skipped by their type. Add domain-specific exceptions to [allowed_words].</p><div class="examples-grid">
+    <div class="error-hint"><p>Standalone conversion functions in OCaml use the [&lt;dst&gt;_of_&lt;src&gt;] form ([int_of_string], [string_of_float], ...) — never [&lt;src&gt;_to_&lt;dst&gt;], [&lt;dst&gt;_from_&lt;src&gt;], [&lt;X&gt;_of_t], or [t_of_&lt;X&gt;]. The convention reads as 'an X out of a Y' and matches the stdlib precedent. The [to_&lt;X&gt;] prefix is reserved for conversions whose source is the module's own [t] ([List.to_seq], [Bytes.to_string]); use [&lt;X&gt;_of_&lt;src&gt;] when the source is anything else. The rule runs on [.mli] only -- naming is a public-API concern; private helpers in [.ml] are not flagged. The rule only flags single-arrow functions ([T1 -&gt; T2] with non-unit [T2]), so multi-argument actions ([add_to_set : 'a -&gt; 'a list -&gt; 'a list]) and writes-into-sink functions ([print_to_buffer : Buffer.t -&gt; string -&gt; unit]) are skipped by their type. Add domain-specific exceptions to [allowed_words].</p><div class="examples-grid">
 <div class="example bad">
   <h4>BAD</h4>
   <pre><code>(* <span class="cn">Bad</span> examples: single-arrow [<span class="cn">T1</span> -&gt; <span class="cn">T2</span>] <span class="kw">with</span> non-unit [<span class="cn">T2</span>] — these are
@@ -1182,6 +1182,22 @@ and replace each call site with [err_x "..." args] / [fail_x "..." args]. The la
 
 <span class="kw">let</span> value_from_string s = int_of_string s
 <span class="kw">let</span> bytes_from_hex h = <span class="cn">Bytes</span>.of_string h
+
+(* <span class="cn">Inside</span> a <span class="kw">module</span> whose abstract <span class="kw">type</span> is [t], the [t] <span class="kw">in</span> conversion
+   names is implicit; [&lt;<span class="cn">X</span>&gt;_of_t] <span class="kw">and</span> [t_of_&lt;<span class="cn">X</span>&gt;] should collapse <span class="kw">to</span>
+   [to_&lt;<span class="cn">X</span>&gt;] <span class="kw">and</span> [of_&lt;<span class="cn">X</span>&gt;]. *)
+
+<span class="kw">type</span> t = int
+
+<span class="kw">let</span> int_of_t (x : t) = x
+<span class="kw">let</span> t_of_int n : t = n
+
+(* [to_&lt;<span class="cn">X</span>&gt;] is only canonical <span class="kw">when</span> the source is the <span class="kw">module</span>'s [t] (<span class="kw">or</span>
+   one <span class="kw">of</span> [t]'s transparent aliases <span class="kw">when</span> the [.ml] omits an annotation).
+   <span class="cn">A</span> <span class="kw">function</span> whose source is unrelated <span class="kw">to</span> [t] is a disguised
+   [&lt;src&gt;_to_&lt;<span class="cn">X</span>&gt;] <span class="kw">and</span> must use [&lt;<span class="cn">X</span>&gt;_of_&lt;src&gt;] instead. *)
+
+<span class="kw">let</span> to_pair (s : string) = (s, s)
 </code></pre>
 </div>
 <div class="example good">
@@ -1211,6 +1227,57 @@ and replace each call site with [err_x "..." args] / [fail_x "..." args]. The la
 
 <span class="kw">let</span> recover_from_error e = ignore e
 <span class="cm">(* val recover_from_error : 'a -&gt; unit — unit return, not flagged. *)</span>
+
+(* <span class="cn">Inside</span> a <span class="kw">module</span> whose <span class="kw">type</span> is [t]: the canonical conversion names are
+   [to_&lt;<span class="cn">X</span>&gt;] (source implicit [t]) <span class="kw">and</span> [of_&lt;<span class="cn">X</span>&gt;] (destination implicit [t]). *)
+
+<span class="kw">type</span> t = int
+
+<span class="kw">let</span> to_int (x : t) = x
+<span class="kw">let</span> of_int n : t = n
+
+(* <span class="cn">When</span> [<span class="kw">type</span> t = <span class="cn">X</span>] is a transparent alias <span class="kw">and</span> the [.ml] omits a <span class="kw">type</span>
+   annotation, <span class="cn">Merlin</span> infers the body <span class="kw">as</span> [<span class="cn">X</span> -&gt; <span class="cn">Y</span>]. <span class="cn">The</span> rule still recognises
+   the canonical [to_&lt;<span class="cn">Y</span>&gt;] / [of_&lt;<span class="cn">X</span>&gt;] forms by tracking the alias declared at
+   the top <span class="kw">of</span> the file: [<span class="cn">Tid</span>.to_string] below is [string -&gt; string] after
+   alias resolution, but [<span class="kw">type</span> t = string] makes that legitimate. *)
+
+<span class="kw">module</span> <span class="cn">Tid</span> = <span class="kw">struct</span>
+  <span class="kw">type</span> t = string
+  <span class="kw">let</span> to_string s = s
+  <span class="kw">let</span> of_string s : t = s
+<span class="kw">end</span>
+
+(* <span class="cn">Multiple</span> sibling modules, each <span class="kw">with</span> their own [<span class="kw">type</span> t = <span class="cn">X</span>]. <span class="cn">The</span> alias
+   tracking is scoped per <span class="kw">module</span>: [<span class="cn">Inner</span>.to_int : t -&gt; int] resolves <span class="kw">to</span>
+   [int -&gt; int] (where [t = int] <span class="kw">in</span> <span class="cn">Inner</span>), <span class="kw">and</span> [<span class="cn">Outer</span>.to_string : t -&gt;
+   string] resolves <span class="kw">to</span> [string -&gt; string] (where [t = string] <span class="kw">in</span> <span class="cn">Outer</span>).
+   <span class="cn">Neither</span> cross-contaminates the other. *)
+
+<span class="kw">module</span> <span class="cn">Inner</span> = <span class="kw">struct</span>
+  <span class="kw">type</span> t = int
+  <span class="kw">let</span> to_int t = t
+  <span class="kw">let</span> of_int n : t = n
+<span class="kw">end</span>
+
+<span class="kw">module</span> <span class="cn">Outer</span> = <span class="kw">struct</span>
+  <span class="kw">type</span> t = string
+  <span class="kw">let</span> to_string t = t
+  <span class="kw">let</span> of_string s : t = s
+<span class="kw">end</span>
+
+(* <span class="cn">Aliases</span> on parameterised types: [<span class="kw">type</span> t = entry list] should accept
+   both [list] <span class="kw">and</span> [entry] <span class="kw">as</span> legitimate source-<span class="kw">type</span> names. *)
+
+<span class="kw">type</span> entry = { name : string }
+<span class="kw">type</span> tree = entry list
+
+(* <span class="cn">A</span> <span class="kw">function</span> on the parameterised alias is accepted <span class="kw">as</span> [t -&gt; ...]
+   even <span class="kw">when</span> <span class="cn">Merlin's</span> inferred <span class="kw">type</span> uses the unfolded [entry list]. *)
+<span class="kw">module</span> <span class="cn">Tree</span> = <span class="kw">struct</span>
+  <span class="kw">type</span> t = tree
+  <span class="kw">let</span> to_entries (t : t) = t
+<span class="kw">end</span>
 </code></pre>
 </div>
 </div></div>
@@ -1961,6 +2028,20 @@ and replace each call site with [err_x "..." args] / [fail_x "..." args]. The la
         <span class="error-title">Promoted MDX error block in source</span>
     </div>
     <div class="error-hint"><p>A README.md, .mli, or .mld file contains an mdx-error block produced by [dune promote] after a failing mdx run. The error output belongs in a [.corrected] file for review, not in the committed source. Fix the underlying example so it type-checks and remove the block.</p></div>
+</div>
+<div class="error-card" id="E930">
+    <div>
+        <span class="error-code">E930</span>
+        <span class="error-title">Sans-IO policy</span>
+    </div>
+    <div class="error-hint"><p>Any package tagged codec.* or protocol must follow the sans-IO contract. The org standardises on Eio: no package may depend on lwt, miou, or mirage runtimes. Pure sans-IO packages (codec.* / protocol without an eio tag) must additionally not depend on eio*, unix, or ambient clocks. They expose Bytesrw Reader/Writer in the main library rather than shipping a separate &lt;pkg&gt;_bytesrw sub-library.</p></div>
+</div>
+<div class="error-card" id="E931">
+    <div>
+        <span class="error-code">E931</span>
+        <span class="error-title">Ambient clock in sans-IO library code</span>
+    </div>
+    <div class="error-hint"><p>Sans-IO packages (tagged [codec.*] or [protocol]) must not read the wall clock or monotonic clock from library code. Time is an input, not a side effect: take [~now] as a parameter, let the caller's adapter or CLI [bin/] call [Mtime_clock.now] / [Ptime_clock.now] / [Unix.gettimeofday] / [Sys.time] and pass the value in. Library attribution follows dune's [(public_name P.X)] via [Monopam_info_index] so a sibling adapter package is scanned against its own tags, not its sans-IO sister's.</p></div>
 </div>
 
     <a href="#top" class="back-to-top">↑ Top</a>

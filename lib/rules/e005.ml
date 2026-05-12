@@ -49,7 +49,7 @@ let check (ctx : Context.file) =
 
     (* Count total match cases in an expression *)
     let rec count_match_cases = function
-      | Ast.Match { cases; _ } -> cases
+      | Ast.Match { cases; _ } -> List.length cases
       | Ast.Function { body; _ } -> count_match_cases body
       | Ast.Let { body; bindings } ->
           let binding_cases =
