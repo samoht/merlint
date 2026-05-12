@@ -57,7 +57,10 @@ let complexity_tests =
           "cyclomatic complexity" 3
           (Ast.Complexity.calculate c));
     Alcotest.test_case "match expression" `Quick (fun () ->
-        let expr = Ast.Match { expr = Ast.Other; cases = 3 } in
+        let expr =
+          Ast.Match
+            { expr = Ast.Other; cases = [ Ast.Other; Ast.Other; Ast.Other ] }
+        in
         let c = Ast.Complexity.analyze expr in
         Alcotest.(check int) "match_cases count" 1 c.match_cases;
         Alcotest.(check int) "total" 1 c.total;
@@ -66,7 +69,10 @@ let complexity_tests =
           (Ast.Complexity.calculate c));
     Alcotest.test_case "match with many cases" `Quick (fun () ->
         (* Pattern match with 10 cases should still count as 1 decision point *)
-        let expr = Ast.Match { expr = Ast.Other; cases = 10 } in
+        let expr =
+          Ast.Match
+            { expr = Ast.Other; cases = List.init 10 (fun _ -> Ast.Other) }
+        in
         let c = Ast.Complexity.analyze expr in
         Alcotest.(check int) "match_cases count" 1 c.match_cases;
         Alcotest.(check int) "total" 1 c.total;
@@ -75,7 +81,7 @@ let complexity_tests =
           (Ast.Complexity.calculate c));
     Alcotest.test_case "match with 0 cases" `Quick (fun () ->
         (* Edge case: match with no cases *)
-        let expr = Ast.Match { expr = Ast.Other; cases = 0 } in
+        let expr = Ast.Match { expr = Ast.Other; cases = [] } in
         let c = Ast.Complexity.analyze expr in
         Alcotest.(check int) "match_cases count" 0 c.match_cases;
         Alcotest.(check int) "total" 0 c.total;
@@ -84,16 +90,56 @@ let complexity_tests =
           (Ast.Complexity.calculate c));
     Alcotest.test_case "nested match expressions" `Quick (fun () ->
         (* Two nested matches should count as 2 decision points total *)
-        let inner_match = Ast.Match { expr = Ast.Other; cases = 5 } in
-        let outer_match = Ast.Match { expr = inner_match; cases = 3 } in
+        let inner_match =
+          Ast.Match
+            { expr = Ast.Other; cases = List.init 5 (fun _ -> Ast.Other) }
+        in
+        let outer_match =
+          Ast.Match
+            { expr = inner_match; cases = [ Ast.Other; Ast.Other; Ast.Other ] }
+        in
         let c = Ast.Complexity.analyze outer_match in
         Alcotest.(check int) "match_cases count" 2 c.match_cases;
         Alcotest.(check int) "total" 2 c.total;
         Alcotest.(check int)
           "cyclomatic complexity" 3
           (Ast.Complexity.calculate c));
+    Alcotest.test_case "match with nested match inside a case" `Quick (fun () ->
+        (* The bug fix: a match whose case BODY contains another match must
+           contribute both decisions. Previously the inner match was
+           invisible because [cases : int] dropped case bodies. *)
+        let inner_match =
+          Ast.Match
+            { expr = Ast.Other; cases = [ Ast.Other; Ast.Other; Ast.Other ] }
+        in
+        let outer_match =
+          Ast.Match
+            { expr = Ast.Other; cases = [ Ast.Other; inner_match; Ast.Other ] }
+        in
+        let c = Ast.Complexity.analyze outer_match in
+        Alcotest.(check int) "match_cases count" 2 c.match_cases;
+        Alcotest.(check int) "total" 2 c.total;
+        Alcotest.(check int)
+          "cyclomatic complexity" 3
+          (Ast.Complexity.calculate c));
+    Alcotest.test_case "nested if inside a case body" `Quick (fun () ->
+        (* An [if] inside a match case body must be counted as a decision. *)
+        let case_with_if =
+          Ast.If_then_else
+            { cond = Ast.Other; then_expr = Ast.Other; else_expr = None }
+        in
+        let outer =
+          Ast.Match
+            { expr = Ast.Other; cases = [ Ast.Other; case_with_if; Ast.Other ] }
+        in
+        let c = Ast.Complexity.analyze outer in
+        Alcotest.(check int) "if_then_else inside case" 1 c.if_then_else;
+        Alcotest.(check int) "match_cases" 1 c.match_cases;
+        Alcotest.(check int) "total" 2 c.total);
     Alcotest.test_case "try expression" `Quick (fun () ->
-        let expr = Ast.Try { expr = Ast.Other; handlers = 2 } in
+        let expr =
+          Ast.Try { expr = Ast.Other; handlers = [ Ast.Other; Ast.Other ] }
+        in
         let c = Ast.Complexity.analyze expr in
         Alcotest.(check int) "try_handlers count" 2 c.try_handlers;
         Alcotest.(check int) "total" 2 c.total;

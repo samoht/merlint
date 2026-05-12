@@ -6,8 +6,8 @@ module Log = (val Logs.src_log src : Logs.LOG)
 
 type expr =
   | If_then_else of { cond : expr; then_expr : expr; else_expr : expr option }
-  | Match of { expr : expr; cases : int }
-  | Try of { expr : expr; handlers : int }
+  | Match of { expr : expr; cases : expr list }
+  | Try of { expr : expr; handlers : expr list }
   | Function of { params : int; body : expr }
   | Let of { bindings : (string * expr) list; body : expr }
   | Sequence of expr list
@@ -48,16 +48,24 @@ module Complexity = struct
         let acc = merge acc (analyze then_expr) in
         match else_expr with Some e -> merge acc (analyze e) | None -> acc)
     | Match { expr; cases } ->
-        (* A match expression is a single decision point, regardless of cases *)
-        let decision_points = if cases > 0 then 1 else 0 in
+        (* A match contributes a single decision point regardless of how
+           many cases it has (matching the original merlint convention),
+           but each case body may contain its own decisions that must be
+           added recursively -- the bug fix is this recursion, which the
+           previous [cases : int] representation made impossible. *)
+        let decision_points = if cases <> [] then 1 else 0 in
         let acc =
           { empty with match_cases = decision_points; total = decision_points }
         in
-        merge acc (analyze expr)
+        let acc = merge acc (analyze expr) in
+        List.fold_left (fun acc e -> merge acc (analyze e)) acc cases
     | Try { expr; handlers } ->
-        (* Each exception handler adds complexity *)
-        let acc = { empty with try_handlers = handlers; total = handlers } in
-        merge acc (analyze expr)
+        (* Each exception handler adds complexity, and handler bodies are
+           analysed recursively. *)
+        let n = List.length handlers in
+        let acc = { empty with try_handlers = n; total = n } in
+        let acc = merge acc (analyze expr) in
+        List.fold_left (fun acc e -> merge acc (analyze e)) acc handlers
     | Function { body; _ } -> analyze body
     | Let { bindings; body } ->
         let acc =
@@ -115,9 +123,14 @@ module Nesting = struct
             | None -> new_depth
           in
           max (max d1 d2) d3
-      | Match { expr; _ } | Try { expr; _ } ->
+      | Match { expr; cases } ->
           let new_depth = current_depth + 1 in
-          max (depth_of current_depth expr) new_depth
+          let case_depths = List.map (depth_of new_depth) cases in
+          List.fold_left max (depth_of current_depth expr) case_depths
+      | Try { expr; handlers } ->
+          let new_depth = current_depth + 1 in
+          let handler_depths = List.map (depth_of new_depth) handlers in
+          List.fold_left max (depth_of current_depth expr) handler_depths
       | Function { body; _ } -> depth_of (current_depth + 1) body
       | Let { bindings; body } ->
           let bind_depth =
@@ -179,9 +192,15 @@ let rec of_parsetree_expr (expr : Parsetree.expression) : expr =
           else_expr = Option.map of_parsetree_expr else_expr;
         }
   | Pexp_match (expr, cases) ->
-      Match { expr = of_parsetree_expr expr; cases = List.length cases }
+      let case_exprs =
+        List.map (fun c -> of_parsetree_expr c.Parsetree.pc_rhs) cases
+      in
+      Match { expr = of_parsetree_expr expr; cases = case_exprs }
   | Pexp_try (expr, cases) ->
-      Try { expr = of_parsetree_expr expr; handlers = List.length cases }
+      let handler_exprs =
+        List.map (fun c -> of_parsetree_expr c.Parsetree.pc_rhs) cases
+      in
+      Try { expr = of_parsetree_expr expr; handlers = handler_exprs }
   | Pexp_function (params, _, body) ->
       (* In OCaml 5, multi-parameter functions have all params here *)
       Log.debug (fun m -> m "Pexp_function: %d params" (List.length params));
@@ -195,7 +214,10 @@ let rec of_parsetree_expr (expr : Parsetree.expression) : expr =
             Log.debug (fun m ->
                 m "Found Pfunction_cases with %d cases" (List.length cases));
             (* This is a pattern matching function - treat it as a match expression *)
-            Match { expr = Other; cases = List.length cases }
+            let case_exprs =
+              List.map (fun c -> of_parsetree_expr c.Parsetree.pc_rhs) cases
+            in
+            Match { expr = Other; cases = case_exprs }
       in
 
       if List.length params = 0 then
@@ -232,22 +254,22 @@ let rec of_parsetree_expr (expr : Parsetree.expression) : expr =
   | _ -> Other
 
 (** Extract function definitions from structure items *)
+let process_binding ~push (vb : Parsetree.value_binding) =
+  match vb.pvb_pat.ppat_desc with
+  | Ppat_var { txt = name; _ } ->
+      Log.debug (fun m -> m "Processing binding: %s" name);
+      let expr = of_parsetree_expr vb.pvb_expr in
+      Log.debug (fun m -> m "Converted %s to AST" name);
+      push (name, expr)
+  | _ -> ()
+
 let functions_of_structure (structure : Parsetree.structure) =
   let functions = ref [] in
+  let push pair = functions := pair :: !functions in
 
   let rec process_structure_item (item : Parsetree.structure_item) =
     match item.pstr_desc with
-    | Pstr_value (_, bindings) ->
-        List.iter
-          (fun (vb : Parsetree.value_binding) ->
-            match vb.pvb_pat.ppat_desc with
-            | Ppat_var { txt = name; _ } ->
-                Log.debug (fun m -> m "Processing binding: %s" name);
-                let expr = of_parsetree_expr vb.pvb_expr in
-                Log.debug (fun m -> m "Converted %s to AST" name);
-                functions := (name, expr) :: !functions
-            | _ -> ())
-          bindings
+    | Pstr_value (_, bindings) -> List.iter (process_binding ~push) bindings
     | Pstr_module { pmb_expr; _ } -> process_module_expr pmb_expr
     | Pstr_recmodule mods ->
         List.iter

@@ -200,14 +200,15 @@ let print_summary all_issues enabled_rule_count =
     Fmt.pr "%s Some checks failed. See details above.@."
       (Merlint.Report.print_color false "✗")
 
-let run_engine ?profiling rule_filter dune_describe project_root =
+let run_engine ?profiling rule_filter dune_describe index project_root =
   match rule_filter with
   | Some filter ->
-      Merlint.Engine.run ~filter ~dune_describe ?profiling project_root
+      Merlint.Engine.run ~filter ~dune_describe ~index ?profiling project_root
   | None -> (
       match Merlint.Filter.parse "all" with
       | Ok filter ->
-          Merlint.Engine.run ~filter ~dune_describe ?profiling project_root
+          Merlint.Engine.run ~filter ~dune_describe ~index ?profiling
+            project_root
       | Error _ -> { Merlint.Engine.issues = []; excluded = [] })
 
 let print_exclusion_stats all_excluded =
@@ -228,14 +229,15 @@ let print_exclusion_stats all_excluded =
     Fmt.pr "@]@."
   end
 
-let run_analysis project_root dune_describe rule_filter show_profile =
+let run_analysis project_root dune_describe index rule_filter show_profile =
   let profiling_state =
     if show_profile then Some (Merlint.Profiling.v ()) else None
   in
   let files_count = List.length (Merlint.Dune.project_files dune_describe) in
   Log.info (fun m -> m "Starting visual analysis on %d files" files_count);
   let { Merlint.Engine.issues = all_issues; excluded = all_excluded } =
-    run_engine ?profiling:profiling_state rule_filter dune_describe project_root
+    run_engine ?profiling:profiling_state rule_filter dune_describe index
+      project_root
   in
   Fmt.pr "Running merlint analysis...@.@.Analyzing %d files@.@." files_count;
   print_exclusion_stats all_excluded;
@@ -275,40 +277,34 @@ let ensure_project_built ~path mgr =
       Fmt.epr "Function type analysis may not work properly.@.";
       Fmt.epr "Continuing with analysis...@."
 
+let is_ocaml_source path =
+  Filename.check_suffix path ".ml" || Filename.check_suffix path ".mli"
+
+let classify_path path =
+  if not (Sys.file_exists path) then `Missing
+  else if Sys.is_directory path then `Dir
+  else if is_ocaml_source path then `File
+  else `Other
+
+let process_path ~describes ~explicit_files path =
+  match classify_path path with
+  | `Dir -> describes := Merlint.Dune.describe (Fpath.v path) :: !describes
+  | `File -> explicit_files := path :: !explicit_files
+  | `Other -> ()
+  | `Missing -> Fmt.epr "Warning: %s does not exist@." path
+
 let build_dune_describe ~project_root files =
   match files with
-  | [] ->
-      (* No files specified, use dune for the project root *)
-      Merlint.Dune.describe (Fpath.v project_root)
+  | [] -> Merlint.Dune.describe (Fpath.v project_root)
   | _ ->
-      (* Files or directories specified *)
       let describes = ref [] in
       let explicit_files = ref [] in
-      List.iter
-        (fun path ->
-          if Sys.file_exists path && Sys.is_directory path then
-            (* For directories, create a dune describe *)
-            let desc = Merlint.Dune.describe (Fpath.v path) in
-            describes := desc :: !describes
-          else if Sys.file_exists path then
-            (* For individual files, we need to create a describe with them *)
-            if
-              Filename.check_suffix path ".ml"
-              || Filename.check_suffix path ".mli"
-            then explicit_files := path :: !explicit_files
-            else ()
-          else Fmt.epr "Warning: %s does not exist@." path)
-        files;
-
-      (* If we have explicit files but no describes, create a synthetic describe *)
+      List.iter (process_path ~describes ~explicit_files) files;
       if !describes = [] && !explicit_files <> [] then
-        (* Create a synthetic describe with the files as executables *)
         Merlint.Dune.synthetic (List.rev !explicit_files)
-      else
-        (* Merge all describes *)
-        Merlint.Dune.merge (List.rev !describes)
+      else Merlint.Dune.merge (List.rev !describes)
 
-let analyze_files mgr ?(exclude_patterns = []) ?rule_filter
+let analyze_files mgr fs ?(exclude_patterns = []) ?rule_filter
     ?(show_profile = false) ?(no_build = false) files =
   (* Find project root *)
   let project_root =
@@ -334,7 +330,10 @@ let analyze_files mgr ?(exclude_patterns = []) ?rule_filter
     else Merlint.Dune.exclude exclude_patterns dune_describe
   in
 
-  run_analysis project_root filtered_describe rule_filter show_profile
+  let index =
+    lazy (Monopam_info_index.build ~fs ~monorepo:(Fpath.v project_root))
+  in
+  run_analysis project_root filtered_describe index rule_filter show_profile
 
 let files =
   let doc =
@@ -424,7 +423,8 @@ let main exclude_patterns rules_spec ~show_profile ~show_config ~no_build files
     let rule_filter = parse_rule_filter rules_spec in
     Eio_main.run @@ fun env ->
     let mgr = Eio.Stdenv.process_mgr env in
-    analyze_files mgr ~exclude_patterns ?rule_filter ~show_profile ~no_build
+    let fs = Eio.Stdenv.fs env in
+    analyze_files mgr fs ~exclude_patterns ?rule_filter ~show_profile ~no_build
       files
 
 let man_config_section =
