@@ -10,10 +10,10 @@
 type expr =
   | If_then_else of { cond : expr; then_expr : expr; else_expr : expr option }
       (** If-then-else expression. *)
-  | Match of { expr : expr; cases : int }
-      (** Match expression with number of cases. *)
-  | Try of { expr : expr; handlers : int }
-      (** Try expression with number of exception handlers. *)
+  | Match of { expr : expr; cases : expr list }
+      (** Match expression with the body of each case. *)
+  | Try of { expr : expr; handlers : expr list }
+      (** Try expression with the body of each exception handler. *)
   | Function of { params : int; body : expr }  (** Function definition. *)
   | Let of { bindings : (string * expr) list; body : expr }  (** Let binding. *)
   | Sequence of expr list  (** Sequence of expressions. *)

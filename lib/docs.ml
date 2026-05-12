@@ -9,36 +9,38 @@ type style_issue =
   | Redundant_phrase of string
   | Regular_comment_instead_of_doc
 
+(* Top-level arrow at position [i] (not inside parens). *)
+
 (** Count required and total arguments in a signature string. e.g., "?foo:int ->
     string -> int -> bool" has 2 required, 3 total. Returns (required_count,
     total_count). Ignores arrows inside parentheses (function-typed arguments).
 *)
+let is_top_level_arrow signature i depth =
+  depth = 0
+  && i + 1 < String.length signature
+  && signature.[i] = '-'
+  && signature.[i + 1] = '>'
+
 let count_args signature =
-  (* Count top-level arrows only, ignoring those inside parentheses *)
-  let rec scan_args acc_total acc_optional depth i optional_in_arg =
-    if i >= String.length signature then (acc_optional, acc_total)
+  let len = String.length signature in
+  let rec scan acc_total acc_optional depth i optional_in_arg =
+    if i >= len then (acc_optional, acc_total)
+    else if is_top_level_arrow signature i depth then
+      let new_optional =
+        if optional_in_arg then acc_optional + 1 else acc_optional
+      in
+      scan (acc_total + 1) new_optional depth (i + 2) false
     else
       match signature.[i] with
-      | '(' ->
-          scan_args acc_total acc_optional (depth + 1) (i + 1) optional_in_arg
+      | '(' -> scan acc_total acc_optional (depth + 1) (i + 1) optional_in_arg
       | ')' ->
-          scan_args acc_total acc_optional
+          scan acc_total acc_optional
             (max 0 (depth - 1))
             (i + 1) optional_in_arg
-      | '-'
-        when depth = 0
-             && i + 1 < String.length signature
-             && signature.[i + 1] = '>' ->
-          (* Found a top-level arrow, this completes an argument *)
-          let new_optional =
-            if optional_in_arg then acc_optional + 1 else acc_optional
-          in
-          scan_args (acc_total + 1) new_optional depth (i + 2) false
-      | '?' when depth = 0 ->
-          scan_args acc_total acc_optional depth (i + 1) true
-      | _ -> scan_args acc_total acc_optional depth (i + 1) optional_in_arg
+      | '?' when depth = 0 -> scan acc_total acc_optional depth (i + 1) true
+      | _ -> scan acc_total acc_optional depth (i + 1) optional_in_arg
   in
-  let optional_count, total_count = scan_args 0 0 0 0 false in
+  let optional_count, total_count = scan 0 0 0 0 false in
   let required_count = max 0 (total_count - optional_count) in
   (required_count, total_count)
 

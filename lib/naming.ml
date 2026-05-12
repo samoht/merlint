@@ -58,32 +58,29 @@ let split_words name =
 
   List.rev !words
 
+let snake_case_of_words = function
+  | [] -> ""
+  | [ single ] -> single
+  | first :: rest ->
+      (* Keep the first word's capitalisation; lowercase the rest except
+         acronyms (kept uppercase). *)
+      let converted_rest =
+        List.map
+          (fun w -> if is_all_upper w then w else String.lowercase_ascii w)
+          rest
+      in
+      String.concat "_" (first :: converted_rest)
+
 let to_capitalized_snake_case name =
   (* Convert PascalCase to Snake_case (for modules/variants/constructors) *)
-  let len = String.length name in
-  if len = 0 then ""
+  if String.length name = 0 then ""
   else if is_all_upper name && not (String.contains name '_') then
     (* All uppercase like "XML" or "III" - keep as is *)
     name
   else if String.contains name '_' then
     (* Already has underscores - keep as is *)
     name
-  else
-    let words = split_words name in
-    match words with
-    | [] -> ""
-    | [ single ] -> single
-    | first :: rest ->
-        (* First word: keep capitalization *)
-        (* Rest: lowercase each word unless it's all uppercase (acronym) *)
-        let converted_rest =
-          List.map
-            (fun w ->
-              if is_all_upper w then w (* Keep acronyms uppercase *)
-              else String.lowercase_ascii w)
-            rest
-        in
-        String.concat "_" (first :: converted_rest)
+  else snake_case_of_words (split_words name)
 
 let to_lowercase_snake_case name =
   (* Convert any case to lowercase_snake_case (for values/types/fields) *)

@@ -29,41 +29,33 @@ let rec scalar_to_string : Toml.Value.t -> string = function
    - (key, string) settings entries, or
    - rule-pattern entries when the key is "rules" and the value is an array of
      tables. *)
+let lookup_member name members =
+  List.find_map (fun ((k, _), v) -> if k = name then Some v else None) members
+
+let exclude_string_of_value = function
+  | Toml.Value.String (s, _) -> s
+  | _ -> Fmt.failwith "merlint config: rule.exclude entries must be strings"
+
+let exclude_rules_of_member = function
+  | Some (Toml.Value.Array (items, _)) -> List.map exclude_string_of_value items
+  | Some _ -> Fmt.failwith "merlint config: rule.exclude must be a list"
+  | None -> Fmt.failwith "merlint config: rule missing 'exclude'"
+
+let files_string_of_member = function
+  | Some (Toml.Value.String (s, _)) -> s
+  | _ -> Fmt.failwith "merlint config: rule missing string 'files'"
+
+let extract_pattern (entry : Toml.Value.t) =
+  match entry with
+  | Table (members, _) ->
+      let files = files_string_of_member (lookup_member "files" members) in
+      let rules = exclude_rules_of_member (lookup_member "exclude" members) in
+      { Rule_config.pattern = files; rules }
+  | _ -> Fmt.failwith "merlint config: rule entries must be tables"
+
 let project_setting (key, (value : Toml.Value.t)) =
   match (key, value) with
-  | "rules", Array (entries, _) ->
-      let extract_pattern (entry : Toml.Value.t) =
-        match entry with
-        | Table (members, _) ->
-            let lookup name =
-              List.find_map
-                (fun ((k, _), v) -> if k = name then Some v else None)
-                members
-            in
-            let files =
-              match lookup "files" with
-              | Some (String (s, _)) -> s
-              | _ -> Fmt.failwith "merlint config: rule missing string 'files'"
-            in
-            let rules =
-              match lookup "exclude" with
-              | Some (Array (items, _)) ->
-                  List.map
-                    (function
-                      | Toml.Value.String (s, _) -> s
-                      | _ ->
-                          Fmt.failwith
-                            "merlint config: rule.exclude entries must be \
-                             strings")
-                    items
-              | Some _ ->
-                  Fmt.failwith "merlint config: rule.exclude must be a list"
-              | None -> Fmt.failwith "merlint config: rule missing 'exclude'"
-            in
-            { Rule_config.pattern = files; rules }
-        | _ -> Fmt.failwith "merlint config: rule entries must be tables"
-      in
-      `Rules (List.map extract_pattern entries)
+  | "rules", Array (entries, _) -> `Rules (List.map extract_pattern entries)
   | _ -> `Setting (key, scalar_to_string value)
 
 let parse content =
