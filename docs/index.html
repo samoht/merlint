@@ -1955,6 +1955,13 @@ and replace each call site with [err_x "..." args] / [fail_x "..." args]. The la
     </div>
     <div class="error-hint"><p>When a README.md, .mli or .mld contains OCaml code blocks (```ocaml fenced or {[ ... ]} odoc), add an (mdx (files &lt;file&gt;)) stanza to the same directory's dune file so the snippets are type-checked and run during dune test.</p></div>
 </div>
+<div class="error-card" id="E921">
+    <div>
+        <span class="error-code">E921</span>
+        <span class="error-title">Promoted MDX error block in source</span>
+    </div>
+    <div class="error-hint"><p>A README.md, .mli, or .mld file contains an mdx-error block produced by [dune promote] after a failing mdx run. The error output belongs in a [.corrected] file for review, not in the committed source. Fix the underlying example so it type-checks and remove the block.</p></div>
+</div>
 
     <a href="#top" class="back-to-top">↑ Top</a>
 </body>
