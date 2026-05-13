@@ -1,0 +1,15 @@
+(test
+ (name test)
+ (libraries
+  test_rules_harness
+  merlint
+  ocaml-merlin
+  alcotest
+  compiler-libs.common
+  eio
+  eio_main
+  fpath
+  unix
+  logs.fmt
+  fmt
+  fmt.tty))

@@ -863,9 +863,9 @@ Log.info (fun m ->
 
 Enforces proper test organization: (1) Test executables (test.ml) should use test suites from test modules (e.g., Test_user.suite) rather than defining their own test lists directly. (2) Test module interfaces (test_*.mli) should only export a 'suite' value with type 'string * unit Alcotest.test_case list' and no other values. (3) Alcotest.run should only appear in test.ml, not in individual test_*.ml modules.
 
-### [E605] Missing Test File
+### [E605] Untested module — write tests for it
 
-Each library module should have a corresponding test file to ensure proper testing coverage. Create test files following the naming convention test_<module>.ml
+This rule is not a checkbox exercise. The goal is real test coverage and real code quality, not a [test_<module>.ml] file that satisfies the linter. Treat each untested module as an opportunity: write the tests you'd want a reviewer to write before you trusted the code in production. Anchor on the spec when one exists -- cite section numbers, copy test vectors verbatim. Probe the edge cases the implementation hopes you won't try: empty / single-element / maximum-length inputs, NaN, malformed UTF-8, negative sizes, off-by-one boundaries, integer overflow. Drive at least one hostile case (random bytes, truncated payloads, malicious lengths); the public API should fail with a clear error, not crash or corrupt state. Use exact expected values, not loose ranges. A trivial module still deserves the exercise -- writing the tests usually surfaces the corner the author didn't think through.
 
 3. **Test Organization**: Test files should export a `suite` value.
 

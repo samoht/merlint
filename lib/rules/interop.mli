@@ -18,7 +18,9 @@ val read_file : string -> string
 (** [read_file path] returns the contents of [path], or an empty string. *)
 
 val dune_content : string -> string
-(** [dune_content dir] returns the contents of [dir/dune], or an empty string. *)
+(** [dune_content dir] returns the contents of [dir/dune], or an empty string.
+*)
 
 val test_content : string -> string
-(** [test_content dir] returns the contents of [dir/test.ml], or an empty string. *)
+(** [test_content dir] returns the contents of [dir/test.ml], or an empty
+    string. *)

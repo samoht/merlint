@@ -1,2 +1,1 @@
-(* Cram coverage for e523 lives under [merlint/test/cram/e523.t]. *)
-let () = ()
+let suite = Test_rules_harness.Test_harness.fixture_suite Merlint.E523.rule

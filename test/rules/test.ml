@@ -1,0 +1,99 @@
+let setup_log log_level =
+  Fmt_tty.setup_std_outputs ();
+  Logs.set_level log_level;
+  Logs.set_reporter (Logs_fmt.reporter ~dst:Fmt.stderr ~app:Fmt.stdout ())
+
+let () = setup_log (Some Debug)
+
+let () =
+  Alcotest.run "merlint rules"
+    [
+      Test_e001.suite;
+      Test_e005.suite;
+      Test_e010.suite;
+      Test_e100.suite;
+      Test_e105.suite;
+      Test_e110.suite;
+      Test_e200.suite;
+      Test_e205.suite;
+      Test_e210.suite;
+      Test_e215.suite;
+      Test_e216.suite;
+      Test_e217.suite;
+      Test_e218.suite;
+      Test_e219.suite;
+      Test_e300.suite;
+      Test_e305.suite;
+      Test_e310.suite;
+      Test_e315.suite;
+      Test_e320.suite;
+      Test_e325.suite;
+      Test_e330.suite;
+      Test_e331.suite;
+      Test_e332.suite;
+      Test_e333.suite;
+      Test_e335.suite;
+      Test_e336.suite;
+      Test_e340.suite;
+      Test_e350.suite;
+      Test_e351.suite;
+      Test_e400.suite;
+      Test_e405.suite;
+      Test_e410.suite;
+      Test_e415.suite;
+      Test_e500.suite;
+      Test_e505.suite;
+      Test_e510.suite;
+      Test_e515.suite;
+      Test_e520.suite;
+      Test_e521.suite;
+      Test_e522.suite;
+      Test_e523.suite;
+      Test_e524.suite;
+      Test_e525.suite;
+      Test_e526.suite;
+      Test_e600.suite;
+      Test_e605.suite;
+      Test_e606.suite;
+      Test_e607.suite;
+      Test_e610.suite;
+      Test_e615.suite;
+      Test_e616.suite;
+      Test_e617.suite;
+      Test_e618.suite;
+      Test_e620.suite;
+      Test_e621.suite;
+      Test_e700.suite;
+      Test_e705.suite;
+      Test_e710.suite;
+      Test_e715.suite;
+      Test_e718.suite;
+      Test_e720.suite;
+      Test_e721.suite;
+      Test_e722.suite;
+      Test_e724.suite;
+      Test_e725.suite;
+      Test_e726.suite;
+      Test_e800.suite;
+      Test_e801.suite;
+      Test_e802.suite;
+      Test_e803.suite;
+      Test_e805.suite;
+      Test_e806.suite;
+      Test_e807.suite;
+      Test_e810.suite;
+      Test_e815.suite;
+      Test_e820.suite;
+      Test_e825.suite;
+      Test_e830.suite;
+      Test_e835.suite;
+      Test_e900.suite;
+      Test_e905.suite;
+      Test_e910.suite;
+      Test_e915.suite;
+      Test_e920.suite;
+      Test_e921.suite;
+      Test_e930.suite;
+      Test_e931.suite;
+      Test_interop.suite;
+    ]

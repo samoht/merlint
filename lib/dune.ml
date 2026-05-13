@@ -269,9 +269,9 @@ let is_ocaml_source_file entry =
   && (String.ends_with ~suffix:".ml" entry
      || String.ends_with ~suffix:".mli" entry)
 
-(** [data_or_nested_stanza_dir dir] is [true] when [dir] looks like a
-    cram sandbox, a generated build dir, or contains its own [dune] file (which
-    means it has its own stanzas and shouldn't be sucked up by an
+(** [data_or_nested_stanza_dir dir] is [true] when [dir] looks like a cram
+    sandbox, a generated build dir, or contains its own [dune] file (which means
+    it has its own stanzas and shouldn't be sucked up by an
     [include_subdirs unqualified] parent). *)
 let data_or_nested_stanza_dir dir =
   let name = Fpath.basename dir in

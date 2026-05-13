@@ -1,2 +1,1 @@
-(* Cram coverage for e340 lives under [merlint/test/cram/e340.t]. *)
-let () = ()
+let suite = Test_rules_harness.Test_harness.fixture_suite Merlint.E340.rule
