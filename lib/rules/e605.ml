@@ -264,13 +264,27 @@ let check (ctx : Context.project) =
     missing_tests
 
 let pp ppf { module_name; expected_test_file } =
-  Fmt.pf ppf "Library module '%s' is missing test file (expected: %s)"
+  Fmt.pf ppf
+    "Module '%s' has no tests yet — write thoughtful, adversarial tests \
+     against it. Expected file: %s"
     module_name expected_test_file
 
 let rule =
-  Rule.v ~code:"E605" ~title:"Missing Test File" ~category:Testing
+  Rule.v ~code:"E605" ~title:"Untested module — write tests for it"
+    ~category:Testing
     ~hint:
-      "Each library module should have a corresponding test file to ensure \
-       proper testing coverage. Create test files following the naming \
-       convention test_<module>.ml"
+      "This rule is not a checkbox exercise. The goal is real test coverage \
+       and real code quality, not a [test_<module>.ml] file that satisfies \
+       the linter. Treat each untested module as an opportunity: write the \
+       tests you'd want a reviewer to write before you trusted the code in \
+       production. Anchor on the spec when one exists -- cite section \
+       numbers, copy test vectors verbatim. Probe the edge cases the \
+       implementation hopes you won't try: empty / single-element / \
+       maximum-length inputs, NaN, malformed UTF-8, negative sizes, \
+       off-by-one boundaries, integer overflow. Drive at least one hostile \
+       case (random bytes, truncated payloads, malicious lengths); the \
+       public API should fail with a clear error, not crash or corrupt \
+       state. Use exact expected values, not loose ranges. A trivial module \
+       still deserves the exercise -- writing the tests usually surfaces the \
+       corner the author didn't think through."
     ~examples:[] ~pp (Project check)

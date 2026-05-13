@@ -1691,9 +1691,19 @@ and replace each call site with [err_x "..." args] / [fail_x "..." args]. The la
 <div class="error-card" id="E605">
     <div>
         <span class="error-code">E605</span>
-        <span class="error-title">Missing Test File</span>
+        <span class="error-title">Untested module — write tests for it</span>
     </div>
-    <div class="error-hint"><p>Each library module should have a corresponding test file to ensure proper testing coverage. Create test files following the naming convention test_&lt;module&gt;.ml</p></div>
+    <div class="error-hint"><p>This rule is not a checkbox exercise. The goal is real test coverage and real code quality, not a [test_&lt;module&gt;.ml] file that satisfies the linter. Treat each untested module as an opportunity: write the tests you'd want a reviewer to write before you trusted the code in production.
+
+What that looks like in practice:
+
+  - {b Anchor on the spec.} If the module implements a standard or protocol, cite section numbers in the test and copy test vectors verbatim. The test encodes the spec; the code is one attempt to satisfy it.
+  - {b Probe edge cases the implementation hopes you won't try.} Empty / single-element / maximum-length inputs, NaN, malformed UTF-8, negative sizes, off-by-one boundaries, integer overflow, concurrent access where relevant, partial reads on streaming inputs.
+  - {b Drive at least one hostile case.} Random bytes, truncated payloads, malicious lengths, recursion bombs. The public API should fail with a clear error, not crash, hang, or corrupt state.
+  - {b Use exact expected values}, not loose ranges. A test that accepts "approximately 5500" when the spec answer is 5553.46 isn't testing anything.
+  - {b Tests that always pass aren't testing anything.} Tighten tolerances until you find the real precision boundary.
+
+A trivial module still deserves the exercise — writing the tests usually surfaces the corner the author didn't think through. If the module is genuinely too small to test, the test file is also small; the cost is low and the protection is real.</p></div>
 </div>
 <div class="error-card" id="E606">
     <div>
