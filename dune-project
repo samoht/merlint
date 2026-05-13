@@ -29,6 +29,7 @@
   fmt
   astring
   nox-sexp
+  nox-dune
   nox-opam
   nox-toml
   nox-tty
