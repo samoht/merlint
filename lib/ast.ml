@@ -39,6 +39,15 @@ module Complexity = struct
       boolean_operators = 0;
     }
 
+  let merge acc info =
+    {
+      total = acc.total + info.total;
+      if_then_else = acc.if_then_else + info.if_then_else;
+      match_cases = acc.match_cases + info.match_cases;
+      try_handlers = acc.try_handlers + info.try_handlers;
+      boolean_operators = acc.boolean_operators + info.boolean_operators;
+    }
+
   (** Count decision points in an AST expression node *)
   let rec analyze node =
     match node with
@@ -77,15 +86,6 @@ module Complexity = struct
     | Sequence exprs ->
         List.fold_left (fun acc e -> merge acc (analyze e)) empty exprs
     | List | Record _ | Other -> empty
-
-  and merge acc info =
-    {
-      total = acc.total + info.total;
-      if_then_else = acc.if_then_else + info.if_then_else;
-      match_cases = acc.match_cases + info.match_cases;
-      try_handlers = acc.try_handlers + info.try_handlers;
-      boolean_operators = acc.boolean_operators + info.boolean_operators;
-    }
 
   (** Calculate cyclomatic complexity from complexity info (1 + total decision
       points) *)
