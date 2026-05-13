@@ -285,7 +285,8 @@ let pp ppf { function_name; suggested; kind } =
       Fmt.pf ppf
         "Function '%s' uses [to_<X>] but its source type is '%s', which has a \
          polymorphic parameter. Pick a name that captures what the contents \
-         represent, or rework the API so the source is the module's [t]."
+         represent (e.g. [<X>_of_entries], [<X>_of_chunks]), or rework the API \
+         so the source is the module's [t]."
         function_name src_type_pretty
   | To_prefix_non_t { src_type_pretty; polymorphic_arg = false; _ } ->
       Fmt.pf ppf

@@ -137,13 +137,25 @@ type project_item =
       dir : Fpath.t;
       modules : string list;
       private_modules : string list;
+      include_subdirs : bool;
+          (** [true] when the enclosing dune file declares
+              [(include_subdirs unqualified)]. Directory scans (when no explicit
+              [(modules ...)] list is given) must recurse to find modules that
+              live in nested folders -- e.g. [merlint/lib/rules/] under
+              [merlint/lib]. *)
     }
-  | Executable of { names : string list; dir : Fpath.t; modules : string list }
+  | Executable of {
+      names : string list;
+      dir : Fpath.t;
+      modules : string list;
+      include_subdirs : bool;
+    }
   | Test of {
       names : string list;
       dir : Fpath.t;
       modules : string list;
       libraries : string list;
+      include_subdirs : bool;
     }
   | Cram_test of { dir : Fpath.t }
 
@@ -159,7 +171,7 @@ let should_include_dir dune_file =
   in
   not has_data_only
 
-let extract_test_item dir fields =
+let extract_test_item ~include_subdirs dir fields =
   let names =
     List.concat_map
       (function
@@ -189,10 +201,13 @@ let extract_test_item dir fields =
         modules
         Fmt.(list ~sep:comma string)
         libraries);
-  Some (Test { names = test_names; dir; modules; libraries })
+  Some (Test { names = test_names; dir; modules; libraries; include_subdirs })
 
-(** Extract project structure from dune stanza *)
-let extract_project_item dir = function
+(** Extract project structure from dune stanza. [include_subdirs] reflects the
+    enclosing dune file's [(include_subdirs unqualified)] stanza, threaded
+    through so directory scans recurse correctly for libraries that span nested
+    folders (e.g. [merlint/lib/rules/]). *)
+let extract_project_item ~include_subdirs dir = function
   | Sexp.List (Sexp.Atom "library" :: fields) -> (
       let name =
         List.find_map
@@ -214,7 +229,15 @@ let extract_project_item dir = function
       match name with
       | Some n ->
           Some
-            (Library { name = n; public_name; dir; modules; private_modules })
+            (Library
+               {
+                 name = n;
+                 public_name;
+                 dir;
+                 modules;
+                 private_modules;
+                 include_subdirs;
+               })
       | None -> None)
   | Sexp.List (Sexp.Atom kind :: fields)
     when kind = "executable" || kind = "executables" ->
@@ -230,9 +253,11 @@ let extract_project_item dir = function
           fields
       in
       let modules = List.concat_map extract_modules_field fields in
-      if names <> [] then Some (Executable { names; dir; modules }) else None
+      if names <> [] then
+        Some (Executable { names; dir; modules; include_subdirs })
+      else None
   | Sexp.List (Sexp.Atom kind :: fields) when kind = "test" || kind = "tests" ->
-      extract_test_item dir fields
+      extract_test_item ~include_subdirs dir fields
   | Sexp.List (Sexp.Atom "cram" :: _) -> Some (Cram_test { dir })
   | _ -> None
 
@@ -244,22 +269,43 @@ let is_ocaml_source_file entry =
   && (String.ends_with ~suffix:".ml" entry
      || String.ends_with ~suffix:".mli" entry)
 
-let scan_directory_for_ml_files item_type dir =
+(** [is_data_only_or_nested_stanza_dir dir] is [true] when [dir] looks like a
+    cram sandbox, a generated build dir, or contains its own [dune] file (which
+    means it has its own stanzas and shouldn't be sucked up by an
+    [include_subdirs unqualified] parent). *)
+let is_data_only_or_nested_stanza_dir dir =
+  let name = Fpath.basename dir in
+  if name = "_build" || name = "_opam" || name = ".git" then true
+  else if name = "" || name.[0] = '.' then true
+  else
+    let nested_dune = Fpath.(dir / "dune") |> Fpath.normalize in
+    Sys.file_exists (Fpath.to_string nested_dune)
+
+let scan_directory_for_ml_files ?(recurse = false) item_type dir =
   Log.debug (fun m ->
-      m "%s in %a has no explicit modules, scanning directory" item_type
-        Fpath.pp dir);
+      m "%s in %a has no explicit modules, scanning directory (recurse=%b)"
+        item_type Fpath.pp dir recurse);
   let files = ref [] in
-  (try
-     let entries = Sys.readdir (Fpath.to_string dir) in
-     Array.iter
-       (fun entry ->
-         if is_ocaml_source_file entry then (
-           let file_path = Fpath.(dir / entry) |> Fpath.normalize in
-           Log.debug (fun m ->
-               m "  Found %s file: %a" item_type Fpath.pp file_path);
-           files := file_path :: !files))
-       entries
-   with Sys_error _ -> ());
+  let rec walk dir =
+    match Sys.readdir (Fpath.to_string dir) with
+    | exception Sys_error _ -> ()
+    | entries ->
+        Array.iter
+          (fun entry ->
+            let child = Fpath.(dir / entry) |> Fpath.normalize in
+            if is_ocaml_source_file entry then (
+              Log.debug (fun m ->
+                  m "  Found %s file: %a" item_type Fpath.pp child);
+              files := child :: !files)
+            else if
+              recurse
+              && (try Sys.is_directory (Fpath.to_string child)
+                  with Sys_error _ -> false)
+              && not (is_data_only_or_nested_stanza_dir child)
+            then walk child)
+          entries
+  in
+  walk dir;
   Log.debug (fun m ->
       m "%s in %a found %d files" item_type Fpath.pp dir (List.length !files));
   !files
@@ -273,24 +319,27 @@ let files_of_modules dir modules =
     modules
 
 let item_files = function
-  | Library { dir; modules; _ } ->
-      if modules = [] then scan_directory_for_ml_files "Library" dir
+  | Library { dir; modules; include_subdirs; _ } ->
+      if modules = [] then
+        scan_directory_for_ml_files ~recurse:include_subdirs "Library" dir
       else (
         Log.debug (fun m ->
             m "Library in %a has explicit modules: %a" Fpath.pp dir
               Fmt.(list ~sep:comma string)
               modules);
         files_of_modules dir modules)
-  | Executable { names = _; dir; modules } ->
-      if modules = [] then scan_directory_for_ml_files "Executable" dir
+  | Executable { names = _; dir; modules; include_subdirs } ->
+      if modules = [] then
+        scan_directory_for_ml_files ~recurse:include_subdirs "Executable" dir
       else (
         Log.debug (fun m ->
             m "Executable in %a has explicit modules: %a" Fpath.pp dir
               Fmt.(list ~sep:comma string)
               modules);
         files_of_modules dir modules)
-  | Test { dir; modules; _ } ->
-      if modules = [] then scan_directory_for_ml_files "Test" dir
+  | Test { dir; modules; include_subdirs; _ } ->
+      if modules = [] then
+        scan_directory_for_ml_files ~recurse:include_subdirs "Test" dir
       else (
         Log.debug (fun m ->
             m "Test in %a has explicit modules: %a" Fpath.pp dir
@@ -419,12 +468,24 @@ let is_under_cram_only_dir cram_dirs path =
         m "Path %s is under cram-only directory" (Fpath.to_string path_fp));
   result
 
+(** Detect [(include_subdirs <mode>)] in a dune file's top-level stanzas.
+    Returns [true] for [qualified] and [unqualified] (anything other than [no]);
+    the default is [no] when the stanza is absent. *)
+let stanzas_include_subdirs stanzas =
+  List.exists
+    (function
+      | Sexp.List [ Sexp.Atom "include_subdirs"; Sexp.Atom mode ] ->
+          mode <> "no"
+      | _ -> false)
+    stanzas
+
 let extract_items_from_dune_file cram_dirs dune_file =
   if should_include_dir dune_file then
     let dir = Fpath.(dune_file |> parent |> normalize) in
     if not (is_under_cram_only_dir cram_dirs dir) then
       let stanzas = parse_dune_file dune_file in
-      List.filter_map (extract_project_item dir) stanzas
+      let include_subdirs = stanzas_include_subdirs stanzas in
+      List.filter_map (extract_project_item ~include_subdirs dir) stanzas
     else (
       Log.debug (fun m ->
           m "Skipping dune file in cram dir: %s (dir=%s)"
@@ -457,30 +518,35 @@ let describe_impl project_root =
   let libraries =
     structure
     |> List.filter_map (function
-      | Library { name; public_name; dir; modules; private_modules } ->
-          let files =
-            item_files
-              (Library { name; public_name; dir; modules; private_modules })
-          in
-          Some ({ name; public_name; files; private_modules } : library_info)
+      | Library item ->
+          let files = item_files (Library item) in
+          Some
+            ({
+               name = item.name;
+               public_name = item.public_name;
+               files;
+               private_modules = item.private_modules;
+             }
+              : library_info)
       | _ -> None)
   in
   let executables =
     structure
     |> List.filter_map (function
-      | Executable { names; dir; modules } -> (
-          let files = item_files (Executable { names; dir; modules }) in
-          match names with [] -> None | main :: _ -> Some (main, files))
+      | Executable item -> (
+          let files = item_files (Executable item) in
+          match item.names with [] -> None | main :: _ -> Some (main, files))
       | _ -> None)
   in
   let tests =
     structure
     |> List.filter_map (function
-      | Test { names; dir; modules; libraries } -> (
-          let files = item_files (Test { names; dir; modules; libraries }) in
-          match names with
+      | Test item -> (
+          let files = item_files (Test item) in
+          match item.names with
           | [] -> None
-          | main :: _ -> Some { name = main; files; libraries })
+          | main :: _ -> Some { name = main; files; libraries = item.libraries }
+          )
       | _ -> None)
   in
   { libraries; executables; tests }
