@@ -1,5 +1,4 @@
 let rule_code rule = String.lowercase_ascii (Merlint.Rule.code rule)
-
 let path_exists path = Sys.file_exists path
 
 let fixture_dir rule =
@@ -12,26 +11,22 @@ let top_level_entries dir =
     |> List.sort String.compare
   with Sys_error _ -> []
 
-let basename_no_ext path =
-  Filename.basename path |> Filename.remove_extension
+let basename_no_ext path = Filename.basename path |> Filename.remove_extension
 
 let is_bad_fixture path =
   let name = basename_no_ext path in
-  name = "bad" || String.starts_with ~prefix:"bad" name
-  || name = "test_bad"
+  name = "bad" || String.starts_with ~prefix:"bad" name || name = "test_bad"
 
 let is_good_fixture path =
   let name = basename_no_ext path in
-  name = "good" || String.starts_with ~prefix:"good" name
-  || name = "test_good"
+  name = "good" || String.starts_with ~prefix:"good" name || name = "test_good"
 
 let fixture_paths rule pred =
   let dir = fixture_dir rule in
   top_level_entries dir
   |> List.filter (fun path ->
-         pred path
-         &&
-         (Sys.is_directory path
+      pred path
+      && (Sys.is_directory path
          || Filename.check_suffix path ".ml"
          || Filename.check_suffix path ".mli"))
 
@@ -100,19 +95,14 @@ let check_rule_metadata rule =
 
 let assert_bad_fixtures_report rule () =
   let paths = fixture_paths rule is_bad_fixture in
-  Alcotest.(check bool)
-    "bad fixtures exist" true
-    (paths <> []);
+  Alcotest.(check bool) "bad fixtures exist" true (paths <> []);
   let issues = run_rule rule paths in
   Alcotest.(check bool)
-    "bad fixtures report at least one issue" true
-    (issues <> [])
+    "bad fixtures report at least one issue" true (issues <> [])
 
 let assert_good_fixtures_pass rule () =
   let paths = fixture_paths rule is_good_fixture in
-  Alcotest.(check bool)
-    "good fixtures exist" true
-    (paths <> []);
+  Alcotest.(check bool) "good fixtures exist" true (paths <> []);
   let issues = run_rule rule paths in
   Alcotest.(check int) "good fixtures are clean" 0 (List.length issues)
 

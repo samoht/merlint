@@ -48,7 +48,7 @@ let check (ctx : Context.file) =
         let lexbuf = Lexing.from_string content in
         lexbuf.lex_curr_p <- { lexbuf.lex_curr_p with pos_fname = filename };
         Some (Parse.implementation lexbuf)
-      with _ -> None
+      with Syntaxerr.Error _ | Lexer.Error _ -> None
     in
     match structure with
     | None -> []

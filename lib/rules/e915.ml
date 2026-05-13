@@ -34,7 +34,7 @@ let read_tags path =
         | Some (Opam.Value.String s) -> Some [ s ]
         | Some (Opam.Value.List l) -> Some (List.filter_map string_of_value l)
         | Some _ -> Some [])
-  with _ -> None
+  with Sys_error _ -> None
 
 let check_opam_file ~topics pkg_dir opam_name =
   let path = Filename.concat pkg_dir opam_name in

@@ -94,7 +94,7 @@ let check (ctx : Context.project) =
               In_channel.with_open_text dune_file In_channel.input_all
             in
             Re.execp (Re.compile (Re.str "--gen-corpus")) content
-          with _ -> false
+          with Sys_error _ -> false
         in
         if not has_gen_corpus then
           issues :=

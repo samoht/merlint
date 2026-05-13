@@ -107,7 +107,7 @@ let check ctx =
               In_channel.with_open_text filename In_channel.input_all
             in
             check_fuzz_mli_file dune_describe filename content
-          with _ -> []
+          with Sys_error _ -> []
         else [])
       files
   in

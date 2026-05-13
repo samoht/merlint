@@ -44,7 +44,8 @@ let rec walk dir =
       if String.length entry > 0 && (entry.[0] = '.' || entry.[0] = '_') then []
       else
         let path = Filename.concat dir entry in
-        if try Sys.is_directory path with _ -> false then walk path
+        let is_dir = try Sys.is_directory path with Sys_error _ -> false in
+        if is_dir then walk path
         else if
           Filename.check_suffix path ".md"
           || Filename.check_suffix path ".mli"

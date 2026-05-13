@@ -65,7 +65,7 @@ let check (ctx : Context.file) =
       in
       [ Issue.v ~loc { module_name } ]
     else []
-  with _ ->
+  with Context.Analysis_error _ ->
     (* If we can't parse the dump, skip this check *)
     []
 

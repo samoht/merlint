@@ -59,7 +59,7 @@ let read_tags path =
         | Some (Opam.Value.String s) -> [ s ]
         | Some (Opam.Value.List xs) -> List.filter_map strings_of xs
         | Some _ -> [])
-  with _ -> []
+  with Sys_error _ -> []
 
 let rec extract_dep_name (v : Opam.Value.t) =
   match v with
@@ -94,7 +94,7 @@ let read_runtime_depends path =
               (fun e -> if dep_is_runtime e then extract_dep_name e else None)
               entries
         | _ -> [])
-  with _ -> []
+  with Sys_error _ -> []
 
 (* Walk a dune file looking for [(libraries ...)] inside [(library ...)],
    [(executable ...)] and [(executables ...)] stanzas. Test stanzas are
@@ -176,8 +176,8 @@ let rec walk ~in_test dir acc =
         acc
       else
         let path = Filename.concat dir entry in
-        if try Sys.is_directory path with _ -> false then
-          walk ~in_test:(in_test || is_test_subdir entry) path acc
+        let is_dir = try Sys.is_directory path with Sys_error _ -> false in
+        if is_dir then walk ~in_test:(in_test || is_test_subdir entry) path acc
         else if entry = "dune" && not in_test then
           (path, parse_dune path) :: acc
         else acc)
@@ -262,16 +262,18 @@ let check (ctx : Context.project) =
     (fun pkg ->
       let pkg_dir = Filename.concat root pkg in
       if List.mem pkg skip then []
-      else if try not (Sys.is_directory pkg_dir) with _ -> true then []
       else
-        List.concat_map
-          (fun opam ->
-            match check_opam ~pkg_dir opam with
-            | [] -> []
-            | findings ->
-                let loc = Location.in_file (Filename.concat pkg opam) in
-                [ Issue.v ~loc { package = pkg; opam; findings } ])
-          (list_opam_files pkg_dir))
+        let is_dir = try Sys.is_directory pkg_dir with Sys_error _ -> false in
+        if not is_dir then []
+        else
+          List.concat_map
+            (fun opam ->
+              match check_opam ~pkg_dir opam with
+              | [] -> []
+              | findings ->
+                  let loc = Location.in_file (Filename.concat pkg opam) in
+                  [ Issue.v ~loc { package = pkg; opam; findings } ])
+            (list_opam_files pkg_dir))
     entries
 
 let pp_finding ppf = function

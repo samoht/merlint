@@ -76,7 +76,7 @@ let check (ctx : Context.project) =
                     }
                   :: !issues)
             fuzz_modules
-        with _ -> ())
+        with Sys_error _ -> ())
   in
   (* Check test stanzas *)
   List.iter
