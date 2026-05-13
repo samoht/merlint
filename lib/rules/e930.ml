@@ -46,21 +46,6 @@ let lib_matches ~banned name =
   in
   List.exists (fun b -> b = name || b = top) banned
 
-let read_tags path =
-  let strings_of = function Opam.Value.String s -> Some s | _ -> None in
-  try
-    let ic = open_in path in
-    Fun.protect
-      ~finally:(fun () -> close_in ic)
-      (fun () ->
-        let r = Bytesrw.Bytes.Reader.of_in_channel ic in
-        match Opam.field_reader ~file:path "tags" r with
-        | None -> []
-        | Some (Opam.Value.String s) -> [ s ]
-        | Some (Opam.Value.List xs) -> List.filter_map strings_of xs
-        | Some _ -> [])
-  with Sys_error _ -> []
-
 let rec extract_dep_name (v : Opam.Value.t) =
   match v with
   | Opam.Value.String s -> Some s
@@ -152,17 +137,8 @@ let rec walk ~in_test dir acc =
         else acc)
     acc entries
 
-(* A package is sans-IO if it carries any [codec.*] tag (the encoding kind)
-   or a top-level [protocol] tag (a state machine wrapping a wire codec). *)
-let is_sans_io_tag t =
-  t = "codec"
-  || (String.length t > 6 && String.sub t 0 6 = "codec.")
-  || t = "protocol"
-
-let has_sans_io_tag tags = List.exists is_sans_io_tag tags
-
 let kind_of_tags tags =
-  if not (has_sans_io_tag tags) then Non_codec
+  if not (Opam_tags.has_sans_io tags) then Non_codec
   else if List.mem "eio" tags then Eio_codec
   else Pure_codec
 
@@ -180,7 +156,7 @@ let pkg_name_of_opam opam =
 
 let check_opam ~pkg_dir opam =
   let path = Filename.concat pkg_dir opam in
-  let tags = read_tags path in
+  let tags = Opam_tags.read path in
   let kind = kind_of_tags tags in
   let banned = banned_for kind in
   let pkg_name = pkg_name_of_opam opam in

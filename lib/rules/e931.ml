@@ -51,11 +51,6 @@ let suggestion_for = function
        read the wall clock"
   | _ -> "thread the time value through your state-machine state instead"
 
-let is_sans_io_tag t =
-  t = "codec"
-  || (String.length t > 6 && String.sub t 0 6 = "codec.")
-  || t = "protocol"
-
 let parse_structure ~filename =
   match
     let ic = open_in filename in
@@ -116,7 +111,7 @@ let check (ctx : Context.project) =
   List.concat_map
     (fun pkg ->
       let tags = Monopam_info_index.tags index pkg in
-      if not (List.exists is_sans_io_tag tags) then []
+      if not (Opam_tags.has_sans_io tags) then []
       else
         let mls =
           Monopam_info_index.libraries index pkg
