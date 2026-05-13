@@ -1,8 +1,16 @@
 let rule_code rule = String.lowercase_ascii (Merlint.Rule.code rule)
 let path_exists path = Sys.file_exists path
 
-let fixture_dir rule =
-  Filename.concat (Filename.concat "test" "cram") (rule_code rule ^ ".t")
+let cram_root () =
+  [
+    Filename.concat ".." "cram";
+    Filename.concat (Filename.concat "test" "cram") "";
+    Filename.concat (Filename.concat "merlint" "test") "cram";
+  ]
+  |> List.find_opt path_exists
+  |> Option.value ~default:(Filename.concat (Filename.concat "test" "cram") "")
+
+let fixture_dir rule = Filename.concat (cram_root ()) (rule_code rule ^ ".t")
 
 let top_level_entries dir =
   try
@@ -33,6 +41,71 @@ let fixture_paths rule pred =
 let is_ocaml_source path =
   Filename.check_suffix path ".ml" || Filename.check_suffix path ".mli"
 
+let rec ocaml_sources_under dir =
+  try
+    Sys.readdir dir |> Array.to_list
+    |> List.concat_map (fun name ->
+        let path = Filename.concat dir name in
+        if Sys.is_directory path then ocaml_sources_under path
+        else if is_ocaml_source path then [ path ]
+        else [])
+  with Sys_error _ -> []
+
+let fresh_dir prefix =
+  let path = Filename.temp_file prefix "" in
+  Sys.remove path;
+  Unix.mkdir path 0o755;
+  path
+
+let copy_file source target =
+  In_channel.with_open_bin source @@ fun input ->
+  Out_channel.with_open_bin target @@ fun output ->
+  Out_channel.output_string output (In_channel.input_all input)
+
+let rec copy_tree source target =
+  if Sys.is_directory source then (
+    if not (path_exists target) then Unix.mkdir target 0o755;
+    Sys.readdir source
+    |> Array.iter (fun name ->
+        if name <> "_build" && not (String.starts_with ~prefix:".cram" name)
+        then
+          copy_tree (Filename.concat source name) (Filename.concat target name)))
+  else copy_file source target
+
+let rec remove_tree path =
+  if path_exists path then
+    if Sys.is_directory path then (
+      Sys.readdir path
+      |> Array.iter (fun name -> remove_tree (Filename.concat path name));
+      Unix.rmdir path)
+    else Sys.remove path
+
+let path_under ~root path =
+  let prefix = root ^ Filename.dir_sep in
+  if path = root then Some ""
+  else if String.starts_with ~prefix path then
+    Some
+      (String.sub path (String.length prefix)
+         (String.length path - String.length prefix))
+  else None
+
+let with_fixture_workspace rule paths f =
+  let root = fixture_dir rule in
+  let temp = fresh_dir (rule_code rule ^ "-") in
+  let cleanup () = remove_tree temp in
+  Fun.protect ~finally:cleanup @@ fun () ->
+  copy_tree root temp;
+  let copied_paths =
+    List.map
+      (fun path ->
+        match path_under ~root path with
+        | Some "" -> temp
+        | Some rel -> Filename.concat temp rel
+        | None -> Alcotest.failf "fixture path %S is not under %S" path root)
+      paths
+  in
+  f copied_paths
+
 let classify_path path =
   if not (path_exists path) then `Missing
   else if Sys.is_directory path then `Dir
@@ -41,7 +114,11 @@ let classify_path path =
 
 let process_path ~describes ~explicit_files path =
   match classify_path path with
-  | `Dir -> describes := Merlint.Dune.describe (Fpath.v path) :: !describes
+  | `Dir ->
+      let describe = Merlint.Dune.describe (Fpath.v path) in
+      describes := describe :: !describes;
+      if Merlint.Dune.project_files describe = [] then
+        explicit_files := ocaml_sources_under path @ !explicit_files
   | `File -> explicit_files := path :: !explicit_files
   | `Missing | `Other -> ()
 
@@ -56,7 +133,14 @@ let build_dune_describe ~project_root paths =
         let project = Merlint.Dune.describe (Fpath.v project_root) in
         let explicit = List.rev_map Fpath.v !explicit_files in
         (project, Some explicit)
-      else (Merlint.Dune.merge (List.rev !describes), None)
+      else
+        let describe = Merlint.Dune.merge (List.rev !describes) in
+        let explicit =
+          match !explicit_files with
+          | [] -> None
+          | files -> Some (List.rev_map Fpath.v files)
+        in
+        (describe, explicit)
 
 let run_rule ?index rule paths =
   match paths with
@@ -74,7 +158,11 @@ let run_rule ?index rule paths =
       let index =
         match index with
         | Some index -> index
-        | None -> lazy (failwith "Monopam_info_index not available")
+        | None ->
+            lazy
+              ( Eio_main.run @@ fun env ->
+                Monopam_info_index.build ~fs:(Eio.Stdenv.fs env)
+                  ~monorepo:(Fpath.v project_root) )
       in
       let result =
         Merlint.Engine.run ~filter ~dune_describe ?files_to_analyze ~index
@@ -96,6 +184,7 @@ let check_rule_metadata rule =
 let assert_bad_fixtures_report rule () =
   let paths = fixture_paths rule is_bad_fixture in
   Alcotest.(check bool) "bad fixtures exist" true (paths <> []);
+  with_fixture_workspace rule paths @@ fun paths ->
   let issues = run_rule rule paths in
   Alcotest.(check bool)
     "bad fixtures report at least one issue" true (issues <> [])
@@ -103,7 +192,7 @@ let assert_bad_fixtures_report rule () =
 let assert_good_fixtures_pass rule () =
   let paths = fixture_paths rule is_good_fixture in
   Alcotest.(check bool) "good fixtures exist" true (paths <> []);
-  let issues = run_rule rule paths in
+  let issues = with_fixture_workspace rule paths (run_rule rule) in
   Alcotest.(check int) "good fixtures are clean" 0 (List.length issues)
 
 let fixture_suite rule =

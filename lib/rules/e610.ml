@@ -44,158 +44,118 @@ let expected_lib_path test_file =
         Some (String.sub basename 5 (String.length basename - 5) ^ ".ml")
       else None
 
+let library_module_path file =
+  if not (Fpath.has_ext ".ml" file) then None
+  else
+    let path = Fpath.to_string file in
+    match find_lib_prefix path with
+    | Some idx ->
+        let result = String.sub path idx (String.length path - idx) in
+        Log.debug (fun m -> m "E610: lib path %s -> %s" path result);
+        Some result
+    | None ->
+        Log.debug (fun m -> m "E610: lib path %s (no lib/ prefix)" path);
+        Some path
+
+let library_module_paths libraries =
+  List.concat_map
+    (fun (lib_info : Dune.library_info) ->
+      List.filter_map library_module_path lib_info.files)
+    libraries
+
+let library_source_files libraries =
+  List.concat_map
+    (fun (lib_info : Dune.library_info) ->
+      List.filter_map
+        (fun file ->
+          if Fpath.has_ext ".ml" file || Fpath.has_ext ".mli" file then
+            Some (Fpath.to_string file)
+          else None)
+        lib_info.files)
+    libraries
+
+(** Check if [module_name] (e.g. "Dump") is referenced as a module in any
+    library source file. *)
+let is_referenced_in_library library_source_files module_name =
+  let cap_name = String.capitalize_ascii module_name in
+  let patterns =
+    [ cap_name ^ "."; "module " ^ cap_name; "= " ^ cap_name; ": " ^ cap_name ]
+  in
+  List.exists
+    (fun src_path ->
+      try
+        let content = In_channel.with_open_text src_path In_channel.input_all in
+        List.exists
+          (fun pattern -> Astring.String.is_infix ~affix:pattern content)
+          patterns
+      with Sys_error _ -> false)
+    library_source_files
+
+let module_path_matches ~expected_path lib_path =
+  let expected_lc = String.lowercase_ascii expected_path in
+  let expected_dir = String.lowercase_ascii (Filename.dirname expected_path) in
+  let expected_base =
+    String.lowercase_ascii (Filename.basename expected_path)
+  in
+  let lib_lc = String.lowercase_ascii lib_path in
+  let lib_base = String.lowercase_ascii (Filename.basename lib_path) in
+  lib_lc = expected_lc
+  || lib_base = expected_base
+     && (expected_dir = "."
+        || String.starts_with ~prefix:(expected_dir ^ "/") lib_lc
+        || (expected_dir = "" && lib_lc = lib_base)
+        || Astring.String.is_infix
+             ~affix:("/" ^ expected_dir ^ "/" ^ expected_base)
+             lib_lc)
+
+let missing_library_issue file expected_path =
+  let loc =
+    Location.v ~file:(Fpath.to_string file) ~start_line:1 ~start_col:0
+      ~end_line:1 ~end_col:0
+  in
+  Issue.v ~loc
+    { test_file = Fpath.to_string file; expected_module = expected_path }
+
+let check_test_file ~library_module_paths ~library_source_files file =
+  let test_module = Fpath.(file |> rem_ext |> basename) in
+  if
+    (not (Fpath.has_ext ".ml" file))
+    || (not (String.starts_with ~prefix:"test_" test_module))
+    || File.is_in_examples (Fpath.to_string file)
+  then None
+  else
+    match expected_lib_path file with
+    | None -> None
+    | Some expected_path ->
+        Log.debug (fun m ->
+            m "E610: test %s expects lib %s" (Fpath.to_string file)
+              expected_path);
+        let found =
+          List.exists (module_path_matches ~expected_path) library_module_paths
+        in
+        let module_name =
+          Filename.remove_extension (Filename.basename expected_path)
+        in
+        let referenced =
+          is_referenced_in_library library_source_files module_name
+        in
+        Log.debug (fun m -> m "E610: found=%b referenced=%b" found referenced);
+        if found || referenced then None
+        else Some (missing_library_issue file expected_path)
+
 let check ctx =
   let dune_describe = Context.dune_describe ctx in
-
-  (* Build a set of library module paths (relative to lib/) *)
   let libraries = Dune.libraries dune_describe in
-  let library_module_paths =
-    List.concat_map
-      (fun (lib_info : Dune.library_info) ->
-        List.filter_map
-          (fun file ->
-            if Fpath.has_ext ".ml" file then (
-              let path = Fpath.to_string file in
-              (* Extract path relative to lib/ *)
-              match find_lib_prefix path with
-              | Some idx ->
-                  let result = String.sub path idx (String.length path - idx) in
-                  Log.debug (fun m -> m "E610: lib path %s -> %s" path result);
-                  Some result
-              | None ->
-                  Log.debug (fun m ->
-                      m "E610: lib path %s (no lib/ prefix)" path);
-                  Some (Fpath.to_string file))
-            else None)
-          lib_info.files)
-      libraries
-  in
-
-  (* Collect all library source file paths for sub-module reference checking *)
-  let library_source_files =
-    List.concat_map
-      (fun (lib_info : Dune.library_info) ->
-        List.filter_map
-          (fun file ->
-            if Fpath.has_ext ".ml" file || Fpath.has_ext ".mli" file then
-              Some (Fpath.to_string file)
-            else None)
-          lib_info.files)
-      libraries
-  in
-
-  (* Check if [module_name] (e.g. "Dump") is referenced as a module in any
-     library source file. Looks for the three textual forms a library can take
-     to use the module:
-     - [Foo.Dump.…] / [Dump.…]    — direct member access
-     - [module Dump = …]           — defines it
-     - [… = Dump] / [… : Dump]     — re-exports it via [module X = Dump] or
-                                     [module X : module type of Dump]; the
-                                     wrapper-alias case where [Dump] is the
-                                     RHS, never appearing with a trailing
-                                     dot. *)
-  let is_referenced_in_library module_name =
-    let cap_name = String.capitalize_ascii module_name in
-    let pattern_dot = cap_name ^ "." in
-    let pattern_module = "module " ^ cap_name in
-    let pattern_eq = "= " ^ cap_name in
-    let pattern_colon = ": " ^ cap_name in
-    List.exists
-      (fun src_path ->
-        try
-          let content =
-            In_channel.with_open_text src_path In_channel.input_all
-          in
-          Astring.String.is_infix ~affix:pattern_dot content
-          || Astring.String.is_infix ~affix:pattern_module content
-          || Astring.String.is_infix ~affix:pattern_eq content
-          || Astring.String.is_infix ~affix:pattern_colon content
-        with Sys_error _ -> false)
-      library_source_files
-  in
-
+  let library_module_paths = library_module_paths libraries in
+  let library_source_files = library_source_files libraries in
   Log.debug (fun m ->
       m "E610: library_module_paths = %a"
         Fmt.(list ~sep:comma string)
         library_module_paths);
-
-  (* Check each test file *)
-  let issues = ref [] in
-  List.iter
-    (fun test_info ->
-      List.iter
-        (fun file ->
-          if Fpath.has_ext ".ml" file then
-            let test_module = Fpath.(file |> rem_ext |> basename) in
-            if
-              String.starts_with ~prefix:"test_" test_module
-              && not (File.is_in_examples (Fpath.to_string file))
-            then
-              match expected_lib_path file with
-              | Some expected_path ->
-                  Log.debug (fun m ->
-                      m "E610: test %s expects lib %s" (Fpath.to_string file)
-                        expected_path);
-                  let found =
-                    let expected_lc = String.lowercase_ascii expected_path in
-                    let expected_dir =
-                      String.lowercase_ascii (Filename.dirname expected_path)
-                    in
-                    let expected_base =
-                      String.lowercase_ascii (Filename.basename expected_path)
-                    in
-                    List.exists
-                      (fun lib_path ->
-                        let lib_lc = String.lowercase_ascii lib_path in
-                        lib_lc = expected_lc
-                        ||
-                        (* Same module basename and same sublib bucket:
-                           a sublib subdir like [lib/<sub>/<dir>/<mod>.ml] is
-                           an acceptable home for a test at
-                           [test/<sub>/test_<mod>.ml]. *)
-                        let lib_base =
-                          String.lowercase_ascii (Filename.basename lib_path)
-                        in
-                        lib_base = expected_base
-                        && (expected_dir = "."
-                           || String.starts_with ~prefix:(expected_dir ^ "/")
-                                lib_lc
-                           || (expected_dir = "" && lib_lc = lib_base)
-                           ||
-                           (* Sublibs that don't sit under a [lib/] dir
-                              (e.g. [ocaml-tls/eio/]) keep their package
-                              prefix in [lib_lc]. Match when the
-                              expected [<dir>/<base>] appears as a path
-                              segment anywhere in the library path. *)
-                           Astring.String.is_infix
-                             ~affix:("/" ^ expected_dir ^ "/" ^ expected_base)
-                             lib_lc))
-                      library_module_paths
-                  in
-                  (* Also check if the expected module name is referenced as a
-                     sub-module or dependency module in any library source file *)
-                  let module_name =
-                    Filename.remove_extension (Filename.basename expected_path)
-                  in
-                  let referenced = is_referenced_in_library module_name in
-                  Log.debug (fun m ->
-                      m "E610: found=%b referenced=%b" found referenced);
-                  if (not found) && not referenced then
-                    let loc =
-                      Location.v ~file:(Fpath.to_string file) ~start_line:1
-                        ~start_col:0 ~end_line:1 ~end_col:0
-                    in
-                    issues :=
-                      Issue.v ~loc
-                        {
-                          test_file = Fpath.to_string file;
-                          expected_module = expected_path;
-                        }
-                      :: !issues
-              | None -> ())
-        test_info.Dune.files)
-    (Dune.tests dune_describe);
-  List.rev !issues
+  Dune.tests dune_describe
+  |> List.concat_map (fun (test_info : Dune.test_info) -> test_info.files)
+  |> List.filter_map
+       (check_test_file ~library_module_paths ~library_source_files)
 
 let pp ppf { test_file = _; expected_module } =
   Fmt.pf ppf "Test file exists but corresponding library module '%s' not found"

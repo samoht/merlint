@@ -21,6 +21,11 @@ let has_files dir suffix =
     |> List.exists (fun f -> Filename.check_suffix f suffix)
   with Sys_error _ -> false
 
+let has_doc_files pkg_dir =
+  Sys.file_exists (Filename.concat pkg_dir "README.md")
+  || has_files pkg_dir ".mld"
+  || has_files (Filename.concat pkg_dir "doc") ".mld"
+
 (** Detect quality features from directory structure. *)
 let detect_features pkg_dir =
   let features = ref [] in
@@ -34,6 +39,7 @@ let detect_features pkg_dir =
     add "build";
   if dir_exists test_dir && has_files test_dir ".ml" then add "test";
   if dir_exists fuzz_dir && has_files fuzz_dir ".ml" then add "fuzz";
+  if has_doc_files pkg_dir then add "doc";
   if dir_exists interop_dir then add "interop";
   (if dir_exists test_dir then
      try

@@ -44,25 +44,9 @@ Test good example - should find no issues:
   ✓ Naming Conventions (0 total issues)
   ✓ Documentation (0 total issues)
   ✓ Project Structure (0 total issues)
-  ✗ Test Quality (1 total issues)
-    [E600] Test Module Convention (1 issue)
-    Enforces proper test organization: (1) Test executables (test.ml) should use
-    test suites from test modules (e.g., Test_user.suite) rather than defining
-    their own test lists directly. (2) Test module interfaces (test_*.mli) should
-    only export a 'suite' value with type 'string * unit Alcotest.test_case list'
-    and no other values. (3) Alcotest.run should only appear in test.ml, not in
-    individual test_*.ml modules.
-    - good/test_user.mli:1:0: Test module interface should only export 'suite' with type string * unit Alcotest.test_case list
+  ✓ Test Quality (0 total issues)
   ✓ Interop Testing (0 total issues)
   ✓ Code Generation (0 total issues)
   
-  ╭──────────────┬──────────────────────────────╮
-  │ Category     │ Issues                       │
-  ├──────────────┼──────────────────────────────┤
-  │ Test Quality │ 1 (1 test module convention) │
-  ╰──────────────┴──────────────────────────────╯
-  
-  
-  Summary: ✗ 1 total issue (applied 1 rule)
-  ✗ Some checks failed. See details above.
-  [1]
+  Summary: ✓ 0 total issues (applied 1 rule)
+  ✓ All checks passed!

@@ -93,9 +93,16 @@ let scan_file ~filename =
 (* Source files of a library: every [.ml] in the library's dune directory.
    Acceptable over-approximation — [(modules ...)] filters would tighten it but
    add no false positives we care about (an extra .ml scanned is benign). *)
+let is_io_edge_dir dir =
+  Fpath.segs dir
+  |> List.exists (function
+    | "bench" | "benches" | "test" | "tests" | "fuzz" -> true
+    | _ -> false)
+
 let library_ml_files index lib =
   match Monopam_info_index.library_source_dir index lib with
   | None -> []
+  | Some dir when is_io_edge_dir dir -> []
   | Some dir -> (
       try
         Sys.readdir (Fpath.to_string dir)

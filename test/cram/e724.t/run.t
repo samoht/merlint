@@ -46,26 +46,12 @@ Test good example - fuzz directory with all required build rules:
   ✓ Naming Conventions (0 total issues)
   ✓ Documentation (0 total issues)
   ✓ Project Structure (0 total issues)
-  ✗ Test Quality (1 total issues)
-    [E724] Missing Fuzz Build Rules (1 issue)
-    Each fuzz directory should have (rule (alias runtest) ...) for property-based
-    testing during dune test, and (rule (alias fuzz) ...) using fuzz.exe
-    --gen-corpus for AFL fuzzing campaigns.
-    - good/fuzz/dune:1:0: Fuzz directory 'good/fuzz/' (alias fuzz) rule should use fuzz.exe --gen-corpus to generate seed corpus
+  ✓ Test Quality (0 total issues)
   ✓ Interop Testing (0 total issues)
   ✓ Code Generation (0 total issues)
   
-  ╭──────────────┬────────────────────────────────╮
-  │ Category     │ Issues                         │
-  ├──────────────┼────────────────────────────────┤
-  │ Test Quality │ 1 (1 missing fuzz build rules) │
-  ╰──────────────┴────────────────────────────────╯
-  
-  
-  Summary: ✗ 1 total issue (applied 1 rule)
-  ✗ Some checks failed. See details above.
-  [1]
-
+  Summary: ✓ 0 total issues (applied 1 rule)
+  ✓ All checks passed!
 
 
 

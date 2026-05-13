@@ -2,8 +2,6 @@
 
 type payload = { filename : string; module_name : string }
 
-let is_fuzz_dir = File.is_in_fuzz_dir
-
 let uses_fuzz_module_suites content =
   Re.execp
     (Re.compile
@@ -27,7 +25,7 @@ let check ctx =
     (fun filename ->
       let fp = Fpath.v filename in
       if
-        Fpath.has_ext ".ml" fp && is_fuzz_dir fp
+        Fpath.has_ext ".ml" fp && File.is_in_fuzz_dir fp
         && Fpath.(fp |> rem_ext |> basename) = "fuzz"
       then
         try

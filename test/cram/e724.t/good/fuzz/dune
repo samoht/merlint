@@ -18,4 +18,5 @@
   gen_corpus.exe)
  (action
   (progn
+   (run %{exe:fuzz_parser.exe} --gen-corpus corpus)
    (run afl-fuzz -V 60 -i corpus -o _fuzz -- %{exe:fuzz_parser.exe} @@))))

@@ -12,10 +12,10 @@ Test bad example - should find error pattern usage:
     functions (prefixed with 'err_') that encapsulate common error patterns and
     provide consistent formatting. Place these error helpers at the top of the
     file to make it easier to see all the different error cases in one place.
-    - bad.ml:3:0: Found 'Error (Fmt.str ...)' pattern - consider using 'err_*' helper functions for consistent error handling
-    - bad.ml:6:0: Found 'Error (Fmt.str ...)' pattern - consider using 'err_*' helper functions for consistent error handling
-    - bad.ml:11:0: Found 'Error (`Msg (Fmt.str ...))' pattern - consider using 'err_*' helper functions for consistent error handling
-    - bad.ml:13:0: Found 'Error (`Msg (Fmt.str ...))' pattern - consider using 'err_*' helper functions for consistent error handling
+    - bad.ml:3:0: Found 'Error applied to Fmt.str' pattern - consider using 'err_*' helper functions for consistent error handling
+    - bad.ml:6:0: Found 'Error applied to Fmt.str' pattern - consider using 'err_*' helper functions for consistent error handling
+    - bad.ml:11:0: Found 'Error (`Msg ...) applied to Fmt.str' pattern - consider using 'err_*' helper functions for consistent error handling
+    - bad.ml:13:0: Found 'Error (`Msg ...) applied to Fmt.str' pattern - consider using 'err_*' helper functions for consistent error handling
   ✓ Naming Conventions (0 total issues)
   ✓ Documentation (0 total issues)
   ✓ Project Structure (0 total issues)

@@ -3,42 +3,47 @@
 type payload = { error_message : string; suggested_function : string }
 (** Payload for error pattern issues *)
 
+let error_fmt_str_pattern =
+  Re.compile
+    (Re.seq
+       [
+         Re.str "Error";
+         Re.rep Re.space;
+         Re.str "(";
+         Re.rep Re.space;
+         Re.str "Fmt.str";
+       ])
+
+let error_msg_fmt_str_pattern =
+  Re.compile
+    (Re.seq
+       [
+         Re.str "Error";
+         Re.rep Re.space;
+         Re.str "(";
+         Re.rep Re.space;
+         Re.str "`Msg";
+         Re.rep Re.space;
+         Re.str "(";
+         Re.rep Re.space;
+         Re.str "Fmt.str";
+       ])
+
+let issue ~loc error_message =
+  Issue.v ~loc { error_message; suggested_function = "err_*" }
+
+let issue_of_line ~loc line =
+  if Re.execp error_fmt_str_pattern line then
+    Some (issue ~loc "Error applied to Fmt.str")
+  else if Re.execp error_msg_fmt_str_pattern line then
+    Some (issue ~loc "Error (`Msg ...) applied to Fmt.str")
+  else None
+
 let check ctx =
   let content = Context.content ctx in
   let filename = ctx.filename in
   let outline = Context.outline ctx in
 
-  (* Pattern to match Error applied to an Fmt.str result. *)
-  let error_fmt_str_pattern =
-    Re.compile
-      (Re.seq
-         [
-           Re.str "Error";
-           Re.rep Re.space;
-           Re.str "(";
-           Re.rep Re.space;
-           Re.str "Fmt.str";
-         ])
-  in
-
-  (* Pattern to match Error (`Msg ...) applied to an Fmt.str result. *)
-  let error_msg_fmt_str_pattern =
-    Re.compile
-      (Re.seq
-         [
-           Re.str "Error";
-           Re.rep Re.space;
-           Re.str "(";
-           Re.rep Re.space;
-           Re.str "`Msg";
-           Re.rep Re.space;
-           Re.str "(";
-           Re.rep Re.space;
-           Re.str "Fmt.str";
-         ])
-  in
-
-  (* Get all error helper functions from the outline *)
   let error_helpers =
     Outline.values outline
     |> List.filter_map (fun (item : Outline.item) ->
@@ -63,21 +68,7 @@ let check ctx =
 
       (* Only flag if we're not inside an error helper *)
       if not (is_inside_error_helper line_num) then
-        if Re.execp error_fmt_str_pattern line then
-          Some
-            (Issue.v ~loc:location
-               {
-                 error_message = "Error applied to Fmt.str";
-                 suggested_function = "err_*";
-               })
-        else if Re.execp error_msg_fmt_str_pattern line then
-          Some
-            (Issue.v ~loc:location
-               {
-                 error_message = "Error (`Msg ...) applied to Fmt.str";
-                 suggested_function = "err_*";
-               })
-        else None
+        issue_of_line ~loc:location line
       else None)
 
 let pp ppf { error_message; suggested_function } =

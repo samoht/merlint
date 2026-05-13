@@ -42,6 +42,58 @@ let defines_own_tests content =
           ]))
     content
 
+let suite_val_re =
+  Re.compile
+    (Re.seq
+       [
+         Re.bow;
+         Re.str "val";
+         Re.rep1 Re.space;
+         Re.str "suite";
+         Re.rep Re.space;
+         Re.str ":";
+       ])
+
+let val_re = Re.compile (Re.seq [ Re.bow; Re.str "val"; Re.rep1 Re.space ])
+
+let non_comment_lines content =
+  content |> String.split_on_char '\n'
+  |> List.filter (fun line ->
+      let trimmed = String.trim line in
+      trimmed <> "" && not (String.starts_with ~prefix:"(*" trimmed))
+
+let suite_line lines = List.find_opt (Re.execp suite_val_re) lines
+
+let has_correct_suite_type = function
+  | None -> true
+  | Some line ->
+      let normalized =
+        Re.replace_string (Re.compile (Re.rep1 Re.space)) ~by:" " line
+        |> String.trim
+      in
+      String.ends_with ~suffix:"string * unit Alcotest.test_case list"
+        normalized
+
+let exports_non_suite_val lines =
+  List.exists
+    (fun line -> Re.execp val_re line && not (Re.execp suite_val_re line))
+    lines
+
+let test_mli_needs_issue content =
+  let lines = non_comment_lines content in
+  let suite = suite_line lines in
+  exports_non_suite_val lines
+  || Option.is_none suite
+  || not (has_correct_suite_type suite)
+
+let test_mli_target dune_describe filename =
+  let basename = Filename.basename filename in
+  String.ends_with ~suffix:".mli" basename
+  && String.starts_with ~prefix:"test_" basename
+  && basename <> "test.mli"
+  && (not (File.is_in_private_library dune_describe filename))
+  && not (File.is_in_examples filename)
+
 (** Check if a test.ml file properly uses test module suites instead of defining
     its own tests. *)
 let check_test_file_uses_modules filename content =
@@ -93,86 +145,12 @@ let check_runner_in_wrong_file filename content =
     ]
   else []
 
-let is_in_private_library = File.is_in_private_library
-
 (** Check if a test_*.mli file exports only suite with correct type. Skips files
     that belong to private libraries. *)
 let check_test_mli_file dune_describe filename content =
   let basename = Filename.basename filename in
-  if
-    String.ends_with ~suffix:".mli" basename
-    && String.starts_with ~prefix:"test_" basename
-    && basename <> "test.mli"
-    && (not (is_in_private_library dune_describe filename))
-    && not (File.is_in_examples filename)
-  then
-    (* Parse the interface to check what's exported *)
-    let lines = String.split_on_char '\n' content in
-    let non_comment_lines =
-      List.filter
-        (fun line ->
-          let trimmed = String.trim line in
-          trimmed <> "" && not (String.starts_with ~prefix:"(*" trimmed))
-        lines
-    in
-    (* Check if it exports suite *)
-    let suite_line =
-      List.find_opt
-        (fun line ->
-          Re.execp
-            (Re.compile
-               (Re.seq
-                  [
-                    Re.bow;
-                    Re.str "val";
-                    Re.rep1 Re.space;
-                    Re.str "suite";
-                    Re.rep Re.space;
-                    Re.str ":";
-                  ]))
-            line)
-        non_comment_lines
-    in
-    let exports_suite = Option.is_some suite_line in
-    (* Check if suite has correct type: string * unit Alcotest.test_case list *)
-    let has_correct_type =
-      match suite_line with
-      | Some line ->
-          (* Normalize whitespace and check exact type *)
-          let normalized =
-            Re.replace_string (Re.compile (Re.rep1 Re.space)) ~by:" " line
-            |> String.trim
-          in
-          String.ends_with ~suffix:"string * unit Alcotest.test_case list"
-            normalized
-      | None -> true
-    in
-    let exports_other =
-      List.exists
-        (fun line ->
-          let is_val_line =
-            Re.execp
-              (Re.compile (Re.seq [ Re.bow; Re.str "val"; Re.rep1 Re.space ]))
-              line
-          in
-          let is_suite_line =
-            Re.execp
-              (Re.compile
-                 (Re.seq
-                    [
-                      Re.bow;
-                      Re.str "val";
-                      Re.rep1 Re.space;
-                      Re.str "suite";
-                      Re.rep Re.space;
-                      Re.str ":";
-                    ]))
-              line
-          in
-          is_val_line && not is_suite_line)
-        non_comment_lines
-    in
-    if exports_other || (not exports_suite) || not has_correct_type then
+  if test_mli_target dune_describe filename then
+    if test_mli_needs_issue content then
       [
         Issue.v
           ~loc:
@@ -183,46 +161,40 @@ let check_test_mli_file dune_describe filename content =
     else []
   else []
 
+let test_ml_target dune_describe ml_file =
+  let basename = Filename.basename ml_file in
+  String.ends_with ~suffix:".ml" ml_file
+  && String.starts_with ~prefix:"test_" basename
+  && basename <> "test.ml"
+  && (not (File.is_in_private_library dune_describe ml_file))
+  && not (File.is_in_examples ml_file)
+
+let file_has_runner ml_file =
+  try
+    let content = In_channel.with_open_text ml_file In_channel.input_all in
+    has_test_runner content
+  with Sys_error _ -> false
+
+let missing_test_mli_issue files ml_file =
+  let mli_path = Filename.remove_extension ml_file ^ ".mli" in
+  if List.mem mli_path files then None
+  else
+    let basename = Filename.basename ml_file in
+    let loc =
+      Location.v ~file:ml_file ~start_line:1 ~start_col:0 ~end_line:1 ~end_col:0
+    in
+    Some
+      (Issue.v ~loc
+         { filename = ml_file; module_name = Filename.chop_extension basename })
+
 (** Check if test_*.ml files have corresponding .mli files. Skip files that
     contain Alcotest.run since they shouldn't be test modules, and files that
     belong to private libraries. *)
 let check_missing_test_mli dune_describe files =
   List.filter_map
     (fun ml_file ->
-      if String.ends_with ~suffix:".ml" ml_file then
-        let basename = Filename.basename ml_file in
-        if
-          String.starts_with ~prefix:"test_" basename
-          && basename <> "test.ml"
-          && (not (is_in_private_library dune_describe ml_file))
-          && not (File.is_in_examples ml_file)
-        then
-          (* Skip if file contains Alcotest.run - it's a runner not a test module *)
-          let has_runner =
-            try
-              let content =
-                In_channel.with_open_text ml_file In_channel.input_all
-              in
-              has_test_runner content
-            with Sys_error _ -> false
-          in
-          if has_runner then None
-          else
-            let base_name = Filename.remove_extension ml_file in
-            let mli_path = base_name ^ ".mli" in
-            if not (List.mem mli_path files) then
-              let loc =
-                Location.v ~file:ml_file ~start_line:1 ~start_col:0 ~end_line:1
-                  ~end_col:0
-              in
-              Some
-                (Issue.v ~loc
-                   {
-                     filename = ml_file;
-                     module_name = basename |> Filename.chop_extension;
-                   })
-            else None
-        else None
+      if test_ml_target dune_describe ml_file && not (file_has_runner ml_file)
+      then missing_test_mli_issue files ml_file
       else None)
     files
 

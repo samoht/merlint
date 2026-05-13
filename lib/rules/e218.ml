@@ -197,6 +197,38 @@ let pp ppf { variant; suggested } =
         suggested
   | Rename -> Fmt.pf ppf "Helper name doesn't match its body: %s" suggested
 
+let bad_example =
+  {|exception Parse_error of string
+
+let parse_int s =
+  match int_of_string_opt s with
+  | Some n -> n
+  | None -> Fmt.kstr (fun s -> raise (Parse_error s)) "not an int: %S" s
+
+let parse s =
+  if s = "" then Fmt.kstr (fun s -> Error s) "empty input"
+  else if String.length s > 100 then
+    Fmt.kstr (fun s -> Error s) "input too long: %d" (String.length s)
+  else Ok s|}
+
+let good_example =
+  {|exception Parse_error of string
+
+let fail_parse fmt = Fmt.kstr (fun s -> raise (Parse_error s)) fmt
+let err fmt = Fmt.kstr (fun s -> Error s) fmt
+
+let parse_int s =
+  match int_of_string_opt s with
+  | Some n -> n
+  | None -> fail_parse "not an int: %S" s
+
+let parse s =
+  if s = "" then err "empty input"
+  else if String.length s > 100 then err "input too long: %d" (String.length s)
+  else Ok s|}
+
+let examples = [ Example.bad bad_example; Example.good good_example ]
+
 let rule =
   Rule.v ~code:"E218"
     ~title:"Extract Fmt.kstr Error/raise wrappers into let err_/fail_ helpers"
@@ -214,41 +246,4 @@ let rule =
        helper is a deduplication tool. The rule only flags inline call sites \
        (kstr with a literal-string format) and skips helper definitions, which \
        thread a [fmt] parameter."
-    ~examples:
-      [
-        {
-          is_good = false;
-          code =
-            {|exception Parse_error of string
-
-let parse_int s =
-  match int_of_string_opt s with
-  | Some n -> n
-  | None -> Fmt.kstr (fun s -> raise (Parse_error s)) "not an int: %S" s
-
-let parse s =
-  if s = "" then Fmt.kstr (fun s -> Error s) "empty input"
-  else if String.length s > 100 then
-    Fmt.kstr (fun s -> Error s) "input too long: %d" (String.length s)
-  else Ok s|};
-        };
-        {
-          is_good = true;
-          code =
-            {|exception Parse_error of string
-
-let fail_parse fmt = Fmt.kstr (fun s -> raise (Parse_error s)) fmt
-let err fmt = Fmt.kstr (fun s -> Error s) fmt
-
-let parse_int s =
-  match int_of_string_opt s with
-  | Some n -> n
-  | None -> fail_parse "not an int: %S" s
-
-let parse s =
-  if s = "" then err "empty input"
-  else if String.length s > 100 then err "input too long: %d" (String.length s)
-  else Ok s|};
-        };
-      ]
-    ~pp (File check)
+    ~examples ~pp (File check)

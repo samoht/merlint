@@ -131,7 +131,11 @@ module Nesting = struct
           let new_depth = current_depth + 1 in
           let handler_depths = List.map (depth_of new_depth) handlers in
           List.fold_left max (depth_of current_depth expr) handler_depths
-      | Function { body; _ } -> depth_of (current_depth + 1) body
+      | Function { body; _ } ->
+          (* A function literal introduces a new control-flow body. Count a
+             top-level function from depth 1, but don't add callback nesting to
+             the enclosing expression's indentation depth. *)
+          max current_depth (depth_of 1 body)
       | Let { bindings; body } ->
           let bind_depth =
             List.fold_left

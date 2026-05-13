@@ -6,8 +6,6 @@ type payload = {
     [ `naming of string * string | `missing_gen_corpus | `missing_fuzz_runner ];
 }
 
-let is_fuzz_dir = File.is_in_fuzz_dir
-
 let is_valid basename =
   String.starts_with ~prefix:"fuzz_" basename || String.equal basename "fuzz"
 
@@ -18,7 +16,9 @@ let fuzz_stanzas dune_describe =
     List.filter_map
       (fun (t : Dune.test_info) ->
         let fuzz_files =
-          List.filter (fun f -> Fpath.has_ext ".ml" f && is_fuzz_dir f) t.files
+          List.filter
+            (fun f -> Fpath.has_ext ".ml" f && File.is_in_fuzz_dir f)
+            t.files
         in
         match fuzz_files with [] -> None | _ -> Some (t.name, fuzz_files))
       (Dune.tests dune_describe)
@@ -27,96 +27,88 @@ let fuzz_stanzas dune_describe =
     List.filter_map
       (fun (name, files) ->
         let fuzz_files =
-          List.filter (fun f -> Fpath.has_ext ".ml" f && is_fuzz_dir f) files
+          List.filter
+            (fun f -> Fpath.has_ext ".ml" f && File.is_in_fuzz_dir f)
+            files
         in
         match fuzz_files with [] -> None | _ -> Some (name, fuzz_files))
       (Dune.executables dune_describe)
   in
   from_tests @ from_execs
 
+let naming_issue stanza_name file =
+  let basename = Fpath.(file |> rem_ext |> basename) in
+  if is_valid basename then None
+  else
+    let dir = Fpath.parent file |> Fpath.to_string in
+    let loc =
+      Location.v ~file:(Fpath.to_string file) ~start_line:1 ~start_col:0
+        ~end_line:1 ~end_col:0
+    in
+    Some
+      (Issue.v ~loc
+         { directory = dir; kind = `naming (stanza_name, Fpath.to_string file) })
+
+let naming_issues stanzas =
+  List.concat_map
+    (fun (stanza_name, files) ->
+      List.filter_map (naming_issue stanza_name) files)
+    stanzas
+
+let dir_files all_files dir =
+  List.filter (fun f -> Fpath.parent f |> Fpath.to_string = dir) all_files
+
+let has_module name files =
+  List.exists (fun f -> Fpath.(f |> rem_ext |> basename) = name) files
+
+let has_fuzz_modules files =
+  List.exists
+    (fun f ->
+      String.starts_with ~prefix:"fuzz_" Fpath.(f |> rem_ext |> basename))
+    files
+
+let dune_has_gen_corpus dir =
+  try
+    let content =
+      In_channel.with_open_text
+        (Filename.concat dir "dune")
+        In_channel.input_all
+    in
+    Re.execp (Re.compile (Re.str "--gen-corpus")) content
+  with Sys_error _ -> false
+
+let dir_issue dir kind =
+  let dune_file = Filename.concat dir "dune" in
+  let loc =
+    Location.v ~file:dune_file ~start_line:1 ~start_col:0 ~end_line:1 ~end_col:0
+  in
+  Issue.v ~loc { directory = dir; kind }
+
+let missing_issues_for_dir all_files dir =
+  let files = dir_files all_files dir in
+  let issues = [] in
+  let issues =
+    if dune_has_gen_corpus dir then issues
+    else dir_issue dir `missing_gen_corpus :: issues
+  in
+  let issues =
+    if has_fuzz_modules files && not (has_module "fuzz" files) then
+      dir_issue dir `missing_fuzz_runner :: issues
+    else issues
+  in
+  List.rev issues
+
+let missing_issues stanzas =
+  let all_files = List.concat_map snd stanzas in
+  all_files
+  |> List.map (fun f -> Fpath.parent f |> Fpath.to_string)
+  |> List.sort_uniq String.compare
+  |> List.concat_map (missing_issues_for_dir all_files)
+
 let check (ctx : Context.project) =
   let dune_describe = Context.dune_describe ctx in
   let stanzas = fuzz_stanzas dune_describe in
-  let naming_issues =
-    List.concat_map
-      (fun (stanza_name, files) ->
-        List.filter_map
-          (fun file ->
-            let basename = Fpath.(file |> rem_ext |> basename) in
-            if not (is_valid basename) then
-              let dir = Fpath.parent file |> Fpath.to_string in
-              let loc =
-                Location.v ~file:(Fpath.to_string file) ~start_line:1
-                  ~start_col:0 ~end_line:1 ~end_col:0
-              in
-              Some
-                (Issue.v ~loc
-                   {
-                     directory = dir;
-                     kind = `naming (stanza_name, Fpath.to_string file);
-                   })
-            else None)
-          files)
-      stanzas
-  in
-  (* Check each fuzz directory has a gen_corpus.ml *)
-  let all_files = List.concat_map snd stanzas in
-  let fuzz_dirs =
-    List.map (fun f -> Fpath.parent f |> Fpath.to_string) all_files
-    |> List.sort_uniq String.compare
-  in
-  let missing_issues =
-    List.concat_map
-      (fun dir ->
-        let dir_files =
-          List.filter
-            (fun f -> Fpath.parent f |> Fpath.to_string = dir)
-            all_files
-        in
-        let has file =
-          List.exists
-            (fun f -> Fpath.(f |> rem_ext |> basename) = file)
-            dir_files
-        in
-        let has_fuzz_modules =
-          List.exists
-            (fun f ->
-              String.starts_with ~prefix:"fuzz_"
-                Fpath.(f |> rem_ext |> basename))
-            dir_files
-        in
-        let issues = ref [] in
-        (* Corpus generation should use fuzz.exe --gen-corpus (alcobar). *)
-        let dune_file = Filename.concat dir "dune" in
-        let has_gen_corpus =
-          try
-            let content =
-              In_channel.with_open_text dune_file In_channel.input_all
-            in
-            Re.execp (Re.compile (Re.str "--gen-corpus")) content
-          with Sys_error _ -> false
-        in
-        if not has_gen_corpus then
-          issues :=
-            Issue.v
-              ~loc:
-                (Location.v ~file:dune_file ~start_line:1 ~start_col:0
-                   ~end_line:1 ~end_col:0)
-              { directory = dir; kind = `missing_gen_corpus }
-            :: !issues;
-        if has_fuzz_modules && not (has "fuzz") then
-          issues :=
-            Issue.v
-              ~loc:
-                (Location.v
-                   ~file:(Filename.concat dir "dune")
-                   ~start_line:1 ~start_col:0 ~end_line:1 ~end_col:0)
-              { directory = dir; kind = `missing_fuzz_runner }
-            :: !issues;
-        List.rev !issues)
-      fuzz_dirs
-  in
-  naming_issues @ missing_issues
+  naming_issues stanzas @ missing_issues stanzas
 
 let pp ppf { directory; kind } =
   match kind with

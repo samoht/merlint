@@ -34,6 +34,11 @@ type payload = { package : string; kind : kind }
 let min_major = 3
 let min_minor = 21
 let try_readdir d = try Sys.readdir d |> Array.to_list with Sys_error _ -> []
+let is_dir p = try Sys.is_directory p with Sys_error _ -> false
+
+let skip_entry name =
+  name = "_build" || name = "_opam" || name = ".git"
+  || String.starts_with ~prefix:"." name
 
 let has_opam_file pkg_dir =
   List.exists
@@ -78,49 +83,40 @@ let version_too_old v =
       | _, _ -> false)
   | _ -> false
 
+let dune_issue name dune_path =
+  let loc = Location.in_file dune_path in
+  if not (Sys.file_exists dune_path) then
+    [ Issue.v ~loc { package = name; kind = Missing_dune } ]
+  else
+    match read_file dune_path with
+    | Some c when contains_warnings c -> []
+    | _ -> [ Issue.v ~loc { package = name; kind = Missing_warnings } ]
+
+let lang_issue name dp_path =
+  match read_file dp_path with
+  | Some c -> (
+      match parse_lang_version c with
+      | Some version when version_too_old version ->
+          [
+            Issue.v ~loc:(Location.in_file dp_path)
+              { package = name; kind = Lang_too_old { version } };
+          ]
+      | _ -> [])
+  | None -> []
+
+let check_package root name =
+  if skip_entry name then []
+  else
+    let pkg_dir = Filename.concat root name in
+    if (not (is_dir pkg_dir)) || not (has_opam_file pkg_dir) then []
+    else
+      let dune_path = Filename.concat pkg_dir "dune" in
+      let dp_path = Filename.concat pkg_dir "dune-project" in
+      dune_issue name dune_path @ lang_issue name dp_path
+
 let check (ctx : Context.project) =
   let root = ctx.project_root in
-  let is_dir p = try Sys.is_directory p with Sys_error _ -> false in
-  List.concat_map
-    (fun name ->
-      if
-        name = "_build" || name = "_opam" || name = ".git"
-        || String.starts_with ~prefix:"." name
-      then []
-      else
-        let pkg_dir = Filename.concat root name in
-        if (not (is_dir pkg_dir)) || not (has_opam_file pkg_dir) then []
-        else
-          let dune_path = Filename.concat pkg_dir "dune" in
-          let dp_path = Filename.concat pkg_dir "dune-project" in
-          let dune_loc = Location.in_file dune_path in
-          let dp_loc = Location.in_file dp_path in
-          let dune_issue =
-            if not (Sys.file_exists dune_path) then
-              [ Issue.v ~loc:dune_loc { package = name; kind = Missing_dune } ]
-            else
-              match read_file dune_path with
-              | Some c when contains_warnings c -> []
-              | _ ->
-                  [
-                    Issue.v ~loc:dune_loc
-                      { package = name; kind = Missing_warnings };
-                  ]
-          in
-          let lang_issue =
-            match read_file dp_path with
-            | None -> []
-            | Some c -> (
-                match parse_lang_version c with
-                | Some v when version_too_old v ->
-                    [
-                      Issue.v ~loc:dp_loc
-                        { package = name; kind = Lang_too_old { version = v } };
-                    ]
-                | _ -> [])
-          in
-          dune_issue @ lang_issue)
-    (try_readdir root)
+  List.concat_map (check_package root) (try_readdir root)
 
 let pp ppf { package; kind } =
   match kind with

@@ -8,6 +8,7 @@
   eio
   eio_main
   fpath
+  monopam-info.index
   unix
   logs.fmt
   fmt

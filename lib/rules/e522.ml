@@ -18,6 +18,7 @@
 type payload = { package : string; file : string }
 
 let try_readdir d = try Sys.readdir d |> Array.to_list with Sys_error _ -> []
+let is_dir p = try Sys.is_directory p with Sys_error _ -> false
 
 let read_file path =
   try
@@ -32,34 +33,29 @@ let read_file path =
     library/executable/test stanza in [dune_path]. These names are claimed by a
     specific stanza (often a sublibrary) and should not be flagged as "wrong
     place" by E522 — the prefix is encoding the sublib's public name. *)
+let is_module_stanza = function
+  | "library" | "executable" | "executables" | "test" | "tests" -> true
+  | _ -> false
+
+let modules_field = function
+  | Sexp.List (Sexp.Atom "modules" :: atoms) ->
+      List.filter_map
+        (function Sexp.Atom a -> Some (String.lowercase_ascii a) | _ -> None)
+        atoms
+  | _ -> []
+
+let claimed_modules_of_stanza = function
+  | Sexp.List (Sexp.Atom kind :: fields) when is_module_stanza kind ->
+      List.concat_map modules_field fields
+  | _ -> []
+
 let modules_explicitly_claimed dune_path =
   match read_file dune_path with
   | None -> []
   | Some contents -> (
       match Sexp.Value.parse_string_many contents with
       | Error _ -> []
-      | Ok stanzas ->
-          let is_module_stanza = function
-            | "library" | "executable" | "executables" | "test" | "tests" ->
-                true
-            | _ -> false
-          in
-          List.concat_map
-            (function
-              | Sexp.List (Sexp.Atom kind :: fields) when is_module_stanza kind
-                ->
-                  List.concat_map
-                    (function
-                      | Sexp.List (Sexp.Atom "modules" :: atoms) ->
-                          List.filter_map
-                            (function
-                              | Sexp.Atom a -> Some (String.lowercase_ascii a)
-                              | _ -> None)
-                            atoms
-                      | _ -> [])
-                    fields
-              | _ -> [])
-            stanzas)
+      | Ok stanzas -> List.concat_map claimed_modules_of_stanza stanzas)
 
 let check (ctx : Context.project) =
   let root = ctx.project_root in
@@ -69,7 +65,6 @@ let check (ctx : Context.project) =
     (fun pkg ->
       let pkg_dir = Filename.concat root pkg in
       let lib_dir = Filename.concat pkg_dir "lib" in
-      let is_dir p = try Sys.is_directory p with Sys_error _ -> false in
       if pkg <> "_build" && pkg <> "_opam" && pkg <> ".git" && is_dir lib_dir
       then
         let prefix =

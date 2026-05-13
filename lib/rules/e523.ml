@@ -215,6 +215,23 @@ let ml_modules_in_dir dir =
     entries
 
 let check_dune path contents =
+  let issue kind = Issue.v ~loc:(Location.in_file path) { dune = path; kind } in
+  let uncovered_issue stanzas specs =
+    let covered =
+      List.concat_map (function Explicit xs -> xs | Standard -> []) specs
+      |> List.map String.lowercase_ascii
+    in
+    let generated =
+      generator_modules stanzas |> List.map String.lowercase_ascii
+    in
+    let missing =
+      Filename.dirname path |> ml_modules_in_dir
+      |> List.filter (fun m ->
+          let ml = String.lowercase_ascii m in
+          not (List.mem ml covered || List.mem ml generated))
+    in
+    if missing = [] then None else Some (issue (Uncovered missing))
+  in
   match Sexp.Value.parse_string_many contents with
   | Error _ -> None
   | Ok stanzas when has_nontrivial_include_subdirs stanzas -> None
@@ -225,9 +242,7 @@ let check_dune path contents =
       | [ specs ] ->
           (* Single module-accepting stanza. An explicit list is redundant. *)
           if List.exists (function Explicit _ -> true | _ -> false) specs then
-            Some
-              (Issue.v ~loc:(Location.in_file path)
-                 { dune = path; kind = Redundant })
+            Some (issue Redundant)
           else None
       | _ :: _ :: _ ->
           (* Multiple module-accepting stanzas share a directory. If any
@@ -243,30 +258,7 @@ let check_dune path contents =
             List.exists (function Standard -> true | _ -> false) all_specs
           in
           if any_implicit || any_standard then None
-          else
-            let covered =
-              List.concat_map
-                (function Explicit xs -> xs | Standard -> [])
-                all_specs
-              |> List.map String.lowercase_ascii
-            in
-            let dir = Filename.dirname path in
-            let generated =
-              generator_modules stanzas |> List.map String.lowercase_ascii
-            in
-            let files = ml_modules_in_dir dir in
-            let missing =
-              List.filter
-                (fun m ->
-                  let ml = String.lowercase_ascii m in
-                  not (List.mem ml covered || List.mem ml generated))
-                files
-            in
-            if missing = [] then None
-            else
-              Some
-                (Issue.v ~loc:(Location.in_file path)
-                   { dune = path; kind = Uncovered missing }))
+          else uncovered_issue stanzas all_specs)
 
 let check (ctx : Context.project) =
   let dunes = dune_files ctx.project_root in

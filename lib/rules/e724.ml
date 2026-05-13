@@ -11,8 +11,6 @@ type payload = {
     | `fuzz_missing_afl_profile ];
 }
 
-let is_fuzz_dir = File.is_in_fuzz_dir
-
 (** Collect fuzz directories from executable stanzas. *)
 let fuzz_dirs dune_describe =
   let dirs =
@@ -22,7 +20,7 @@ let fuzz_dirs dune_describe =
         else
           match
             List.find_opt
-              (fun f -> Fpath.has_ext ".ml" f && is_fuzz_dir f)
+              (fun f -> Fpath.has_ext ".ml" f && File.is_in_fuzz_dir f)
               files
           with
           | Some f -> Some (Fpath.parent f |> Fpath.to_string)
@@ -31,72 +29,56 @@ let fuzz_dirs dune_describe =
   in
   List.sort_uniq String.compare dirs
 
+let has_alias alias content =
+  Re.execp (Re.compile (Fmt.kstr Re.str "(alias %s)" alias)) content
+
+let issue ~loc dir kind = Issue.v ~loc { directory = dir; kind }
+
+let presence_issues ~loc dir ~has_runtest ~has_fuzz =
+  match (has_runtest, has_fuzz) with
+  | true, true -> []
+  | false, false -> [ issue ~loc dir `missing_both ]
+  | false, true -> [ issue ~loc dir `missing_runtest ]
+  | true, false -> [ issue ~loc dir `missing_fuzz ]
+
+let fuzz_content_issues ~loc dir content =
+  let has_corpus =
+    Re.execp (Re.compile (Re.str "source_tree corpus")) content
+    || Re.execp (Re.compile (Re.str "source_tree input")) content
+    || Re.execp (Re.compile (Re.str "--gen-corpus corpus")) content
+  in
+  let has_gen_corpus = Re.execp (Re.compile (Re.str "--gen-corpus")) content in
+  let has_afl_profile =
+    Re.execp (Re.compile (Re.str "profile")) content
+    && Re.execp (Re.compile (Re.str "afl")) content
+  in
+  [
+    (has_corpus, `fuzz_missing_corpus);
+    (has_gen_corpus, `fuzz_missing_gen_corpus);
+    (has_afl_profile, `fuzz_missing_afl_profile);
+  ]
+  |> List.filter_map (fun (present, kind) ->
+      if present then None else Some (issue ~loc dir kind))
+
+let check_dir dir =
+  let dune_file = Filename.concat dir "dune" in
+  try
+    let content = In_channel.with_open_text dune_file In_channel.input_all in
+    let has_runtest = has_alias "runtest" content in
+    let has_fuzz = has_alias "fuzz" content in
+    let loc =
+      Location.v ~file:dune_file ~start_line:1 ~start_col:0 ~end_line:1
+        ~end_col:0
+    in
+    let issues = presence_issues ~loc dir ~has_runtest ~has_fuzz in
+    if has_fuzz then issues @ fuzz_content_issues ~loc dir content else issues
+  with Sys_error _ -> []
+
 (** Check that fuzz dune files contain required rule aliases with proper
     content. *)
 let check (ctx : Context.project) =
   let dune_describe = Context.dune_describe ctx in
-  let dirs = fuzz_dirs dune_describe in
-  List.concat_map
-    (fun dir ->
-      let dune_file = Filename.concat dir "dune" in
-      try
-        let content =
-          In_channel.with_open_text dune_file In_channel.input_all
-        in
-        let has_runtest =
-          Re.execp (Re.compile (Re.str "(alias runtest)")) content
-        in
-        let has_fuzz = Re.execp (Re.compile (Re.str "(alias fuzz)")) content in
-        let loc =
-          Location.v ~file:dune_file ~start_line:1 ~start_col:0 ~end_line:1
-            ~end_col:0
-        in
-        let presence_issues =
-          match (has_runtest, has_fuzz) with
-          | true, true -> []
-          | false, false ->
-              [ Issue.v ~loc { directory = dir; kind = `missing_both } ]
-          | false, true ->
-              [ Issue.v ~loc { directory = dir; kind = `missing_runtest } ]
-          | true, false ->
-              [ Issue.v ~loc { directory = dir; kind = `missing_fuzz } ]
-        in
-        (* If fuzz alias exists, check it references corpus and gen_corpus *)
-        let content_issues =
-          if has_fuzz then (
-            let has_corpus =
-              Re.execp (Re.compile (Re.str "source_tree corpus")) content
-              || Re.execp (Re.compile (Re.str "source_tree input")) content
-              || Re.execp (Re.compile (Re.str "--gen-corpus corpus")) content
-            in
-            let has_gen_corpus =
-              Re.execp (Re.compile (Re.str "--gen-corpus")) content
-            in
-            let has_afl_profile =
-              Re.execp (Re.compile (Re.str "profile")) content
-              && Re.execp (Re.compile (Re.str "afl")) content
-            in
-            let issues = ref [] in
-            if not has_corpus then
-              issues :=
-                Issue.v ~loc { directory = dir; kind = `fuzz_missing_corpus }
-                :: !issues;
-            if not has_gen_corpus then
-              issues :=
-                Issue.v ~loc
-                  { directory = dir; kind = `fuzz_missing_gen_corpus }
-                :: !issues;
-            if not has_afl_profile then
-              issues :=
-                Issue.v ~loc
-                  { directory = dir; kind = `fuzz_missing_afl_profile }
-                :: !issues;
-            !issues)
-          else []
-        in
-        presence_issues @ content_issues
-      with Sys_error _ -> [])
-    dirs
+  List.concat_map check_dir (fuzz_dirs dune_describe)
 
 let pp ppf { directory; kind } =
   match kind with
