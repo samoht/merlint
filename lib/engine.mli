@@ -9,8 +9,24 @@ type result = { issues : Rule.Run.result list; excluded : exclusion_stats list }
 val run :
   filter:Filter.t ->
   dune_describe:Dune.describe ->
+  ?files_to_analyze:Fpath.t list ->
+  index:Monopam_info_index.t Lazy.t ->
   ?profiling:Profiling.t ->
   string ->
   result
-(** [run ~filter ~dune_describe ?profiling project_root] runs all checks.
-    Returns detected issues and a record of every suppressed issue. *)
+(** [run ~filter ~dune_describe ?files_to_analyze ~index ?profiling
+     project_root] runs all checks. Returns detected issues and a record of
+    every suppressed issue.
+
+    [dune_describe] is the project-wide view used by project-scoped rules: E605
+    (Missing Test File), E610 (Test Without Library), E606 (Test File in Wrong
+    Directory), E615 (Test Suite Not Included), E620 (Multiple Test Stanzas),
+    etc. It must reflect the whole project even when [merlint] is invoked on a
+    single file, otherwise project rules fire false positives or fail silently.
+
+    [files_to_analyze] narrows what {b file}-scoped rules iterate. Defaults to
+    every file in [dune_describe]. The CLI passes the explicit file list here in
+    single-file mode so file-scoped rules don't widen to the whole project while
+    project-scoped rules still see the full library/test view.
+
+    [index] is forced lazily when a rule reads it. *)

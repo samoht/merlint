@@ -2,7 +2,16 @@
 
 type kind =
   | Sep_or_t_pattern
-  | To_prefix_non_t of { src_type_name : string; src_type_pretty : string }
+  | To_prefix_non_t of {
+      src_type_name : string;
+      src_type_pretty : string;
+      polymorphic_arg : bool;
+          (** [true] when the source is a constructor with a polymorphic
+              argument (['a list], ['a option], ['a Hashtbl.t]). The diagnostic
+              still flags the function (the convention isn't met), but
+              suppresses the [<X>_of_<head>] rename suggestion because it would
+              hide the polymorphic parameter and read worse than [to_<X>]. *)
+    }
       (** Which sub-rule fired. [Sep_or_t_pattern] is the
           [_to_]/[_from_]/[_of_t] family where renaming the function is the only
           fix. [To_prefix_non_t] is [to_<X>] with a non-[t] source type, where
@@ -116,6 +125,22 @@ let t_aliases (outline : Outline.t) =
       else [])
     (Outline.flatten outline)
 
+(** A [Ptyp_constr] whose argument list contains a type variable, e.g.
+    ['a list], ['a option], ['a Hashtbl.t]. These cases stay flagged ([to_<X>]
+    on a polymorphic container still isn't t-sourced), but the diagnostic omits
+    the [<X>_of_<head>] suggestion because it would hide the polymorphic
+    parameter and read worse than the original. *)
+let has_polymorphic_arg (ct : Parsetree.core_type) =
+  let rec is_var (ct : Parsetree.core_type) =
+    match ct.ptyp_desc with
+    | Ptyp_var _ -> true
+    | Ptyp_alias (inner, _) -> is_var inner
+    | _ -> false
+  in
+  match ct.ptyp_desc with
+  | Ptyp_constr (_, args) -> List.exists is_var args
+  | _ -> false
+
 (** [to_<X>] is legitimate when the source is [t] or one of [t]'s aliases. Only
     flag when the source is a {b named} constructor different from [t] and not
     aliased to it. Polymorphic sources (['a]) and structural ones (polymorphic
@@ -205,13 +230,20 @@ let to_prefix_issue ~loc ~aliases ~name ~ct =
       let src_type_pretty =
         Option.value (source_type_pretty ct) ~default:src_type_name
       in
+      let polymorphic_arg =
+        match (strip_labeled_args ct).ptyp_desc with
+        | Ptyp_arrow (Asttypes.Nolabel, src, _) -> has_polymorphic_arg src
+        | _ -> false
+      in
       let suggested = dst ^ "_of_" ^ src_type_name in
       Some
         (Issue.v ~loc
            {
              function_name = name;
              suggested;
-             kind = To_prefix_non_t { src_type_name; src_type_pretty };
+             kind =
+               To_prefix_non_t
+                 { src_type_name; src_type_pretty; polymorphic_arg };
            })
   | _ -> None
 
@@ -249,7 +281,13 @@ let pp ppf { function_name; suggested; kind } =
          convention is '%s' (the [<dst>_of_<src>] form, matching \
          [int_of_string], [string_of_float], ...)."
         function_name suggested
-  | To_prefix_non_t { src_type_pretty; _ } ->
+  | To_prefix_non_t { src_type_pretty; polymorphic_arg = true; _ } ->
+      Fmt.pf ppf
+        "Function '%s' uses [to_<X>] but its source type is '%s', which has a \
+         polymorphic parameter. Pick a name that captures what the contents \
+         represent, or rework the API so the source is the module's [t]."
+        function_name src_type_pretty
+  | To_prefix_non_t { src_type_pretty; polymorphic_arg = false; _ } ->
       Fmt.pf ppf
         "Function '%s' uses [to_<X>] but its source type is '%s', not [t]. \
          Preferred fix: declare [type t = %s] in this module so the function \

@@ -51,20 +51,20 @@ let run_project_rule ?profiling ctx rule =
   | None -> ());
   res
 
-let setup_analysis ~filter ~dune_describe project_root =
+let setup_analysis ~filter ~dune_describe ~files_to_analyze ~index project_root
+    =
   let config = Config.load project_root in
-  let files_to_analyze = Dune.project_files dune_describe in
   let files_to_analyze_str = List.map Fpath.to_string files_to_analyze in
   let project_ctx =
     Context.project ~config ~project_root ~all_files:files_to_analyze_str
-      ~dune_describe
+      ~dune_describe ~index
   in
   let enabled_rules =
     Data.all_rules
     |> List.filter (fun rule ->
         Filter.is_enabled_by_code filter (Rule.code rule))
   in
-  (config, files_to_analyze, project_ctx, enabled_rules)
+  (config, project_ctx, enabled_rules)
 
 let config_lookup () =
   let cache = Hashtbl.create 32 in
@@ -77,29 +77,31 @@ let config_lookup () =
         Hashtbl.add cache dir c;
         c
 
+let is_result_excluded ~config_for ~code ~excluded_acc r =
+  match Rule.Run.location r with
+  | None -> false
+  | Some loc ->
+      let file = loc.Location.file in
+      let cfg : Config.t = config_for file in
+      let skip = Rule_config.should_exclude cfg.exclusions ~rule:code ~file in
+      if skip then excluded_acc := { rule = code; file } :: !excluded_acc;
+      skip
+
+let run_one_project_rule ?profiling ~config_for ~excluded_acc project_ctx rule =
+  let code = Rule.code rule in
+  let issues = run_project_rule ?profiling project_ctx rule in
+  List.filter
+    (fun r -> not (is_result_excluded ~config_for ~code ~excluded_acc r))
+    issues
+
 let run_project_rules ?profiling enabled_rules project_ctx =
   let config_for = config_lookup () in
   let excluded_acc = ref [] in
   let issues =
     enabled_rules
     |> List.filter Rule.is_project_scoped
-    |> List.concat_map (fun rule ->
-        let code = Rule.code rule in
-        let issues = run_project_rule ?profiling project_ctx rule in
-        List.filter
-          (fun r ->
-            match Rule.Run.location r with
-            | Some loc ->
-                let file = loc.Location.file in
-                let cfg = config_for file in
-                let skip =
-                  Rule_config.should_exclude cfg.exclusions ~rule:code ~file
-                in
-                if skip then
-                  excluded_acc := { rule = code; file } :: !excluded_acc;
-                not skip
-            | None -> true)
-          issues)
+    |> List.concat_map
+         (run_one_project_rule ?profiling ~config_for ~excluded_acc project_ctx)
   in
   (issues, List.rev !excluded_acc)
 
@@ -146,10 +148,16 @@ let analyze_single_file ?profiling ~backend ~config_for ~project_root
   in
   (issues, List.rev !excluded_acc)
 
-let run ~filter ~dune_describe ?profiling project_root =
+let run ~filter ~dune_describe ?files_to_analyze ~index ?profiling project_root
+    =
   Log.info (fun m -> m "Starting analysis of %s" project_root);
-  let _config, files_to_analyze, project_ctx, enabled_rules =
-    setup_analysis ~filter ~dune_describe project_root
+  let files_to_analyze =
+    match files_to_analyze with
+    | Some files -> files
+    | None -> Dune.project_files dune_describe
+  in
+  let _config, project_ctx, enabled_rules =
+    setup_analysis ~filter ~dune_describe ~files_to_analyze ~index project_root
   in
   let project_issues, project_excluded =
     run_project_rules ?profiling enabled_rules project_ctx
