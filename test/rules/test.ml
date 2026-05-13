@@ -98,4 +98,5 @@ let () =
       Test_interop.suite;
       Test_opam_tags.suite;
       Test_empty_suite.suite;
+      Test_suite_mli.suite;
     ]

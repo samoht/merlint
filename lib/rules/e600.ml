@@ -42,49 +42,10 @@ let defines_own_tests content =
           ]))
     content
 
-let suite_val_re =
-  Re.compile
-    (Re.seq
-       [
-         Re.bow;
-         Re.str "val";
-         Re.rep1 Re.space;
-         Re.str "suite";
-         Re.rep Re.space;
-         Re.str ":";
-       ])
-
-let val_re = Re.compile (Re.seq [ Re.bow; Re.str "val"; Re.rep1 Re.space ])
-
-let non_comment_lines content =
-  content |> String.split_on_char '\n'
-  |> List.filter (fun line ->
-      let trimmed = String.trim line in
-      trimmed <> "" && not (String.starts_with ~prefix:"(*" trimmed))
-
-let suite_line lines = List.find_opt (Re.execp suite_val_re) lines
-
-let has_correct_suite_type = function
-  | None -> true
-  | Some line ->
-      let normalized =
-        Re.replace_string (Re.compile (Re.rep1 Re.space)) ~by:" " line
-        |> String.trim
-      in
-      String.ends_with ~suffix:"string * unit Alcotest.test_case list"
-        normalized
-
-let exports_non_suite_val lines =
-  List.exists
-    (fun line -> Re.execp val_re line && not (Re.execp suite_val_re line))
-    lines
-
 let test_mli_needs_issue content =
-  let lines = non_comment_lines content in
-  let suite = suite_line lines in
-  exports_non_suite_val lines
-  || Option.is_none suite
-  || not (has_correct_suite_type suite)
+  not
+    (Suite_mli.is_compliant ~expected:"string * unit Alcotest.test_case list"
+       content)
 
 let test_mli_target dune_describe filename =
   let basename = Filename.basename filename in
