@@ -2,27 +2,6 @@
 
 type payload = { filename : string; module_name : string }
 
-let val_suite_re =
-  Re.compile
-    (Re.seq
-       [
-         Re.bow;
-         Re.str "val";
-         Re.rep1 Re.space;
-         Re.str "suite";
-         Re.rep Re.space;
-         Re.str ":";
-       ])
-
-let val_re = Re.compile (Re.seq [ Re.bow; Re.str "val"; Re.rep1 Re.space ])
-let whitespace_re = Re.compile (Re.rep1 Re.space)
-
-let non_comment_lines content =
-  String.split_on_char '\n' content
-  |> List.filter (fun line ->
-      let trimmed = String.trim line in
-      trimmed <> "" && not (String.starts_with ~prefix:"(*" trimmed))
-
 (** Check if a fuzz_*.mli file exports only suite with correct type. *)
 let check_fuzz_mli_file dune_describe filename content =
   let basename = Filename.basename filename in
@@ -33,26 +12,10 @@ let check_fuzz_mli_file dune_describe filename content =
     && (not (File.is_in_private_library dune_describe filename))
     && not (File.is_in_examples filename)
   then
-    let lines = non_comment_lines content in
-    let suite_line =
-      List.find_opt (fun line -> Re.execp val_suite_re line) lines
-    in
-    let exports_suite = Option.is_some suite_line in
-    let has_correct_type =
-      match suite_line with
-      | Some line ->
-          let normalized =
-            Re.replace_string whitespace_re ~by:" " line |> String.trim
-          in
-          String.ends_with ~suffix:"string * Alcobar.test_case list" normalized
-      | None -> true
-    in
-    let exports_other =
-      List.exists
-        (fun line -> Re.execp val_re line && not (Re.execp val_suite_re line))
-        lines
-    in
-    if exports_other || (not exports_suite) || not has_correct_type then
+    if
+      Suite_mli.is_compliant ~expected:"string * Alcobar.test_case list" content
+    then []
+    else
       [
         Issue.v
           ~loc:
@@ -60,7 +23,6 @@ let check_fuzz_mli_file dune_describe filename content =
                ~end_col:0)
           { filename; module_name = basename |> Filename.chop_extension };
       ]
-    else []
   else []
 
 (** Check if fuzz_*.ml files have corresponding .mli files. *)
