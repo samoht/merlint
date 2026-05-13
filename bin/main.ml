@@ -301,7 +301,13 @@ let build_dune_describe ~project_root files =
       let explicit_files = ref [] in
       List.iter (process_path ~describes ~explicit_files) files;
       if !describes = [] && !explicit_files <> [] then
-        Merlint.Dune.synthetic (List.rev !explicit_files)
+        (* Single-file (or all-files) mode: project rules still need to see
+           the whole project's libraries (E610, E605, E620 ...). Run the
+           project-level describe and merge so the synthetic file list is
+           supplemented with real library info. *)
+        let project = Merlint.Dune.describe (Fpath.v project_root) in
+        let synthetic = Merlint.Dune.synthetic (List.rev !explicit_files) in
+        Merlint.Dune.merge [ project; synthetic ]
       else Merlint.Dune.merge (List.rev !describes)
 
 let analyze_files mgr fs ?(exclude_patterns = []) ?rule_filter
