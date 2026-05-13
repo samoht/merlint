@@ -808,6 +808,27 @@ and replace each call site with [err_x "..." args] / [fail_x "..." args]. The la
 </div>
 </div></div>
 </div>
+<div class="error-card" id="E219">
+    <div>
+        <span class="error-code">E219</span>
+        <span class="error-title">Useless [and] in [let rec ... and ...] groups</span>
+    </div>
+    <div class="error-hint"><p>A [let rec f and g and h] chain only needs the [and] when at least one binding calls another binding in the group. When [h] references neither [f] nor [g] (and isn't recursive itself), the [and] is just a coupling: future readers assume the bindings are co-dependent. Lift the standalone binding to its own [let] above or below the group. The same applies inside expressions: [let rec ... and ... in body] follows the same rule.</p><div class="examples-grid">
+<div class="example bad">
+  <h4>BAD</h4>
+  <pre><code><span class="kw">let</span> <span class="kw">rec</span> is_even n = n = <span class="nu">0</span> || is_odd (n - <span class="nu">1</span>)
+<span class="kw">and</span> is_odd n = n &lt;&gt; <span class="nu">0</span> &amp;&amp; is_even (n - <span class="nu">1</span>)
+<span class="kw">and</span> double x = x + x</code></pre>
+</div>
+<div class="example good">
+  <h4>GOOD</h4>
+  <pre><code><span class="kw">let</span> double x = x + x
+
+<span class="kw">let</span> <span class="kw">rec</span> is_even n = n = <span class="nu">0</span> || is_odd (n - <span class="nu">1</span>)
+<span class="kw">and</span> is_odd n = n &lt;&gt; <span class="nu">0</span> &amp;&amp; is_even (n - <span class="nu">1</span>)</code></pre>
+</div>
+</div></div>
+</div>
 <h2 id="naming conventions">Naming Conventions</h2>
 <div class="category">E300-E399 • Identifier naming convention violations</div>
 <div class="error-card" id="E300">
