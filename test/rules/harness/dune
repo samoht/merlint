@@ -2,7 +2,6 @@
  (name test_rules_harness)
  (libraries
   merlint
-  ocaml-merlin
   alcotest
   compiler-libs.common
   eio
@@ -11,5 +10,4 @@
   monopam-info.index
   unix
   logs.fmt
-  fmt
   fmt.tty))
