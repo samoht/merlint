@@ -40,8 +40,44 @@ let expected_lib_path test_file =
         Some (String.sub basename 5 (String.length basename - 5) ^ ".ml")
       else None
 
+(** Whole-project fallback: search [all_files] for any .ml whose path matches
+    the expected library path, with the same flexibility as the dune-derived
+    check (exact match, basename-in-sublib, or expected-path appearing as a
+    suffix segment). This catches projects whose lib/ files are not surfaced by
+    [dune describe] -- conditional stanzas, generated modules, or unusual
+    [(include_subdirs ...)] setups. *)
+let all_files_has_expected ~all_files expected_path =
+  let expected_lc = String.lowercase_ascii expected_path in
+  let expected_dir = String.lowercase_ascii (Filename.dirname expected_path) in
+  let expected_base =
+    String.lowercase_ascii (Filename.basename expected_path)
+  in
+  List.exists
+    (fun file ->
+      let file_lc = String.lowercase_ascii file in
+      (* Strip any leading "lib/" / "src/" / similar so we compare on the
+         module-relative part, not the project-relative path. *)
+      let stripped =
+        match find_lib_prefix file_lc with
+        | Some idx -> String.sub file_lc idx (String.length file_lc - idx)
+        | None -> file_lc
+      in
+      stripped = expected_lc
+      ||
+      let stripped_base = Filename.basename stripped in
+      stripped_base = expected_base
+      && (expected_dir = "."
+         || String.starts_with ~prefix:(expected_dir ^ "/") stripped
+         || Astring.String.is_infix
+              ~affix:("/" ^ expected_dir ^ "/" ^ expected_base)
+              file_lc))
+    all_files
+
 let check ctx =
   let dune_describe = Context.dune_describe ctx in
+  let all_files =
+    List.filter (fun s -> Filename.check_suffix s ".ml") (Context.all_files ctx)
+  in
 
   (* Build a set of library module paths (relative to lib/) *)
   let libraries = Dune.libraries dune_describe in
@@ -174,9 +210,14 @@ let check ctx =
                     Filename.remove_extension (Filename.basename expected_path)
                   in
                   let referenced = is_referenced_in_library module_name in
+                  let on_disk =
+                    (not found) && (not referenced)
+                    && all_files_has_expected ~all_files expected_path
+                  in
                   Logs.debug (fun m ->
-                      m "E610: found=%b referenced=%b" found referenced);
-                  if (not found) && not referenced then
+                      m "E610: found=%b referenced=%b on_disk=%b" found
+                        referenced on_disk);
+                  if (not found) && (not referenced) && not on_disk then
                     let loc =
                       Location.v ~file:(Fpath.to_string file) ~start_line:1
                         ~start_col:0 ~end_line:1 ~end_col:0
