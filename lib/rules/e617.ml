@@ -27,7 +27,7 @@ let extract_expected_name filename =
 
 (** Extract suite name from a [let suite = ...] binding using the AST. Handles
     both [let suite = ("name", ...)] and [let suite = \n  ("name", ...)]. *)
-let extract_suite_name_from_expr (expr : Parsetree.expression) =
+let extract_suite_name_of_expr (expr : Parsetree.expression) =
   match expr.pexp_desc with
   | Pexp_tuple
       (( _,
@@ -55,7 +55,7 @@ let find_suite_name structure =
                 _;
               };
             ] ) ->
-          extract_suite_name_from_expr pvb_expr
+          extract_suite_name_of_expr pvb_expr
       | _ -> None)
     structure
 

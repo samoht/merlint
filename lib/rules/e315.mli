@@ -4,4 +4,4 @@
     should use snake_case naming (except 't' and 'id' which are idiomatic). *)
 
 val rule : Rule.t
-(** The E315 rule definition *)
+(** [rule] is the E315 rule definition. *)

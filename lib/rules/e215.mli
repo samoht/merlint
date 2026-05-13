@@ -4,4 +4,4 @@
     Fmt.failwith instead for more concise and readable code. *)
 
 val rule : Rule.t
-(** The E215 rule definition *)
+(** [rule] is the E215 rule definition. *)

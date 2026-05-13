@@ -22,7 +22,7 @@ let has_redundant_prefix item_name_lower module_name filename =
     || item_name_lower = module_name
 
 (** Create redundant module name issue *)
-let create_redundant_name_issue item_name module_name location item_type =
+let redundant_name_issue item_name module_name location item_type =
   Issue.v ~loc:location
     { item_name; module_name = String.capitalize_ascii module_name; item_type }
 
@@ -44,9 +44,9 @@ let check (ctx : Context.file) =
             let kind_label =
               if Outline.is_function_type item then "function" else "value"
             in
-            Some (create_redundant_name_issue name module_name loc kind_label)
+            Some (redundant_name_issue name module_name loc kind_label)
         | Outline.Type, Some loc ->
-            Some (create_redundant_name_issue name module_name loc "type")
+            Some (redundant_name_issue name module_name loc "type")
         | _ -> None
       else None)
     outline_data

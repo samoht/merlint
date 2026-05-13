@@ -69,7 +69,7 @@ let scan_file path =
   with Sys_error _ -> false
 
 let check (ctx : Context.project) =
-  let dirs = Interop.find_oracle_dirs ctx.project_root in
+  let dirs = Interop.oracle_dirs ctx.project_root in
   List.filter_map
     (fun (d : Interop.oracle_dir) ->
       let scripts = Filename.concat d.path "scripts" in

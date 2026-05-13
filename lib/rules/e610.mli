@@ -5,4 +5,4 @@
     created. *)
 
 val rule : Rule.t
-(** The E610 rule definition *)
+(** [rule] is the E610 rule definition. *)

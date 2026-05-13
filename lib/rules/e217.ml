@@ -119,7 +119,7 @@ let rule =
       \  - [print_string (Fmt.str ...)] -> [Fmt.pr \"...\"];\n\
       \  - [prerr_endline (Fmt.str ...)] -> [Fmt.epr \"...@.\"];\n\
       \  - [prerr_string (Fmt.str ...)] -> [Fmt.epr \"...\"];\n\
-      \  - [Error (Fmt.str ...)] -> [Fmt.kstr (fun e -> Error e) \"...\"], or \
+      \  - [Error (... formatted with Fmt.str ...)] -> [Fmt.kstr (fun e -> Error e) \"...\"], or \
        a one-shot [error_msgf] helper in the package;\n\
       \  - any other [<f> (Fmt.str ...)] -> [Fmt.kstr <f> \"...\"].\n\
        Specialised cases for [failwith], [invalid_arg], [Alcotest.fail], and \
@@ -130,7 +130,7 @@ let rule =
           is_good = false;
           code =
             {|let parse s =
-  if s = "" then Error (Fmt.str "empty input")
+  if s = "" then Fmt.kstr (fun e -> Error e) "empty input"
   else Ok s
 
 let log_event buf ev =

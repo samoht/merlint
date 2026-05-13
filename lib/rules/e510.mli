@@ -4,4 +4,4 @@
     without a source makes it difficult to trace issues in production. *)
 
 val rule : Rule.t
-(** The E510 rule definition *)
+(** [rule] is the E510 rule definition. *)

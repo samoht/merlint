@@ -41,7 +41,7 @@ let check (ctx : Context.file) =
                   ~end_line:doc_line ~end_col:0
               in
               let issue_texts =
-                List.map (Format.asprintf "%a" Docs.pp_style_issue) issues
+                List.map (Fmt.str "%a" Docs.pp_style_issue) issues
               in
               let issue_text = String.concat ", " issue_texts in
               Some

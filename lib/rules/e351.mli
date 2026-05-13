@@ -4,4 +4,4 @@
     level. Global mutable state makes code harder to test and reason about. *)
 
 val rule : Rule.t
-(** The E351 rule definition *)
+(** [rule] is the E351 rule definition. *)

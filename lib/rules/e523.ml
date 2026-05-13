@@ -18,7 +18,7 @@
 type kind = Redundant | Uncovered of string list
 type payload = { dune : string; kind : kind }
 
-let find_dune_files root =
+let dune_files root =
   let try_readdir d =
     try Sys.readdir d |> Array.to_list with Sys_error _ -> []
   in
@@ -269,7 +269,7 @@ let check_dune path contents =
                    { dune = path; kind = Uncovered missing }))
 
 let check (ctx : Context.project) =
-  let dunes = find_dune_files ctx.project_root in
+  let dunes = dune_files ctx.project_root in
   List.filter_map
     (fun path ->
       match read_file path with

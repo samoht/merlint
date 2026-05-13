@@ -3,6 +3,10 @@
 type payload = { name : string; length : int; threshold : int }
 (** Payload for function length issues *)
 
+let log_src = Logs.Src.create "merlint.rules.e005" ~doc:"E005 rule diagnostics"
+
+module Log = (val Logs.src_log log_src : Logs.LOG)
+
 type config = { max_function_length : int }
 
 let check (ctx : Context.file) =
@@ -28,7 +32,7 @@ let check (ctx : Context.file) =
          (String.split_on_char '/' ctx.filename)
   in
 
-  Logs.debug (fun m ->
+  Log.debug (fun m ->
       m "E005: Checking %s (module_name=%s, is_test=%b)" ctx.filename
         module_name is_test_file);
 
@@ -91,7 +95,7 @@ let check (ctx : Context.file) =
 
             (* Skip length check for pure data structures *)
             if is_data_def then (
-              Logs.debug (fun m ->
+              Log.debug (fun m ->
                   m "Skipping pure data structure: %s" item.name);
               None)
             else

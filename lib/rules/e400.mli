@@ -4,4 +4,4 @@
     should start with a documentation comment. *)
 
 val rule : Rule.t
-(** The E400 rule definition *)
+(** [rule] is the E400 rule definition. *)

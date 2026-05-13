@@ -4,4 +4,4 @@
     Library modules should have interface files for proper encapsulation. *)
 
 val rule : Rule.t
-(** The E505 rule definition *)
+(** [rule] is the E505 rule definition. *)

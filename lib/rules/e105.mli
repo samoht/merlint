@@ -4,4 +4,4 @@
     hide important errors and make debugging difficult. *)
 
 val rule : Rule.t
-(** The E105 rule definition *)
+(** [rule] is the E105 rule definition. *)

@@ -269,11 +269,11 @@ let is_ocaml_source_file entry =
   && (String.ends_with ~suffix:".ml" entry
      || String.ends_with ~suffix:".mli" entry)
 
-(** [is_data_only_or_nested_stanza_dir dir] is [true] when [dir] looks like a
+(** [data_or_nested_stanza_dir dir] is [true] when [dir] looks like a
     cram sandbox, a generated build dir, or contains its own [dune] file (which
     means it has its own stanzas and shouldn't be sucked up by an
     [include_subdirs unqualified] parent). *)
-let is_data_only_or_nested_stanza_dir dir =
+let data_or_nested_stanza_dir dir =
   let name = Fpath.basename dir in
   if name = "_build" || name = "_opam" || name = ".git" then true
   else if name = "" || name.[0] = '.' then true
@@ -301,7 +301,7 @@ let scan_directory_for_ml_files ?(recurse = false) item_type dir =
               recurse
               && (try Sys.is_directory (Fpath.to_string child)
                   with Sys_error _ -> false)
-              && not (is_data_only_or_nested_stanza_dir child)
+              && not (data_or_nested_stanza_dir child)
             then walk child)
           entries
   in

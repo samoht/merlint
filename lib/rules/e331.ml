@@ -28,7 +28,7 @@ type payload = {
 }
 (** Payload for redundant prefix issues *)
 
-let prefix_type_to_string = function
+let string_of_prefix_type = function
   | Create -> "create_"
   | Make -> "make_"
   | Get -> "get_"
@@ -117,7 +117,7 @@ let check (ctx : Context.file) =
     outline_data
 
 let pp ppf { function_name = _; suggested_name; prefix_type; context } =
-  let prefix_str = prefix_type_to_string prefix_type in
+  let prefix_str = string_of_prefix_type prefix_type in
   Fmt.pf ppf
     "Function '%s' has redundant '%s' prefix - consider '%s' instead. %s \
      functions can often omit the prefix when the function name alone is \

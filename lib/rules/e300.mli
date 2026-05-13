@@ -6,4 +6,4 @@
     - Should use PascalCase (e.g., MyVariant, SomeConstructor) *)
 
 val rule : Rule.t
-(** The E300 rule definition *)
+(** [rule] is the E300 rule definition. *)

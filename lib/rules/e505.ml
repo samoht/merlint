@@ -2,6 +2,10 @@
 
 type payload = { ml_file : string; expected_mli : string }
 
+let log_src = Logs.Src.create "merlint.rules.e505" ~doc:"E505 rule diagnostics"
+
+module Log = (val Logs.src_log log_src : Logs.LOG)
+
 let check (ctx : Context.project) =
   let files = Context.all_files ctx in
   (* Get executable and test module info once for all files *)
@@ -26,13 +30,13 @@ let check (ctx : Context.project) =
     let is_intf = String.ends_with ~suffix:"_intf" module_name in
 
     if is_exe then
-      Logs.debug (fun m ->
+      Log.debug (fun m ->
           m "File %s is executable (module %s)" ml_file module_name_capitalized);
     if is_test then
-      Logs.debug (fun m ->
+      Log.debug (fun m ->
           m "File %s is test module (module %s)" ml_file module_name);
     if is_intf then
-      Logs.debug (fun m -> m "File %s is interface definition file" ml_file);
+      Log.debug (fun m -> m "File %s is interface definition file" ml_file);
 
     is_exe || is_test || is_intf
   in

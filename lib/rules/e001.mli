@@ -5,4 +5,4 @@
     a function's source code. *)
 
 val rule : Rule.t
-(** The E001 rule definition *)
+(** [rule] is the E001 rule definition. *)

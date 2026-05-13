@@ -5,4 +5,4 @@
     directory. *)
 
 val rule : Rule.t
-(** The E500 rule definition *)
+(** [rule] is the E500 rule definition. *)

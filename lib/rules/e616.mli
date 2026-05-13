@@ -4,4 +4,4 @@
     in test files and suggests using Alcotest.failf or failf instead. *)
 
 val rule : Rule.t
-(** The E616 rule definition *)
+(** [rule] is the E616 rule definition. *)

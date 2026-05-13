@@ -4,4 +4,4 @@
     be unused) that are actually used in the code. *)
 
 val rule : Rule.t
-(** The E335 rule definition *)
+(** [rule] is the E335 rule definition. *)

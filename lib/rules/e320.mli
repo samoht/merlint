@@ -4,4 +4,4 @@
     makes them hard to read. *)
 
 val rule : Rule.t
-(** The E320 rule definition *)
+(** [rule] is the E320 rule definition. *)
