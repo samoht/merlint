@@ -17,29 +17,10 @@ type payload = { package : string; opam : string; findings : finding list }
 
 let dir_exists path = try Sys.is_directory path with Sys_error _ -> false
 
-(** Extract the list of tags from an opam file. Handles both list
-    ([tags: ["a" "b"]]) and single-string ([tags: "a"]) forms.
-
-    Returns [None] if no [tags:] field is found or the file cannot be parsed. *)
-let read_tags path =
-  let string_of_value = function Opam.Value.String s -> Some s | _ -> None in
-  try
-    let ic = open_in path in
-    Fun.protect
-      ~finally:(fun () -> close_in ic)
-      (fun () ->
-        let r = Bytesrw.Bytes.Reader.of_in_channel ic in
-        match Opam.field_reader ~file:path "tags" r with
-        | None -> None
-        | Some (Opam.Value.String s) -> Some [ s ]
-        | Some (Opam.Value.List l) -> Some (List.filter_map string_of_value l)
-        | Some _ -> Some [])
-  with Sys_error _ -> None
-
 let check_opam_file ~topics pkg_dir opam_name =
   let path = Filename.concat pkg_dir opam_name in
   let findings = ref [] in
-  (match read_tags path with
+  (match Opam_tags.read_opt path with
   | None -> findings := [ Missing_tags ]
   | Some tags ->
       let has_org =
