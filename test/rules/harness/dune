@@ -1,0 +1,14 @@
+(library
+ (name test_rules_harness)
+ (libraries
+  merlint
+  ocaml-merlin
+  alcotest
+  compiler-libs.common
+  eio
+  eio_main
+  fpath
+  unix
+  logs.fmt
+  fmt
+  fmt.tty))

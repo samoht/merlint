@@ -1,2 +1,1 @@
-(* Cram coverage for e219 lives under [merlint/test/cram/e219.t]. *)
-let () = ()
+let suite = Test_rules_harness.Test_harness.fixture_suite Merlint.E219.rule

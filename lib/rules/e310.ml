@@ -33,8 +33,7 @@ let check_value_name ~allowed name =
   else
     let expected = Naming.to_lowercase_snake_case name in
     if name <> expected && name <> String.lowercase_ascii name then
-      if valid_snake_with_suffix ~allowed name then None
-      else Some expected
+      if valid_snake_with_suffix ~allowed name then None else Some expected
     else None
 
 let check (ctx : Context.file) =

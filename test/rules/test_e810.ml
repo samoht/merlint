@@ -1,2 +1,1 @@
-(* Cram coverage for e810 lives under [merlint/test/cram/e810.t]. *)
-let () = ()
+let suite = Test_rules_harness.Test_harness.fixture_suite Merlint.E810.rule

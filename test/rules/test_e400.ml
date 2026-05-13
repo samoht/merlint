@@ -1,2 +1,1 @@
-(* Cram coverage for e400 lives under [merlint/test/cram/e400.t]. *)
-let () = ()
+let suite = Test_rules_harness.Test_harness.fixture_suite Merlint.E400.rule

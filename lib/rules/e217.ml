@@ -119,8 +119,8 @@ let rule =
       \  - [print_string (Fmt.str ...)] -> [Fmt.pr \"...\"];\n\
       \  - [prerr_endline (Fmt.str ...)] -> [Fmt.epr \"...@.\"];\n\
       \  - [prerr_string (Fmt.str ...)] -> [Fmt.epr \"...\"];\n\
-      \  - [Error (... formatted with Fmt.str ...)] -> [Fmt.kstr (fun e -> Error e) \"...\"], or \
-       a one-shot [error_msgf] helper in the package;\n\
+      \  - [Error (... formatted with Fmt.str ...)] -> [Fmt.kstr (fun e -> \
+       Error e) \"...\"], or a one-shot [error_msgf] helper in the package;\n\
       \  - any other [<f> (Fmt.str ...)] -> [Fmt.kstr <f> \"...\"].\n\
        Specialised cases for [failwith], [invalid_arg], [Alcotest.fail], and \
        bare [fail] are handled by E215, E216, and E616 respectively."

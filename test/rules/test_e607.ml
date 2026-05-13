@@ -1,2 +1,1 @@
-(* Cram coverage for e607 lives under [merlint/test/cram/e607.t]. *)
-let () = ()
+let suite = Test_rules_harness.Test_harness.fixture_suite Merlint.E607.rule
