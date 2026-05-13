@@ -95,7 +95,7 @@ let check (ctx : Context.project) =
           else []
         in
         presence_issues @ content_issues
-      with _ -> [])
+      with Sys_error _ -> [])
     dirs
 
 let pp ppf { directory; kind } =

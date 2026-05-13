@@ -4,55 +4,29 @@ open Examples
 
 type payload = { type_name : string; missing_functions : string list }
 
+let nearby_lines content line_num =
+  let lines = String.split_on_char '\n' content in
+  let start_idx = max 0 (line_num - 1) in
+  let end_idx = min (List.length lines) (line_num + 3) in
+  lines
+  |> List.filteri (fun idx _ -> idx >= start_idx && idx < end_idx)
+  |> String.concat " "
+
 (** Check if a type definition is a function type *)
 let is_function_type content line_num =
-  try
-    let lines = String.split_on_char '\n' content in
-    (* Look at a few lines around the type declaration *)
-    let start_idx = max 0 (line_num - 1) in
-    let end_idx = min (List.length lines) (line_num + 3) in
-    let context_lines =
-      let rec collect idx acc =
-        if idx >= end_idx then acc
-        else try collect (idx + 1) (List.nth lines idx :: acc) with _ -> acc
-      in
-      List.rev (collect start_idx [])
-    in
-    let context = String.concat " " context_lines in
-    (* Check for function type patterns using Re *)
-    let arrow_pattern = Re.compile (Re.str "->") in
-    Re.execp arrow_pattern context
-  with _ -> false
+  let context = nearby_lines content line_num in
+  let arrow_pattern = Re.compile (Re.str "->") in
+  Re.execp arrow_pattern context
 
 (** Check if a type has deriving show attribute in the content *)
 let has_deriving_show content line_num =
   (* Merlin's outline doesn't include PPX-generated functions, so we need to
      check the source for [@@deriving show] which generates pp automatically. 
      This is a workaround for a Merlin limitation. *)
-  try
-    let lines = String.split_on_char '\n' content in
-    (* Look at a few lines around the type declaration *)
-    let start_idx = max 0 (line_num - 1) in
-    let end_idx = min (List.length lines) (line_num + 3) in
-    let context_lines =
-      let rec collect idx acc =
-        if idx >= end_idx then acc
-        else try collect (idx + 1) (List.nth lines idx :: acc) with _ -> acc
-      in
-      List.rev (collect start_idx [])
-    in
-    let context = String.concat " " context_lines in
-    (* Simple substring search for deriving show *)
-    let rec contains_substring str sub =
-      if String.length sub > String.length str then false
-      else if String.sub str 0 (String.length sub) = sub then true
-      else if String.length str <= 1 then false
-      else contains_substring (String.sub str 1 (String.length str - 1)) sub
-    in
-    contains_substring context "deriving show"
-    || contains_substring context "deriving yojson, show"
-    || contains_substring context "deriving show,"
-  with _ -> false
+  let context = nearby_lines content line_num in
+  Astring.String.is_infix ~affix:"deriving show" context
+  || Astring.String.is_infix ~affix:"deriving yojson, show" context
+  || Astring.String.is_infix ~affix:"deriving show," context
 
 let check (ctx : Context.file) =
   (* Only check .mli files *)

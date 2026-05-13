@@ -35,7 +35,7 @@ let check (ctx : Context.project) =
                   in
                   Astring.String.is_infix ~affix:"Wire.Codec.v " content
                   || Astring.String.is_infix ~affix:"Codec.v \"" content
-                with _ -> false)
+                with Sys_error _ -> false)
               ml_files
           in
           if has_wire then

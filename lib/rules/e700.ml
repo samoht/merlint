@@ -44,7 +44,7 @@ let check ctx =
                 { filename; module_name = "fuzz" };
             ]
           else []
-        with _ -> []
+        with Sys_error _ -> []
       else [])
     files
 

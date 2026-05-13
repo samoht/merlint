@@ -37,7 +37,7 @@ let check (ctx : Context.project) =
                         In_channel.input_all
                     in
                     Astring.String.is_infix ~affix:"Wire." c
-                  with _ -> false)
+                  with Sys_error _ -> false)
               all_files
           in
           if has_wire then
@@ -59,7 +59,7 @@ let check (ctx : Context.project) =
                         let loc = Location.in_file file in
                         issues := Issue.v ~loc { file; symbol = sym } :: !issues)
                     wire_symbols
-                with _ -> ())
+                with Sys_error _ -> ())
               mli_files)
     packages;
   !issues

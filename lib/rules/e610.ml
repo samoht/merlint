@@ -110,7 +110,7 @@ let check ctx =
           || Astring.String.is_infix ~affix:pattern_module content
           || Astring.String.is_infix ~affix:pattern_eq content
           || Astring.String.is_infix ~affix:pattern_colon content
-        with _ -> false)
+        with Sys_error _ -> false)
       library_source_files
   in
 

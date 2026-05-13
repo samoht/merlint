@@ -130,7 +130,7 @@ let check (ctx : Context.project) =
                     }
                   :: !issues)
               !missing_includes
-          with _ -> ()))
+          with Sys_error _ -> ()))
     (Dune.tests dune_describe);
 
   List.rev !issues

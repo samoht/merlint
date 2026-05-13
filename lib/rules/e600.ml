@@ -204,7 +204,7 @@ let check_missing_test_mli dune_describe files =
                 In_channel.with_open_text ml_file In_channel.input_all
               in
               has_test_runner content
-            with _ -> false
+            with Sys_error _ -> false
           in
           if has_runner then None
           else
@@ -251,7 +251,7 @@ let check ctx =
             check_test_file_uses_modules filename content
             @ check_runner_in_wrong_file filename content
             @ check_test_mli_file dune_describe filename content
-          with _ -> []
+          with Sys_error _ -> []
         else [])
       files
   in
@@ -273,7 +273,7 @@ let pp ppf { filename; module_name = _ } =
             In_channel.with_open_text filename In_channel.input_all
           in
           has_test_runner content
-        with _ -> false
+        with Sys_error _ -> false
       in
       if has_runner then
         Fmt.pf ppf

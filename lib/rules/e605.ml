@@ -42,7 +42,8 @@ let contains_only_types_and_modules file_path =
       | _ -> false
     in
     List.for_all is_facade_item structure
-  with _ -> false (* If we can't parse, assume it needs tests *)
+  with Sys_error _ | Syntaxerr.Error _ | Lexer.Error _ ->
+    false (* If we can't parse, assume it needs tests *)
 
 (** Compute expected test file path from source file. For [lib] and [src] source
     directories, the directory is replaced with [test]. For any other source
@@ -274,17 +275,16 @@ let rule =
     ~category:Testing
     ~hint:
       "This rule is not a checkbox exercise. The goal is real test coverage \
-       and real code quality, not a [test_<module>.ml] file that satisfies \
-       the linter. Treat each untested module as an opportunity: write the \
-       tests you'd want a reviewer to write before you trusted the code in \
-       production. Anchor on the spec when one exists -- cite section \
-       numbers, copy test vectors verbatim. Probe the edge cases the \
-       implementation hopes you won't try: empty / single-element / \
-       maximum-length inputs, NaN, malformed UTF-8, negative sizes, \
-       off-by-one boundaries, integer overflow. Drive at least one hostile \
-       case (random bytes, truncated payloads, malicious lengths); the \
-       public API should fail with a clear error, not crash or corrupt \
-       state. Use exact expected values, not loose ranges. A trivial module \
-       still deserves the exercise -- writing the tests usually surfaces the \
-       corner the author didn't think through."
+       and real code quality, not a [test_<module>.ml] file that satisfies the \
+       linter. Treat each untested module as an opportunity: write the tests \
+       you'd want a reviewer to write before you trusted the code in \
+       production. Anchor on the spec when one exists -- cite section numbers, \
+       copy test vectors verbatim. Probe the edge cases the implementation \
+       hopes you won't try: empty / single-element / maximum-length inputs, \
+       NaN, malformed UTF-8, negative sizes, off-by-one boundaries, integer \
+       overflow. Drive at least one hostile case (random bytes, truncated \
+       payloads, malicious lengths); the public API should fail with a clear \
+       error, not crash or corrupt state. Use exact expected values, not loose \
+       ranges. A trivial module still deserves the exercise -- writing the \
+       tests usually surfaces the corner the author didn't think through."
     ~examples:[] ~pp (Project check)

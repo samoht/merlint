@@ -14,8 +14,9 @@ let with_temp_dir name f =
 
 let write_file path content =
   let oc = open_out path in
-  Fun.protect ~finally:(fun () -> close_out oc) (fun () ->
-      output_string oc content)
+  Fun.protect
+    ~finally:(fun () -> close_out oc)
+    (fun () -> output_string oc content)
 
 let mkdir path = if not (Sys.file_exists path) then Unix.mkdir path 0o700
 
@@ -29,12 +30,14 @@ let test_file_helpers () =
     "read_file existing" "(test (name test))\n"
     (Merlint.Interop.read_file dune);
   Alcotest.(check string)
-    "read_file missing" "" (Merlint.Interop.read_file (Filename.concat root "x"));
+    "read_file missing" ""
+    (Merlint.Interop.read_file (Filename.concat root "x"));
   Alcotest.(check string)
     "dune_content" "(test (name test))\n"
     (Merlint.Interop.dune_content root);
   Alcotest.(check string)
-    "test_content" "let () = ()\n" (Merlint.Interop.test_content root)
+    "test_content" "let () = ()\n"
+    (Merlint.Interop.test_content root)
 
 let test_oracle_dirs () =
   with_temp_dir "merlint-interop-" @@ fun root ->
@@ -55,8 +58,7 @@ let test_oracle_dirs () =
       Alcotest.(check bool) "has traces" true dir.has_traces;
       Alcotest.(check bool) "has dune" true dir.has_dune;
       Alcotest.(check bool) "has test.ml" true dir.has_test_ml
-  | dirs ->
-      Alcotest.failf "expected one oracle dir, got %d" (List.length dirs)
+  | dirs -> Alcotest.failf "expected one oracle dir, got %d" (List.length dirs)
 
 let suite =
   ( "interop",

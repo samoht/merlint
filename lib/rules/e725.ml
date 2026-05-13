@@ -35,7 +35,8 @@ let extract_suites content =
          ])
   in
   Re.all pat content
-  |> List.filter_map (fun g -> try Some (Re.Group.get g 1) with _ -> None)
+  |> List.filter_map (fun g ->
+      try Some (Re.Group.get g 1) with Not_found -> None)
 
 (** Check that suite name in fuzz_foo.ml matches "foo". *)
 let check ctx =
@@ -49,7 +50,7 @@ let check ctx =
         | Some expected ->
             let content =
               try In_channel.with_open_text filename In_channel.input_all
-              with _ -> ""
+              with Sys_error _ -> ""
             in
             let suites = extract_suites content in
             List.filter_map

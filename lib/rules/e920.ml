@@ -92,9 +92,9 @@ let rec dune_files dir =
       if String.length entry > 0 && (entry.[0] = '.' || entry.[0] = '_') then []
       else
         let path = Filename.concat dir entry in
-        if entry = "dune" && try not (Sys.is_directory path) with _ -> false
-        then [ path ]
-        else if try Sys.is_directory path with _ -> false then dune_files path
+        let is_dir = try Sys.is_directory path with Sys_error _ -> false in
+        if entry = "dune" && not is_dir then [ path ]
+        else if is_dir then dune_files path
         else [])
     entries
 
