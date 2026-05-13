@@ -23,7 +23,7 @@ type project = {
   config : Config.t;
   project_root : string;
   all_files : string list Lazy.t;
-  dune_describe : Dune.describe Lazy.t;
+  dune_describe : Dune_describe.describe Lazy.t;
   executable_modules : string list Lazy.t;
   lib_modules : string list Lazy.t;
   test_modules : string list Lazy.t;
@@ -68,7 +68,9 @@ let test_module_of_file f =
 
 let discover_test_modules ~all_files dune_desc_lazy =
   (* Get test modules from dune describe *)
-  let dune_test_modules = Dune.test_modules (Lazy.force dune_desc_lazy) in
+  let dune_test_modules =
+    Dune_describe.test_modules (Lazy.force dune_desc_lazy)
+  in
   (* Also discover test_*.ml files from all_files that might not be in dune *)
   let file_test_modules = List.filter_map test_module_of_file all_files in
   (* Combine and deduplicate *)
@@ -114,8 +116,8 @@ let project ~config ~project_root ~all_files ~dune_describe ~index =
          all_files);
     dune_describe = dune_desc_lazy;
     executable_modules =
-      lazy (Dune.executable_modules (Lazy.force dune_desc_lazy));
-    lib_modules = lazy (Dune.lib_modules (Lazy.force dune_desc_lazy));
+      lazy (Dune_describe.executable_modules (Lazy.force dune_desc_lazy));
+    lib_modules = lazy (Dune_describe.lib_modules (Lazy.force dune_desc_lazy));
     test_modules = lazy (discover_test_modules ~all_files dune_desc_lazy);
     index;
   }

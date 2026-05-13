@@ -25,7 +25,7 @@ let fuzz_dirs dune_describe =
           with
           | Some f -> Some (Fpath.parent f |> Fpath.to_string)
           | None -> None)
-      (Dune.executables dune_describe)
+      (Dune_describe.executables dune_describe)
   in
   List.sort_uniq String.compare dirs
 

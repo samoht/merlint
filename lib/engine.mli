@@ -8,7 +8,7 @@ type result = { issues : Rule.Run.result list; excluded : exclusion_stats list }
 
 val run :
   filter:Filter.t ->
-  dune_describe:Dune.describe ->
+  dune_describe:Dune_describe.describe ->
   ?files_to_analyze:Fpath.t list ->
   index:Monopam_info_index.t Lazy.t ->
   ?profiling:Profiling.t ->

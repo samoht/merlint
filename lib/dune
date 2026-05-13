@@ -14,6 +14,7 @@
   fpath
   nox-tty
   nox-opam
+  nox-dune
   nox-toml
   bytesrw
   nox-sexp

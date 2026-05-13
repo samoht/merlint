@@ -14,14 +14,14 @@ let is_valid basename =
 let fuzz_stanzas dune_describe =
   let from_tests =
     List.filter_map
-      (fun (t : Dune.test_info) ->
+      (fun (t : Dune_describe.test_info) ->
         let fuzz_files =
           List.filter
             (fun f -> Fpath.has_ext ".ml" f && File.is_in_fuzz_dir f)
             t.files
         in
         match fuzz_files with [] -> None | _ -> Some (t.name, fuzz_files))
-      (Dune.tests dune_describe)
+      (Dune_describe.tests dune_describe)
   in
   let from_execs =
     List.filter_map
@@ -32,7 +32,7 @@ let fuzz_stanzas dune_describe =
             files
         in
         match fuzz_files with [] -> None | _ -> Some (name, fuzz_files))
-      (Dune.executables dune_describe)
+      (Dune_describe.executables dune_describe)
   in
   from_tests @ from_execs
 

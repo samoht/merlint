@@ -22,7 +22,8 @@ type project = {
   config : Config.t;  (** The merlint configuration. *)
   project_root : string;  (** The project root directory. *)
   all_files : string list Lazy.t;  (** All files in the project (lazy). *)
-  dune_describe : Dune.describe Lazy.t;  (** Dune project description (lazy). *)
+  dune_describe : Dune_describe.describe Lazy.t;
+      (** Dune project description (lazy). *)
   executable_modules : string list Lazy.t;
       (** List of executable module names (lazy). *)
   lib_modules : string list Lazy.t;  (** List of library module names (lazy). *)
@@ -47,7 +48,7 @@ val project :
   config:Config.t ->
   project_root:string ->
   all_files:string list ->
-  dune_describe:Dune.describe ->
+  dune_describe:Dune_describe.describe ->
   index:Monopam_info_index.t Lazy.t ->
   project
 (** [project ~config ~project_root ~all_files ~dune_describe ~index] creates a
@@ -87,5 +88,5 @@ val lib_modules : project -> string list
 val test_modules : project -> string list
 (** [test_modules project] returns test module names. *)
 
-val dune_describe : project -> Dune.describe
+val dune_describe : project -> Dune_describe.describe
 (** [dune_describe project] returns the dune project description. *)

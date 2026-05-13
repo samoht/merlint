@@ -18,13 +18,13 @@ let is_test_support_library name =
 
 let check (ctx : Context.project) =
   let dune_describe = Context.dune_describe ctx in
-  let libraries = Dune.libraries dune_describe in
-  let tests = Dune.tests dune_describe in
+  let libraries = Dune_describe.libraries dune_describe in
+  let tests = Dune_describe.tests dune_describe in
 
   (* Get directories containing non-test library files *)
   let lib_dirs =
     List.concat_map
-      (fun (lib : Dune.library_info) ->
+      (fun (lib : Dune_describe.library_info) ->
         (* Skip test support libraries *)
         if is_test_support_library lib.name then []
         else
@@ -39,7 +39,7 @@ let check (ctx : Context.project) =
 
   (* Check if any test files are in the same directory as library files *)
   List.concat_map
-    (fun (test : Dune.test_info) ->
+    (fun (test : Dune_describe.test_info) ->
       List.filter_map
         (fun file ->
           let test_dir = Fpath.parent file |> Fpath.to_string in

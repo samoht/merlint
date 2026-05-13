@@ -7,7 +7,7 @@ type payload = { stanza_name : string; directory : string }
 let check (ctx : Context.project) =
   let dune_describe = Context.dune_describe ctx in
   List.filter_map
-    (fun (t : Dune.test_info) ->
+    (fun (t : Dune_describe.test_info) ->
       let fuzz_files =
         List.filter
           (fun f -> Fpath.has_ext ".ml" f && File.is_in_fuzz_dir f)
@@ -23,7 +23,7 @@ let check (ctx : Context.project) =
               ~start_line:1 ~start_col:0 ~end_line:1 ~end_col:0
           in
           Some (Issue.v ~loc { stanza_name = t.name; directory = dir }))
-    (Dune.tests dune_describe)
+    (Dune_describe.tests dune_describe)
 
 let pp ppf { stanza_name; directory = _ } =
   Fmt.pf ppf

@@ -12,13 +12,13 @@ let expected_lib_module fuzz_file =
 
 let check (ctx : Context.project) =
   let dune_describe = Context.dune_describe ctx in
-  let lib_modules = Dune.lib_modules dune_describe in
-  let tests = Dune.tests dune_describe in
-  let execs = Dune.executables dune_describe in
+  let lib_modules = Dune_describe.lib_modules dune_describe in
+  let tests = Dune_describe.tests dune_describe in
+  let execs = Dune_describe.executables dune_describe in
   let fuzz_files =
     let from_tests =
       List.concat_map
-        (fun (t : Dune.test_info) ->
+        (fun (t : Dune_describe.test_info) ->
           List.filter
             (fun f -> Fpath.has_ext ".ml" f && File.is_in_fuzz_dir f)
             t.files)

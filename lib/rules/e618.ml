@@ -8,7 +8,7 @@ let is_valid basename =
 let check (ctx : Context.project) =
   let dune_describe = Context.dune_describe ctx in
   List.concat_map
-    (fun (test_info : Dune.test_info) ->
+    (fun (test_info : Dune_describe.test_info) ->
       List.filter_map
         (fun file ->
           if
@@ -25,12 +25,12 @@ let check (ctx : Context.project) =
                 (Issue.v ~loc
                    {
                      filename = Fpath.to_string file;
-                     test_stanza = test_info.Dune.name;
+                     test_stanza = test_info.Dune_describe.name;
                    })
             else None
           else None)
-        test_info.Dune.files)
-    (Dune.tests dune_describe)
+        test_info.Dune_describe.files)
+    (Dune_describe.tests dune_describe)
 
 let pp ppf { filename; test_stanza } =
   let basename = Filename.basename filename in

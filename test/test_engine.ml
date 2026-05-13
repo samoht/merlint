@@ -5,7 +5,7 @@ let test_run_empty_filter () =
   match Filter.parse "none" with
   | Error msg -> Alcotest.failf "Failed to create filter: %s" msg
   | Ok filter ->
-      let dune_describe = Dune.describe (Fpath.v ".") in
+      let dune_describe = Dune_describe.describe (Fpath.v ".") in
       let index = lazy (failwith "Monopam_info_index not built in tests") in
       let result = Engine.run ~filter ~dune_describe ~index "." in
       Alcotest.(check int)
