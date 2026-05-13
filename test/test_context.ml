@@ -1,5 +1,7 @@
 (** Tests for Context module *)
 
+let dummy_index = lazy (failwith "Monopam_info_index not built in tests")
+
 let test_create_project () =
   (* Test creating a project context *)
   let config = Merlint.Config.default in
@@ -8,6 +10,7 @@ let test_create_project () =
   let dune_describe = Merlint.Dune.describe (Fpath.v ".") in
   let ctx =
     Merlint.Context.project ~config ~project_root ~all_files ~dune_describe
+      ~index:dummy_index
   in
   (* Test that we can access fields *)
   Alcotest.(check string) "project root" "." ctx.project_root;
@@ -44,6 +47,7 @@ let test_lazy_evaluation () =
       executable_modules = lazy [];
       lib_modules = lazy [];
       test_modules = lazy [];
+      index = dummy_index;
     }
   in
   (* Files should not be evaluated yet *)

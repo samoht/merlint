@@ -13,6 +13,7 @@
   vlog
   nox-tty
   monopam-info
+  monopam-info.index
   nox-memtrace))
 
 (executable

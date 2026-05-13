@@ -14,10 +14,10 @@
   fpath
   nox-tty
   nox-opam
-  nox-opam.bytesrw
   nox-toml
   bytesrw
   nox-sexp
+  monopam-info.index
   unix))
 
 (rule

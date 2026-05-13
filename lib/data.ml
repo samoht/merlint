@@ -86,4 +86,6 @@ let all_rules =
     E915.rule;
     E920.rule;
     E921.rule;
+    E930.rule;
+    E931.rule;
   ]

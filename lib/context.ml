@@ -27,6 +27,7 @@ type project = {
   executable_modules : string list Lazy.t;
   lib_modules : string list Lazy.t;
   test_modules : string list Lazy.t;
+  index : Monopam_info_index.t Lazy.t;
 }
 
 let file ~filename ~config ~project_root ~outline ~dump =
@@ -85,7 +86,7 @@ let discover_test_modules ~all_files dune_desc_lazy =
         all_test_modules);
   all_test_modules
 
-let project ~config ~project_root ~all_files ~dune_describe =
+let project ~config ~project_root ~all_files ~dune_describe ~index =
   let dune_desc_lazy = lazy dune_describe in
   {
     config;
@@ -116,7 +117,10 @@ let project ~config ~project_root ~all_files ~dune_describe =
       lazy (Dune.executable_modules (Lazy.force dune_desc_lazy));
     lib_modules = lazy (Dune.lib_modules (Lazy.force dune_desc_lazy));
     test_modules = lazy (discover_test_modules ~all_files dune_desc_lazy);
+    index;
   }
+
+let index ctx = Lazy.force ctx.index
 
 (* File context accessors *)
 let ast ctx = Lazy.force ctx.ast
