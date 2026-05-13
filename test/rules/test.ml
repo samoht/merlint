@@ -97,4 +97,5 @@ let () =
       Test_e931.suite;
       Test_interop.suite;
       Test_opam_tags.suite;
+      Test_empty_suite.suite;
     ]
