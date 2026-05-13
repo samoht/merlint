@@ -87,6 +87,48 @@ let classify_named_binding ~graph ~siblings name =
   let scc = scc_of_node ~graph ~siblings name in
   classify_binding ~scc ~self_loop:(List.mem name refs)
 
+let walk_expr issues expr =
+  (* Nested [let rec ... and ...] inside an expression body. *)
+  let iter =
+    {
+      Ast_iterator.default_iterator with
+      expr =
+        (fun this e ->
+          (match e.Parsetree.pexp_desc with
+          | Pexp_let (Recursive, bindings, _) when List.length bindings >= 2 ->
+              let named =
+                List.filter_map
+                  (fun (vb : Parsetree.value_binding) ->
+                    match pat_name vb.pvb_pat with
+                    | Some n -> Some (vb, n)
+                    | None -> None)
+                  bindings
+              in
+              if List.length named = List.length bindings then
+                let siblings = List.map snd named in
+                let graph = graph_of_named_bindings named in
+                List.iter
+                  (fun ((vb : Parsetree.value_binding), name) ->
+                    match classify_named_binding ~graph ~siblings name with
+                    | `Mutually_recursive -> ()
+                    | `Standalone_rec ->
+                        issues :=
+                          ( vb.pvb_loc,
+                            { name; kind = Standalone_rec; group = siblings } )
+                          :: !issues
+                    | `Standalone_nonrec ->
+                        issues :=
+                          ( vb.pvb_loc,
+                            { name; kind = Standalone_nonrec; group = siblings }
+                          )
+                          :: !issues)
+                  named
+          | _ -> ());
+          Ast_iterator.default_iterator.expr this e);
+    }
+  in
+  iter.expr iter expr
+
 (** Walk every top-level (and nested) structure looking for
     [Pstr_value (Recursive, bindings)] with at least two bindings whose patterns
     are [Ppat_var]. Returns a list of [(loc, name, kind, group_names)] for each
@@ -122,9 +164,11 @@ let collect_misused_bindings structure =
                       { name; kind = Standalone_nonrec; group = siblings } )
                     :: !issues)
             named;
-          List.iter (fun (vb, _) -> walk_expr vb.Parsetree.pvb_expr) named)
+          List.iter
+            (fun (vb, _) -> walk_expr issues vb.Parsetree.pvb_expr)
+            named)
     | Pstr_value (_, bindings) ->
-        List.iter (fun vb -> walk_expr vb.Parsetree.pvb_expr) bindings
+        List.iter (fun vb -> walk_expr issues vb.Parsetree.pvb_expr) bindings
     | Pstr_module mb -> walk_module_expr mb.pmb_expr
     | Pstr_recmodule mbs ->
         List.iter
@@ -135,52 +179,6 @@ let collect_misused_bindings structure =
     match me.pmod_desc with
     | Pmod_structure s -> List.iter walk_item s
     | _ -> ()
-  and walk_expr expr =
-    (* Nested [let rec ... and ...] inside an expression body. *)
-    let iter =
-      {
-        Ast_iterator.default_iterator with
-        expr =
-          (fun this e ->
-            (match e.Parsetree.pexp_desc with
-            | Pexp_let (Recursive, bindings, _) when List.length bindings >= 2
-              ->
-                let named =
-                  List.filter_map
-                    (fun (vb : Parsetree.value_binding) ->
-                      match pat_name vb.pvb_pat with
-                      | Some n -> Some (vb, n)
-                      | None -> None)
-                    bindings
-                in
-                if List.length named = List.length bindings then
-                  let siblings = List.map snd named in
-                  let graph = graph_of_named_bindings named in
-                  List.iter
-                    (fun ((vb : Parsetree.value_binding), name) ->
-                      match classify_named_binding ~graph ~siblings name with
-                      | `Mutually_recursive -> ()
-                      | `Standalone_rec ->
-                          issues :=
-                            ( vb.pvb_loc,
-                              { name; kind = Standalone_rec; group = siblings }
-                            )
-                            :: !issues
-                      | `Standalone_nonrec ->
-                          issues :=
-                            ( vb.pvb_loc,
-                              {
-                                name;
-                                kind = Standalone_nonrec;
-                                group = siblings;
-                              } )
-                            :: !issues)
-                    named
-            | _ -> ());
-            Ast_iterator.default_iterator.expr this e);
-      }
-    in
-    iter.expr iter expr
   in
   List.iter walk_item structure;
   List.rev !issues

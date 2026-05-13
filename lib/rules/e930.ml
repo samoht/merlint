@@ -67,19 +67,19 @@ let rec extract_dep_name (v : Opam.Value.t) =
   | Opam.Value.Option (inner, _) -> extract_dep_name inner
   | _ -> None
 
-(* Depends entries with [with-test] or [with-doc] don't ship at runtime;
-   they're fine even in a sans-io package. *)
-let rec dep_is_runtime (v : Opam.Value.t) =
-  match v with
-  | Opam.Value.Option (_, filters) -> not (List.exists is_non_runtime filters)
-  | _ -> true
-
-and is_non_runtime (v : Opam.Value.t) =
+let rec is_non_runtime (v : Opam.Value.t) =
   match v with
   | Opam.Value.Ident "with-test" | Opam.Value.Ident "with-doc" -> true
   | Opam.Value.Logop (_, l, r) -> is_non_runtime l || is_non_runtime r
   | Opam.Value.Pfxop (_, x) -> is_non_runtime x
   | _ -> false
+
+(* Depends entries with [with-test] or [with-doc] don't ship at runtime;
+   they're fine even in a sans-io package. *)
+let dep_is_runtime (v : Opam.Value.t) =
+  match v with
+  | Opam.Value.Option (_, filters) -> not (List.exists is_non_runtime filters)
+  | _ -> true
 
 let read_runtime_depends path =
   try
