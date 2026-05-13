@@ -2029,6 +2029,13 @@ and replace each call site with [err_x "..." args] / [fail_x "..." args]. The la
     </div>
     <div class="error-hint"><p>Move struct_, module_, c_stubs, ml_stubs out of the .mli. These belong in c/gen.ml where they are used to generate EverParse 3D files and C stubs. The codec is the public API; the 3D projection is a build artifact.</p></div>
 </div>
+<div class="error-card" id="E910">
+    <div>
+        <span class="error-code">E910</span>
+        <span class="error-title">Package quality policy</span>
+    </div>
+    <div class="error-hint"><p>Add x-quality field to *.opam.template to declare required quality features. Merlint checks that declared features actually exist.</p></div>
+</div>
 <div class="error-card" id="E915">
     <div>
         <span class="error-code">E915</span>

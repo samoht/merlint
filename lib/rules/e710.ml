@@ -2,8 +2,6 @@
 
 type payload = { fuzz_file : string; expected_module : string }
 
-let is_fuzz_dir = File.is_in_fuzz_dir
-
 (** Extract the expected library module name from a fuzz file. fuzz_foo.ml ->
     foo *)
 let expected_lib_module fuzz_file =
@@ -21,13 +19,17 @@ let check (ctx : Context.project) =
     let from_tests =
       List.concat_map
         (fun (t : Dune.test_info) ->
-          List.filter (fun f -> Fpath.has_ext ".ml" f && is_fuzz_dir f) t.files)
+          List.filter
+            (fun f -> Fpath.has_ext ".ml" f && File.is_in_fuzz_dir f)
+            t.files)
         tests
     in
     let from_execs =
       List.concat_map
         (fun (_, files) ->
-          List.filter (fun f -> Fpath.has_ext ".ml" f && is_fuzz_dir f) files)
+          List.filter
+            (fun f -> Fpath.has_ext ".ml" f && File.is_in_fuzz_dir f)
+            files)
         execs
     in
     from_tests @ from_execs

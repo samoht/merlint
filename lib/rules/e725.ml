@@ -6,8 +6,6 @@ type payload = {
   actual_suite : string;
 }
 
-let is_fuzz_dir = File.is_in_fuzz_dir
-
 (** Extract the expected suite name from fuzz_foo.ml -> "foo". *)
 let expected_suite file =
   let basename = Fpath.(file |> rem_ext |> basename) in
@@ -44,7 +42,7 @@ let check ctx =
   List.concat_map
     (fun filename ->
       let fp = Fpath.v filename in
-      if Fpath.has_ext ".ml" fp && is_fuzz_dir fp then
+      if Fpath.has_ext ".ml" fp && File.is_in_fuzz_dir fp then
         match expected_suite fp with
         | None -> []
         | Some expected ->

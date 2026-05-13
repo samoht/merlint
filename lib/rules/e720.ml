@@ -2,8 +2,6 @@
 
 type payload = { directory : string; stanza_names : string list }
 
-let is_fuzz_dir = File.is_in_fuzz_dir
-
 (** Collect all stanza names in fuzz/ directories from both test and executable
     stanzas. *)
 let fuzz_stanzas_by_dir dune_describe =
@@ -14,7 +12,7 @@ let fuzz_stanzas_by_dir dune_describe =
         else
           match
             List.find_opt
-              (fun f -> Fpath.has_ext ".ml" f && is_fuzz_dir f)
+              (fun f -> Fpath.has_ext ".ml" f && File.is_in_fuzz_dir f)
               files
           with
           | Some f -> Some (Fpath.parent f |> Fpath.to_string, name)

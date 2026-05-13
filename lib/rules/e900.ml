@@ -2,49 +2,36 @@
 
 type payload = { package : string }
 
+let try_readdir d = try Sys.readdir d |> Array.to_list with Sys_error _ -> []
+let is_dir p = Sys.file_exists p && Sys.is_directory p
+let skip_pkg = function "_build" | ".git" | "_opam" -> true | _ -> false
+
+let file_uses_wire path =
+  try
+    let content = In_channel.with_open_text path In_channel.input_all in
+    Astring.String.is_infix ~affix:"Wire.Codec.v " content
+    || Astring.String.is_infix ~affix:"Codec.v \"" content
+  with Sys_error _ -> false
+
+let package_uses_wire lib_dir =
+  try_readdir lib_dir
+  |> List.filter (fun f ->
+      Filename.check_suffix f ".ml" && not (Filename.check_suffix f ".mli"))
+  |> List.exists (fun f -> file_uses_wire (Filename.concat lib_dir f))
+
+let check_package root pkg =
+  let pkg_dir = Filename.concat root pkg in
+  let lib_dir = Filename.concat pkg_dir "lib" in
+  let c_dir = Filename.concat pkg_dir "c" in
+  if skip_pkg pkg || not (is_dir pkg_dir && is_dir lib_dir) then []
+  else if (not (package_uses_wire lib_dir)) || is_dir c_dir then []
+  else
+    let loc = Location.in_file (Filename.concat pkg "dune-project") in
+    [ Issue.v ~loc { package = pkg } ]
+
 let check (ctx : Context.project) =
   let root = ctx.project_root in
-  let try_readdir d =
-    try Sys.readdir d |> Array.to_list with Sys_error _ -> []
-  in
-  let issues = ref [] in
-  let packages = try_readdir root in
-  List.iter
-    (fun pkg ->
-      let pkg_dir = Filename.concat root pkg in
-      if
-        Sys.file_exists pkg_dir && Sys.is_directory pkg_dir && pkg <> "_build"
-        && pkg <> ".git" && pkg <> "_opam"
-      then
-        let lib_dir = Filename.concat pkg_dir "lib" in
-        if Sys.file_exists lib_dir && Sys.is_directory lib_dir then
-          let ml_files =
-            try_readdir lib_dir
-            |> List.filter (fun f ->
-                Filename.check_suffix f ".ml"
-                && not (Filename.check_suffix f ".mli"))
-          in
-          let has_wire =
-            List.exists
-              (fun f ->
-                try
-                  let content =
-                    In_channel.with_open_text
-                      (Filename.concat lib_dir f)
-                      In_channel.input_all
-                  in
-                  Astring.String.is_infix ~affix:"Wire.Codec.v " content
-                  || Astring.String.is_infix ~affix:"Codec.v \"" content
-                with Sys_error _ -> false)
-              ml_files
-          in
-          if has_wire then
-            let c_dir = Filename.concat pkg_dir "c" in
-            if not (Sys.file_exists c_dir && Sys.is_directory c_dir) then
-              let loc = Location.in_file (Filename.concat pkg "dune-project") in
-              issues := Issue.v ~loc { package = pkg } :: !issues)
-    packages;
-  !issues
+  List.concat_map (check_package root) (try_readdir root)
 
 let pp ppf { package } =
   Fmt.pf ppf

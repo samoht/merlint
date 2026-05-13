@@ -1,3 +1,3 @@
 (** Test module interface - only exports suite *)
 
-val suite : unit Alcotest.test
+val suite : string * unit Alcotest.test_case list

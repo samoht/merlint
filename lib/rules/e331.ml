@@ -34,87 +34,66 @@ let string_of_prefix_type = function
   | Get -> "get_"
   | Find -> "find_"
 
+let prefixed_name name =
+  let name_lower = String.lowercase_ascii name in
+  let prefixes =
+    [ ("create_", Create); ("make_", Make); ("get_", Get); ("find_", Find) ]
+  in
+  List.find_map
+    (fun (prefix, prefix_type) ->
+      if String.starts_with ~prefix name_lower then
+        let suffix =
+          String.sub name_lower (String.length prefix)
+            (String.length name_lower - String.length prefix)
+        in
+        if suffix = "" then None else Some (prefix_type, suffix)
+      else None)
+    prefixes
+
+let module_create_prefix ~module_name name =
+  let name_lower = String.lowercase_ascii name in
+  match prefixed_name name_lower with
+  | Some (Create, suffix)
+    when suffix = module_name || String.starts_with ~prefix:module_name suffix
+    ->
+      Some (Create, "v")
+  | _ -> None
+
+let redundant_prefix_issue ~loc ~name ~suggested_name ~prefix_type ~context =
+  Issue.v ~loc { function_name = name; suggested_name; prefix_type; context }
+
+let item_issue ~filename ~allowed ~module_name (item : Outline.item) =
+  let name = item.name in
+  match (item.kind, Outline.location filename item) with
+  | Outline.Value, Some loc
+    when (not (List.mem name allowed))
+         && (not (is_stdlib_find_alias name))
+         && not (is_find_option name item) -> (
+      match prefixed_name name with
+      | Some (prefix_type, suggested_name) ->
+          Some
+            (redundant_prefix_issue ~loc ~name ~suggested_name ~prefix_type
+               ~context:name)
+      | None -> (
+          match module_create_prefix ~module_name name with
+          | Some (prefix_type, suggested_name) ->
+              let context = String.capitalize_ascii module_name ^ "." ^ name in
+              Some
+                (redundant_prefix_issue ~loc ~name ~suggested_name ~prefix_type
+                   ~context)
+          | None -> None))
+  | _ -> None
+
 let check (ctx : Context.file) =
-  let outline_data = Context.outline ctx in
   let filename = ctx.filename in
   let allowed = ctx.config.allowed_words in
   let module_name =
     Filename.basename filename |> Filename.remove_extension
     |> String.lowercase_ascii
   in
-
-  (* Check if a function name has redundant prefix *)
-  let check_function_prefix name =
-    let name_lower = String.lowercase_ascii name in
-
-    (* Check for create_ prefix *)
-    if String.starts_with ~prefix:"create_" name_lower then
-      let suffix = String.sub name_lower 7 (String.length name_lower - 7) in
-      if suffix <> "" then Some (Create, suffix) else None
-      (* Check for make_ prefix *)
-    else if String.starts_with ~prefix:"make_" name_lower then
-      let suffix = String.sub name_lower 5 (String.length name_lower - 5) in
-      if suffix <> "" then Some (Make, suffix) else None
-      (* Check for get_ prefix *)
-    else if String.starts_with ~prefix:"get_" name_lower then
-      let suffix = String.sub name_lower 4 (String.length name_lower - 4) in
-      if suffix <> "" then Some (Get, suffix) else None
-      (* Check for find_ prefix *)
-    else if String.starts_with ~prefix:"find_" name_lower then
-      let suffix = String.sub name_lower 5 (String.length name_lower - 5) in
-      if suffix <> "" then Some (Find, suffix) else None
-    else None
-  in
-
-  (* Check for Module.create_module pattern *)
-  let check_module_create_prefix name =
-    let name_lower = String.lowercase_ascii name in
-    if String.starts_with ~prefix:"create_" name_lower then
-      let suffix = String.sub name_lower 7 (String.length name_lower - 7) in
-      (* Check if suffix matches module name or is related to module *)
-      if suffix = module_name || String.starts_with ~prefix:module_name suffix
-      then Some (Create, "v")
-      else None
-    else None
-  in
-
   List.filter_map
-    (fun (item : Outline.item) ->
-      let name = item.name in
-      let location = Outline.location filename item in
-
-      match (item.kind, location) with
-      | Outline.Value, Some loc
-        when (not (List.mem name allowed))
-             && (not (is_stdlib_find_alias name))
-             && not (is_find_option name item) -> (
-          (* Check for regular function prefix patterns *)
-          match check_function_prefix name with
-          | Some (prefix_type, suggested) ->
-              Some
-                (Issue.v ~loc
-                   {
-                     function_name = name;
-                     suggested_name = suggested;
-                     prefix_type;
-                     context = name;
-                   })
-          | None -> (
-              (* Check for Module.create_module pattern *)
-              match check_module_create_prefix name with
-              | Some (prefix_type, suggested) ->
-                  Some
-                    (Issue.v ~loc
-                       {
-                         function_name = name;
-                         suggested_name = suggested;
-                         prefix_type;
-                         context =
-                           String.capitalize_ascii module_name ^ "." ^ name;
-                       })
-              | None -> None))
-      | _ -> None)
-    outline_data
+    (item_issue ~filename ~allowed ~module_name)
+    (Context.outline ctx)
 
 let pp ppf { function_name = _; suggested_name; prefix_type; context } =
   let prefix_str = string_of_prefix_type prefix_type in

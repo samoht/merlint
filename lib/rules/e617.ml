@@ -59,59 +59,60 @@ let find_suite_name structure =
       | _ -> None)
     structure
 
+let parse_structure ~filename content =
+  try
+    let lexbuf = Lexing.from_string content in
+    lexbuf.lex_curr_p <- { lexbuf.lex_curr_p with pos_fname = filename };
+    Some (Parse.implementation lexbuf)
+  with Syntaxerr.Error _ | Lexer.Error _ -> None
+
+let suite_issue ~filename ~expected_name
+    ((suite_name, name_loc) : string * Warnings.loc) =
+  let loc =
+    Location.v ~file:filename ~start_line:name_loc.loc_start.pos_lnum
+      ~start_col:0 ~end_line:name_loc.loc_start.pos_lnum ~end_col:80
+  in
+  if suite_name <> String.lowercase_ascii suite_name then
+    Some
+      (Issue.v ~loc
+         {
+           suite_name;
+           issue_type = Not_lowercase (String.lowercase_ascii suite_name);
+         })
+  else if not (is_snake_case suite_name) then
+    Some (Issue.v ~loc { suite_name; issue_type = Not_snake_case suite_name })
+  else if suite_name <> expected_name then
+    Some
+      (Issue.v ~loc
+         {
+           suite_name;
+           issue_type =
+             Wrong_name { actual = suite_name; expected = expected_name };
+         })
+  else None
+
+let is_test_module_file filename =
+  let basename = Filename.basename filename in
+  String.starts_with ~prefix:"test_" basename
+  && String.ends_with ~suffix:".ml" basename
+
+let issues_of_content ~filename content =
+  let expected_name = extract_expected_name filename in
+  match parse_structure ~filename content with
+  | None -> []
+  | Some structure -> (
+      match find_suite_name structure with
+      | None -> []
+      | Some found -> (
+          match suite_issue ~filename ~expected_name found with
+          | None -> []
+          | Some issue -> [ issue ]))
+
 let check (ctx : Context.file) =
   let filename = ctx.filename in
-  let basename = Filename.basename filename in
-  if
-    not
-      (String.starts_with ~prefix:"test_" basename
-      && String.ends_with ~suffix:".ml" basename)
-  then []
-  else
-    let expected_name = extract_expected_name filename in
-    let content = Context.content ctx in
-    let structure =
-      try
-        let lexbuf = Lexing.from_string content in
-        lexbuf.lex_curr_p <- { lexbuf.lex_curr_p with pos_fname = filename };
-        Some (Parse.implementation lexbuf)
-      with Syntaxerr.Error _ | Lexer.Error _ -> None
-    in
-    match structure with
-    | None -> []
-    | Some structure -> (
-        match find_suite_name structure with
-        | None -> []
-        | Some (suite_name, name_loc) ->
-            let loc =
-              Location.v ~file:filename ~start_line:name_loc.loc_start.pos_lnum
-                ~start_col:0 ~end_line:name_loc.loc_start.pos_lnum ~end_col:80
-            in
-            if suite_name <> String.lowercase_ascii suite_name then
-              [
-                Issue.v ~loc
-                  {
-                    suite_name;
-                    issue_type =
-                      Not_lowercase (String.lowercase_ascii suite_name);
-                  };
-              ]
-            else if not (is_snake_case suite_name) then
-              [
-                Issue.v ~loc
-                  { suite_name; issue_type = Not_snake_case suite_name };
-              ]
-            else if suite_name <> expected_name then
-              [
-                Issue.v ~loc
-                  {
-                    suite_name;
-                    issue_type =
-                      Wrong_name
-                        { actual = suite_name; expected = expected_name };
-                  };
-              ]
-            else [])
+  if is_test_module_file filename then
+    issues_of_content ~filename (Context.content ctx)
+  else []
 
 let pp ppf { suite_name; issue_type } =
   match issue_type with

@@ -26,6 +26,11 @@ type kind = Missing | Set_to_true
 type payload = { package : string; kind : kind }
 
 let try_readdir d = try Sys.readdir d |> Array.to_list with Sys_error _ -> []
+let is_dir p = try Sys.is_directory p with Sys_error _ -> false
+
+let skip_entry name =
+  name = "_build" || name = "_opam" || name = ".git"
+  || String.starts_with ~prefix:"." name
 
 let has_opam_file pkg_dir =
   List.exists
@@ -65,31 +70,26 @@ let find_setting contents =
   | None -> None
   | Some g -> Some (Re.Group.get g 1)
 
+let issue_of_setting name loc = function
+  | Some "false" | Some "false-if-hidden-includes-supported" -> []
+  | Some "true" -> [ Issue.v ~loc { package = name; kind = Set_to_true } ]
+  | Some _ | None -> [ Issue.v ~loc { package = name; kind = Missing } ]
+
+let check_package root name =
+  if skip_entry name then []
+  else
+    let pkg_dir = Filename.concat root name in
+    if (not (is_dir pkg_dir)) || not (has_opam_file pkg_dir) then []
+    else
+      let dp_path = Filename.concat pkg_dir "dune-project" in
+      match read_file dp_path with
+      | None -> []
+      | Some c ->
+          issue_of_setting name (Location.in_file dp_path) (find_setting c)
+
 let check (ctx : Context.project) =
   let root = ctx.project_root in
-  let is_dir p = try Sys.is_directory p with Sys_error _ -> false in
-  List.concat_map
-    (fun name ->
-      if
-        name = "_build" || name = "_opam" || name = ".git"
-        || String.starts_with ~prefix:"." name
-      then []
-      else
-        let pkg_dir = Filename.concat root name in
-        if (not (is_dir pkg_dir)) || not (has_opam_file pkg_dir) then []
-        else
-          let dp_path = Filename.concat pkg_dir "dune-project" in
-          let loc = Location.in_file dp_path in
-          match read_file dp_path with
-          | None -> []
-          | Some c -> (
-              match find_setting c with
-              | Some "false" | Some "false-if-hidden-includes-supported" -> []
-              | Some "true" ->
-                  [ Issue.v ~loc { package = name; kind = Set_to_true } ]
-              | Some _ | None ->
-                  [ Issue.v ~loc { package = name; kind = Missing } ]))
-    (try_readdir root)
+  List.concat_map (check_package root) (try_readdir root)
 
 let pp ppf { package; kind } =
   match kind with

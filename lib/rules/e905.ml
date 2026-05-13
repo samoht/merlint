@@ -3,66 +3,65 @@
 type payload = { file : string; symbol : string }
 
 let wire_symbols = [ "struct_"; "module_"; "c_stubs"; "ml_stubs" ]
+let try_readdir d = try Sys.readdir d |> Array.to_list with Sys_error _ -> []
+let is_dir d = Sys.file_exists d && Sys.is_directory d
+let skip_pkg = function "_build" | ".git" | "_opam" -> true | _ -> false
+
+let file_contains path affix =
+  try
+    let content = In_channel.with_open_text path In_channel.input_all in
+    Astring.String.is_infix ~affix content
+  with Sys_error _ -> false
+
+let package_uses_wire lib_dir all_files =
+  List.exists
+    (fun f ->
+      Filename.check_suffix f ".ml"
+      && (not (Filename.check_suffix f ".mli"))
+      && file_contains (Filename.concat lib_dir f) "Wire.")
+    all_files
+
+let exposed_symbol_issues pkg lib_dir mli =
+  let path = Filename.concat lib_dir mli in
+  let content =
+    try Some (In_channel.with_open_text path In_channel.input_all)
+    with Sys_error _ -> None
+  in
+  match content with
+  | None -> []
+  | Some content ->
+      List.filter_map
+        (fun sym ->
+          let pattern = "val " ^ sym in
+          if Astring.String.is_infix ~affix:pattern content then
+            let file = Filename.concat pkg mli in
+            Some (Issue.v ~loc:(Location.in_file file) { file; symbol = sym })
+          else None)
+        wire_symbols
+
+let check_package pkg =
+  let pkg_dir = pkg in
+  let lib_dir = Filename.concat pkg_dir "lib" in
+  if
+    (not (is_dir pkg_dir))
+    || skip_pkg (Filename.basename pkg)
+    || not (is_dir lib_dir)
+  then []
+  else
+    let all_files = try_readdir lib_dir in
+    if not (package_uses_wire lib_dir all_files) then []
+    else
+      all_files
+      |> List.filter (fun f -> Filename.check_suffix f ".mli")
+      |> List.concat_map (exposed_symbol_issues (Filename.basename pkg) lib_dir)
 
 (** Walk <pkg>/lib/*.mli looking for val struct_ / val module_ / val c_stubs /
     val ml_stubs. These belong in c/gen.ml. *)
 let check (ctx : Context.project) =
   let root = ctx.project_root in
-  let try_readdir d =
-    try Sys.readdir d |> Array.to_list with Sys_error _ -> []
-  in
-  let issues = ref [] in
-  let packages = try_readdir root in
-  List.iter
-    (fun pkg ->
-      let pkg_dir = Filename.concat root pkg in
-      if
-        Sys.file_exists pkg_dir && Sys.is_directory pkg_dir && pkg <> "_build"
-        && pkg <> ".git" && pkg <> "_opam"
-      then
-        let lib_dir = Filename.concat pkg_dir "lib" in
-        if Sys.file_exists lib_dir && Sys.is_directory lib_dir then
-          let all_files = try_readdir lib_dir in
-          (* Only flag packages that actually use Wire *)
-          let has_wire =
-            List.exists
-              (fun f ->
-                Filename.check_suffix f ".ml"
-                && (not (Filename.check_suffix f ".mli"))
-                &&
-                  try
-                    let c =
-                      In_channel.with_open_text
-                        (Filename.concat lib_dir f)
-                        In_channel.input_all
-                    in
-                    Astring.String.is_infix ~affix:"Wire." c
-                  with Sys_error _ -> false)
-              all_files
-          in
-          if has_wire then
-            let mli_files =
-              List.filter (fun f -> Filename.check_suffix f ".mli") all_files
-            in
-            List.iter
-              (fun f ->
-                try
-                  let path = Filename.concat lib_dir f in
-                  let content =
-                    In_channel.with_open_text path In_channel.input_all
-                  in
-                  List.iter
-                    (fun sym ->
-                      let pattern = "val " ^ sym in
-                      if Astring.String.is_infix ~affix:pattern content then
-                        let file = Filename.concat pkg f in
-                        let loc = Location.in_file file in
-                        issues := Issue.v ~loc { file; symbol = sym } :: !issues)
-                    wire_symbols
-                with Sys_error _ -> ())
-              mli_files)
-    packages;
-  !issues
+  root |> try_readdir
+  |> List.map (Filename.concat root)
+  |> List.concat_map check_package
 
 let pp ppf { file; symbol } =
   Fmt.pf ppf "%s exposes Wire EverParse symbol `%s` in public API" file symbol

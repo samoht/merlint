@@ -1,0 +1,1 @@
+let timestamp ~now = now

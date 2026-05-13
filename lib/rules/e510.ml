@@ -2,59 +2,51 @@
 
 type payload = { module_name : string }
 
+let log_functions =
+  [
+    ("Logs", "debug");
+    ("Logs", "info");
+    ("Logs", "warn");
+    ("Logs", "err");
+    ("Logs", "app");
+    ("Log", "debug");
+    ("Log", "info");
+    ("Log", "warn");
+    ("Log", "err");
+    ("Log", "app");
+  ]
+
+let uses_logging identifiers =
+  List.exists
+    (fun (module_name, func_name) ->
+      List.exists
+        (fun (ident : Merlin.Dump.elt) ->
+          match ident.name.prefix with
+          | prefix_mod :: _ when prefix_mod = module_name ->
+              ident.name.base = func_name
+          | _ -> false)
+        identifiers)
+    log_functions
+
+let has_log_source dump_data identifiers =
+  List.exists
+    (fun (ident : Merlin.Dump.elt) ->
+      match (ident.name.prefix, ident.name.base) with
+      | [ "Logs"; "Src" ], "create" -> true
+      | [ "Logs" ], "src_log" -> true
+      | _, ("log_src" | "src") ->
+          List.exists
+            (fun (value : Merlin.Dump.elt) -> value.name.base = ident.name.base)
+            dump_data.Merlin.Dump.values
+      | _ -> false)
+    identifiers
+
 let check (ctx : Context.file) =
   try
     let dump_data = Context.dump ctx in
-    (* Get all identifiers from the typedtree *)
     let identifiers = dump_data.Merlin.Dump.identifiers in
-
-    (* Check if any logging functions are used *)
-    let log_functions =
-      [
-        ("Logs", "debug");
-        ("Logs", "info");
-        ("Logs", "warn");
-        ("Logs", "err");
-        ("Logs", "app");
-        ("Log", "debug");
-        ("Log", "info");
-        ("Log", "warn");
-        ("Log", "err");
-        ("Log", "app");
-      ]
-    in
-
-    let uses_logging =
-      List.exists
-        (fun (module_name, func_name) ->
-          List.exists
-            (fun (ident : Merlin.Dump.elt) ->
-              match ident.name.prefix with
-              | prefix_mod :: _ when prefix_mod = module_name ->
-                  ident.name.base = func_name
-              | _ -> false)
-            identifiers)
-        log_functions
-    in
-
-    (* Check if log source is defined *)
-    let has_log_source =
-      List.exists
-        (fun (ident : Merlin.Dump.elt) ->
-          match (ident.name.prefix, ident.name.base) with
-          | [ "Logs"; "Src" ], "create" -> true
-          | [ "Logs" ], "src_log" -> true
-          | _, ("log_src" | "src") ->
-              (* Check if it's a value definition for log source *)
-              List.exists
-                (fun (value : Merlin.Dump.elt) ->
-                  value.name.base = ident.name.base)
-                dump_data.values
-          | _ -> false)
-        identifiers
-    in
-
-    if uses_logging && not has_log_source then
+    if uses_logging identifiers && not (has_log_source dump_data identifiers)
+    then
       let module_name =
         Filename.basename ctx.filename
         |> Filename.remove_extension |> String.capitalize_ascii

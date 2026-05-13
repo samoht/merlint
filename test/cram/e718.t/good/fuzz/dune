@@ -3,6 +3,7 @@
  (modules fuzz fuzz_parser)
  (libraries alcobar))
 
-(executable
- (name gen_corpus)
- (modules gen_corpus))
+(rule
+ (alias fuzz)
+ (action
+  (run %{exe:fuzz.exe} --gen-corpus corpus)))

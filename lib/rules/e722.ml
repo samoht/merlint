@@ -2,8 +2,6 @@
 
 type payload = { stanza_name : string; directory : string }
 
-let is_fuzz_dir = File.is_in_fuzz_dir
-
 (** Find test stanzas that contain files in fuzz/ directories. These should use
     (executable ...) stanzas instead. *)
 let check (ctx : Context.project) =
@@ -11,7 +9,9 @@ let check (ctx : Context.project) =
   List.filter_map
     (fun (t : Dune.test_info) ->
       let fuzz_files =
-        List.filter (fun f -> Fpath.has_ext ".ml" f && is_fuzz_dir f) t.files
+        List.filter
+          (fun f -> Fpath.has_ext ".ml" f && File.is_in_fuzz_dir f)
+          t.files
       in
       match fuzz_files with
       | [] -> None

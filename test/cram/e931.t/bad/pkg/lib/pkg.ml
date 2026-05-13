@@ -1,0 +1,1 @@
+let timestamp () = Unix.gettimeofday ()

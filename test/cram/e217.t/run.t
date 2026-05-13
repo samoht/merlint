@@ -13,11 +13,12 @@ Test bad example - should flag generic f (Fmt.str ...) but NOT specialized failw
     (hoist the formatter outside any hot loop to avoid re-allocating); -
     [print_endline (Fmt.str ...)] -> [Fmt.pr "...@."]; - [print_string (Fmt.str
     ...)] -> [Fmt.pr "..."]; - [prerr_endline (Fmt.str ...)] -> [Fmt.epr "...@."];
-    - [prerr_string (Fmt.str ...)] -> [Fmt.epr "..."]; - [Error (Fmt.str ...)] ->
-    [Fmt.kstr (fun e -> Error e) "..."], or a one-shot [error_msgf] helper in the
-    package; - any other [<f> (Fmt.str ...)] -> [Fmt.kstr <f> "..."]. Specialised
-    cases for [failwith], [invalid_arg], [Alcotest.fail], and bare [fail] are
-    handled by E215, E216, and E616 respectively.
+    - [prerr_string (Fmt.str ...)] -> [Fmt.epr "..."]; - [Error (... formatted
+    with Fmt.str ...)] -> [Fmt.kstr (fun e -> Error e) "..."], or a one-shot
+    [error_msgf] helper in the package; - any other [<f> (Fmt.str ...)] ->
+    [Fmt.kstr <f> "..."]. Specialised cases for [failwith], [invalid_arg],
+    [Alcotest.fail], and bare [fail] are handled by E215, E216, and E616
+    respectively.
     - bad.ml:2:22: Wrap with [Fmt.kstr (fun s -> Error s) "..."] instead of [... (Fmt.str ...)]
     - bad.ml:6:14: Wrap with [Fmt.kstr log "..."] instead of [... (Fmt.str ...)]
     - bad.ml:9:14: Wrap with [Fmt.kstr (fun s -> Some s) "..."] instead of [... (Fmt.str ...)]
