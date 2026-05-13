@@ -30,6 +30,7 @@
   astring
   nox-sexp
   nox-opam
+  nox-toml
   nox-tty
   vlog
   eio_main

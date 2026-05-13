@@ -29,7 +29,7 @@ let read_tags path =
       ~finally:(fun () -> close_in ic)
       (fun () ->
         let r = Bytesrw.Bytes.Reader.of_in_channel ic in
-        match Opam_bytesrw.field_reader ~file:path "tags" r with
+        match Opam.field_reader ~file:path "tags" r with
         | None -> None
         | Some (Opam.Value.String s) -> Some [ s ]
         | Some (Opam.Value.List l) -> Some (List.filter_map string_of_value l)
