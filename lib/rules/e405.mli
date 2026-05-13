@@ -4,4 +4,4 @@
     in .mli files should be documented for API clarity. *)
 
 val rule : Rule.t
-(** The E405 rule definition *)
+(** [rule] is the E405 rule definition. *)

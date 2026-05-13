@@ -13,7 +13,7 @@ let shell_patterns =
   ]
 
 let check (ctx : Context.project) =
-  let dirs = Interop.find_oracle_dirs ctx.project_root in
+  let dirs = Interop.oracle_dirs ctx.project_root in
   List.filter_map
     (fun (d : Interop.oracle_dir) ->
       if d.has_test_ml then

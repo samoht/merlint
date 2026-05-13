@@ -4,4 +4,4 @@
     should use snake_case naming. *)
 
 val rule : Rule.t
-(** The E310 rule definition *)
+(** [rule] is the E310 rule definition. *)

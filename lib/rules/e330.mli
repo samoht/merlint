@@ -4,4 +4,4 @@
     is redundant (e.g., My_module.my_module_do_thing). *)
 
 val rule : Rule.t
-(** The E330 rule definition *)
+(** [rule] is the E330 rule definition. *)

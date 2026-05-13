@@ -4,4 +4,4 @@
     can lead to runtime crashes. *)
 
 val rule : Rule.t
-(** The E100 rule definition *)
+(** [rule] is the E100 rule definition. *)

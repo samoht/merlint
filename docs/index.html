@@ -736,13 +736,13 @@ pre code {
   - [print_string (Fmt.str ...)] -&gt; [Fmt.pr "..."];
   - [prerr_endline (Fmt.str ...)] -&gt; [Fmt.epr "...@."];
   - [prerr_string (Fmt.str ...)] -&gt; [Fmt.epr "..."];
-  - [Error (Fmt.str ...)] -&gt; [Fmt.kstr (fun e -&gt; Error e) "..."], or a one-shot [error_msgf] helper in the package;
+  - [Error (... formatted with Fmt.str ...)] -&gt; [Fmt.kstr (fun e -&gt; Error e) "..."], or a one-shot [error_msgf] helper in the package;
   - any other [&lt;f&gt; (Fmt.str ...)] -&gt; [Fmt.kstr &lt;f&gt; "..."].
 Specialised cases for [failwith], [invalid_arg], [Alcotest.fail], and bare [fail] are handled by E215, E216, and E616 respectively.</p><div class="examples-grid">
 <div class="example bad">
   <h4>BAD</h4>
   <pre><code><span class="kw">let</span> parse s =
-  <span class="kw">if</span> s = &quot;&quot; <span class="kw">then</span> <span class="cn">Error</span> (<span class="cn">Fmt</span>.str &quot;empty input&quot;)
+  <span class="kw">if</span> s = &quot;&quot; <span class="kw">then</span> <span class="cn">Fmt</span>.kstr (<span class="kw">fun</span> e -&gt; <span class="cn">Error</span> e) &quot;empty input&quot;
   <span class="kw">else</span> <span class="cn">Ok</span> s
 
 <span class="kw">let</span> log_event buf ev =

@@ -5,4 +5,4 @@
     - Match the test file name (test_foo.ml should have suite 'foo') *)
 
 val rule : Rule.t
-(** The E617 rule definition *)
+(** [rule] is the E617 rule definition. *)

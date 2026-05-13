@@ -74,7 +74,7 @@ let is_conversion_type ct =
 let source_type_pretty ct =
   match (strip_labeled_args ct).ptyp_desc with
   | Ptyp_arrow (Asttypes.Nolabel, src, _) ->
-      Some (Format.asprintf "%a" Pprintast.core_type src)
+      Fmt.kstr Option.some "%a" Pprintast.core_type src
   | _ -> None
 
 (** Source type-name of a single-arrow conversion, when one exists. Returns

@@ -5,4 +5,4 @@
     use, Fmt offers additional features. *)
 
 val rule : Rule.t
-(** The E205 rule definition *)
+(** [rule] is the E205 rule definition. *)

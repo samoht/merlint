@@ -19,8 +19,8 @@ let check (ctx : Context.file) =
               :: !issues);
       List.rev !issues
 
-let pp _ppf () =
-  Fmt.pf _ppf
+let pp ppf () =
+  Fmt.pf ppf
     "Use Fmt.failwith instead of failwith (Fmt.str ...) - Fmt.failwith \
      provides printf-style formatting directly"
 

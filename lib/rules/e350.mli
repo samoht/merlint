@@ -4,4 +4,4 @@
     lead to confusion about argument order and meaning. *)
 
 val rule : Rule.t
-(** The E350 rule definition *)
+(** [rule] is the E350 rule definition. *)

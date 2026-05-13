@@ -2,6 +2,10 @@
 
 type payload = { test_file : string; expected_module : string }
 
+let log_src = Logs.Src.create "merlint.rules.e610" ~doc:"E610 rule diagnostics"
+
+module Log = (val Logs.src_log log_src : Logs.LOG)
+
 (** Find "test/" in path, handling both absolute (/test/) and relative (test/)
     paths. Returns the index after "test/" if found. *)
 let find_test_prefix path =
@@ -56,10 +60,10 @@ let check ctx =
               match find_lib_prefix path with
               | Some idx ->
                   let result = String.sub path idx (String.length path - idx) in
-                  Logs.debug (fun m -> m "E610: lib path %s -> %s" path result);
+                  Log.debug (fun m -> m "E610: lib path %s -> %s" path result);
                   Some result
               | None ->
-                  Logs.debug (fun m ->
+                  Log.debug (fun m ->
                       m "E610: lib path %s (no lib/ prefix)" path);
                   Some (Fpath.to_string file))
             else None)
@@ -110,7 +114,7 @@ let check ctx =
       library_source_files
   in
 
-  Logs.debug (fun m ->
+  Log.debug (fun m ->
       m "E610: library_module_paths = %a"
         Fmt.(list ~sep:comma string)
         library_module_paths);
@@ -129,7 +133,7 @@ let check ctx =
             then
               match expected_lib_path file with
               | Some expected_path ->
-                  Logs.debug (fun m ->
+                  Log.debug (fun m ->
                       m "E610: test %s expects lib %s" (Fpath.to_string file)
                         expected_path);
                   let found =
@@ -174,7 +178,7 @@ let check ctx =
                     Filename.remove_extension (Filename.basename expected_path)
                   in
                   let referenced = is_referenced_in_library module_name in
-                  Logs.debug (fun m ->
+                  Log.debug (fun m ->
                       m "E610: found=%b referenced=%b" found referenced);
                   if (not found) && not referenced then
                     let loc =

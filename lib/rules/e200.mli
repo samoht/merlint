@@ -4,4 +4,4 @@
     The Re module is preferred for its better API and performance. *)
 
 val rule : Rule.t
-(** The E200 rule definition *)
+(** [rule] is the E200 rule definition. *)

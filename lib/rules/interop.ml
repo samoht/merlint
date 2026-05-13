@@ -10,7 +10,7 @@ type oracle_dir = {
   has_dune : bool;
 }
 
-let find_oracle_dirs project_root =
+let oracle_dirs project_root =
   (* Walk <pkg>/test/interop/<tool>/ directories *)
   let results = ref [] in
   let try_readdir d =

@@ -4,4 +4,4 @@
     Long functions are harder to understand, test, and maintain. *)
 
 val rule : Rule.t
-(** The E005 rule definition *)
+(** [rule] is the E005 rule definition. *)

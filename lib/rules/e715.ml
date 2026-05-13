@@ -2,6 +2,10 @@
 
 type payload = { fuzz_module : string; fuzz_runner_file : string }
 
+let log_src = Logs.Src.create "merlint.rules.e715" ~doc:"E715 rule diagnostics"
+
+module Log = (val Logs.src_log log_src : Logs.LOG)
+
 let is_fuzz_dir = File.is_in_fuzz_dir
 
 (** Check if fuzz.ml includes all fuzz modules via Fuzz_*.suite *)
@@ -47,7 +51,7 @@ let check (ctx : Context.project) =
                 else None)
               fuzz_files
           in
-          Logs.debug (fun m ->
+          Log.debug (fun m ->
               m "E715: stanza '%s' has %d fuzz modules" stanza_name
                 (List.length fuzz_modules));
           (* Check which fuzz modules are not included in fuzz.ml *)

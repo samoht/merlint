@@ -2,6 +2,10 @@
 
 type payload = { filename : string; module_name : string }
 
+let log_src = Logs.Src.create "merlint.rules.e600" ~doc:"E600 rule diagnostics"
+
+module Log = (val Logs.src_log log_src : Logs.LOG)
+
 let is_test_file filename =
   (* Only test executables named test.ml should follow this convention *)
   Filename.basename filename = "test.ml"
@@ -41,22 +45,22 @@ let defines_own_tests content =
 (** Check if a test.ml file properly uses test module suites instead of defining
     its own tests. *)
 let check_test_file_uses_modules filename content =
-  Logs.debug (fun m -> m "E600: Checking file %s" filename);
+  Log.debug (fun m -> m "E600: Checking file %s" filename);
   if not (is_test_file filename) then (
-    Logs.debug (fun m -> m "E600:   Not a test.ml file");
+    Log.debug (fun m -> m "E600:   Not a test.ml file");
     [])
   else if not (has_test_runner content) then (
-    Logs.debug (fun m -> m "E600:   No test runner found");
+    Log.debug (fun m -> m "E600:   No test runner found");
     [])
   else
     let defines_own = defines_own_tests content in
     let uses_modules = uses_test_module_suites content in
-    Logs.debug (fun m ->
+    Log.debug (fun m ->
         m "E600:   defines_own_tests=%b, uses_test_module_suites=%b" defines_own
           uses_modules);
     if defines_own && not uses_modules then (
       (* Issue if test.ml defines its own tests instead of using test modules *)
-      Logs.debug (fun m ->
+      Log.debug (fun m ->
           m "E600:   Found issue - defines own tests without using modules");
       [
         Issue.v
@@ -66,7 +70,7 @@ let check_test_file_uses_modules filename content =
           { filename; module_name = "test" };
       ])
     else (
-      Logs.debug (fun m -> m "E600:   No issue found");
+      Log.debug (fun m -> m "E600:   No issue found");
       [])
 
 (** Check if test_*.ml file incorrectly contains Alcotest.run. The test runner
@@ -227,8 +231,8 @@ let check ctx =
   let files = Context.all_files ctx in
   let dune_describe = Context.dune_describe ctx in
   (* Debug log to see what files we're analyzing *)
-  Logs.debug (fun m -> m "E600: Analyzing %d files:" (List.length files));
-  List.iter (fun f -> Logs.debug (fun m -> m "E600:   - %s" f)) files;
+  Log.debug (fun m -> m "E600: Analyzing %d files:" (List.length files));
+  List.iter (fun f -> Log.debug (fun m -> m "E600:   - %s" f)) files;
 
   (* Check for missing .mli files for test modules *)
   let missing_mli_issues = check_missing_test_mli dune_describe files in

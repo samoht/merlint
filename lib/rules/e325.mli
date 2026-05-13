@@ -5,4 +5,4 @@
     - find_* functions should return option types *)
 
 val rule : Rule.t
-(** The E325 rule definition *)
+(** [rule] is the E325 rule definition. *)

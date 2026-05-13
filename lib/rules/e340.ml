@@ -8,7 +8,7 @@ let check ctx =
   let filename = ctx.filename in
   let outline = Context.outline ctx in
 
-  (* Pattern to match Error (Fmt.str ...) constructs *)
+  (* Pattern to match Error applied to an Fmt.str result. *)
   let error_fmt_str_pattern =
     Re.compile
       (Re.seq
@@ -21,7 +21,7 @@ let check ctx =
          ])
   in
 
-  (* Pattern to match Error (`Msg (Fmt.str ...)) constructs *)
+  (* Pattern to match Error (`Msg ...) applied to an Fmt.str result. *)
   let error_msg_fmt_str_pattern =
     Re.compile
       (Re.seq
@@ -67,14 +67,14 @@ let check ctx =
           Some
             (Issue.v ~loc:location
                {
-                 error_message = "Error (Fmt.str ...)";
+                 error_message = "Error applied to Fmt.str";
                  suggested_function = "err_*";
                })
         else if Re.execp error_msg_fmt_str_pattern line then
           Some
             (Issue.v ~loc:location
                {
-                 error_message = "Error (`Msg (Fmt.str ...))";
+                 error_message = "Error (`Msg ...) applied to Fmt.str";
                  suggested_function = "err_*";
                })
         else None

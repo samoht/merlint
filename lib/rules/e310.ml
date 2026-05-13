@@ -7,7 +7,7 @@ type payload = { value_name : string; expected : string }
     [_A], [_B]) is always allowed; multi-letter uppercase suffixes are accepted
     only when the suffix matches a name from [allowed_words] (e.g.
     [answer_certificate_RSA] when [RSA] is in [allowed_words]). *)
-let is_valid_snake_case_with_suffix ~allowed name =
+let valid_snake_with_suffix ~allowed name =
   let len = String.length name in
   if len < 3 then false
   else
@@ -33,7 +33,7 @@ let check_value_name ~allowed name =
   else
     let expected = Naming.to_lowercase_snake_case name in
     if name <> expected && name <> String.lowercase_ascii name then
-      if is_valid_snake_case_with_suffix ~allowed name then None
+      if valid_snake_with_suffix ~allowed name then None
       else Some expected
     else None
 

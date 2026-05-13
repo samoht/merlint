@@ -2,6 +2,10 @@
 
 type payload = { module_name : string; expected_test_file : string }
 
+let log_src = Logs.Src.create "merlint.rules.e605" ~doc:"E605 rule diagnostics"
+
+module Log = (val Logs.src_log log_src : Logs.LOG)
+
 (** Check if a module only contains type definitions, module aliases, and
     delegations. This detects facade/wrapper modules that just re-export other
     modules (e.g. the top-level [Irmin] module). *)
@@ -83,7 +87,7 @@ let expected_test_path source_file =
 
 (** Creates a missing test file issue for a library module without corresponding
     test *)
-let create_missing_test_issue module_name source_file =
+let missing_test_issue module_name source_file =
   let loc =
     Location.v ~file:source_file ~start_line:1 ~start_col:0 ~end_line:1
       ~end_col:0
@@ -125,13 +129,13 @@ let check (ctx : Context.project) =
      First check dune metadata, then check actual files being analyzed. *)
 
   (* Debug logging *)
-  Logs.debug (fun m ->
+  Log.debug (fun m ->
       m "E605: Checking %d library modules" (List.length lib_modules));
-  Logs.debug (fun m ->
+  Log.debug (fun m ->
       m "E605: Found %d test modules in dune" (List.length test_modules));
-  Logs.debug (fun m ->
+  Log.debug (fun m ->
       m "E605: Test modules: %a" Fmt.(list ~sep:comma string) test_modules);
-  Logs.debug (fun m -> m "E605: Analyzing %d files" (List.length files));
+  Log.debug (fun m -> m "E605: Analyzing %d files" (List.length files));
 
   (* Log test files found in the files list *)
   let test_files_in_list =
@@ -142,15 +146,15 @@ let check (ctx : Context.project) =
         let basename = Filename.basename f |> Filename.remove_extension in
         String.starts_with ~prefix:"test_" basename || basename = "test")
   in
-  Logs.debug (fun m ->
+  Log.debug (fun m ->
       m "E605: Test .ml files in analyzed files: %d"
         (List.length test_files_in_list));
   List.iter
-    (fun f -> Logs.debug (fun m -> m "E605:   - %s" f))
+    (fun f -> Log.debug (fun m -> m "E605:   - %s" f))
     test_files_in_list;
 
   if List.length test_files_in_list = 0 && List.length lib_modules > 0 then
-    Logs.debug (fun m ->
+    Log.debug (fun m ->
         m
           "E605: No test files found in analyzed files. Make sure to include \
            test directories in the analysis (e.g., 'merlint lib test' instead \
@@ -188,7 +192,7 @@ let check (ctx : Context.project) =
         (* Skip if this is already a test module *)
         if String.starts_with ~prefix:"test_" lib_mod then None
         else if List.mem (String.lowercase_ascii lib_mod) private_modules then (
-          Logs.debug (fun m ->
+          Log.debug (fun m ->
               m "E605: Skipping module '%s' (listed in private_modules)" lib_mod);
           None)
         else
@@ -199,7 +203,7 @@ let check (ctx : Context.project) =
               (* No library source file found — the module only exists in
                  executables. Skip it; executable modules don't need E605
                  test files. *)
-              Logs.debug (fun m ->
+              Log.debug (fun m ->
                   m
                     "E605: Skipping module '%s' (no library source file, only \
                      in executables)"
@@ -208,18 +212,18 @@ let check (ctx : Context.project) =
           | Some file_path
             when Astring.String.is_infix ~affix:"/test/" file_path ->
               (* Skip libraries defined in test directories - they are test support libs *)
-              Logs.debug (fun m ->
+              Log.debug (fun m ->
                   m "E605: Skipping module '%s' (defined in test directory)"
                     lib_mod);
               None
           | Some file_path when File.is_in_examples file_path ->
               (* Skip modules in examples directories - they demo usage, not library code *)
-              Logs.debug (fun m ->
+              Log.debug (fun m ->
                   m "E605: Skipping module '%s' (defined in examples directory)"
                     lib_mod);
               None
           | Some file_path when contains_only_types_and_modules file_path ->
-              Logs.debug (fun m ->
+              Log.debug (fun m ->
                   m "E605: Skipping module '%s' (contains only types/modules)"
                     lib_mod);
               None
@@ -244,7 +248,7 @@ let check (ctx : Context.project) =
                   files
               in
 
-              Logs.debug (fun m ->
+              Log.debug (fun m ->
                   m "E605: Checking %s -> %s (in_dune=%b, in_files=%b)" lib_mod
                     expected_test_name in_dune in_files);
 
@@ -256,7 +260,7 @@ let check (ctx : Context.project) =
       lib_modules
   in
   List.map
-    (fun (m, source_file) -> create_missing_test_issue m source_file)
+    (fun (m, source_file) -> missing_test_issue m source_file)
     missing_tests
 
 let pp ppf { module_name; expected_test_file } =

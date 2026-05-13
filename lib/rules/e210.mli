@@ -6,4 +6,4 @@
     not be used in application code. *)
 
 val rule : Rule.t
-(** The E210 rule definition *)
+(** [rule] is the E210 rule definition. *)

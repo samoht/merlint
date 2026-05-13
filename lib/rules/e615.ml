@@ -2,6 +2,10 @@
 
 type payload = { test_module : string; test_runner_file : string }
 
+let log_src = Logs.Src.create "merlint.rules.e615" ~doc:"E615 rule diagnostics"
+
+module Log = (val Logs.src_log log_src : Logs.LOG)
+
 (** Determine if a test file should be excluded based on E606 logic *)
 let should_exclude_test_file dune_describe test_file declared_libraries =
   if declared_libraries = [] then false
@@ -24,7 +28,7 @@ let check (ctx : Context.project) =
   List.iter
     (fun test_info ->
       (* Debug logging *)
-      Logs.debug (fun m ->
+      Log.debug (fun m ->
           m "E615: Checking test stanza '%s' with %d files" test_info.Dune.name
             (List.length test_info.Dune.files));
 
@@ -80,7 +84,7 @@ let check (ctx : Context.project) =
                     should_exclude_test_file dune_describe f
                       test_info.Dune.libraries
                   then (
-                    Logs.debug (fun m ->
+                    Log.debug (fun m ->
                         m
                           "E615: Excluding test module '%s' (would be flagged \
                            by E606)"
@@ -90,7 +94,7 @@ let check (ctx : Context.project) =
                 all_test_modules
             in
 
-            Logs.debug (fun m ->
+            Log.debug (fun m ->
                 m
                   "E615: Found %d test modules in stanza '%s' (after E606 \
                    filtering): %a"

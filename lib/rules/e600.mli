@@ -4,4 +4,4 @@
     should export 'suite' not module name. *)
 
 val rule : Rule.t
-(** The E600 rule definition *)
+(** [rule] is the E600 rule definition. *)

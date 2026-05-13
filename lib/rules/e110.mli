@@ -4,4 +4,4 @@
     Warnings should be addressed rather than suppressed. *)
 
 val rule : Rule.t
-(** The E110 rule definition *)
+(** [rule] is the E110 rule definition. *)

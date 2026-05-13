@@ -5,7 +5,7 @@ type payload = { warning_number : string }
 (** Payload for silenced warning issues *)
 
 (** Create regex for warning attributes with given prefix *)
-let make_warning_regex prefix =
+let warning_regex prefix =
   Re.compile
     (Re.seq
        [
@@ -19,9 +19,9 @@ let make_warning_regex prefix =
          Re.str "\"";
        ])
 
-let warning_attr_regex = make_warning_regex "[@"
-let warning_attr2_regex = make_warning_regex "[@@"
-let warning_attr3_regex = make_warning_regex "[@@@"
+let warning_attr_regex = warning_regex "[@"
+let warning_attr2_regex = warning_regex "[@@"
+let warning_attr3_regex = warning_regex "[@@@"
 
 (** Check if a regex matches and extract warning number *)
 let check_regex regex line =

@@ -4,4 +4,4 @@
     harder to read and understand. *)
 
 val rule : Rule.t
-(** The E010 rule definition *)
+(** [rule] is the E010 rule definition. *)
