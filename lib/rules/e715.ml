@@ -69,11 +69,12 @@ let check_stanza stanza_name files =
 let check (ctx : Context.project) =
   let dune_describe = Context.dune_describe ctx in
   let test_issues =
-    Dune.tests dune_describe
-    |> List.concat_map (fun (t : Dune.test_info) -> check_stanza t.name t.files)
+    Dune_describe.tests dune_describe
+    |> List.concat_map (fun (t : Dune_describe.test_info) ->
+        check_stanza t.name t.files)
   in
   let executable_issues =
-    Dune.executables dune_describe
+    Dune_describe.executables dune_describe
     |> List.concat_map (fun (name, files) -> check_stanza name files)
   in
   test_issues @ executable_issues

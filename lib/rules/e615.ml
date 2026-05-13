@@ -10,12 +10,12 @@ module Log = (val Logs.src_log log_src : Logs.LOG)
 let should_exclude_test_file dune_describe test_file declared_libraries =
   if declared_libraries = [] then false
   else
-    let mod_to_libs = Dune.libraries_of_module dune_describe in
+    let mod_to_libs = Dune_describe.libraries_of_module dune_describe in
     let resolved =
-      List.map (Dune.resolve_library dune_describe) declared_libraries
+      List.map (Dune_describe.resolve_library dune_describe) declared_libraries
     in
     let basename = Fpath.(test_file |> rem_ext |> basename) in
-    match Dune.test_file_library mod_to_libs basename with
+    match Dune_describe.test_file_library mod_to_libs basename with
     | Some lib -> not (List.mem lib resolved)
     | None -> false
 
@@ -44,7 +44,7 @@ let all_test_modules test_file files =
       else None)
     files
 
-let test_modules dune_describe (test_info : Dune.test_info) test_file =
+let test_modules dune_describe (test_info : Dune_describe.test_info) test_file =
   all_test_modules test_file test_info.files
   |> List.filter_map (fun (basename, f) ->
       if should_exclude_test_file dune_describe f test_info.libraries then (
@@ -70,7 +70,7 @@ let missing_issue test_file test_mod =
   Issue.v ~loc
     { test_module = test_mod; test_runner_file = Fpath.to_string test_file }
 
-let check_test_info dune_describe (test_info : Dune.test_info) =
+let check_test_info dune_describe (test_info : Dune_describe.test_info) =
   Log.debug (fun m ->
       m "E615: Checking test stanza '%s' with %d files" test_info.name
         (List.length test_info.files));
@@ -100,7 +100,8 @@ let check_test_info dune_describe (test_info : Dune.test_info) =
 (** Check if test.ml includes all test suites *)
 let check (ctx : Context.project) =
   let dune_describe = Context.dune_describe ctx in
-  Dune.tests dune_describe |> List.concat_map (check_test_info dune_describe)
+  Dune_describe.tests dune_describe
+  |> List.concat_map (check_test_info dune_describe)
 
 let pp ppf { test_module; test_runner_file } =
   Fmt.pf ppf "Test module %s is not included in %s" test_module test_runner_file

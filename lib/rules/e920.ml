@@ -32,42 +32,21 @@ let has_ocaml_code path =
           Re.execp odoc_block_re content)
   with Sys_error _ -> false
 
-(* The set of files an (mdx ...) stanza references. We support:
-     (mdx (files a.mli b.md))
-     (mdx (files a.mli) (files b.md))
-     (mdx)                                  -> defaults to README.md
-   Treat a bare (mdx ...) without (files ...) as covering README.md, which
-   matches dune's default. *)
-let mdx_covered_files stanzas =
-  let from_files_field = function
-    | Sexp.List (Sexp.Atom "files" :: rest) ->
-        List.filter_map (function Sexp.Atom s -> Some s | _ -> None) rest
-    | _ -> []
-  in
-  List.concat_map
-    (function
-      | Sexp.List (Sexp.Atom "mdx" :: fields) ->
-          let listed = List.concat_map from_files_field fields in
-          if listed = [] then [ "README.md" ] else listed
-      | _ -> [])
-    stanzas
-
-let parse_dune_file path =
+let mdx_covered_files path =
   try
     let ic = open_in path in
     Fun.protect
       ~finally:(fun () -> close_in ic)
       (fun () ->
         let content = really_input_string ic (in_channel_length ic) in
-        match Sexp.Value.parse_string_many content with
-        | Ok stanzas -> stanzas
+        match Dune.File.of_string content with
+        | Ok file -> Dune.File.mdx_files file
         | Error _ -> [])
   with Sys_error _ -> []
 
 let scan_dir dune_path =
   let dir = Filename.dirname dune_path in
-  let stanzas = parse_dune_file dune_path in
-  let covered = mdx_covered_files stanzas in
+  let covered = mdx_covered_files dune_path in
   let entries = try Sys.readdir dir |> Array.to_list with Sys_error _ -> [] in
   List.filter_map
     (fun name ->

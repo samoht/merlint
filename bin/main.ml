@@ -239,7 +239,7 @@ let run_analysis project_root dune_describe files_to_analyze index rule_filter
   let files_count =
     match files_to_analyze with
     | Some files -> List.length files
-    | None -> List.length (Merlint.Dune.project_files dune_describe)
+    | None -> List.length (Merlint.Dune_describe.project_files dune_describe)
   in
   Log.info (fun m -> m "Starting visual analysis on %d files" files_count);
   let { Merlint.Engine.issues = all_issues; excluded = all_excluded } =
@@ -277,7 +277,7 @@ let run_analysis project_root dune_describe files_to_analyze index rule_filter
       print_fix_hints all_issues
 
 let ensure_project_built ~path mgr =
-  match Merlint.Dune.ensure_project_built ~path mgr with
+  match Merlint.Dune_describe.ensure_project_built ~path mgr with
   | Ok () -> ()
   | Error msg ->
       Fmt.epr "Warning: %s@." msg;
@@ -295,7 +295,8 @@ let classify_path path =
 
 let process_path ~describes ~explicit_files path =
   match classify_path path with
-  | `Dir -> describes := Merlint.Dune.describe (Fpath.v path) :: !describes
+  | `Dir ->
+      describes := Merlint.Dune_describe.describe (Fpath.v path) :: !describes
   | `File -> explicit_files := path :: !explicit_files
   | `Other -> ()
   | `Missing -> Fmt.epr "Warning: %s does not exist@." path
@@ -310,10 +311,10 @@ let process_path ~describes ~explicit_files path =
 
     Returns [(project_describe, files_to_analyze)] where [files_to_analyze] is
     [Some explicit] in single-file mode and [None] in directory / no-arg mode
-    (engine then defaults to [Dune.project_files project_describe]). *)
+    (engine then defaults to [Dune_describe.project_files project_describe]). *)
 let build_dune_describe ~project_root files =
   match files with
-  | [] -> (Merlint.Dune.describe (Fpath.v project_root), None)
+  | [] -> (Merlint.Dune_describe.describe (Fpath.v project_root), None)
   | _ ->
       let describes = ref [] in
       let explicit_files = ref [] in
@@ -321,12 +322,12 @@ let build_dune_describe ~project_root files =
       if !describes = [] && !explicit_files <> [] then
         (* Single-file mode: synthetic carries only the explicit files; the
            project rules need the full library/test view, so we run
-           [Dune.describe project_root] and narrow [files_to_analyze] to the
+           [Dune_describe.describe project_root] and narrow [files_to_analyze] to the
            explicit set. *)
-        let project = Merlint.Dune.describe (Fpath.v project_root) in
+        let project = Merlint.Dune_describe.describe (Fpath.v project_root) in
         let explicit = List.rev_map Fpath.v !explicit_files in
         (project, Some explicit)
-      else (Merlint.Dune.merge (List.rev !describes), None)
+      else (Merlint.Dune_describe.merge (List.rev !describes), None)
 
 let analyze_files mgr fs ?(exclude_patterns = []) ?rule_filter
     ?(show_profile = false) ?(no_build = false) files =
@@ -353,7 +354,7 @@ let analyze_files mgr fs ?(exclude_patterns = []) ?rule_filter
   (* Apply exclusions (including cram directories which are already filtered) *)
   let filtered_describe =
     if exclude_patterns = [] then dune_describe
-    else Merlint.Dune.exclude exclude_patterns dune_describe
+    else Merlint.Dune_describe.exclude exclude_patterns dune_describe
   in
 
   let index =

@@ -98,8 +98,8 @@ let missing_test_issue module_name source_file =
 
 (** Build a set of file paths that belong to libraries. *)
 let library_file_set dune_desc =
-  Dune.libraries dune_desc
-  |> List.concat_map (fun (lib : Dune.library_info) -> lib.files)
+  Dune_describe.libraries dune_desc
+  |> List.concat_map (fun (lib : Dune_describe.library_info) -> lib.files)
   |> List.map (fun p -> String.lowercase_ascii (Fpath.to_string p))
 
 (** Collect the union of module names listed in [(private_modules ...)] across
@@ -107,14 +107,16 @@ let library_file_set dune_desc =
     they cannot be referenced from a [test_<module>.ml] in a sibling test
     stanza, and should not be required to have a test file. *)
 let private_module_set dune_desc =
-  Dune.libraries dune_desc
-  |> List.concat_map (fun (lib : Dune.library_info) -> lib.private_modules)
+  Dune_describe.libraries dune_desc
+  |> List.concat_map (fun (lib : Dune_describe.library_info) ->
+      lib.private_modules)
   |> List.map String.lowercase_ascii
   |> List.sort_uniq String.compare
 
 (** Build a set of file paths that belong to executables. *)
 let executable_file_set dune_desc =
-  Dune.executables dune_desc |> List.concat_map snd
+  Dune_describe.executables dune_desc
+  |> List.concat_map snd
   |> List.map (fun p -> String.lowercase_ascii (Fpath.to_string p))
 
 let module_source_name file = Filename.basename (Filename.remove_extension file)

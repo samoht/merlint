@@ -4,19 +4,21 @@ type payload = { test_module : string; library_name : string }
 
 let check (ctx : Context.project) =
   let dune_describe = Context.dune_describe ctx in
-  let mod_to_libs = Dune.libraries_of_module dune_describe in
+  let mod_to_libs = Dune_describe.libraries_of_module dune_describe in
   let issues = ref [] in
   List.iter
-    (fun (test_info : Dune.test_info) ->
+    (fun (test_info : Dune_describe.test_info) ->
       if test_info.libraries <> [] then
         let resolved =
-          List.map (Dune.resolve_library dune_describe) test_info.libraries
+          List.map
+            (Dune_describe.resolve_library dune_describe)
+            test_info.libraries
         in
         List.iter
           (fun file ->
             if Fpath.has_ext ".ml" file then
               let basename = Fpath.(file |> rem_ext |> basename) in
-              match Dune.test_file_library mod_to_libs basename with
+              match Dune_describe.test_file_library mod_to_libs basename with
               | Some lib when not (List.mem lib resolved) ->
                   let loc =
                     Location.v ~file:(Fpath.to_string file) ~start_line:1
@@ -27,7 +29,7 @@ let check (ctx : Context.project) =
                     :: !issues
               | _ -> ())
           test_info.files)
-    (Dune.tests dune_describe);
+    (Dune_describe.tests dune_describe);
   !issues
 
 let pp ppf { test_module; library_name } =

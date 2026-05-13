@@ -10,7 +10,7 @@ val is_in_fuzz_dir : Fpath.t -> bool
 val is_in_test_dir : Fpath.t -> bool
 (** [is_in_test_dir file] returns [true] if [file] is in a test directory. *)
 
-val is_in_private_library : Dune.describe -> string -> bool
+val is_in_private_library : Dune_describe.describe -> string -> bool
 (** [is_in_private_library dune_describe filename] returns [true] if [filename]
     belongs to a private library (no public_name). *)
 

@@ -59,13 +59,13 @@ let library_module_path file =
 
 let library_module_paths libraries =
   List.concat_map
-    (fun (lib_info : Dune.library_info) ->
+    (fun (lib_info : Dune_describe.library_info) ->
       List.filter_map library_module_path lib_info.files)
     libraries
 
 let library_source_files libraries =
   List.concat_map
-    (fun (lib_info : Dune.library_info) ->
+    (fun (lib_info : Dune_describe.library_info) ->
       List.filter_map
         (fun file ->
           if Fpath.has_ext ".ml" file || Fpath.has_ext ".mli" file then
@@ -145,15 +145,16 @@ let check_test_file ~library_module_paths ~library_source_files file =
 
 let check ctx =
   let dune_describe = Context.dune_describe ctx in
-  let libraries = Dune.libraries dune_describe in
+  let libraries = Dune_describe.libraries dune_describe in
   let library_module_paths = library_module_paths libraries in
   let library_source_files = library_source_files libraries in
   Log.debug (fun m ->
       m "E610: library_module_paths = %a"
         Fmt.(list ~sep:comma string)
         library_module_paths);
-  Dune.tests dune_describe
-  |> List.concat_map (fun (test_info : Dune.test_info) -> test_info.files)
+  Dune_describe.tests dune_describe
+  |> List.concat_map (fun (test_info : Dune_describe.test_info) ->
+      test_info.files)
   |> List.filter_map
        (check_test_file ~library_module_paths ~library_source_files)
 

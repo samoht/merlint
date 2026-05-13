@@ -7,7 +7,7 @@ let test_create_project () =
   let config = Merlint.Config.default in
   let project_root = "." in
   let all_files = [ "foo.ml"; "bar.ml" ] in
-  let dune_describe = Merlint.Dune.describe (Fpath.v ".") in
+  let dune_describe = Merlint.Dune_describe.describe (Fpath.v ".") in
   let ctx =
     Merlint.Context.project ~config ~project_root ~all_files ~dune_describe
       ~index:dummy_index
@@ -37,7 +37,7 @@ let test_lazy_evaluation () =
       (files_evaluated := true;
        [ "test.ml" ])
   in
-  let dune_describe = Merlint.Dune.describe (Fpath.v ".") in
+  let dune_describe = Merlint.Dune_describe.describe (Fpath.v ".") in
   let ctx =
     {
       Merlint.Context.config;

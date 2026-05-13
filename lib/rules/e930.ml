@@ -96,51 +96,6 @@ let read_runtime_depends path =
         | _ -> [])
   with Sys_error _ -> []
 
-(* Walk a dune file looking for [(libraries ...)] inside [(library ...)],
-   [(executable ...)] and [(executables ...)] stanzas. Test stanzas are
-   skipped: depending on Eio in a [(test ...)] stanza is fine even in a
-   sans-io package. *)
-let lib_atoms = function Sexp.Atom s -> Some s | _ -> None
-
-let libraries_field = function
-  | Sexp.List (Sexp.Atom "libraries" :: rest) -> List.filter_map lib_atoms rest
-  | _ -> []
-
-let name_field = function
-  | Sexp.List [ Sexp.Atom "name"; Sexp.Atom n ] -> Some n
-  | _ -> None
-
-let public_name_field = function
-  | Sexp.List [ Sexp.Atom "public_name"; Sexp.Atom n ] -> Some n
-  | _ -> None
-
-let library_name = function
-  | Sexp.List (Sexp.Atom "library" :: fields) -> List.find_map name_field fields
-  | _ -> None
-
-(* The opam package a library belongs to. A library's [(public_name X.Y)]
-   declares its owning opam package as [X] (the dot-prefix); without a
-   public_name the library is private and not attributable. *)
-let library_owner = function
-  | Sexp.List (Sexp.Atom "library" :: fields) -> (
-      match List.find_map public_name_field fields with
-      | None -> None
-      | Some pname ->
-          let owner =
-            match String.index_opt pname '.' with
-            | Some i -> String.sub pname 0 i
-            | None -> pname
-          in
-          Some owner)
-  | _ -> None
-
-(* Only [(library ...)] stanzas express the package's contract; binaries and
-   tests are at the IO edge and may pull in eio/unix legitimately. *)
-let stanza_libraries = function
-  | Sexp.List (Sexp.Atom "library" :: fields) ->
-      List.concat_map libraries_field fields
-  | _ -> []
-
 (* A bytesrw sub-library is one whose name ends in ["_bytesrw"] / ["-bytesrw"]
    or matches ["bytesrw"] inside a non-root directory of a codec package.
    The intended pattern is: the codec lib itself depends on bytesrw and
@@ -151,6 +106,20 @@ let is_bytesrw_sublib name =
   || String.length name > 8
      && String.sub name (String.length name - 8) 8 = "_bytesrw"
 
+(* Library [(public_name X.Y)] declares the owning opam package as [X] (the
+   dot-prefix); without a public_name the library is private and we
+   conservatively attribute it to the containing directory's pkg. *)
+let library_owner lib =
+  match Dune.File.Library.public_name lib with
+  | None -> None
+  | Some pname ->
+      let owner =
+        match String.index_opt pname '.' with
+        | Some i -> String.sub pname 0 i
+        | None -> pname
+      in
+      Some owner
+
 let parse_dune path =
   try
     let ic = open_in path in
@@ -158,8 +127,8 @@ let parse_dune path =
       ~finally:(fun () -> close_in ic)
       (fun () ->
         let content = really_input_string ic (in_channel_length ic) in
-        match Sexp.Value.parse_string_many content with
-        | Ok stanzas -> stanzas
+        match Dune.File.of_string content with
+        | Ok file -> Dune.File.libraries file
         | Error _ -> [])
   with Sys_error _ -> []
 
@@ -197,14 +166,12 @@ let kind_of_tags tags =
   else if List.mem "eio" tags then Eio_codec
   else Pure_codec
 
-(* Decide whether a library stanza belongs to the opam package being
-   checked. A library with [(public_name P.foo)] belongs to package [P];
-   without a public_name it's private and we conservatively attribute it
-   to the opam package of its containing directory (passed as [pkg_name]). *)
-let stanza_belongs_to ~pkg_name stanza =
-  match library_owner stanza with
-  | Some owner -> owner = pkg_name
-  | None -> true
+(* A library belongs to the opam package being checked when its
+   [(public_name P.foo)] resolves to [P = pkg_name]; libraries without a
+   public_name are private and conservatively attributed to the containing
+   directory's pkg. *)
+let library_belongs_to ~pkg_name lib =
+  match library_owner lib with Some owner -> owner = pkg_name | None -> true
 
 let pkg_name_of_opam opam =
   match Filename.chop_suffix_opt ~suffix:".opam" opam with
@@ -226,22 +193,23 @@ let check_opam ~pkg_dir opam =
     deps;
   let dunes = walk ~in_test:false pkg_dir [] in
   List.iter
-    (fun (dune_file, stanzas) ->
-      let owned = List.filter (stanza_belongs_to ~pkg_name) stanzas in
-      let libs = List.concat_map stanza_libraries owned in
+    (fun (dune_file, libs) ->
+      let owned = List.filter (library_belongs_to ~pkg_name) libs in
       List.iter
         (fun lib ->
-          if lib_matches ~banned lib then
-            findings := Banned_in_libraries { dune_file; lib } :: !findings)
-        libs;
+          List.iter
+            (fun dep ->
+              if lib_matches ~banned dep then
+                findings :=
+                  Banned_in_libraries { dune_file; lib = dep } :: !findings)
+            (Dune.File.Library.libraries lib))
+        owned;
       if kind <> Non_codec then
         List.iter
-          (fun stanza ->
-            match library_name stanza with
-            | Some name when is_bytesrw_sublib name ->
-                findings :=
-                  Bytesrw_sublib { dune_file; lib = name } :: !findings
-            | _ -> ())
+          (fun lib ->
+            let name = Dune.File.Library.name lib in
+            if name <> "" && is_bytesrw_sublib name then
+              findings := Bytesrw_sublib { dune_file; lib = name } :: !findings)
           owned)
     dunes;
   List.rev !findings

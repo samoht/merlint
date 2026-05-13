@@ -21,11 +21,11 @@ let fuzz_stanzas_by_dir dune_describe =
   in
   let from_tests =
     List.map
-      (fun (t : Dune.test_info) -> (t.name, t.files))
-      (Dune.tests dune_describe)
+      (fun (t : Dune_describe.test_info) -> (t.name, t.files))
+      (Dune_describe.tests dune_describe)
     |> collect_dirs
   in
-  let from_execs = Dune.executables dune_describe |> collect_dirs in
+  let from_execs = Dune_describe.executables dune_describe |> collect_dirs in
   from_tests @ from_execs
 
 let check (ctx : Context.project) =

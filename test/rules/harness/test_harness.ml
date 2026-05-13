@@ -115,26 +115,26 @@ let classify_path path =
 let process_path ~describes ~explicit_files path =
   match classify_path path with
   | `Dir ->
-      let describe = Merlint.Dune.describe (Fpath.v path) in
+      let describe = Merlint.Dune_describe.describe (Fpath.v path) in
       describes := describe :: !describes;
-      if Merlint.Dune.project_files describe = [] then
+      if Merlint.Dune_describe.project_files describe = [] then
         explicit_files := ocaml_sources_under path @ !explicit_files
   | `File -> explicit_files := path :: !explicit_files
   | `Missing | `Other -> ()
 
 let build_dune_describe ~project_root paths =
   match paths with
-  | [] -> (Merlint.Dune.describe (Fpath.v project_root), None)
+  | [] -> (Merlint.Dune_describe.describe (Fpath.v project_root), None)
   | _ ->
       let describes = ref [] in
       let explicit_files = ref [] in
       List.iter (process_path ~describes ~explicit_files) paths;
       if !describes = [] && !explicit_files <> [] then
-        let project = Merlint.Dune.describe (Fpath.v project_root) in
+        let project = Merlint.Dune_describe.describe (Fpath.v project_root) in
         let explicit = List.rev_map Fpath.v !explicit_files in
         (project, Some explicit)
       else
-        let describe = Merlint.Dune.merge (List.rev !describes) in
+        let describe = Merlint.Dune_describe.merge (List.rev !describes) in
         let explicit =
           match !explicit_files with
           | [] -> None

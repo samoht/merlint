@@ -154,7 +154,7 @@ let run ~filter ~dune_describe ?files_to_analyze ~index ?profiling project_root
   let files_to_analyze =
     match files_to_analyze with
     | Some files -> files
-    | None -> Dune.project_files dune_describe
+    | None -> Dune_describe.project_files dune_describe
   in
   let _config, project_ctx, enabled_rules =
     setup_analysis ~filter ~dune_describe ~files_to_analyze ~index project_root

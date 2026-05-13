@@ -11,11 +11,11 @@ let check (ctx : Context.project) =
   let all_dirs =
     let test_dirs =
       List.filter_map
-        (fun (t : Dune.test_info) ->
+        (fun (t : Dune_describe.test_info) ->
           match t.files with
           | f :: _ -> Some (Fpath.parent f |> Fpath.to_string)
           | [] -> None)
-        (Dune.tests dune_describe)
+        (Dune_describe.tests dune_describe)
     in
     let exec_dirs =
       List.filter_map
@@ -23,7 +23,7 @@ let check (ctx : Context.project) =
           match files with
           | f :: _ -> Some (Fpath.parent f |> Fpath.to_string)
           | [] -> None)
-        (Dune.executables dune_describe)
+        (Dune_describe.executables dune_describe)
     in
     List.sort_uniq String.compare (test_dirs @ exec_dirs)
   in

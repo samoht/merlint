@@ -4,11 +4,11 @@ type payload = { directory : string; stanza_names : string list }
 
 let check (ctx : Context.project) =
   let dune_describe = Context.dune_describe ctx in
-  let tests = Dune.tests dune_describe in
+  let tests = Dune_describe.tests dune_describe in
   (* Group test stanzas by directory *)
   let by_dir =
     List.filter_map
-      (fun (t : Dune.test_info) ->
+      (fun (t : Dune_describe.test_info) ->
         match t.files with
         | f :: _ -> Some (Fpath.parent f |> Fpath.to_string, t.name)
         | [] -> None)
