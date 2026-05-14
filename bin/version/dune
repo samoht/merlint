@@ -1,28 +1,12 @@
 (library
  (name version)
- (package merlint)
  (libraries dune-build-info))
 
-; In release mode, get the actual git hash (uses universe dep to always refresh)
-
 (rule
  (target git_hash.ml)
- (deps (universe))
- (enabled_if
-  (= %{profile} release))
+ (deps
+  (env_var PROJECT_VERSION))
  (action
   (with-stdout-to
    %{target}
-   (bash
-    "echo 'let hash = \"'$(git rev-parse --short HEAD 2>/dev/null || echo dev)'\"'"))))
-
-; In dev mode, just use "dev" to avoid rebuilds on every commit
-
-(rule
- (target git_hash.ml)
- (enabled_if
-  (<> %{profile} release))
- (action
-  (with-stdout-to
-   %{target}
-   (echo "let hash = \"dev\""))))
+   (bash "printf 'let hash = \"%s\"\\n' \"${PROJECT_VERSION:-dev}\""))))
