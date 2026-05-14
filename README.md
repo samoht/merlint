@@ -106,34 +106,22 @@ $ merlint --rules A-E110
 
 ## Configuration
 
-Merlint can be configured via a `merlint.toml` file in your project
-root. See [MERLINT_CONFIG.md](docs/MERLINT_CONFIG.md) for the full
-reference.
+Merlint reads `merlint.toml` from your project root. Run
+`merlint config --help` for the full reference -- the man page
+covers the settings keys, the `[[rules]]` block format (single glob
+or list of globs), and the pattern syntax. The same examples it
+shows are round-tripped through the parser by the test suite, so
+the docs can't drift from the implementation.
 
-Example `merlint.toml`:
+Quick example:
 
 ```toml
 max-complexity = 15
 max-function-length = 100
 
-# Single glob: exclude one rule for one pattern
 [[rules]]
-files = "lib/prose*.ml"
+files = ["lib/color.ml*", "lib/margin.ml*", "lib/padding.ml*"]
 exclude = ["E330"]
-
-# List of files: exclude one rule for many specific files in one block
-[[rules]]
-files = [
-  "lib/color.ml*",
-  "lib/margin.ml*",
-  "lib/padding.ml*",
-]
-exclude = ["E330"]
-
-# Glob with directory recursion
-[[rules]]
-files = "test/**/*.ml"
-exclude = ["E400", "E410"]
 ```
 
 ## Rules Overview
