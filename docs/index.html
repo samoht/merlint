@@ -2078,6 +2078,13 @@ and replace each call site with [err_x "..." args] / [fail_x "..." args]. The la
     </div>
     <div class="error-hint"><p>Every project (or subtree) should enable [%{dune-warnings}] on the dev profile so warnings are uniform across builds. Add the stanza [(env (dev (flags :standard %{dune-warnings})))] to the top-level [dune] file. Note [%{dune-warnings}] requires [(lang dune 3.21)] or newer in the corresponding [dune-project].</p></div>
 </div>
+<div class="error-card" id="E941">
+    <div>
+        <span class="error-code">E941</span>
+        <span class="error-title">Missing runtime dependency</span>
+    </div>
+    <div class="error-hint"><p>When a library in your package's [(libraries L)] resolves to opam package P, P must appear in your package's [depends:]. Otherwise [opam install] from a fresh switch fails for downstream users -- your local build only works because P happens to be in the active switch. The fix is to add P to the [depends:] section of [&lt;pkg&gt;.opam.template] (or to [(package (depends ...))] in [dune-project] if you generate opam files with dune). Builtin libraries (unix, str, threads, ...), implicit deps (ocaml, dune, js_of_ocaml), [conf-*] wrappers, and libraries owned by the package itself are exempt.</p></div>
+</div>
 
     <a href="#top" class="back-to-top">↑ Top</a>
 </body>
