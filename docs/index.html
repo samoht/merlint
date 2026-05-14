@@ -2071,6 +2071,13 @@ and replace each call site with [err_x "..." args] / [fail_x "..." args]. The la
     </div>
     <div class="error-hint"><p>Sans-IO packages (tagged [codec.*] or [protocol]) must not read the wall clock or monotonic clock from library code. Time is an input, not a side effect: take [~now] as a parameter, let the caller's adapter or CLI [bin/] call [Mtime_clock.now] / [Ptime_clock.now] / [Unix.gettimeofday] / [Sys.time] and pass the value in. Library attribution follows dune's [(public_name P.X)] via [Monopam_info_index] so a sibling adapter package is scanned against its own tags, not its sans-IO sister's.</p></div>
 </div>
+<div class="error-card" id="E940">
+    <div>
+        <span class="error-code">E940</span>
+        <span class="error-title">Dune warnings flag</span>
+    </div>
+    <div class="error-hint"><p>Every project (or subtree) should enable [%{dune-warnings}] on the dev profile so warnings are uniform across builds. Add the stanza [(env (dev (flags :standard %{dune-warnings})))] to the top-level [dune] file. Note [%{dune-warnings}] requires [(lang dune 3.21)] or newer in the corresponding [dune-project].</p></div>
+</div>
 
     <a href="#top" class="back-to-top">↑ Top</a>
 </body>
