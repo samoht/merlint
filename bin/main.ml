@@ -479,7 +479,7 @@ let analyze =
       `P "Run $(b,merlint help config) for the configuration file format.";
     ]
   in
-  let info = Cmd.info "merlint" ~version:Version.version ~doc ~man in
+  let info = Cmd.info "merlint" ~version:Version.string ~doc ~man in
   Cmd.v info analyze_term
 
 let config =
@@ -531,7 +531,7 @@ let help =
 
 let cmd =
   let doc = "Analyze OCaml code for style issues" in
-  let info = Cmd.info "merlint" ~version:Version.version ~doc in
+  let info = Cmd.info "merlint" ~version:Version.string ~doc in
   Cmd.group ~default:analyze_term info [ analyze; config; help ]
 
 let () = Stdlib.exit (Cmd.eval cmd)
