@@ -41,21 +41,37 @@ let exclude_rules_of_member = function
   | Some _ -> Fmt.failwith "merlint config: rule.exclude must be a list"
   | None -> Fmt.failwith "merlint config: rule missing 'exclude'"
 
-let files_string_of_member = function
-  | Some (Toml.Value.String (s, _)) -> s
-  | _ -> Fmt.failwith "merlint config: rule missing string 'files'"
+(* [files] may be either a single glob ([files = "lib/foo.ml*"]) or a
+   list of globs ([files = ["lib/a.ml*", "lib/b.ml*"]]) -- one entry
+   covering many files reads better than one [[rules]] block per file
+   when the same exclude applies. *)
+let files_strings_of_member = function
+  | Some (Toml.Value.String (s, _)) -> [ s ]
+  | Some (Toml.Value.Array (items, _)) ->
+      List.map
+        (function
+          | Toml.Value.String (s, _) -> s
+          | _ ->
+              Fmt.failwith
+                "merlint config: rule.files list entries must be strings")
+        items
+  | Some _ ->
+      Fmt.failwith
+        "merlint config: rule.files must be a string or list of strings"
+  | None -> Fmt.failwith "merlint config: rule missing 'files'"
 
-let extract_pattern (entry : Toml.Value.t) =
+let extract_patterns (entry : Toml.Value.t) =
   match entry with
   | Table (members, _) ->
-      let files = files_string_of_member (lookup_member "files" members) in
+      let files = files_strings_of_member (lookup_member "files" members) in
       let rules = exclude_rules_of_member (lookup_member "exclude" members) in
-      { Rule_config.pattern = files; rules }
+      List.map (fun pattern -> { Rule_config.pattern; rules }) files
   | _ -> Fmt.failwith "merlint config: rule entries must be tables"
 
 let project_setting (key, (value : Toml.Value.t)) =
   match (key, value) with
-  | "rules", Array (entries, _) -> `Rules (List.map extract_pattern entries)
+  | "rules", Array (entries, _) ->
+      `Rules (List.concat_map extract_patterns entries)
   | _ -> `Setting (key, scalar_to_string value)
 
 let parse content =

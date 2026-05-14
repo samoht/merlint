@@ -144,6 +144,61 @@ let test_parse_allowed_words_multiline () =
      in
      loop 0)
 
+let test_parse_files_list () =
+  (* [files] accepts either a single string or a list of strings; the
+     list form is what 50-file CSS-shaped libraries use to avoid
+     dragging in a wider [lib/*.ml*] glob. *)
+  let input =
+    {|[[rules]]
+files = ["lib/color.ml*", "lib/margin.ml*", "lib/padding.ml*"]
+exclude = ["E330"]
+|}
+  in
+  let config = Config_parser.parse input in
+  Alcotest.(check bool)
+    "list form parses to non-empty exclusions" false
+    (config.exclusions = Rule_config.empty);
+  let pp = Fmt.str "%a" Rule_config.pp config.exclusions in
+  let contains needle =
+    let n = String.length pp and k = String.length needle in
+    let rec loop i =
+      if i + k > n then false
+      else if String.sub pp i k = needle then true
+      else loop (i + 1)
+    in
+    loop 0
+  in
+  Alcotest.(check bool) "first file expanded" true (contains "lib/color.ml*");
+  Alcotest.(check bool) "second file expanded" true (contains "lib/margin.ml*");
+  Alcotest.(check bool) "third file expanded" true (contains "lib/padding.ml*")
+
+let test_parse_files_missing () =
+  let input = {|[[rules]]
+exclude = ["E100"]
+|} in
+  match Config_parser.parse input with
+  | _ -> Alcotest.fail "expected Failure on missing files"
+  | exception Failure msg ->
+      Alcotest.(check bool)
+        "error mentions missing files" true
+        (let needle = "missing 'files'" in
+         let n = String.length msg and k = String.length needle in
+         let rec loop i =
+           if i + k > n then false
+           else if String.sub msg i k = needle then true
+           else loop (i + 1)
+         in
+         loop 0)
+
+let test_parse_files_wrong_type () =
+  let input = {|[[rules]]
+files = 42
+exclude = ["E100"]
+|} in
+  match Config_parser.parse input with
+  | _ -> Alcotest.fail "expected Failure on non-string non-list files"
+  | exception Failure _ -> ()
+
 let suite =
   ( "config_parser",
     [
@@ -155,4 +210,7 @@ let suite =
       ("parse with comments", `Quick, test_parse_with_comments);
       ("parse file", `Quick, test_parse_file);
       ("parse multi-line array", `Quick, test_parse_allowed_words_multiline);
+      ("parse files list", `Quick, test_parse_files_list);
+      ("parse files missing", `Quick, test_parse_files_missing);
+      ("parse files wrong type", `Quick, test_parse_files_wrong_type);
     ] )
