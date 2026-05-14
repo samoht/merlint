@@ -27,7 +27,14 @@ let ocaml_builtins =
     dep-declaration rules don't flag them as "missing runtime deps" because dune
     resolves them as tools rather than as [(libraries ...)] entries. *)
 let build_tools =
-  String_set.of_list [ "ocaml"; "dune"; "js_of_ocaml"; "js_of_ocaml-compiler" ]
+  String_set.of_list
+    [
+      "ocaml";
+      "dune";
+      "dune-configurator";
+      "js_of_ocaml";
+      "js_of_ocaml-compiler";
+    ]
 
 (** [conf-*] packages wrap system libraries (e.g. [conf-libssl]); they aren't
     OCaml libraries and don't show up in [(libraries ...)]. *)

@@ -1,0 +1,3 @@
+(library
+ (name pkg_b_main)
+ (public_name pkg-b))
