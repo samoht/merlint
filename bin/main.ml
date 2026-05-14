@@ -478,7 +478,7 @@ let analyze =
         "If no files or directories are specified, it analyzes all .ml and \
          .mli files in the current dune project (searching upward for \
          dune-project).";
-      `P "Run $(b,merlint config --help) for the configuration file format.";
+      `P "Run $(b,merlint help config) for the configuration file format.";
     ]
   in
   let info = Cmd.info "merlint" ~version:Monopam_info.version ~doc ~man in
@@ -499,9 +499,41 @@ let config =
   let info = Cmd.info "config" ~doc ~man in
   Cmd.v info Term.(const () |> map (fun () -> ()))
 
+(* [merlint help <topic>] mirrors how git/opam expose subcommand manuals:
+   bare [merlint help] prints the main man, [merlint help config] prints
+   the config subcommand's man, and an unknown topic exits with a clear
+   error rather than running anything. *)
+let help =
+  let doc = "Show help for a topic (e.g. $(b,merlint help config))" in
+  let man =
+    [
+      `S Manpage.s_description;
+      `P
+        "Render the manual for $(b,merlint) or one of its subcommands. \
+         Equivalent to passing $(b,--help) to the corresponding command.";
+    ]
+  in
+  let topic =
+    let doc = "Topic to show help for. Omit for the main manual." in
+    Arg.(value & pos 0 (some string) None & info [] ~docv:"TOPIC" ~doc)
+  in
+  let known_topics = [ "config" ] in
+  let run topic =
+    match topic with
+    | None -> `Help (`Auto, None)
+    | Some t when List.mem t known_topics -> `Help (`Auto, Some t)
+    | Some t ->
+        `Error
+          ( true,
+            Fmt.str "unknown help topic %S (known: %s)" t
+              (String.concat ", " known_topics) )
+  in
+  let info = Cmd.info "help" ~doc ~man in
+  Cmd.v info Term.(ret (const run $ topic))
+
 let cmd =
   let doc = "Analyze OCaml code for style issues" in
   let info = Cmd.info "merlint" ~version:Monopam_info.version ~doc in
-  Cmd.group ~default:analyze_term info [ analyze; config ]
+  Cmd.group ~default:analyze_term info [ analyze; config; help ]
 
 let () = Stdlib.exit (Cmd.eval cmd)

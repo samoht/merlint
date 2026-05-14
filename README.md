@@ -107,7 +107,7 @@ $ merlint --rules A-E110
 ## Configuration
 
 Merlint reads `merlint.toml` from your project root. Run
-`merlint config --help` for the full reference -- the man page
+`merlint help config` for the full reference -- the man page
 covers the settings keys, the `[[rules]]` block format (single glob
 or list of globs), and the pattern syntax. The same examples it
 shows are round-tripped through the parser by the test suite, so
