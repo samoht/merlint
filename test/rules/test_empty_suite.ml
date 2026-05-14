@@ -38,19 +38,19 @@ let test_find_empty_suite_present () =
   let s = parse {|let suite = ("foo", [])|} in
   Alcotest.(check bool)
     "find_empty_suite returns Some" true
-    (Empty_suite.find_empty_suite s <> None)
+    (Empty_suite.find s <> None)
 
 let test_find_empty_suite_nonempty () =
   let s = parse {|let suite = ("foo", [ x ])|} in
   Alcotest.(check bool)
     "non-empty suite returns None" true
-    (Empty_suite.find_empty_suite s = None)
+    (Empty_suite.find s = None)
 
 let test_find_empty_suite_absent () =
   let s = parse {|let other = ("foo", [])|} in
   Alcotest.(check bool)
     "binding not named suite -> None" true
-    (Empty_suite.find_empty_suite s = None)
+    (Empty_suite.find s = None)
 
 let test_find_alcobar_open () =
   (* Spec: [Alcobar.[]] / [List.[]] is still the empty list and must be
@@ -58,14 +58,14 @@ let test_find_alcobar_open () =
   let s = parse {|let suite = ("p", Alcobar.[])|} in
   Alcotest.(check bool)
     "Alcobar.[] under Pexp_open is detected" true
-    (Empty_suite.find_empty_suite s <> None)
+    (Empty_suite.find s <> None)
 
 let test_find_wrong_shape () =
   (* [let suite = "foo"] -- not a tuple at all. *)
   let s = parse {|let suite = "foo"|} in
   Alcotest.(check bool)
     "non-tuple suite shape -> None" true
-    (Empty_suite.find_empty_suite s = None)
+    (Empty_suite.find s = None)
 
 let test_find_extra_bindings () =
   (* Multiple [let suite = ...] bindings (impossible in real code but
@@ -77,7 +77,7 @@ let unrelated = "y"|}
   in
   Alcotest.(check bool)
     "no empty suite in mixed bindings" true
-    (Empty_suite.find_empty_suite s = None)
+    (Empty_suite.find s = None)
 
 let suite =
   ( "empty_suite",

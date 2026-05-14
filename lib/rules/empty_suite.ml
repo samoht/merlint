@@ -13,7 +13,7 @@ let rec is_empty_list (expr : Parsetree.expression) =
 
 (** Walk [structure] for [let suite = ("name", body)] where [body] is the empty
     list. Returns the binding's location on a hit. *)
-let find_empty_suite structure =
+let find structure =
   List.find_map
     (fun (item : Parsetree.structure_item) ->
       match item.pstr_desc with
@@ -58,7 +58,7 @@ let check ~prefix ~mk_payload (ctx : Context.file) =
     match parse_structure ~filename content with
     | None -> []
     | Some structure -> (
-        match find_empty_suite structure with
+        match find structure with
         | None -> []
         | Some loc ->
             let suite_name =
