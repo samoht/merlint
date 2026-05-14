@@ -2041,7 +2041,7 @@ and replace each call site with [err_x "..." args] / [fail_x "..." args]. The la
         <span class="error-code">E915</span>
         <span class="error-title">Opam tag metadata</span>
     </div>
-    <div class="error-hint"><p>Every *.opam file must declare tags: ["org:blacksun" "&lt;topic&gt;" ...] where each topic is a slug declared in categories.toml at the project root (or listed in the topics: field of .merlint). Edit the package's dune-project so dune regenerates the opam file.</p></div>
+    <div class="error-hint"><p>Runs only when the project root has a sources.toml (monopam monorepo marker) or a categories.toml (the tag vocabulary). When it does run, every *.opam must declare tags: ["org:&lt;your-org&gt;" "&lt;topic&gt;" ...] where each topic is a slug from categories.toml / merlint.toml's topics list. Edit the package's dune-project so dune regenerates the opam file.</p></div>
 </div>
 <div class="error-card" id="E920">
     <div>
