@@ -4,10 +4,11 @@
 module String_set : Set.S with type elt = string
 
 val build_tools : String_set.t
-(** Build-time tools (ocaml, dune, js_of_ocaml, js_of_ocaml-compiler). Dune
-    resolves them as tools, not via [(libraries ...)], so the dep-declaration
-    rules don't flag them as missing runtime deps even when absent from
-    [depends:]. *)
+(** Build-time tools (ocaml, dune, dune-configurator, js_of_ocaml,
+    js_of_ocaml-compiler). Dune resolves them as tools, not via
+    [(libraries ...)], so the dep-declaration rules don't flag them as missing
+    runtime deps even when absent from [depends:], nor as misclassified runtime
+    deps just because their only consumer is a private executable. *)
 
 val is_conf_pkg : string -> bool
 (** [is_conf_pkg name] is [true] for [conf-*] packages -- system-library

@@ -2085,6 +2085,13 @@ and replace each call site with [err_x "..." args] / [fail_x "..." args]. The la
     </div>
     <div class="error-hint"><p>When a library in your package's [(libraries L)] resolves to opam package P, P must appear in your package's [depends:]. Otherwise [opam install] from a fresh switch fails for downstream users -- your local build only works because P happens to be in the active switch. The fix depends on how you author opam metadata: if you hand-write [&lt;pkg&gt;.opam], add the package to its [depends:]; if you let dune generate [&lt;pkg&gt;.opam] from [dune-project], add it to the [(package (depends ...))] stanza (use [&lt;pkg&gt;.opam.template] only for fields dune can't generate). Builtin libraries (unix, str, threads, ...), build-tool packages dune resolves separately (ocaml, dune, js_of_ocaml), [conf-*] system-library wrappers, and libraries owned by the package itself are exempt.</p></div>
 </div>
+<div class="error-card" id="E943">
+    <div>
+        <span class="error-code">E943</span>
+        <span class="error-title">Misclassified test-only dependency</span>
+    </div>
+    <div class="error-hint"><p>A dep that's used only from [(test ...)] / [(tests ...)] stanzas or a private [(executable ...)] (no [public_name]) belongs in [:with-test], not in the runtime [depends:]. Add a [{with-test}] filter: in a hand-written [&lt;pkg&gt;.opam], wrap the entry as ["alcotest" {with-test}]; in a [dune-project] [(package (depends ...))] stanza, write [(alcotest :with-test)]. Downstream users who [opam install &lt;pkg&gt;] will then skip the test framework. Build-tool packages dune resolves separately and [conf-*] system wrappers are exempt.</p></div>
+</div>
 
     <a href="#top" class="back-to-top">↑ Top</a>
 </body>
