@@ -5,8 +5,8 @@ val is_empty_list : Parsetree.expression -> bool
 (** [is_empty_list e] is [true] iff [e] is [[]], possibly under one or more
     [open ... in] / [M.[]] layers. *)
 
-val find_empty_suite : Parsetree.structure -> Warnings.loc option
-(** [find_empty_suite s] returns the binding location of any top-level
+val find : Parsetree.structure -> Warnings.loc option
+(** [find s] returns the binding location of any top-level
     [let suite = ("name", [])], or [None]. *)
 
 val check :

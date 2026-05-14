@@ -40,9 +40,9 @@ let extract_suite_name_of_expr (expr : Parsetree.expression) =
       Some (name, expr.pexp_loc)
   | _ -> None
 
-(** Find the suite name from a parsed structure by looking for
+(** Locate the suite name from a parsed structure by looking for
     [let suite = ("name", ...)] bindings. *)
-let find_suite_name structure =
+let suite_name structure =
   List.find_map
     (fun (item : Parsetree.structure_item) ->
       match item.pstr_desc with
@@ -101,7 +101,7 @@ let issues_of_content ~filename content =
   match parse_structure ~filename content with
   | None -> []
   | Some structure -> (
-      match find_suite_name structure with
+      match suite_name structure with
       | None -> []
       | Some found -> (
           match suite_issue ~filename ~expected_name found with
