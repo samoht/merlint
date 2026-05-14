@@ -7,8 +7,8 @@
       stanza or a private executable attached to the [runtest] alias (fuzz
       driver, regression harness). Suggest [{with-test}].
     - {b dev-setup scope}: the dep is reached only from a private executable
-      that is {b not} attached to [runtest] -- generator, benchmark, dev
-      tool. Suggest [{with-dev-setup}].
+      that is {b not} attached to [runtest] -- generator, benchmark, dev tool.
+      Suggest [{with-dev-setup}].
 
     Either way, leaving the dep in unconditional [depends:] forces every
     downstream [opam install <pkg>] to pull machinery it doesn't need. *)
