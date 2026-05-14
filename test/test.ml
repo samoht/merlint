@@ -31,6 +31,7 @@ let () =
       Test_guide.suite;
       Test_profiling.suite;
       Test_rule.suite;
+      Test_config_doc.suite;
       Test_e610.suite;
     ]
   in

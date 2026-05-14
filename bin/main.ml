@@ -455,53 +455,15 @@ let main exclude_patterns rules_spec ~show_profile ~show_config ~no_build files
     analyze_files mgr fs ~exclude_patterns ?rule_filter ~show_profile ~no_build
       files
 
-let man_config_section =
-  [
-    `S "CONFIGURATION FILE";
-    `P
-      "$(tname) looks for $(b,merlint.toml) configuration files by searching \
-       upward from the analyzed path to the workspace root (outermost \
-       dune-project). All found files are merged: settings from closer files \
-       override outer ones, while rule exclusions accumulate.";
-    `P "Top-level keys override default thresholds and toggles:";
-    `Pre "max-complexity = 15\nmax-function-length = 80\nallow-obj-magic = true";
-    `P
-      "Rules are an array of tables; each excludes specific rule codes for \
-       files matching a glob pattern:";
-    `Pre
-      "[[rules]]\n\
-       files = \"memtrace/src/trace.ml\"\n\
-       exclude = [\"E100\"]\n\n\
-       [[rules]]\n\
-       files = \"lib/generated/*.ml\"\n\
-       exclude = [\"E200\", \"E300\"]";
-    `P
-      "Rule patterns support wildcards: $(b,\"*\") excludes all rules for \
-       matching files, and $(b,\"E1*\") excludes all rules starting with E1. \
-       Use this to completely skip a file:";
-    `Pre "[[rules]]\nfiles = \"vendor/**/*.ml\"\nexclude = [\"*\"]";
-    `P
-      "File patterns support $(b,*) (any filename), $(b,**/) (any directory \
-       depth), and $(b,?) (single character). Use $(b,--show-config) to verify \
-       the loaded configuration.";
-    `P
-      "$(b,allowed_words) — names accepted as-is by naming rules (E300, E331, \
-       etc.). For example $(b,create_table) would normally trigger E331 \
-       (redundant prefix) but can be exempted:";
-    `Pre "allowed_words = [\"create_table\"]";
-    `P
-      "$(b,acronyms) is an alias for $(b,allowed_words) — both add to the same \
-       allowlist.";
-    `P
-      "Available settings: $(b,max-complexity), $(b,max-function-length), \
-       $(b,max-nesting), $(b,exempt-data-definitions), \
-       $(b,max-underscores-in-name), $(b,min-name-length-underscore), \
-       $(b,allow-obj-magic), $(b,allow-str-module), \
-       $(b,allow-catch-all-exceptions), $(b,require-ocamlformat-file), \
-       $(b,require-mli-files).";
-  ]
+let analyze_term =
+  Term.(
+    const (fun e r p c n f u ->
+        main e r ~show_profile:p ~show_config:c ~no_build:n f u)
+    $ exclude_flag $ rules_flag $ profile_flag $ show_config_flag
+    $ no_build_flag $ files
+    $ Term.(const (fun () () -> ()) $ Vlog.setup "merlint" $ Memtrace.term))
 
-let cmd =
+let analyze =
   let doc = "Analyze OCaml code for style issues" in
   let man =
     [
@@ -516,16 +478,30 @@ let cmd =
         "If no files or directories are specified, it analyzes all .ml and \
          .mli files in the current dune project (searching upward for \
          dune-project).";
+      `P "Run $(b,merlint config --help) for the configuration file format.";
     ]
-    @ man_config_section
   in
   let info = Cmd.info "merlint" ~version:Monopam_info.version ~doc ~man in
-  Cmd.v info
-    Term.(
-      const (fun e r p c n f u ->
-          main e r ~show_profile:p ~show_config:c ~no_build:n f u)
-      $ exclude_flag $ rules_flag $ profile_flag $ show_config_flag
-      $ no_build_flag $ files
-      $ Term.(const (fun () () -> ()) $ Vlog.setup "merlint" $ Memtrace.term))
+  Cmd.v info analyze_term
+
+let config =
+  let doc = "Show the merlint.toml configuration file format" in
+  let man =
+    [
+      `S Manpage.s_description;
+      `P
+        "Reference for the $(b,merlint.toml) configuration file format. The \
+         file is parsed as TOML 1.1 and supports top-level settings keys plus \
+         $(b,[[rules]]) blocks that exclude rules per file pattern.";
+    ]
+    @ Merlint_doc.Config_doc.man
+  in
+  let info = Cmd.info "config" ~doc ~man in
+  Cmd.v info Term.(const () |> map (fun () -> ()))
+
+let cmd =
+  let doc = "Analyze OCaml code for style issues" in
+  let info = Cmd.info "merlint" ~version:Monopam_info.version ~doc in
+  Cmd.group ~default:analyze_term info [ analyze; config ]
 
 let () = Stdlib.exit (Cmd.eval cmd)

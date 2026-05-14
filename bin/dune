@@ -4,6 +4,7 @@
  (modules main)
  (libraries
   merlint
+  merlint_doc
   cmdliner
   eio
   eio_main
