@@ -6,11 +6,11 @@
     library code that the package's tags advertise as sans-IO.
 
     A package is sans-IO iff its opam [tags:] include any [codec.*] topic or the
-    top-level [protocol] tag. Eligibility is read from
-    [Monopam_info_index.tags]. Library-to-package attribution and per-library
-    source directories come from [Monopam_info_index.library_source_dir] —
-    sibling adapter packages (e.g. [nox-tls-eio] alongside [nox-tls]) are
-    therefore scanned against their own tags, not their sans-IO sister's. *)
+    top-level [protocol] tag. Eligibility is read from [Project_index.tags].
+    Library-to-package attribution and per-library source directories come from
+    [Project_index.library_source_dir] — sibling adapter packages (e.g.
+    [nox-tls-eio] alongside [nox-tls]) are therefore scanned against their own
+    tags, not their sans-IO sister's. *)
 
 type finding = {
   file : string;
@@ -95,7 +95,7 @@ let is_io_edge_dir dir =
     | _ -> false)
 
 let library_ml_files index lib =
-  match Monopam_info_index.library_source_dir index lib with
+  match Project_index.library_source_dir index lib with
   | None -> []
   | Some dir when is_io_edge_dir dir -> []
   | Some dir -> (
@@ -110,11 +110,11 @@ let check (ctx : Context.project) =
   let index = Context.index ctx in
   List.concat_map
     (fun pkg ->
-      let tags = Monopam_info_index.tags index pkg in
+      let tags = Project_index.tags index pkg in
       if not (Opam_tags.has_sans_io tags) then []
       else
         let mls =
-          Monopam_info_index.libraries index pkg
+          Project_index.libraries index pkg
           |> List.concat_map (fun lib -> library_ml_files index lib)
         in
         let findings =
@@ -124,13 +124,13 @@ let check (ctx : Context.project) =
         | [] -> []
         | _ ->
             let opam_path =
-              match Monopam_info_index.source_dir index pkg with
+              match Project_index.source_dir index pkg with
               | Some dir -> Fpath.to_string Fpath.(dir / (pkg ^ ".opam"))
               | None -> pkg ^ ".opam"
             in
             let loc = Location.in_file opam_path in
             [ Issue.v ~loc { package = pkg; findings } ])
-    (Monopam_info_index.packages index)
+    (Project_index.packages index)
 
 let pp_finding ppf { file; line; col; ident; suggestion } =
   Fmt.pf ppf "%s:%d:%d ambient clock [%s] in lib code: %s" file line col ident
@@ -150,7 +150,7 @@ let rule =
        a side effect: take [~now] as a parameter, let the caller's adapter or \
        CLI [bin/] call [Mtime_clock.now] / [Ptime_clock.now] / \
        [Unix.gettimeofday] / [Sys.time] and pass the value in. Library \
-       attribution follows dune's [(public_name P.X)] via [Monopam_info_index] \
-       so a sibling adapter package is scanned against its own tags, not its \
+       attribution follows dune's [(public_name P.X)] via [Project_index] so a \
+       sibling adapter package is scanned against its own tags, not its \
        sans-IO sister's."
     ~examples:[] ~pp (Project check)

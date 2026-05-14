@@ -44,23 +44,22 @@ let is_builtin lib = String_set.mem (top_namespace lib) ocaml_builtins
 
 (** Packages in the monorepo source tree (as opposed to installed in
     [_opam/lib]). A package counts as local when the index registered a source
-    directory for it -- that happens whenever monopam-info-index finds a
-    [<pkg>.opam] file during the source walk. We don't gate on [origin = Local]
-    because that field is only set for packages with a matching install tree
-    under [_build/install/default/lib]; on a fresh checkout before [dune build],
-    all source packages would otherwise be invisible to this check. *)
+    directory for it -- that happens whenever project-index finds a [<pkg>.opam]
+    file during the source walk. We don't gate on [origin = Local] because that
+    field is only set for packages with a matching install tree under
+    [_build/install/default/lib]; on a fresh checkout before [dune build], all
+    source packages would otherwise be invisible to this check. *)
 let local_packages index =
-  Monopam_info_index.packages index
-  |> List.filter (fun pkg -> Monopam_info_index.source_dir index pkg <> None)
+  Project_index.packages index
+  |> List.filter (fun pkg -> Project_index.source_dir index pkg <> None)
 
 (** [own_libs index pkg] is the set of libraries declared by [pkg] itself -- a
     package never needs to declare a dep on itself. *)
-let own_libs index pkg =
-  String_set.of_list (Monopam_info_index.libraries index pkg)
+let own_libs index pkg = String_set.of_list (Project_index.libraries index pkg)
 
 (** [test_only_libs index pkg] is the set of libraries declared by [pkg] whose
     only references in the source tree are from [(test ...)] / [(tests ...)]
     stanzas -- test helpers whose [(libraries ...)] deps belong in [:with-test],
     not the runtime [depends:]. *)
 let test_only_libs index pkg =
-  String_set.of_list (Monopam_info_index.test_only_libraries index pkg)
+  String_set.of_list (Project_index.test_only_libraries index pkg)

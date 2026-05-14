@@ -2069,7 +2069,7 @@ and replace each call site with [err_x "..." args] / [fail_x "..." args]. The la
         <span class="error-code">E931</span>
         <span class="error-title">Ambient clock in sans-IO library code</span>
     </div>
-    <div class="error-hint"><p>Sans-IO packages (tagged [codec.*] or [protocol]) must not read the wall clock or monotonic clock from library code. Time is an input, not a side effect: take [~now] as a parameter, let the caller's adapter or CLI [bin/] call [Mtime_clock.now] / [Ptime_clock.now] / [Unix.gettimeofday] / [Sys.time] and pass the value in. Library attribution follows dune's [(public_name P.X)] via [Monopam_info_index] so a sibling adapter package is scanned against its own tags, not its sans-IO sister's.</p></div>
+    <div class="error-hint"><p>Sans-IO packages (tagged [codec.*] or [protocol]) must not read the wall clock or monotonic clock from library code. Time is an input, not a side effect: take [~now] as a parameter, let the caller's adapter or CLI [bin/] call [Mtime_clock.now] / [Ptime_clock.now] / [Unix.gettimeofday] / [Sys.time] and pass the value in. Library attribution follows dune's [(public_name P.X)] via [Project_index] so a sibling adapter package is scanned against its own tags, not its sans-IO sister's.</p></div>
 </div>
 <div class="error-card" id="E940">
     <div>
@@ -2083,7 +2083,7 @@ and replace each call site with [err_x "..." args] / [fail_x "..." args]. The la
         <span class="error-code">E941</span>
         <span class="error-title">Missing runtime dependency</span>
     </div>
-    <div class="error-hint"><p>When a library in your package's [(libraries L)] resolves to opam package P, P must appear in your package's [depends:]. Otherwise [opam install] from a fresh switch fails for downstream users -- your local build only works because P happens to be in the active switch. The fix is to add P to the [depends:] section of [&lt;pkg&gt;.opam.template] (or to [(package (depends ...))] in [dune-project] if you generate opam files with dune). Builtin libraries (unix, str, threads, ...), implicit deps (ocaml, dune, js_of_ocaml), [conf-*] wrappers, and libraries owned by the package itself are exempt.</p></div>
+    <div class="error-hint"><p>When a library in your package's [(libraries L)] resolves to opam package P, P must appear in your package's [depends:]. Otherwise [opam install] from a fresh switch fails for downstream users -- your local build only works because P happens to be in the active switch. The fix depends on how you author opam metadata: if you hand-write [&lt;pkg&gt;.opam], add the package to its [depends:]; if you let dune generate [&lt;pkg&gt;.opam] from [dune-project], add it to the [(package (depends ...))] stanza (use [&lt;pkg&gt;.opam.template] only for fields dune can't generate). Builtin libraries (unix, str, threads, ...), build-tool packages dune resolves separately (ocaml, dune, js_of_ocaml), [conf-*] system-library wrappers, and libraries owned by the package itself are exempt.</p></div>
 </div>
 
     <a href="#top" class="back-to-top">↑ Top</a>

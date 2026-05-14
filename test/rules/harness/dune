@@ -7,7 +7,7 @@
   eio
   eio_main
   fpath
-  monopam-info.index
+  ocaml-project-index
   unix
   logs.fmt
   fmt.tty))
