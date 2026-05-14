@@ -1,6 +1,6 @@
 (** Tests for Context module *)
 
-let dummy_index = lazy (failwith "Monopam_info_index not built in tests")
+let dummy_index = lazy (failwith "Project_index not built in tests")
 
 let test_create_project () =
   (* Test creating a project context *)

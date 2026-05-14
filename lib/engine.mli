@@ -10,7 +10,7 @@ val run :
   filter:Filter.t ->
   dune_describe:Dune_describe.describe ->
   ?files_to_analyze:Fpath.t list ->
-  index:Monopam_info_index.t Lazy.t ->
+  index:Project_index.t Lazy.t ->
   ?profiling:Profiling.t ->
   string ->
   result

@@ -17,14 +17,14 @@ val is_builtin : string -> bool
 (** [is_builtin lib] is [true] for libraries shipped with the OCaml distribution
     (unix, str, threads, etc.). *)
 
-val local_packages : Monopam_info_index.t -> string list
+val local_packages : Project_index.t -> string list
 (** [local_packages index] is the list of packages declared in the monorepo
     source tree (origin = Local), excluding those installed via opam. *)
 
-val own_libs : Monopam_info_index.t -> string -> String_set.t
+val own_libs : Project_index.t -> string -> String_set.t
 (** [own_libs index pkg] is the set of libraries declared by [pkg]. *)
 
-val test_only_libs : Monopam_info_index.t -> string -> String_set.t
+val test_only_libs : Project_index.t -> string -> String_set.t
 (** [test_only_libs index pkg] is the set of libraries declared by [pkg] whose
     only callers in the source tree are [(test ...)] / [(tests ...)] stanzas --
     private test helpers. Their [(libraries ...)] deps belong in [:with-test]

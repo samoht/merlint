@@ -13,8 +13,8 @@
   logs
   vlog
   nox-tty
-  monopam-info
-  monopam-info.index
+  version
+  ocaml-project-index
   nox-memtrace))
 
 (executable

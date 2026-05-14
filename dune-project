@@ -36,7 +36,7 @@
   vlog
   eio_main
   nox-memtrace
-  monopam-info
+  ocaml-project-index
   (alcotest :with-test)
   (mdx :with-test)
   nox-loc))

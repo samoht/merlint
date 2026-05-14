@@ -28,7 +28,7 @@ type project = {
       (** List of executable module names (lazy). *)
   lib_modules : string list Lazy.t;  (** List of library module names (lazy). *)
   test_modules : string list Lazy.t;  (** List of test module names (lazy). *)
-  index : Monopam_info_index.t Lazy.t;
+  index : Project_index.t Lazy.t;
       (** Monopam package/library index: opam pkg -> dune library -> modules,
           tags, depends, source directories. Walks the monorepo source tree and
           the [_opam/lib/] install tree. Built lazily on first access. *)
@@ -49,12 +49,12 @@ val project :
   project_root:string ->
   all_files:string list ->
   dune_describe:Dune_describe.describe ->
-  index:Monopam_info_index.t Lazy.t ->
+  index:Project_index.t Lazy.t ->
   project
 (** [project ~config ~project_root ~all_files ~dune_describe ~index] creates a
     project context. [index] is the lazy monopam index (built once per run). *)
 
-val index : project -> Monopam_info_index.t
+val index : project -> Project_index.t
 (** [index p] forces and returns the monopam package/library index. *)
 
 (** {2 File context accessors} *)

@@ -357,9 +357,7 @@ let analyze_files mgr fs ?(exclude_patterns = []) ?rule_filter
     else Merlint.Dune_describe.exclude exclude_patterns dune_describe
   in
 
-  let index =
-    lazy (Monopam_info_index.build ~fs ~monorepo:(Fpath.v project_root))
-  in
+  let index = lazy (Project_index.build ~fs ~monorepo:(Fpath.v project_root)) in
   run_analysis project_root filtered_describe files_to_analyze index rule_filter
     show_profile
 
@@ -481,7 +479,7 @@ let analyze =
       `P "Run $(b,merlint help config) for the configuration file format.";
     ]
   in
-  let info = Cmd.info "merlint" ~version:Monopam_info.version ~doc ~man in
+  let info = Cmd.info "merlint" ~version:Version.version ~doc ~man in
   Cmd.v info analyze_term
 
 let config =
@@ -533,7 +531,7 @@ let help =
 
 let cmd =
   let doc = "Analyze OCaml code for style issues" in
-  let info = Cmd.info "merlint" ~version:Monopam_info.version ~doc in
+  let info = Cmd.info "merlint" ~version:Version.version ~doc in
   Cmd.group ~default:analyze_term info [ analyze; config; help ]
 
 let () = Stdlib.exit (Cmd.eval cmd)

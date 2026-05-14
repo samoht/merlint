@@ -27,7 +27,7 @@ type project = {
   executable_modules : string list Lazy.t;
   lib_modules : string list Lazy.t;
   test_modules : string list Lazy.t;
-  index : Monopam_info_index.t Lazy.t;
+  index : Project_index.t Lazy.t;
 }
 
 let file ~filename ~config ~project_root ~outline ~dump =

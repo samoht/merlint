@@ -161,7 +161,7 @@ let run_rule ?index rule paths =
         | None ->
             lazy
               ( Eio_main.run @@ fun env ->
-                Monopam_info_index.build ~fs:(Eio.Stdenv.fs env)
+                Project_index.build ~fs:(Eio.Stdenv.fs env)
                   ~monorepo:(Fpath.v project_root) )
       in
       let result =
