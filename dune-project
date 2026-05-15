@@ -27,6 +27,7 @@
   fpath
   logs
   fmt
+  base-unix
   astring
   nox-sexp
   nox-dune
