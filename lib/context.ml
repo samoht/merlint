@@ -4,19 +4,13 @@ let src = Logs.Src.create "merlint.context" ~doc:"Context management"
 
 module Log = (val Logs.src_log src : Logs.LOG)
 
-exception Analysis_error of string
-
-let fail_analysis fmt = Fmt.kstr (fun s -> raise (Analysis_error s)) fmt
+exception Analysis_error = File_view.Analysis_error
 
 type file = {
   filename : string;
   config : Config.t;
   project_root : string;
-  ast : Ast.t Lazy.t;
-  dump : Merlin.Dump.t Lazy.t;
-  outline : Outline.t Lazy.t;
-  content : string Lazy.t;
-  functions : (string * Ast.expr) list Lazy.t;
+  view : File_view.t;
 }
 
 type project = {
@@ -35,27 +29,7 @@ let file ~filename ~config ~project_root ~outline ~dump =
     filename;
     config;
     project_root;
-    ast = lazy { Ast.functions = Ast.extract_functions filename };
-    dump =
-      lazy
-        (match dump () with Ok d -> d | Error msg -> fail_analysis "%s" msg);
-    outline =
-      lazy
-        (match outline () with
-        | Ok o -> o
-        | Error msg -> fail_analysis "%s" msg);
-    content =
-      lazy
-        (try In_channel.with_open_text filename In_channel.input_all
-         with exn ->
-           fail_analysis "Failed to read file %s: %s" filename
-             (Printexc.to_string exn));
-    functions =
-      lazy
-        (let ast = Ast.extract_functions filename in
-         Log.debug (fun m ->
-             m "Context: extracted %d functions" (List.length ast));
-         ast);
+    view = File_view.v ~filename ~outline ~dump;
   }
 
 let test_module_of_file f =
@@ -100,22 +74,6 @@ let project ~config ~project_root ~all_files ~dune_describe ~index =
       lazy
         (Log.debug (fun m ->
              m "Context: Total files to analyze: %d" (List.length all_files));
-         (* Check specifically for test_author.ml and similar *)
-         let specific_test_files =
-           [ "test_author.ml"; "test_blog.ml"; "test_build.ml" ]
-         in
-         List.iter
-           (fun name ->
-             let found =
-               List.exists (fun f -> String.ends_with ~suffix:name f) all_files
-             in
-             if found then
-               let path =
-                 List.find (fun f -> String.ends_with ~suffix:name f) all_files
-               in
-               Log.debug (fun m -> m "Context: Found %s at: %s" name path)
-             else Log.debug (fun m -> m "Context: NOT FOUND: %s" name))
-           specific_test_files;
          all_files);
     dune_describe = dune_desc_lazy;
     executable_modules =
@@ -128,16 +86,13 @@ let project ~config ~project_root ~all_files ~dune_describe ~index =
 let index ctx = Lazy.force ctx.index
 
 (* File context accessors *)
-let ast ctx = Lazy.force ctx.ast
-
-let dump ctx =
-  let dump_data = Lazy.force ctx.dump in
-  (* Automatically fix all paths to use full path instead of basename *)
-  Merlin.Dump.fix_all_paths ~full_path:ctx.filename dump_data
-
-let outline ctx = Lazy.force ctx.outline
-let content ctx = Lazy.force ctx.content
-let functions ctx = Lazy.force ctx.functions
+let view ctx = ctx.view
+let ast ctx = File_view.ast ctx.view
+let dump ctx = File_view.dump ctx.view
+let outline ctx = File_view.outline ctx.view
+let content ctx = File_view.content ctx.view
+let functions ctx = File_view.functions ctx.view
+let parsetree ctx = File_view.parsetree ctx.view
 
 (* Project context accessors *)
 let all_files ctx = Lazy.force ctx.all_files

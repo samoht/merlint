@@ -33,13 +33,6 @@ let find structure =
       | _ -> None)
     structure
 
-let parse_structure ~filename content =
-  try
-    let lexbuf = Lexing.from_string content in
-    lexbuf.lex_curr_p <- { lexbuf.lex_curr_p with pos_fname = filename };
-    Some (Parse.implementation lexbuf)
-  with Syntaxerr.Error _ | Lexer.Error _ -> None
-
 (** [check ~prefix ~mk_payload ctx] is the rule body: only ML files whose
     basename starts with [<prefix>_] are considered; if their [suite] binding is
     empty, we yield an issue tagged with [mk_payload name] where [name] is the
@@ -54,8 +47,7 @@ let check ~prefix ~mk_payload (ctx : Context.file) =
       && String.ends_with ~suffix:".ml" basename)
   then []
   else
-    let content = Context.content ctx in
-    match parse_structure ~filename content with
+    match Context.parsetree ctx with
     | None -> []
     | Some structure -> (
         match find structure with

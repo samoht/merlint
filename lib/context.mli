@@ -9,13 +9,9 @@ type file = {
   filename : string;  (** The current file being analyzed. *)
   config : Config.t;  (** The merlint configuration. *)
   project_root : string;  (** The project root directory. *)
-  ast : Ast.t Lazy.t;  (** AST control flow (lazy). *)
-  dump : Merlin.Dump.t Lazy.t;
-      (** Names/identifiers from Merlint_backend dump (lazy). *)
-  outline : Outline.t Lazy.t;  (** Outline from Merlint_backend (lazy). *)
-  content : string Lazy.t;  (** File content (lazy). *)
-  functions : (string * Ast.expr) list Lazy.t;
-      (** Functions extracted from parsetree (lazy). *)
+  view : File_view.t;
+      (** Unified file view: shared parsetree, raw content, Merlin outline /
+          dump. See {!File_view}. *)
 }
 
 type project = {
@@ -61,20 +57,28 @@ val index : project -> Project_index.t
 
 (** {2 File context accessors} *)
 
+val view : file -> File_view.t
+(** [view file] returns the underlying {!File_view.t}. *)
+
 val ast : file -> Ast.t
-(** [ast file] returns ast field. *)
+(** [ast file] returns the control-flow AST. *)
 
 val dump : file -> Merlin.Dump.t
-(** [dump file] returns dump field. *)
+(** [dump file] returns the Merlin dump (identifiers, variants, patterns). *)
 
 val outline : file -> Outline.t
-(** [outline file] returns outline field. *)
+(** [outline file] returns the Merlin outline. *)
 
 val content : file -> string
-(** [content file] returns content field. *)
+(** [content file] returns the raw file bytes. *)
 
 val functions : file -> (string * Ast.expr) list
-(** [functions file] returns functions field. *)
+(** [functions file] returns top-level functions extracted from the shared
+    parsetree. *)
+
+val parsetree : file -> Parsetree.structure option
+(** [parsetree file] returns the shared compiler-libs parsetree. [None] for
+    [.mli] and parse errors. *)
 
 (** {2 Project context accessors} *)
 
