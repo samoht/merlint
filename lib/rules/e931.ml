@@ -85,37 +85,24 @@ let scan_file ~filename =
           | _ -> ());
       List.rev !findings
 
-(* Source files of a library: every [.ml] in the library's dune directory.
-   Acceptable over-approximation — [(modules ...)] filters would tighten it but
-   add no false positives we care about (an extra .ml scanned is benign). *)
-let is_io_edge_dir dir =
-  Fpath.segs dir
-  |> List.exists (function
-    | "bench" | "benches" | "test" | "tests" | "fuzz" -> true
-    | _ -> false)
-
-let library_ml_files index lib =
-  match Project_index.library_source_dir index lib with
-  | None -> []
-  | Some dir when is_io_edge_dir dir -> []
-  | Some dir -> (
-      try
-        Sys.readdir (Fpath.to_string dir)
-        |> Array.to_list
-        |> List.filter (fun f -> Filename.check_suffix f ".ml")
-        |> List.map (fun f -> Fpath.to_string Fpath.(dir / f))
-      with Sys_error _ -> [])
+(* Source [.ml] files for a library, exactly as dune sees them: the
+   [(modules ...)] spec from the [dune] stanza, expanded against the
+   library's source directory by [Project_index.Library.files]. *)
+let library_ml_files lib =
+  Project_index.Library.files lib
+  |> List.filter (fun p -> Fpath.has_ext ".ml" p)
+  |> List.map Fpath.to_string
 
 let check (ctx : Context.project) =
+  let module P = Project_index.Package in
   let index = Context.index ctx in
   List.concat_map
     (fun pkg ->
-      let tags = Project_index.tags index pkg in
-      if not (Opam_tags.has_sans_io tags) then []
+      if not (Opam_tags.has_sans_io (P.tags pkg)) then []
       else
         let mls =
-          Project_index.libraries index pkg
-          |> List.concat_map (fun lib -> library_ml_files index lib)
+          Project_index.package_libraries pkg
+          |> List.concat_map library_ml_files
         in
         let findings =
           List.concat_map (fun filename -> scan_file ~filename) mls
@@ -124,13 +111,13 @@ let check (ctx : Context.project) =
         | [] -> []
         | _ ->
             let opam_path =
-              match Project_index.source_dir index pkg with
-              | Some dir -> Fpath.to_string Fpath.(dir / (pkg ^ ".opam"))
-              | None -> pkg ^ ".opam"
+              match P.opam_path pkg with
+              | Some path -> Fpath.to_string path
+              | None -> P.name pkg ^ ".opam"
             in
             let loc = Location.in_file opam_path in
-            [ Issue.v ~loc { package = pkg; findings } ])
-    (Project_index.packages index)
+            [ Issue.v ~loc { package = P.name pkg; findings } ])
+    (Project_index.packages_nodes index)
 
 let pp_finding ppf { file; line; col; ident; suggestion } =
   Fmt.pf ppf "%s:%d:%d ambient clock [%s] in lib code: %s" file line col ident

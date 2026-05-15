@@ -19,83 +19,79 @@ type payload = {
   source_lib : string;
 }
 
+module P = Project_index.Package
+
 let is_exempt_pkg used_pkg =
   Dep_deps.String_set.mem used_pkg Dep_deps.build_tools
   || Dep_deps.is_conf_pkg used_pkg
 
-let check_used_lib ~index ~package ~depends_set ~own used_lib =
+let check_used_lib ~package ~depends_set ~own used_lib =
   if Dep_deps.is_builtin used_lib then `Skip
   else if Dep_deps.String_set.mem used_lib own then `Skip
   else
-    match Project_index.package_of index used_lib with
+    match Project_index.library (P.index package) used_lib with
     | None -> `Skip
-    | Some used_pkg
-      when used_pkg = package || is_exempt_pkg used_pkg
-           || Dep_deps.String_set.mem used_pkg depends_set ->
-        `Skip
-    | Some used_pkg -> `Missing used_pkg
+    | Some lib ->
+        let used_pkg = P.name (Project_index.Library.package lib) in
+        if
+          used_pkg = P.name package
+          || is_exempt_pkg used_pkg
+          || Dep_deps.String_set.mem used_pkg depends_set
+        then `Skip
+        else `Missing used_pkg
 
-let check_lib ~index ~package ~depends_set ~own lib =
-  let used_libs = Project_index.library_libraries index lib in
-  List.filter_map
-    (fun used_lib ->
-      match check_used_lib ~index ~package ~depends_set ~own used_lib with
+let check_lib ~package ~depends_set ~own lib =
+  let lib_name = Project_index.Library.name lib in
+  Project_index.Library.deps lib
+  |> List.filter_map (fun used_lib ->
+      match check_used_lib ~package ~depends_set ~own used_lib with
       | `Skip -> None
       | `Missing used_pkg ->
           Some
             {
-              package;
+              package = P.name package;
               missing_dep = used_pkg;
               used_via = used_lib;
-              source_lib = lib;
+              source_lib = lib_name;
             })
-    used_libs
 
-let check_bin_use ~index ~package ~depends_set ~build_set bin =
-  match Project_index.package_of_binary index bin with
+let check_bin_use ~package ~depends_set ~build_set bin =
+  match Project_index.package_of_binary_node (P.index package) bin with
   | None -> None
   | Some used_pkg
-    when used_pkg = package
-         || Dep_deps.String_set.mem used_pkg Dep_deps.build_tools
-         || Dep_deps.String_set.mem used_pkg depends_set
-         || Dep_deps.String_set.mem used_pkg build_set ->
+    when P.name used_pkg = P.name package
+         || Dep_deps.String_set.mem (P.name used_pkg) Dep_deps.build_tools
+         || Dep_deps.String_set.mem (P.name used_pkg) depends_set
+         || Dep_deps.String_set.mem (P.name used_pkg) build_set ->
       None
   | Some used_pkg ->
       Some
         {
-          package;
-          missing_dep = used_pkg;
+          package = P.name package;
+          missing_dep = P.name used_pkg;
           used_via = Fmt.str "%%{bin:%s}" bin;
           source_lib = "(rule)";
         }
 
-let check_package index package =
-  let libs = Project_index.libraries index package in
-  let depends =
-    Project_index.depends index package |> Dep_deps.String_set.of_list
-  in
-  let build_depends =
-    Project_index.build_depends index package |> Dep_deps.String_set.of_list
-  in
-  let own = Dep_deps.own_libs index package in
+let check_package package =
+  let depends = P.depends package |> Dep_deps.String_set.of_list in
+  let build_depends = P.build_depends package |> Dep_deps.String_set.of_list in
+  let own = Dep_deps.own_libs package in
   (* Skip libraries that are only referenced by test stanzas: their
-     [(libraries ...)] deps are test-scope, not runtime. E943 covers those.
-     The classification comes from project-index, which walks every
-     dune stanza in the package at index-build time. *)
-  let test_only = Dep_deps.test_only_libs index package in
+     [(libraries ...)] deps are test-scope, not runtime. E943 covers those. *)
+  let test_only = Dep_deps.test_only_libs package in
   let runtime_libs =
-    List.filter (fun lib -> not (Dep_deps.String_set.mem lib test_only)) libs
+    Project_index.package_libraries package
+    |> List.filter (fun lib ->
+        not (Dep_deps.String_set.mem (Project_index.Library.name lib) test_only))
   in
   let lib_findings =
-    List.concat_map
-      (check_lib ~index ~package ~depends_set:depends ~own)
-      runtime_libs
+    List.concat_map (check_lib ~package ~depends_set:depends ~own) runtime_libs
   in
   let bin_findings =
-    Project_index.bin_uses index package
+    P.bin_uses package
     |> List.filter_map
-         (check_bin_use ~index ~package ~depends_set:depends
-            ~build_set:build_depends)
+         (check_bin_use ~package ~depends_set:depends ~build_set:build_depends)
   in
   lib_findings @ bin_findings
 

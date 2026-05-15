@@ -2092,6 +2092,13 @@ and replace each call site with [err_x "..." args] / [fail_x "..." args]. The la
     </div>
     <div class="error-hint"><p>A dep used only from [(test ...)] / [(tests ...)] or a runtest-attached private executable belongs in [:with-test]. A dep used only from a private executable that's not attached to [runtest] (generator, benchmark, dev tool) belongs in [:with-dev-setup]. Add the appropriate filter: in a hand-written [&lt;pkg&gt;.opam], wrap the entry as ["alcotest" {with-test}] or ["bench" {with-dev-setup}]; in a [dune-project] [(package (depends ...))] stanza, write [(alcotest :with-test)] or [(bench :with-dev-setup)]. Build-tool packages dune resolves separately (dune, dune-configurator, js_of_ocaml, ocaml) and [conf-*] system wrappers are exempt.</p></div>
 </div>
+<div class="error-card" id="E944">
+    <div>
+        <span class="error-code">E944</span>
+        <span class="error-title">Optional sub-library missing depopt declaration</span>
+    </div>
+    <div class="error-hint"><p>When you use [X.suffix] from package X, X's installation might have skipped that sub-library because the system dep it gates wasn't available at X's build time. The gating dep is one of X's opam [depopts:]. Declare it in your own [depends:] so opam-install picks it up in a fresh switch. The (parent, sub) → depopt mapping lives in [merlint/lib/rules/e944.ml]'s [gating_table]; extend it when you find a new case. Each entry is verified against X's actual depopts at run time; stale entries surface as findings too.</p></div>
+</div>
 
     <a href="#top" class="back-to-top">↑ Top</a>
 </body>
