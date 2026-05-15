@@ -93,4 +93,5 @@ let all_rules =
     E940.rule;
     E941.rule;
     E943.rule;
+    E944.rule;
   ]
