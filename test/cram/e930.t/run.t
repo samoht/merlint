@@ -16,7 +16,7 @@ Test bad example - pure sans-IO package depends on Unix:
     additionally not depend on eio*, unix, or ambient clocks. They expose Bytesrw
     Reader/Writer in the main library rather than shipping a separate
     <pkg>_bytesrw sub-library.
-    - pkg/pkg.opam:1:0: pkg/pkg.opam: sans-io policy violated by depends: unix
+    - pkg/pkg.opam:1:0: pkg/pkg.opam: sans-io policy violated by depends: unix; bad/pkg/lib/dune libraries: unix
   ✓ Test Quality (0 total issues)
   ✓ Interop Testing (0 total issues)
   ✓ Code Generation (0 total issues)
