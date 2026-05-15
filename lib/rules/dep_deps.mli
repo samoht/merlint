@@ -19,16 +19,22 @@ val is_builtin : string -> bool
 (** [is_builtin lib] is [true] for libraries shipped with the OCaml distribution
     (unix, str, threads, etc.). *)
 
-val local_packages : Project_index.t -> string list
-(** [local_packages index] is the list of packages declared in the monorepo
-    source tree (origin = Local), excluding those installed via opam. *)
-
 val own_libs : Project_index.t -> string -> String_set.t
 (** [own_libs index pkg] is the set of libraries declared by [pkg]. *)
 
 val test_only_libs : Project_index.t -> string -> String_set.t
 (** [test_only_libs index pkg] is the set of libraries declared by [pkg] whose
-    only callers in the source tree are [(test ...)] / [(tests ...)] stanzas --
-    private test helpers. Their [(libraries ...)] deps belong in [:with-test]
-    (E943's territory), not in the runtime [depends:]. The classification is
-    done by walking dune stanzas, not by directory name. *)
+    only references in the source tree are from [(test ...)] / [(tests ...)]
+    stanzas. *)
+
+val opam_loc : Project_index.t -> string -> Location.t
+(** [opam_loc index pkg] is a [Location.t] pointing at the start of [pkg]'s
+    [.opam] file. *)
+
+val run_per_package :
+  check_package:(Project_index.t -> string -> 'a list) ->
+  Project_index.t ->
+  'a Issue.t list
+(** [run_per_package ~check_package index] applies [check_package] to every
+    {!Project_index.source_packages}, attaches an {!opam_loc} to each payload,
+    and concatenates the results. *)
