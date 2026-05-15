@@ -74,22 +74,103 @@ let library_source_files libraries =
         lib_info.files)
     libraries
 
-(** Check if [module_name] (e.g. "Dump") is referenced as a module in any
-    library source file. *)
-let is_referenced_in_library library_source_files module_name =
-  let cap_name = String.capitalize_ascii module_name in
-  let patterns =
-    [ cap_name ^ "."; "module " ^ cap_name; "= " ^ cap_name; ": " ^ cap_name ]
+module String_set = Set.Make (String)
+
+(** AST iterator that records the leading segment of every module path in the
+    tree (the [Foo] of [Foo.x], [Foo.Bar.t], [open Foo], [include Foo],
+    [module M = Foo], [type t = Foo.t], constructor patterns, etc.). The leading
+    segment alone is enough for E610: it just needs to know whether a given
+    module name is referenced anywhere. *)
+let module_ref_iterator acc =
+  let add_lid lid =
+    match Longident.flatten lid with
+    | head :: _
+      when String.length head > 0 && head.[0] >= 'A' && head.[0] <= 'Z' ->
+        acc := String_set.add head !acc
+    | _ -> ()
   in
-  List.exists
-    (fun src_path ->
-      try
-        let content = In_channel.with_open_text src_path In_channel.input_all in
-        List.exists
-          (fun pattern -> Astring.String.is_infix ~affix:pattern content)
-          patterns
-      with Sys_error _ -> false)
-    library_source_files
+  {
+    Ast_iterator.default_iterator with
+    expr =
+      (fun self e ->
+        (match e.pexp_desc with
+        | Pexp_ident { txt; _ } | Pexp_construct ({ txt; _ }, _) -> add_lid txt
+        | _ -> ());
+        Ast_iterator.default_iterator.expr self e);
+    typ =
+      (fun self c ->
+        (match c.ptyp_desc with
+        | Ptyp_constr ({ txt; _ }, _) | Ptyp_class ({ txt; _ }, _) ->
+            add_lid txt
+        | _ -> ());
+        Ast_iterator.default_iterator.typ self c);
+    pat =
+      (fun self p ->
+        (match p.ppat_desc with
+        | Ppat_construct ({ txt; _ }, _) -> add_lid txt
+        | _ -> ());
+        Ast_iterator.default_iterator.pat self p);
+    module_expr =
+      (fun self me ->
+        (match me.pmod_desc with
+        | Pmod_ident { txt; _ } -> add_lid txt
+        | _ -> ());
+        Ast_iterator.default_iterator.module_expr self me);
+    module_type =
+      (fun self mty ->
+        (match mty.pmty_desc with
+        | Pmty_ident { txt; _ } | Pmty_alias { txt; _ } -> add_lid txt
+        | _ -> ());
+        Ast_iterator.default_iterator.module_type self mty);
+    open_declaration =
+      (fun self od ->
+        (match od.popen_expr.pmod_desc with
+        | Pmod_ident { txt; _ } -> add_lid txt
+        | _ -> ());
+        Ast_iterator.default_iterator.open_declaration self od);
+  }
+
+let collect_refs_in_structure structure acc =
+  let acc = ref acc in
+  let iter = module_ref_iterator acc in
+  iter.structure iter structure;
+  !acc
+
+let collect_refs_in_signature signature acc =
+  let acc = ref acc in
+  let iter = module_ref_iterator acc in
+  iter.signature iter signature;
+  !acc
+
+let with_lexbuf path f =
+  try
+    let ic = open_in path in
+    Fun.protect
+      ~finally:(fun () -> close_in ic)
+      (fun () ->
+        let lexbuf = Lexing.from_channel ic in
+        lexbuf.lex_curr_p <- { lexbuf.lex_curr_p with pos_fname = path };
+        Some (f lexbuf))
+  with _ -> None
+
+(** Project-wide set of module names referenced anywhere in [files]. Parse each
+    [.ml] / [.mli] once via compiler-libs and walk the AST. The resulting set is
+    consulted by per-test lookups to decide whether a test's expected library
+    module is referenced (and therefore counts as "exists in some library
+    form"). *)
+let collect_referenced_modules files =
+  List.fold_left
+    (fun acc path ->
+      if Filename.check_suffix path ".ml" then
+        match with_lexbuf path Parse.implementation with
+        | None -> acc
+        | Some structure -> collect_refs_in_structure structure acc
+      else if Filename.check_suffix path ".mli" then
+        match with_lexbuf path Parse.interface with
+        | None -> acc
+        | Some signature -> collect_refs_in_signature signature acc
+      else acc)
+    String_set.empty files
 
 let module_path_matches ~expected_path lib_path =
   let expected_lc = String.lowercase_ascii expected_path in
@@ -116,7 +197,7 @@ let missing_library_issue file expected_path =
   Issue.v ~loc
     { test_file = Fpath.to_string file; expected_module = expected_path }
 
-let check_test_file ~library_module_paths ~library_source_files file =
+let check_test_file ~library_module_paths ~referenced_modules file =
   let test_module = Fpath.(file |> rem_ext |> basename) in
   if
     (not (Fpath.has_ext ".ml" file))
@@ -136,9 +217,8 @@ let check_test_file ~library_module_paths ~library_source_files file =
         let module_name =
           Filename.remove_extension (Filename.basename expected_path)
         in
-        let referenced =
-          is_referenced_in_library library_source_files module_name
-        in
+        let cap_name = String.capitalize_ascii module_name in
+        let referenced = String_set.mem cap_name referenced_modules in
         Log.debug (fun m -> m "E610: found=%b referenced=%b" found referenced);
         if found || referenced then None
         else Some (missing_library_issue file expected_path)
@@ -147,7 +227,9 @@ let check ctx =
   let dune_describe = Context.dune_describe ctx in
   let libraries = Dune_describe.libraries dune_describe in
   let library_module_paths = library_module_paths libraries in
-  let library_source_files = library_source_files libraries in
+  let referenced_modules =
+    collect_referenced_modules (library_source_files libraries)
+  in
   Log.debug (fun m ->
       m "E610: library_module_paths = %a"
         Fmt.(list ~sep:comma string)
@@ -155,8 +237,7 @@ let check ctx =
   Dune_describe.tests dune_describe
   |> List.concat_map (fun (test_info : Dune_describe.test_info) ->
       test_info.files)
-  |> List.filter_map
-       (check_test_file ~library_module_paths ~library_source_files)
+  |> List.filter_map (check_test_file ~library_module_paths ~referenced_modules)
 
 let pp ppf { test_file = _; expected_module } =
   Fmt.pf ppf "Test file exists but corresponding library module '%s' not found"
