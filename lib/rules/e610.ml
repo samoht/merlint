@@ -81,10 +81,15 @@ module String_set = Set.Make (String)
     [module M = Foo], [type t = Foo.t], constructor patterns, etc.). The leading
     segment alone is enough for E610: it just needs to know whether a given
     module name is referenced anywhere. *)
+let rec head_of_lid : Longident.t -> string option = function
+  | Lident s -> Some s
+  | Ldot (l, _) -> head_of_lid l.txt
+  | Lapply (l, _) -> head_of_lid l.txt
+
 let module_ref_iterator acc =
   let add_lid lid =
-    match Longident.flatten lid with
-    | head :: _
+    match head_of_lid lid with
+    | Some head
       when String.length head > 0 && head.[0] >= 'A' && head.[0] <= 'Z' ->
         acc := String_set.add head !acc
     | _ -> ()
