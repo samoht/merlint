@@ -19,22 +19,22 @@ val is_builtin : string -> bool
 (** [is_builtin lib] is [true] for libraries shipped with the OCaml distribution
     (unix, str, threads, etc.). *)
 
-val own_libs : Project_index.t -> string -> String_set.t
-(** [own_libs index pkg] is the set of libraries declared by [pkg]. *)
+val own_libs : Project_index.Package.t -> String_set.t
+(** [own_libs pkg] is the set of libraries declared by [pkg]. *)
 
-val test_only_libs : Project_index.t -> string -> String_set.t
-(** [test_only_libs index pkg] is the set of libraries declared by [pkg] whose
-    only references in the source tree are from [(test ...)] / [(tests ...)]
-    stanzas. *)
+val test_only_libs : Project_index.Package.t -> String_set.t
+(** [test_only_libs pkg] is the set of libraries declared by [pkg] whose only
+    references in the source tree are from [(test ...)] / [(tests ...)] stanzas.
+*)
 
-val opam_loc : Project_index.t -> string -> Location.t
-(** [opam_loc index pkg] is a [Location.t] pointing at the start of [pkg]'s
-    [.opam] file. *)
+val opam_loc : Project_index.Package.t -> Location.t
+(** [opam_loc pkg] is a [Location.t] pointing at the start of [pkg]'s [.opam]
+    file. *)
 
 val run_per_package :
-  check_package:(Project_index.t -> string -> 'a list) ->
+  check_package:(Project_index.Package.t -> 'a list) ->
   Project_index.t ->
   'a Issue.t list
 (** [run_per_package ~check_package index] applies [check_package] to every
-    {!Project_index.source_packages}, attaches an {!opam_loc} to each payload,
-    and concatenates the results. *)
+    {!Project_index.source_packages_nodes}, attaches an {!opam_loc} to each
+    payload, and concatenates the results. *)

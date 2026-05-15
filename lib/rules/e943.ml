@@ -22,6 +22,8 @@ type payload = {
   suggest : suggestion;
 }
 
+module P = Project_index.Package
+
 let resolve_pkgs index libs =
   List.fold_left
     (fun acc lib ->
@@ -35,28 +37,36 @@ let example_lib_for libs ~index ~dep =
   |> List.find_opt (fun lib -> Project_index.package_of index lib = Some dep)
   |> Option.value ~default:dep
 
-let check_package index package =
-  let runtime_uses = Project_index.runtime_library_uses index package in
-  let test_uses = Project_index.test_library_uses index package in
-  let dev_uses = Project_index.dev_library_uses index package in
+let check_package package =
+  let index = P.index package in
+  let pkg_name = P.name package in
+  let runtime_uses = P.runtime_library_uses package in
+  let test_uses = P.test_library_uses package in
+  let dev_uses = P.dev_library_uses package in
   let runtime_pkgs = resolve_pkgs index runtime_uses in
   let test_pkgs = resolve_pkgs index test_uses in
   let dev_pkgs = resolve_pkgs index dev_uses in
-  let runtime_depends = Project_index.depends index package in
+  let runtime_depends = P.depends package in
   List.filter_map
     (fun dep ->
-      if dep = package then None
+      if dep = pkg_name then None
       else if Dep_deps.is_conf_pkg dep then None
       else if Dep_deps.String_set.mem dep Dep_deps.build_tools then None
       else if Dep_deps.String_set.mem dep runtime_pkgs then None
       else if Dep_deps.String_set.mem dep test_pkgs then
         let used_via = example_lib_for test_uses ~index ~dep in
-        Some { package; misclassified_dep = dep; used_via; suggest = With_test }
+        Some
+          {
+            package = pkg_name;
+            misclassified_dep = dep;
+            used_via;
+            suggest = With_test;
+          }
       else if Dep_deps.String_set.mem dep dev_pkgs then
         let used_via = example_lib_for dev_uses ~index ~dep in
         Some
           {
-            package;
+            package = pkg_name;
             misclassified_dep = dep;
             used_via;
             suggest = With_dev_setup;
