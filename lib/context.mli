@@ -38,11 +38,13 @@ val file :
   filename:string ->
   config:Config.t ->
   project_root:string ->
-  outline:(Outline.t, string) result ->
-  dump:(Merlin.Dump.t, string) result ->
+  outline:(unit -> (Outline.t, string) result) ->
+  dump:(unit -> (Merlin.Dump.t, string) result) ->
   file
 (** [file ~filename ~config ~project_root ~outline ~dump] creates a file
-    context. *)
+    context. The [outline] and [dump] thunks are invoked on first access (via
+    {!val-outline} / {!val-dump}); rules that don't touch either pay no Merlin
+    cost. *)
 
 val project :
   config:Config.t ->

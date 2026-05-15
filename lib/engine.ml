@@ -112,18 +112,27 @@ let analyze_single_file ?profiling ~backend ~config_for ~project_root
   let excluded_acc = ref [] in
   let issues =
     try
-      let merlin_start = Unix.gettimeofday () in
-      let outline = Merlin.outline backend ~file:filename in
-      let dump = Merlin.dump_ast backend ~file:filename in
-      let merlin_duration = Unix.gettimeofday () -. merlin_start in
-      (match profiling with
-      | Some prof ->
-          Profiling.add_timing prof
-            {
-              operation = Profiling.Merlin filename;
-              duration = merlin_duration;
-            }
-      | None -> ());
+      (* Both Merlin calls are slow (each parses+typechecks the file via
+         merlin-kernel). Defer them: rules that don't ask for outline or
+         dump pay nothing, and a profiling record is only emitted when the
+         thunk actually runs. *)
+      let merlin_op f =
+        let start = Unix.gettimeofday () in
+        let r = f () in
+        let duration = Unix.gettimeofday () -. start in
+        (match profiling with
+        | Some prof ->
+            Profiling.add_timing prof
+              { operation = Profiling.Merlin filename; duration }
+        | None -> ());
+        r
+      in
+      let outline () =
+        merlin_op (fun () -> Merlin.outline backend ~file:filename)
+      in
+      let dump () =
+        merlin_op (fun () -> Merlin.dump_ast backend ~file:filename)
+      in
       let file_ctx =
         Context.file ~filename ~config ~project_root ~outline ~dump
       in
