@@ -461,25 +461,25 @@ let analyze_term =
     $ no_build_flag $ files
     $ Term.(const (fun () () -> ()) $ Vlog.setup "merlint" $ Memtrace.term))
 
-let analyze =
-  let doc = "Analyze OCaml code for style issues" in
+let scan =
+  let doc = "Scan OCaml code for style issues" in
   let man =
     [
       `S Manpage.s_description;
       `P
-        "$(tname) analyzes OCaml source files and reports issues with modern \
+        "$(tname) scans OCaml source files and reports issues with modern \
          OCaml coding conventions.";
       `P
         "It uses Merlin to parse the OCaml AST and checks for naming \
          conventions, complexity, documentation, and code style issues.";
       `P
-        "If no files or directories are specified, it analyzes all .ml and \
-         .mli files in the current dune project (searching upward for \
+        "If no files or directories are specified, it scans all .ml and .mli \
+         files in the current dune project (searching upward for \
          dune-project).";
       `P "Run $(b,merlint help config) for the configuration file format.";
     ]
   in
-  let info = Cmd.info "merlint" ~version:Version.string ~doc ~man in
+  let info = Cmd.info "scan" ~version:Version.string ~doc ~man in
   Cmd.v info analyze_term
 
 let config =
@@ -532,6 +532,21 @@ let help =
 let cmd =
   let doc = "Analyze OCaml code for style issues" in
   let info = Cmd.info "merlint" ~version:Version.string ~doc in
-  Cmd.group ~default:analyze_term info [ analyze; config; help ]
+  Cmd.group ~default:analyze_term info [ scan; config; help ]
 
-let () = Stdlib.exit (Cmd.eval cmd)
+(* Cmdliner's [Cmd.group] only invokes the default term when argv has zero
+   positionals; with any other first positional it expects a subcommand name
+   and errors otherwise. [merlint .] should run [scan] on the current
+   directory, so when argv.(1) isn't a known subcommand or a help/version
+   flag, splice [scan] in front. *)
+let known_first_args = [ "scan"; "config"; "help" ]
+
+let rewrite_argv argv =
+  match Array.to_list argv with
+  | prog :: arg :: rest
+    when (not (List.mem arg known_first_args))
+         && (String.length arg = 0 || arg.[0] <> '-') ->
+      Array.of_list (prog :: "scan" :: arg :: rest)
+  | _ -> argv
+
+let () = Stdlib.exit (Cmd.eval ~argv:(rewrite_argv Sys.argv) cmd)
