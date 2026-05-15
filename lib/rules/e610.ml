@@ -151,7 +151,7 @@ let with_lexbuf path f =
         let lexbuf = Lexing.from_channel ic in
         lexbuf.lex_curr_p <- { lexbuf.lex_curr_p with pos_fname = path };
         Some (f lexbuf))
-  with _ -> None
+  with Sys_error _ | Syntaxerr.Error _ | Lexer.Error _ -> None
 
 (** Project-wide set of module names referenced anywhere in [files]. Parse each
     [.ml] / [.mli] once via compiler-libs and walk the AST. The resulting set is
