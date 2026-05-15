@@ -78,19 +78,8 @@ let check_package index package =
   Project_index.runtime_library_uses index package
   |> List.filter_map (check_lib_use ~index ~package ~depends_set)
 
-let opam_loc index pkg =
-  match Project_index.source_dir index pkg with
-  | Some dir ->
-      Location.in_file (Fpath.to_string (Fpath.add_seg dir (pkg ^ ".opam")))
-  | None -> Location.in_file (pkg ^ ".opam")
-
 let check (ctx : Context.project) =
-  let index = Context.index ctx in
-  List.concat_map
-    (fun pkg ->
-      let loc = opam_loc index pkg in
-      check_package index pkg |> List.map (fun p -> Issue.v ~loc p))
-    (Dep_deps.local_packages index)
+  Dep_deps.run_per_package ~check_package (Context.index ctx)
 
 let pp ppf p =
   match p.suggested with

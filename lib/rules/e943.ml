@@ -64,19 +64,8 @@ let check_package index package =
       else None)
     runtime_depends
 
-let opam_loc index pkg =
-  match Project_index.source_dir index pkg with
-  | Some dir ->
-      Location.in_file (Fpath.to_string (Fpath.add_seg dir (pkg ^ ".opam")))
-  | None -> Location.in_file (pkg ^ ".opam")
-
 let check (ctx : Context.project) =
-  let index = Context.index ctx in
-  List.concat_map
-    (fun pkg ->
-      let loc = opam_loc index pkg in
-      check_package index pkg |> List.map (fun p -> Issue.v ~loc p))
-    (Dep_deps.local_packages index)
+  Dep_deps.run_per_package ~check_package (Context.index ctx)
 
 let suggest_str = function
   | With_test -> "{with-test}"

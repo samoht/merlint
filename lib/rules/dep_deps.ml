@@ -49,17 +49,6 @@ let top_namespace name =
     distribution library: [unix], [str], [threads.posix], etc. *)
 let is_builtin lib = String_set.mem (top_namespace lib) ocaml_builtins
 
-(** Packages in the monorepo source tree (as opposed to installed in
-    [_opam/lib]). A package counts as local when the index registered a source
-    directory for it -- that happens whenever project-index finds a [<pkg>.opam]
-    file during the source walk. We don't gate on [origin = Local] because that
-    field is only set for packages with a matching install tree under
-    [_build/install/default/lib]; on a fresh checkout before [dune build], all
-    source packages would otherwise be invisible to this check. *)
-let local_packages index =
-  Project_index.packages index
-  |> List.filter (fun pkg -> Project_index.source_dir index pkg <> None)
-
 (** [own_libs index pkg] is the set of libraries declared by [pkg] itself -- a
     package never needs to declare a dep on itself. *)
 let own_libs index pkg = String_set.of_list (Project_index.libraries index pkg)
@@ -70,3 +59,22 @@ let own_libs index pkg = String_set.of_list (Project_index.libraries index pkg)
     not the runtime [depends:]. *)
 let test_only_libs index pkg =
   String_set.of_list (Project_index.test_only_libraries index pkg)
+
+(** [opam_loc index pkg] is a [Location.t] pointing at line 1 column 0 of
+    [pkg]'s [.opam] file. Falls back to a bare relative [<pkg>.opam] when the
+    index has no source directory for the package. *)
+let opam_loc index pkg =
+  match Project_index.opam_path index pkg with
+  | Some path -> Location.in_file (Fpath.to_string path)
+  | None -> Location.in_file (pkg ^ ".opam")
+
+(** [run_per_package ~check_package index] applies [check_package] to every
+    {!Project_index.source_packages}, attaches an [opam_loc]-derived location to
+    each payload, and concatenates the results. The shared driver for
+    package-level dep-declaration rules. *)
+let run_per_package ~check_package index =
+  List.concat_map
+    (fun pkg ->
+      let loc = opam_loc index pkg in
+      check_package index pkg |> List.map (fun p -> Issue.v ~loc p))
+    (Project_index.source_packages index)
