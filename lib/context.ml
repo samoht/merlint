@@ -37,10 +37,13 @@ let file ~filename ~config ~project_root ~outline ~dump =
     project_root;
     ast = lazy { Ast.functions = Ast.extract_functions filename };
     dump =
-      lazy (match dump with Ok d -> d | Error msg -> fail_analysis "%s" msg);
+      lazy
+        (match dump () with Ok d -> d | Error msg -> fail_analysis "%s" msg);
     outline =
       lazy
-        (match outline with Ok o -> o | Error msg -> fail_analysis "%s" msg);
+        (match outline () with
+        | Ok o -> o
+        | Error msg -> fail_analysis "%s" msg);
     content =
       lazy
         (try In_channel.with_open_text filename In_channel.input_all
