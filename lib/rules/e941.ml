@@ -51,10 +51,31 @@ let check_lib ~index ~package ~depends_set ~own lib =
             })
     used_libs
 
+let check_bin_use ~index ~package ~depends_set ~build_set bin =
+  match Project_index.package_of_binary index bin with
+  | None -> None
+  | Some used_pkg
+    when used_pkg = package
+         || Dep_deps.String_set.mem used_pkg Dep_deps.build_tools
+         || Dep_deps.String_set.mem used_pkg depends_set
+         || Dep_deps.String_set.mem used_pkg build_set ->
+      None
+  | Some used_pkg ->
+      Some
+        {
+          package;
+          missing_dep = used_pkg;
+          used_via = Fmt.str "%%{bin:%s}" bin;
+          source_lib = "(rule)";
+        }
+
 let check_package index package =
   let libs = Project_index.libraries index package in
   let depends =
     Project_index.depends index package |> Dep_deps.String_set.of_list
+  in
+  let build_depends =
+    Project_index.build_depends index package |> Dep_deps.String_set.of_list
   in
   let own = Dep_deps.own_libs index package in
   (* Skip libraries that are only referenced by test stanzas: their
@@ -65,9 +86,18 @@ let check_package index package =
   let runtime_libs =
     List.filter (fun lib -> not (Dep_deps.String_set.mem lib test_only)) libs
   in
-  List.concat_map
-    (check_lib ~index ~package ~depends_set:depends ~own)
-    runtime_libs
+  let lib_findings =
+    List.concat_map
+      (check_lib ~index ~package ~depends_set:depends ~own)
+      runtime_libs
+  in
+  let bin_findings =
+    Project_index.bin_uses index package
+    |> List.filter_map
+         (check_bin_use ~index ~package ~depends_set:depends
+            ~build_set:build_depends)
+  in
+  lib_findings @ bin_findings
 
 let opam_loc index pkg =
   match Project_index.source_dir index pkg with
