@@ -95,6 +95,9 @@ let () =
       Test_e921.suite;
       Test_e930.suite;
       Test_e931.suite;
+      Test_e940.suite;
+      Test_e941.suite;
+      Test_e943.suite;
       Test_interop.suite;
       Test_opam_tags.suite;
       Test_empty_suite.suite;
