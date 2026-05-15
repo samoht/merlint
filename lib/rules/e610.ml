@@ -94,8 +94,17 @@ let module_ref_iterator acc =
         acc := String_set.add head !acc
     | _ -> ()
   in
+  let add_name name = acc := String_set.add name !acc in
   {
     Ast_iterator.default_iterator with
+    module_binding =
+      (fun self mb ->
+        (match mb.pmb_name.txt with Some n -> add_name n | None -> ());
+        Ast_iterator.default_iterator.module_binding self mb);
+    module_declaration =
+      (fun self md ->
+        (match md.pmd_name.txt with Some n -> add_name n | None -> ());
+        Ast_iterator.default_iterator.module_declaration self md);
     expr =
       (fun self e ->
         (match e.pexp_desc with
