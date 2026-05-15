@@ -26,6 +26,7 @@ let () =
       Test_command.suite;
       Test_context.suite;
       Test_data.suite;
+      Test_file_view.suite;
       Test_example.suite;
       Test_file.suite;
       Test_guide.suite;

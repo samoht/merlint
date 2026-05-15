@@ -201,8 +201,7 @@ let pp ppf { name; kind; group } =
 
 let check (ctx : Context.file) =
   let filename = ctx.filename in
-  let content = Context.content ctx in
-  match Ast.parse_structure ~filename content with
+  match Context.parsetree ctx with
   | None -> []
   | Some structure ->
       collect_misused_bindings structure

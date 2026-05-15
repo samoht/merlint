@@ -49,7 +49,7 @@ let check (ctx : Context.file) =
   (* Only check .mli files *)
   if not (String.ends_with ~suffix:".mli" ctx.filename) then []
   else
-    let content = Lazy.force ctx.content in
+    let content = Context.content ctx in
     let outline = Context.outline ctx in
 
     (* Check all public values in the outline *)

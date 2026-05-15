@@ -32,8 +32,8 @@ let check (ctx : Context.file) =
   (* Only check .mli files *)
   if not (String.ends_with ~suffix:".mli" ctx.filename) then []
   else
-    let outline = Lazy.force ctx.outline in
-    let content = Lazy.force ctx.content in
+    let outline = Context.outline ctx in
+    let content = Context.content ctx in
 
     (* Find type 't' in the outline *)
     let type_t =

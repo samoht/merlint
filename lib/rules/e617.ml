@@ -59,13 +59,6 @@ let suite_name structure =
       | _ -> None)
     structure
 
-let parse_structure ~filename content =
-  try
-    let lexbuf = Lexing.from_string content in
-    lexbuf.lex_curr_p <- { lexbuf.lex_curr_p with pos_fname = filename };
-    Some (Parse.implementation lexbuf)
-  with Syntaxerr.Error _ | Lexer.Error _ -> None
-
 let suite_issue ~filename ~expected_name
     ((suite_name, name_loc) : string * Warnings.loc) =
   let loc =
@@ -96,22 +89,21 @@ let is_test_module_file filename =
   String.starts_with ~prefix:"test_" basename
   && String.ends_with ~suffix:".ml" basename
 
-let issues_of_content ~filename content =
+let issues_of_structure ~filename ~structure =
   let expected_name = extract_expected_name filename in
-  match parse_structure ~filename content with
+  match suite_name structure with
   | None -> []
-  | Some structure -> (
-      match suite_name structure with
+  | Some found -> (
+      match suite_issue ~filename ~expected_name found with
       | None -> []
-      | Some found -> (
-          match suite_issue ~filename ~expected_name found with
-          | None -> []
-          | Some issue -> [ issue ]))
+      | Some issue -> [ issue ])
 
 let check (ctx : Context.file) =
   let filename = ctx.filename in
   if is_test_module_file filename then
-    issues_of_content ~filename (Context.content ctx)
+    match Context.parsetree ctx with
+    | None -> []
+    | Some structure -> issues_of_structure ~filename ~structure
   else []
 
 let pp ppf { suite_name; issue_type } =

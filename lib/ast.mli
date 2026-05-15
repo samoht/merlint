@@ -80,6 +80,10 @@ val extract_functions : string -> (string * expr) list
 (** [extract_functions source] extracts functions with their control flow from a
     source file. Returns a list of (function_name, control_flow_ast) pairs. *)
 
+val functions_of_structure : Parsetree.structure -> (string * expr) list
+(** [functions_of_structure s] extracts the top-level functions with their
+    control flow from an already-parsed [Parsetree.structure]. *)
+
 val parse_structure : filename:string -> string -> Parsetree.structure option
 (** [parse_structure ~filename content] parses [content] into a Parsetree
     structure. Returns [None] for [.mli] files and on parse error. *)
