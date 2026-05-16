@@ -67,15 +67,18 @@ let has_fuzz_modules files =
       String.starts_with ~prefix:"fuzz_" Fpath.(f |> rem_ext |> basename))
     files
 
-let dune_has_gen_corpus dir =
+let dune_has_gen_corpus ctx dir =
   try
-    let content =
-      In_channel.with_open_text
-        (Filename.concat dir "dune")
-        In_channel.input_all
-    in
-    Re.execp (Re.compile (Re.str "--gen-corpus")) content
-  with Sys_error _ -> false
+    let dune_file = Filename.concat dir "dune" in
+    let content = File_view.content (Context.file_view ctx dune_file) in
+    match Dune.File.of_string content with
+    | Error _ -> false
+    | Ok dune ->
+        Dune.File.rules dune
+        |> List.exists (fun rule ->
+            Dune.File.Rule.run_actions rule
+            |> List.exists (List.exists (( = ) "--gen-corpus")))
+  with File_view.Analysis_error _ -> false
 
 let dir_issue dir kind =
   let dune_file = Filename.concat dir "dune" in
@@ -84,11 +87,11 @@ let dir_issue dir kind =
   in
   Issue.v ~loc { directory = dir; kind }
 
-let missing_issues_for_dir all_files dir =
+let missing_issues_for_dir ctx all_files dir =
   let files = dir_files all_files dir in
   let issues = [] in
   let issues =
-    if dune_has_gen_corpus dir then issues
+    if dune_has_gen_corpus ctx dir then issues
     else dir_issue dir `missing_gen_corpus :: issues
   in
   let issues =
@@ -98,17 +101,17 @@ let missing_issues_for_dir all_files dir =
   in
   List.rev issues
 
-let missing_issues stanzas =
+let missing_issues ctx stanzas =
   let all_files = List.concat_map snd stanzas in
   all_files
   |> List.map (fun f -> Fpath.parent f |> Fpath.to_string)
   |> List.sort_uniq String.compare
-  |> List.concat_map (missing_issues_for_dir all_files)
+  |> List.concat_map (missing_issues_for_dir ctx all_files)
 
 let check (ctx : Context.project) =
   let dune_describe = Context.dune_describe ctx in
   let stanzas = fuzz_stanzas dune_describe in
-  naming_issues stanzas @ missing_issues stanzas
+  naming_issues stanzas @ missing_issues ctx stanzas
 
 let pp ppf { directory; kind } =
   match kind with

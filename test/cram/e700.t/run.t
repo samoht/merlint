@@ -27,6 +27,7 @@ Test bad example - fuzz.ml defines tests inline:
   
   Summary: ✗ 1 total issue (applied 1 rule)
   ✗ Some checks failed. See details above.
+    Run `merlint help E700` for the rule's description, hint, and good/bad examples.
   [1]
 
 Test good example - fuzz.ml delegates to Fuzz_*.run():

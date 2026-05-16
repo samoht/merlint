@@ -39,11 +39,10 @@ val file :
   project_root:string ->
   load_content:(unit -> string) ->
   outline:(unit -> (Outline.t, string) result) ->
-  dump:(unit -> (Merlin.ast_dump, string) result) ->
   file
-(** [file ~filename ~config ~project_root ~load_content ~outline ~dump] creates
-    a file context. [load_content], [outline] and [dump] are invoked on first
-    access; rules that don't touch them pay nothing. *)
+(** [file ~filename ~config ~project_root ~load_content ~outline] creates a file
+    context. [load_content] and [outline] are invoked on first access; rules
+    that don't touch them pay nothing. *)
 
 val file_with_view :
   filename:string ->
@@ -78,9 +77,6 @@ val view : file -> File_view.t
 
 val ast : file -> Ast.t
 (** [ast file] returns the control-flow AST. *)
-
-val dump : file -> Merlin.Dump.t
-(** [dump file] returns the Merlin dump (identifiers, variants, patterns). *)
 
 val outline : file -> Outline.t
 (** [outline file] returns the Merlin outline. *)

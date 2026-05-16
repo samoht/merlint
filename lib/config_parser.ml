@@ -60,21 +60,21 @@ let files_strings_of_member = function
         "merlint config: rule.files must be a string or list of strings"
   | None -> Fmt.failwith "merlint config: rule missing 'files'"
 
-let extract_patterns (entry : Toml.Value.t) =
+let extract_patterns ~config_dir (entry : Toml.Value.t) =
   match entry with
   | Table (members, _) ->
       let files = files_strings_of_member (lookup_member "files" members) in
       let rules = exclude_rules_of_member (lookup_member "exclude" members) in
-      List.map (fun pattern -> { Rule_config.pattern; rules }) files
+      List.map (fun pattern -> { Rule_config.pattern; rules; config_dir }) files
   | _ -> Fmt.failwith "merlint config: rule entries must be tables"
 
-let project_setting (key, (value : Toml.Value.t)) =
+let project_setting ~config_dir (key, (value : Toml.Value.t)) =
   match (key, value) with
   | "rules", Array (entries, _) ->
-      `Rules (List.concat_map extract_patterns entries)
+      `Rules (List.concat_map (extract_patterns ~config_dir) entries)
   | _ -> `Setting (key, scalar_to_string value)
 
-let parse content =
+let parse ?(config_dir = "") content =
   let value =
     match Toml.of_string Toml.Value.codec content with
     | Ok v -> v
@@ -87,7 +87,7 @@ let parse content =
   in
   List.fold_left
     (fun acc ((key, _), v) ->
-      match project_setting (key, v) with
+      match project_setting ~config_dir (key, v) with
       | `Setting (k, s) -> { acc with settings = (k, s) :: acc.settings }
       | `Rules patterns ->
           let exclusions =
@@ -102,5 +102,5 @@ let parse content =
 let parse_file path =
   if Sys.file_exists path then
     let content = In_channel.with_open_text path In_channel.input_all in
-    Some (parse content)
+    Some (parse ~config_dir:(Filename.dirname path) content)
   else None

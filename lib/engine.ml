@@ -51,9 +51,12 @@ let log_io_stats stats backend =
   in
   let lookup tbl ext = Option.value ~default:0 (Hashtbl.find_opt tbl ext) in
   Log.info (fun m ->
-      m "IO stats: files_read=%d merlin_calls=%d cmt_hits=%d pipeline_calls=%d"
+      m
+        "IO stats: files_read=%d merlin_calls=%d cmt_hits=%d pipeline_calls=%d \
+         cmt_reads=%d cmt_cache_hits=%d"
         stats.files_read stats.merlin_calls backend_stats.cmt_hits
-        backend_stats.pipeline_calls);
+        backend_stats.pipeline_calls backend_stats.cmt_reads
+        backend_stats.cmt_cache_hits);
   List.iter
     (fun ext ->
       Log.info (fun m ->
@@ -129,19 +132,20 @@ let file_view ?profiling ~stats ~load_file ~backend filename =
     merlin_op ?profiling ?stats:(Some stats) filename (fun () ->
         Merlin.outline ~content backend ~file:filename)
   in
-  let dump () =
-    merlin_op ?profiling ?stats:(Some stats) filename (fun () ->
-        Merlin.dump_ast ~content backend ~file:filename)
-  in
   let parsetree () =
     merlin_op ?profiling ?stats:(Some stats) filename (fun () ->
         Merlin.parsetree ~content backend ~file:filename)
+  in
+  let signature () =
+    merlin_op ?profiling ?stats:(Some stats) filename (fun () ->
+        Merlin.signature ~content backend ~file:filename)
   in
   let typedtree () =
     merlin_op ?profiling ?stats:(Some stats) filename (fun () ->
         Merlin.typedtree ~content backend ~file:filename)
   in
-  File_view.v ~filename ~load_content ~typedtree ~parsetree ~outline ~dump ()
+  File_view.v ~filename ~load_content ~typedtree ~parsetree ~signature ~outline
+    ()
 
 let setup_analysis ~filter ~dune_describe ~files_to_analyze ~index ~file_view
     project_root =

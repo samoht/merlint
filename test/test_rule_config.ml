@@ -1,7 +1,10 @@
 open Merlint
 
 let add_pattern pattern rules exclusions =
-  Rule_config.add { Rule_config.pattern; rules } exclusions
+  Rule_config.add { Rule_config.pattern; rules; config_dir = "" } exclusions
+
+let add_pattern_in ~config_dir pattern rules exclusions =
+  Rule_config.add { Rule_config.pattern; rules; config_dir } exclusions
 
 let test_empty () =
   let exclusions = Rule_config.empty in
@@ -83,6 +86,20 @@ let test_prefix_patterns () =
     "doesn't match different prefix" false
     (Rule_config.should_exclude exclusions ~rule:"E330" ~file:"lib/process.ml")
 
+let test_config_dir_relative_patterns () =
+  let exclusions =
+    Rule_config.empty
+    |> add_pattern_in ~config_dir:"memtrace" "lib/trace.ml" [ "E100" ]
+  in
+  Alcotest.(check bool)
+    "matches file relative to config dir" true
+    (Rule_config.should_exclude exclusions ~rule:"E100"
+       ~file:"memtrace/lib/trace.ml");
+  Alcotest.(check bool)
+    "does not match sibling directory" false
+    (Rule_config.should_exclude exclusions ~rule:"E100"
+       ~file:"other/lib/trace.ml")
+
 let test_pp () =
   let exclusions =
     Rule_config.empty
@@ -113,6 +130,7 @@ let suite =
       ("wildcard patterns", `Quick, test_wildcard_patterns);
       ("exact match", `Quick, test_exact_match);
       ("prefix patterns", `Quick, test_prefix_patterns);
+      ("config-dir relative patterns", `Quick, test_config_dir_relative_patterns);
       ("pp", `Quick, test_pp);
       ("equal", `Quick, test_equal);
     ] )

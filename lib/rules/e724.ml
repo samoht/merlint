@@ -29,9 +29,6 @@ let fuzz_dirs dune_describe =
   in
   List.sort_uniq String.compare dirs
 
-let has_alias alias content =
-  Re.execp (Re.compile (Fmt.kstr Re.str "(alias %s)" alias)) content
-
 let issue ~loc dir kind = Issue.v ~loc { directory = dir; kind }
 
 let presence_issues ~loc dir ~has_runtest ~has_fuzz =
@@ -41,16 +38,46 @@ let presence_issues ~loc dir ~has_runtest ~has_fuzz =
   | false, true -> [ issue ~loc dir `missing_runtest ]
   | true, false -> [ issue ~loc dir `missing_fuzz ]
 
-let fuzz_content_issues ~loc dir content =
-  let has_corpus =
-    Re.execp (Re.compile (Re.str "source_tree corpus")) content
-    || Re.execp (Re.compile (Re.str "source_tree input")) content
-    || Re.execp (Re.compile (Re.str "--gen-corpus corpus")) content
+let fuzz_content_issues ~loc dir dune =
+  let fuzz_rule =
+    Dune.File.rules dune
+    |> List.find_opt (fun rule -> Dune.File.Rule.alias rule = Some "fuzz")
   in
-  let has_gen_corpus = Re.execp (Re.compile (Re.str "--gen-corpus")) content in
+  let run_args =
+    match fuzz_rule with
+    | None -> []
+    | Some rule -> Dune.File.Rule.run_actions rule
+  in
+  let has_run_arg arg =
+    List.exists (fun args -> List.exists (( = ) arg) args) run_args
+  in
+  let has_run_args args =
+    let rec starts_with needle haystack =
+      match (needle, haystack) with
+      | [], _ -> true
+      | x :: xs, y :: ys when x = y -> starts_with xs ys
+      | _ -> false
+    in
+    let rec loop haystack =
+      match haystack with
+      | [] -> args = []
+      | _ :: xs as ys -> starts_with args ys || loop xs
+    in
+    List.exists loop run_args
+  in
+  let has_corpus =
+    match fuzz_rule with
+    | Some rule ->
+        Dune.File.Rule.has_source_tree_dep rule "corpus"
+        || Dune.File.Rule.has_source_tree_dep rule "input"
+        || has_run_args [ "--gen-corpus"; "corpus" ]
+    | None -> false
+  in
+  let has_gen_corpus = has_run_arg "--gen-corpus" in
   let has_afl_profile =
-    Re.execp (Re.compile (Re.str "profile")) content
-    && Re.execp (Re.compile (Re.str "afl")) content
+    match fuzz_rule with
+    | Some rule -> Dune.File.Rule.enabled_if_profile rule = Some "afl"
+    | None -> false
   in
   [
     (has_corpus, `fuzz_missing_corpus);
@@ -60,25 +87,28 @@ let fuzz_content_issues ~loc dir content =
   |> List.filter_map (fun (present, kind) ->
       if present then None else Some (issue ~loc dir kind))
 
-let check_dir dir =
+let check_dir ctx dir =
   let dune_file = Filename.concat dir "dune" in
   try
-    let content = In_channel.with_open_text dune_file In_channel.input_all in
-    let has_runtest = has_alias "runtest" content in
-    let has_fuzz = has_alias "fuzz" content in
-    let loc =
-      Location.v ~file:dune_file ~start_line:1 ~start_col:0 ~end_line:1
-        ~end_col:0
-    in
-    let issues = presence_issues ~loc dir ~has_runtest ~has_fuzz in
-    if has_fuzz then issues @ fuzz_content_issues ~loc dir content else issues
-  with Sys_error _ -> []
+    let content = File_view.content (Context.file_view ctx dune_file) in
+    match Dune.File.of_string content with
+    | Error _ -> []
+    | Ok dune ->
+        let has_runtest = Dune.File.has_rule_alias dune "runtest" in
+        let has_fuzz = Dune.File.has_rule_alias dune "fuzz" in
+        let loc =
+          Location.v ~file:dune_file ~start_line:1 ~start_col:0 ~end_line:1
+            ~end_col:0
+        in
+        let issues = presence_issues ~loc dir ~has_runtest ~has_fuzz in
+        if has_fuzz then issues @ fuzz_content_issues ~loc dir dune else issues
+  with File_view.Analysis_error _ -> []
 
 (** Check that fuzz dune files contain required rule aliases with proper
     content. *)
 let check (ctx : Context.project) =
   let dune_describe = Context.dune_describe ctx in
-  List.concat_map check_dir (fuzz_dirs dune_describe)
+  List.concat_map (check_dir ctx) (fuzz_dirs dune_describe)
 
 let pp ppf { directory; kind } =
   match kind with

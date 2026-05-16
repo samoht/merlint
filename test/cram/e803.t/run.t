@@ -27,6 +27,7 @@ Test bad example - test.ml calls Sys.command:
   
   Summary: ✗ 1 total issue (applied 1 rule)
   ✗ Some checks failed. See details above.
+    Run `merlint help E803` for the rule's description, hint, and good/bad examples.
   [1]
 
 Test good example - test.ml only reads trace files:

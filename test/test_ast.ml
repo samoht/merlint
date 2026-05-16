@@ -173,6 +173,77 @@ let complexity_tests =
           "different ASTs not equal" false (Ast.equal ast1 ast3));
   ]
 
+let nesting_tests =
+  [
+    Alcotest.test_case "function boundary is not nesting" `Quick (fun () ->
+        let expr =
+          Ast.Function
+            {
+              params = 1;
+              body =
+                Ast.If_then_else
+                  { cond = Ast.Other; then_expr = Ast.Other; else_expr = None };
+            }
+        in
+        Alcotest.(check int) "function with if depth" 1 (Ast.Nesting.depth expr));
+    Alcotest.test_case "nested control flow still counts inside function" `Quick
+      (fun () ->
+        let expr =
+          Ast.Function
+            {
+              params = 1;
+              body =
+                Ast.If_then_else
+                  {
+                    cond = Ast.Other;
+                    then_expr =
+                      Ast.Match
+                        {
+                          expr = Ast.Other;
+                          cases =
+                            [
+                              Ast.Other;
+                              Ast.If_then_else
+                                {
+                                  cond = Ast.Other;
+                                  then_expr = Ast.Other;
+                                  else_expr = None;
+                                };
+                            ];
+                        };
+                    else_expr = None;
+                  };
+            }
+        in
+        Alcotest.(check int) "if/match/if depth" 3 (Ast.Nesting.depth expr));
+  ]
+
+let parsetree_conversion_tests =
+  [
+    Alcotest.test_case "constraint unwraps control flow" `Quick (fun () ->
+        match
+          Ast.parse_structure ~filename:"test.ml"
+            "let f x : int = match x with | 0 -> 1 | _ -> 2\n"
+        with
+        | Some structure -> (
+            match Ast.functions_of_structure structure with
+            | [ ("f", Ast.Function { body = Ast.Match { cases; _ }; _ }) ] ->
+                Alcotest.(check int) "case count" 2 (List.length cases)
+            | _ -> Alcotest.fail "expected constrained match function")
+        | None -> Alcotest.fail "expected parsetree");
+    Alcotest.test_case "newtype unwraps control flow" `Quick (fun () ->
+        match
+          Ast.parse_structure ~filename:"test.ml"
+            "let f : type a. a -> int = fun x -> match x with | _ -> 1\n"
+        with
+        | Some structure -> (
+            match Ast.functions_of_structure structure with
+            | [ ("f", Ast.Function { body = Ast.Match { cases; _ }; _ }) ] ->
+                Alcotest.(check int) "case count" 1 (List.length cases)
+            | _ -> Alcotest.fail "expected locally abstract match function")
+        | None -> Alcotest.fail "expected parsetree");
+  ]
+
 (* Visitor tests removed - visitor pattern was removed from AST module *)
 (*
 (** Tests for visitor pattern *)
@@ -572,4 +643,5 @@ let complexity_visitor_tests =
   ]
 *)
 
-let suite = ("ast", complexity_tests)
+let suite =
+  ("ast", complexity_tests @ nesting_tests @ parsetree_conversion_tests)

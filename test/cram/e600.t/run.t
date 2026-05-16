@@ -31,6 +31,7 @@ Test bad example - should find test exports module name:
   
   Summary: ✗ 2 total issues (applied 1 rule)
   ✗ Some checks failed. See details above.
+    Run `merlint help E600` for the rule's description, hint, and good/bad examples.
   [1]
 
 Test good example - should find no issues:

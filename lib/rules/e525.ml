@@ -49,27 +49,6 @@ let content ctx path =
   try Some (File_view.content (Context.file_view ctx path))
   with Sys_error _ | File_view.Analysis_error _ -> None
 
-let warnings_re = Re.compile (Re.str "%{dune-warnings}")
-let contains_warnings contents = Re.execp warnings_re contents
-
-let lang_re =
-  Re.compile
-    (Re.seq
-       [
-         Re.char '(';
-         Re.rep Re.space;
-         Re.str "lang";
-         Re.rep1 Re.space;
-         Re.str "dune";
-         Re.rep1 Re.space;
-         Re.group (Re.rep1 (Re.alt [ Re.digit; Re.char '.' ]));
-       ])
-
-let parse_lang_version contents =
-  match Re.exec_opt lang_re contents with
-  | None -> None
-  | Some g -> Some (Re.Group.get g 1)
-
 let version_too_old v =
   match String.split_on_char '.' v with
   | major :: minor :: _ -> (
@@ -84,19 +63,27 @@ let dune_issue ctx name dune_path =
     [ Issue.v ~loc { package = name; kind = Missing_dune } ]
   else
     match content ctx dune_path with
-    | Some c when contains_warnings c -> []
+    | Some c -> (
+        match Dune.File.of_string c with
+        | Ok file when Dune.File.has_dune_warnings file -> []
+        | Ok _ | Error _ ->
+            [ Issue.v ~loc { package = name; kind = Missing_warnings } ])
     | _ -> [ Issue.v ~loc { package = name; kind = Missing_warnings } ]
 
 let lang_issue ctx name dp_path =
   match content ctx dp_path with
   | Some c -> (
-      match parse_lang_version c with
-      | Some version when version_too_old version ->
-          [
-            Issue.v ~loc:(Location.in_file dp_path)
-              { package = name; kind = Lang_too_old { version } };
-          ]
-      | _ -> [])
+      match Dune.Project.of_string c with
+      | Error _ -> []
+      | Ok project -> (
+          let _lang, version = Dune.Project.lang project in
+          match Some version with
+          | Some version when version_too_old version ->
+              [
+                Issue.v ~loc:(Location.in_file dp_path)
+                  { package = name; kind = Lang_too_old { version } };
+              ]
+          | _ -> []))
   | None -> []
 
 let check_package ctx root name =

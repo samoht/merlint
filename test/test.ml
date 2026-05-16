@@ -9,6 +9,7 @@ let () =
   let suites =
     [
       Test_categories.suite;
+      Test_file_kind.suite;
       Test_config.suite;
       Test_config_parser.suite;
       Test_rule_config.suite;
@@ -23,6 +24,7 @@ let () =
       Test_naming.suite;
       Test_filter.suite;
       Test_docs.suite;
+      Test_doc.suite;
       Test_command.suite;
       Test_context.suite;
       Test_data.suite;

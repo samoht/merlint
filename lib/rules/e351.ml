@@ -1,8 +1,7 @@
 (** E351: Detection of global mutable state patterns.
 
-    Reads [Context.dump.value_sigs] (populated by [Merlin.Dump] from the
-    typedtree text of the [.mli]) and flags [val x : T] declarations whose outer
-    type path resolves to [Stdlib.ref] or [Stdlib.array].
+    Reads native typedtree value signatures and flags [val x : T] declarations
+    whose outer type path resolves to [Stdlib.ref] or [Stdlib.array].
 
     Because the path comes from the typed tree, a local definition like
 
@@ -19,28 +18,32 @@
 type payload = { kind : string; name : string }
 (** Payload for mutable state issues *)
 
-let is_stdlib_mutable (path : Merlin.Dump.name) =
-  match (path.prefix, path.base) with
+let is_stdlib_mutable path =
+  match (File_view.Name.prefix path, File_view.Name.base path) with
   | [ "Stdlib" ], "ref" -> Some "ref"
   | [ "Stdlib" ], "array" -> Some "array"
   | _ -> None
 
 let check (ctx : Context.file) =
-  if not (String.ends_with ~suffix:".mli" ctx.filename) then []
+  if not (File_kind.is_mli ctx.filename) then []
   else
-    let dump = Context.dump ctx in
+    let view = Context.view ctx in
     List.filter_map
-      (fun (s : Merlin.Dump.value_sig) ->
-        match (s.type_path, s.location) with
+      (fun s ->
+        match (File_view.Value_sig.type_path s, File_view.Value_sig.loc s) with
         | Some path, Some loc -> (
             match is_stdlib_mutable path with
             | None -> None
             | Some kind ->
                 Some
                   (Issue.v ~loc
-                     { kind; name = Merlin.Dump.string_of_name s.name }))
+                     {
+                       kind;
+                       name =
+                         File_view.Name.to_string (File_view.Value_sig.name s);
+                     }))
         | _ -> None)
-      dump.value_sigs
+      (Option.value ~default:[] (File_view.resolved_signatures view))
 
 let pp ppf { kind; name } =
   Fmt.pf ppf

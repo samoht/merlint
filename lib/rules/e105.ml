@@ -1,53 +1,31 @@
 open Examples
 (** E105: Catch-all Exception Handler *)
 
-(** Payload for catch-all exception issues *)
+open Ocaml_parsing
 
-(* Pattern to match try...with _ -> constructs *)
-let try_with_wildcard_pattern =
-  Re.compile
-    (Re.seq
-       [
-         Re.str "with";
-         Re.rep1 Re.space;
-         Re.str "_";
-         Re.rep Re.space;
-         Re.str "->";
-       ])
-
-(* Check if a line is likely to be a comment *)
-let is_comment_line line =
-  let trimmed = String.trim line in
-  String.starts_with ~prefix:"(*" trimmed
-  || String.starts_with ~prefix:"*" trimmed
-
-(* Check if the pattern is inside a string literal *)
-let is_in_string line pattern_start =
-  (* Count quotes before the pattern *)
-  let rec count_quotes i count =
-    if i >= pattern_start then count
-    else if i + 1 < String.length line && line.[i] = '\\' && line.[i + 1] = '"'
-    then count_quotes (i + 2) count (* Skip escaped quote *)
-    else if line.[i] = '"' then count_quotes (i + 1) (count + 1)
-    else count_quotes (i + 1) count
-  in
-  let quote_count = count_quotes 0 0 in
-  quote_count mod 2 = 1 (* Odd number of quotes means we're inside a string *)
+let is_wildcard_case (case : Parsetree.case) =
+  match case.pc_lhs.ppat_desc with Ppat_any -> true | _ -> false
 
 let check (ctx : Context.file) =
-  let content = Context.content ctx in
   let filename = ctx.Context.filename in
-
-  File.process_lines_with_location filename content (fun line_idx line loc ->
-      ignore line_idx;
-      if not (is_comment_line line) then
-        match Re.exec_opt try_with_wildcard_pattern line with
-        | Some m ->
-            let start_pos = Re.Group.start m 0 in
-            if not (is_in_string line start_pos) then Some (Issue.v ~loc ())
-            else None
-        | None -> None
-      else None)
+  match File_view.parsetree (Context.view ctx) with
+  | None -> []
+  | Some structure ->
+      let issues = ref [] in
+      Ast.iter_expressions structure (fun (expr : Parsetree.expression) ->
+          match expr.pexp_desc with
+          | Pexp_try (_, cases) ->
+              List.iter
+                (fun (case : Parsetree.case) ->
+                  if is_wildcard_case case then
+                    issues :=
+                      Issue.v
+                        ~loc:(Ast.merlint_of_loc ~filename case.pc_lhs.ppat_loc)
+                        ()
+                      :: !issues)
+                cases
+          | _ -> ());
+      List.rev !issues
 
 let pp ppf () =
   Fmt.pf ppf

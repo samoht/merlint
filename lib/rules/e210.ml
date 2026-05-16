@@ -41,28 +41,21 @@ let clean_original name =
 let clean_suggested original =
   Re.replace_string (Re.compile (Re.str "__")) ~by:"." original
 
-let issue_of_identifier ~filename (elt : Merlin.Dump.elt) =
-  let name = Merlin.Dump.string_of_name elt.Merlin.Dump.name in
-  let base = elt.Merlin.Dump.name.base in
+let issue_of_identifier ref_ =
+  let name = File_view.Name.to_string (File_view.Reference.name ref_) in
+  let base = File_view.Reference.base ref_ in
   if should_check name base && Re.execp bad_pattern name then
     let module_path = clean_original name in
     let suggested_path = clean_suggested module_path in
-    match Merlin.Dump.location elt with
-    | Some loc ->
-        let loc_with_file =
-          Location.v ~file:filename ~start_line:(Location.start_line loc)
-            ~start_col:(Location.start_col loc)
-            ~end_line:(Location.end_line loc) ~end_col:(Location.end_col loc)
-        in
-        Some (Issue.v ~loc:loc_with_file { module_path; suggested_path })
-    | None -> None
+    Option.map
+      (fun loc -> Issue.v ~loc { module_path; suggested_path })
+      (File_view.Reference.loc ref_)
   else None
 
 let check (ctx : Context.file) =
-  let dump_data = Context.dump ctx in
-  List.filter_map
-    (issue_of_identifier ~filename:ctx.filename)
-    dump_data.identifiers
+  let view = Context.view ctx in
+  File_view.outline_identifiers view @ File_view.outline_modules view
+  |> List.filter_map issue_of_identifier
 
 let pp ppf { module_path; suggested_path } =
   Fmt.pf ppf "Use '%s' instead of '%s' - avoid double underscore module access"

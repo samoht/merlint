@@ -196,9 +196,19 @@ let print_summary all_issues enabled_rule_count =
 
   if all_passed then
     Fmt.pr "%s All checks passed!@." (Merlint.Report.print_color true "✓")
-  else
+  else begin
     Fmt.pr "%s Some checks failed. See details above.@."
-      (Merlint.Report.print_color false "✗")
+      (Merlint.Report.print_color false "✗");
+    let codes =
+      List.fold_left (fun acc i -> Merlint.Rule.Run.code i :: acc) [] all_issues
+      |> List.sort_uniq String.compare
+    in
+    let sample = match codes with [] -> "E100" | c :: _ -> c in
+    Fmt.pr
+      "  Run `merlint help %s` for the rule's description, hint, and good/bad \
+       examples.@."
+      sample
+  end
 
 let run_engine ~load_file ?profiling rule_filter dune_describe files_to_analyze
     index project_root =

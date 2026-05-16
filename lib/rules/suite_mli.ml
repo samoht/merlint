@@ -1,55 +1,59 @@
-(** Shared helpers for rules that inspect [.mli] files which should expose
-    exactly [val suite : <expected-type>] and nothing else. Used by E600
-    (test_*.mli) and E705 (fuzz_*.mli). *)
+(** Shared helpers for [.mli] files that should expose exactly one [suite] value
+    with the expected test-suite type. *)
 
-let suite_val_re =
-  Re.compile
-    (Re.seq
-       [
-         Re.bow;
-         Re.str "val";
-         Re.rep1 Re.space;
-         Re.str "suite";
-         Re.rep Re.space;
-         Re.str ":";
-       ])
+open Ocaml_parsing
 
-let any_val_re = Re.compile (Re.seq [ Re.bow; Re.str "val"; Re.rep1 Re.space ])
-let whitespace_re = Re.compile (Re.rep1 Re.space)
+type expected = Alcotest | Alcobar
 
-(** Drop blank lines and lines that look like the start of a comment block.
-    Leaves the rest verbatim so downstream regexen still see column 0. *)
-let non_comment_lines content =
-  content |> String.split_on_char '\n'
-  |> List.filter (fun line ->
-      let trimmed = String.trim line in
-      trimmed <> "" && not (String.starts_with ~prefix:"(*" trimmed))
+let expected_of_string = function
+  | "string * unit Alcotest.test_case list" -> Some Alcotest
+  | "string * Alcobar.test_case list" -> Some Alcobar
+  | _ -> None
 
-(** Find the line that declares [val suite : ...], if any. *)
-let suite_line lines = List.find_opt (Re.execp suite_val_re) lines
+let rec type_constr path arg_matches (ct : Parsetree.core_type) =
+  match ct.ptyp_desc with
+  | Ptyp_constr ({ txt; _ }, args) ->
+      Longident.flatten txt = path
+      && List.length args = List.length arg_matches
+      && List.for_all2 (fun matches arg -> matches arg) arg_matches args
+  | Ptyp_alias (ct, _) | Ptyp_poly (_, ct) -> type_constr path arg_matches ct
+  | _ -> false
 
-(** Whether [lines] export at least one [val foo : ...] declaration that is not
-    [val suite : ...]. *)
-let exports_non_suite_val lines =
-  List.exists
-    (fun line -> Re.execp any_val_re line && not (Re.execp suite_val_re line))
-    lines
+let string_type = type_constr [ "string" ] []
+let unit_type = type_constr [ "unit" ] []
+let list_type elem = type_constr [ "list" ] [ elem ]
 
-(** [matches_suite_type ~expected line] is [true] iff [line] (the
-    [val suite : ...] line) ends with [expected] after whitespace normalisation.
-*)
-let matches_suite_type ~expected line =
-  let normalized =
-    Re.replace_string whitespace_re ~by:" " line |> String.trim
-  in
-  String.ends_with ~suffix:expected normalized
+let alcotest_case_list =
+  list_type (type_constr [ "Alcotest"; "test_case" ] [ unit_type ])
 
-(** [is_compliant ~expected content] is [true] when the [.mli]'s significant
-    lines all check out: exactly one [val suite] of the right type and no other
-    [val ...] exports. *)
-let is_compliant ~expected content =
-  let lines = non_comment_lines content in
-  match suite_line lines with
+let alcobar_case_list = list_type (type_constr [ "Alcobar"; "test_case" ] [])
+
+let rec suite_type expected (ct : Parsetree.core_type) =
+  match ct.ptyp_desc with
+  | Ptyp_tuple [ (None, name); (None, cases) ] -> (
+      string_type name
+      &&
+      match expected with
+      | Alcotest -> alcotest_case_list cases
+      | Alcobar -> alcobar_case_list cases)
+  | Ptyp_alias (ct, _) | Ptyp_poly (_, ct) -> suite_type expected ct
+  | _ -> false
+
+let is_value_suite expected (vd : Parsetree.value_description) =
+  vd.pval_name.txt = "suite" && suite_type expected vd.pval_type
+
+let significant_item (item : Parsetree.signature_item) =
+  match item.psig_desc with Psig_attribute _ -> None | _ -> Some item
+
+let is_compliant_signature ~expected signature =
+  match expected_of_string expected with
   | None -> false
-  | Some line ->
-      matches_suite_type ~expected line && not (exports_non_suite_val lines)
+  | Some expected -> (
+      match List.filter_map significant_item signature with
+      | [ { psig_desc = Psig_value vd; _ } ] -> is_value_suite expected vd
+      | _ -> false)
+
+let is_compliant_view ~expected view =
+  match File_view.signature view with
+  | None -> false
+  | Some signature -> is_compliant_signature ~expected signature

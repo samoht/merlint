@@ -2,16 +2,27 @@
 
 type payload = { dir : string }
 
+let dune_file ctx dir =
+  let path = Filename.concat dir "dune" in
+  try
+    File_view.content (Context.file_view ctx path)
+    |> Dune.File.of_string |> Result.to_option
+  with File_view.Analysis_error _ -> None
+
 let check (ctx : Context.project) =
   let dirs = Interop.oracle_dirs ctx.project_root in
   List.filter_map
     (fun (d : Interop.oracle_dir) ->
       if d.has_dune then
-        let content = Interop.dune_content d.path in
-        if Astring.String.is_infix ~affix:"REGEN_TRACES" content then
-          let loc = Location.in_file (Filename.concat d.path "dune") in
-          Some (Issue.v ~loc { dir = d.path })
-        else None
+        match dune_file ctx d.path with
+        | Some dune
+          when List.exists
+                 (fun rule ->
+                   Dune.File.Rule.enabled_if_env_var rule = Some "REGEN_TRACES")
+                 (Dune.File.rules dune) ->
+            let loc = Location.in_file (Filename.concat d.path "dune") in
+            Some (Issue.v ~loc { dir = d.path })
+        | _ -> None
       else None)
     dirs
 

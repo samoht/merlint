@@ -26,6 +26,7 @@ Test bad example - fuzz_parser not included in fuzz.ml:
   
   Summary: ✗ 1 total issue (applied 1 rule)
   ✗ Some checks failed. See details above.
+    Run `merlint help E715` for the rule's description, hint, and good/bad examples.
   [1]
 
 Test good example - all fuzz modules included:

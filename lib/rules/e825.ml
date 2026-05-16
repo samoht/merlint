@@ -2,6 +2,24 @@
 
 type payload = { dir : string }
 
+let dune_file ctx dir =
+  let path = Filename.concat dir "dune" in
+  try
+    File_view.content (Context.file_view ctx path)
+    |> Dune.File.of_string |> Result.to_option
+  with File_view.Analysis_error _ -> None
+
+(* Match either the library name [csv] or its public name [nox-csv] (the
+   opam package that provides it). A [(libraries ...)] field may reference
+   the library by either name. *)
+let has_csv_dependency dune =
+  let libs =
+    Dune.File.test_libraries dune
+    @ Dune.File.executable_libraries dune
+    @ List.concat_map Dune.File.Library.libraries (Dune.File.libraries dune)
+  in
+  List.exists (fun l -> l = "csv" || l = "nox-csv") libs
+
 let check (ctx : Context.project) =
   let dirs = Interop.oracle_dirs ctx.project_root in
   List.filter_map
@@ -15,11 +33,11 @@ let check (ctx : Context.project) =
           with Sys_error _ -> false
         in
         if has_csv then
-          let dune = Interop.dune_content d.path in
-          if not (Astring.String.is_infix ~affix:"csv" dune) then
-            let loc = Location.in_file (Filename.concat d.path "dune") in
-            Some (Issue.v ~loc { dir = d.path })
-          else None
+          match dune_file ctx d.path with
+          | Some dune when has_csv_dependency dune -> None
+          | _ ->
+              let loc = Location.in_file (Filename.concat d.path "dune") in
+              Some (Issue.v ~loc { dir = d.path })
         else None
       else None)
     dirs

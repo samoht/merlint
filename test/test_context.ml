@@ -23,7 +23,7 @@ let test_analysis_error () =
   let result =
     try raise (Merlint.Context.Analysis_error "test error") with
     | Merlint.Context.Analysis_error msg -> msg
-    | _ -> "wrong exception"
+    | exn -> Printexc.to_string exn
   in
   Alcotest.(check string) "error message" "test error" result
 
@@ -54,7 +54,6 @@ let test_lazy_evaluation () =
             ~load_content:(fun () ->
               In_channel.with_open_text filename In_channel.input_all)
             ~outline:(fun () -> Error "no outline")
-            ~dump:(fun () -> Error "no dump")
             ());
     }
   in
@@ -75,7 +74,6 @@ let test_cache_canonicalizes_keys () =
     Merlint.File_view.v ~filename
       ~load_content:(fun () -> "")
       ~outline:(fun () -> Ok [])
-      ~dump:(fun () -> Error "no dump")
       ()
   in
   let ctx =

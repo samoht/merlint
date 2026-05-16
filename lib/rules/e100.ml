@@ -1,25 +1,36 @@
 (** E100: No Obj.magic *)
 
-(* Match the fully-resolved Stdlib path. Requires typedtree-level dump;
-   parsetree fallback would produce false negatives (a local Obj module
-   would be indistinguishable from the real one), so we skip the file
-   when resolution is unavailable rather than guess. *)
+module Parsetree = Ocaml_parsing.Parsetree
+module Ast_iterator = Ocaml_parsing.Ast_iterator
+module Longident = Ocaml_parsing.Longident
+
+let is_obj_magic lid =
+  match Longident.flatten lid with
+  | [ "Obj"; "magic" ] | [ "Stdlib"; "Obj"; "magic" ] -> true
+  | _ -> false
+
 let check ctx =
-  match File_view.resolved_identifiers (Context.view ctx) with
+  match File_view.parsetree (Context.view ctx) with
   | None -> []
-  | Some identifiers ->
-      List.filter_map
-        (fun ident ->
-          if
-            not
-              (File_view.Reference.matches_path ident
-                 [ "Stdlib"; "Obj"; "magic" ])
-          then None
-          else
-            match File_view.Reference.loc ident with
-            | Some loc -> Some (Issue.v ~loc ())
-            | None -> None)
-        identifiers
+  | Some structure ->
+      let issues = ref [] in
+      let iterator =
+        {
+          Ast_iterator.default_iterator with
+          expr =
+            (fun self expr ->
+              (match expr.Parsetree.pexp_desc with
+              | Pexp_ident { txt; _ } when is_obj_magic txt ->
+                  let loc =
+                    Ast.merlint_of_loc ~filename:ctx.filename expr.pexp_loc
+                  in
+                  issues := Issue.v ~loc () :: !issues
+              | _ -> ());
+              Ast_iterator.default_iterator.expr self expr);
+        }
+      in
+      iterator.structure iterator structure;
+      List.rev !issues
 
 let pp ppf () =
   Fmt.pf ppf "Usage of Obj.magic detected - this is extremely unsafe"

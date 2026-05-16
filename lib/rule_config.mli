@@ -5,6 +5,10 @@ type rule_pattern = {
       (** File glob pattern like "lib/prose*" or "**/*_test.ml" *)
   rules : string list;
       (** List of rule codes to exclude like ["E330"; "E410"] *)
+  config_dir : string;
+      (** Directory of the [merlint.toml] that declared the pattern. Patterns
+          are matched relative to this directory as well as against the raw
+          analyzed file path. *)
 }
 (** [rule_pattern] represents a file pattern and the rules to exclude for
     matching files. *)

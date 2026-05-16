@@ -46,8 +46,7 @@ let check ~prefix ~mk_payload (ctx : Context.file) =
   let prefix_us = prefix ^ "_" in
   if
     not
-      (String.starts_with ~prefix:prefix_us basename
-      && String.ends_with ~suffix:".ml" basename)
+      (String.starts_with ~prefix:prefix_us basename && File_kind.is_ml basename)
   then []
   else
     match File_view.parsetree (Context.view ctx) with

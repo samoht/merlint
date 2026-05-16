@@ -266,12 +266,18 @@ let check_item ~filename ~allowed ~aliases (item : Outline.item) =
         | None -> to_prefix_issue ~loc ~aliases ~name ~ct)
     | _ -> None
 
+let is_test_file filename =
+  let basename = Filename.basename filename in
+  String.starts_with ~prefix:"test_" basename || basename = "test.ml"
+
 let check (ctx : Context.file) =
-  let outline_data = Context.outline ctx in
   let filename = ctx.filename in
-  let allowed = ctx.config.allowed_words in
-  let aliases = t_aliases outline_data in
-  List.filter_map (check_item ~filename ~allowed ~aliases) outline_data
+  if is_test_file filename then []
+  else
+    let outline_data = Context.outline ctx in
+    let allowed = ctx.config.allowed_words in
+    let aliases = t_aliases outline_data in
+    List.filter_map (check_item ~filename ~allowed ~aliases) outline_data
 
 let pp ppf { function_name; suggested; kind } =
   match kind with

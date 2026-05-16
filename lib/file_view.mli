@@ -1,9 +1,9 @@
 (** Unified per-file view for rules.
 
-    Hides the underlying sources — Merlin outline/dump, compiler-libs parsetree,
-    and raw bytes — behind a single API rules call into. A file can be observed
-    at multiple levels of richness; each accessor commits to one level and is
-    explicit when that level is unavailable.
+    Hides the underlying sources — native Merlin typedtree, compiler-libs
+    parsetree, and raw bytes — behind a single API rules call into. A file can
+    be observed at multiple levels of richness; each accessor commits to one
+    level and is explicit when that level is unavailable.
 
     Two name-resolution levels are surfaced separately. They are NOT
     interchangeable:
@@ -17,8 +17,8 @@
       resolution; a user with a local [Printf] module is indistinguishable from
       the stdlib. Rules that lint surface syntax / convention need this level.
 
-    [Merlin.dump_ast] returns a [Typedtree] or [Parsetree] tagged result. The
-    resolved accessors return [None] when only parsetree is available. *)
+    Resolved accessors return [None] when only parsetree is available. The
+    outline accessors prefer typedtree data and degrade to parsetree data. *)
 
 exception Analysis_error of string
 (** Raised by the lazy accessors when the underlying source cannot be read (file
@@ -33,15 +33,15 @@ val v :
   load_content:(unit -> string) ->
   ?typedtree:(unit -> (Merlin.typedtree option, string) result) ->
   ?parsetree:(unit -> (Parsetree.structure option, string) result) ->
+  ?signature:(unit -> (Parsetree.signature option, string) result) ->
   outline:(unit -> (Outline.t, string) result) ->
-  dump:(unit -> (Merlin.ast_dump, string) result) ->
   unit ->
   t
-(** [v ~filename ~load_content ?typedtree ?parsetree ~outline ~dump ()] builds a
-    fresh view over [filename]. The [load_content] / [typedtree] / [parsetree] /
-    [outline] / [dump] thunks are called on first access and never twice. When
-    [parsetree] is omitted, the view falls back to parsing [load_content]
-    directly. *)
+(** [v ~filename ~load_content ?typedtree ?parsetree ?signature ~outline ()]
+    builds a fresh view over [filename]. The [load_content] / [typedtree] /
+    [parsetree] / [signature] / [outline] thunks are called on first access and
+    never twice. When [parsetree] is omitted, the view falls back to parsing
+    [load_content] directly. *)
 
 val filename : t -> string
 (** [filename t] is the source file this view describes. *)
@@ -253,10 +253,54 @@ val iter_applications : t -> (Call.t -> unit) -> unit
 (** [iter_applications t f] applies [f] to every [Pexp_apply] site whose callee
     is a path identifier. *)
 
+val outline_identifiers : t -> Reference.t list
+(** Value identifier use-sites from the typedtree outline, or from the parsetree
+    outline when typedtree is unavailable. *)
+
+val outline_patterns : t -> Reference.t list
+(** Value-binding pattern names from the typedtree outline, or from the
+    parsetree outline when typedtree is unavailable. *)
+
+val outline_variants : t -> Reference.t list
+(** Variant constructor declarations and use-sites from the typedtree outline,
+    or from the parsetree outline when typedtree is unavailable. *)
+
+val outline_variant_definitions : t -> Reference.t list
+(** Variant constructor declarations only, from the typedtree outline, or from
+    the parsetree outline when typedtree is unavailable. *)
+
+val outline_modules : t -> Reference.t list
+(** Module declarations and references from the typedtree outline, or from the
+    parsetree outline when typedtree is unavailable. *)
+
+val outline_module_definitions : t -> Reference.t list
+(** Module declarations only, from the typedtree outline, or from the parsetree
+    outline when typedtree is unavailable. *)
+
+val outline_types : t -> Reference.t list
+(** Type declarations from the typedtree outline, or from the parsetree outline
+    when typedtree is unavailable. *)
+
+val outline_type_definitions : t -> Reference.t list
+(** Type declarations only, from the typedtree outline, or from the parsetree
+    outline when typedtree is unavailable. *)
+
+val outline_exceptions : t -> Reference.t list
+(** Exception declarations from the typedtree outline, or from the parsetree
+    outline when typedtree is unavailable. *)
+
+val outline_values : t -> Reference.t list
+(** Value definitions from the typedtree outline, or from the parsetree outline
+    when typedtree is unavailable. *)
+
 (** {2 Legacy accessors — to be removed once all rules migrate} *)
 
 val parsetree : t -> Parsetree.structure option
 (** [parsetree t] is the compiler-libs parsetree of the file, when available. *)
+
+val signature : t -> Parsetree.signature option
+(** [signature t] is the interface parsetree of the file when a fresh typedtree
+    made it available. *)
 
 val typedtree : t -> Merlin.typedtree option
 (** [typedtree t] is the typedtree for the file, when a fresh [.cmt] made it
@@ -268,11 +312,6 @@ val functions : t -> (string * Ast.expr) list
 
 val ast : t -> Ast.t
 (** [ast t] is the control-flow AST, derived from the shared parsetree. *)
-
-val dump : t -> Merlin.Dump.t
-(** [dump t] is the AST dump (typedtree or parsetree-level, whichever Merlin
-    returned). Use the [resolved_*] accessors instead when name resolution
-    matters. *)
 
 val outline : t -> Outline.t
 (** [outline t] is the underlying Merlin outline; prefer {!items}. *)
