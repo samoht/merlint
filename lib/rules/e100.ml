@@ -1,12 +1,25 @@
 (** E100: No Obj.magic *)
 
+(* Match the fully-resolved Stdlib path. Requires typedtree-level dump;
+   parsetree fallback would produce false negatives (a local Obj module
+   would be indistinguishable from the real one), so we skip the file
+   when resolution is unavailable rather than guess. *)
 let check ctx =
-  let dump_data = Context.dump ctx in
-  let filename = ctx.filename in
-
-  (* Check identifiers for Obj.magic usage *)
-  Merlin.Dump.check_function_usage ~full_path:filename dump_data.identifiers
-    "Obj" "magic" (fun ~loc -> Issue.v ~loc ())
+  match File_view.resolved_identifiers (Context.view ctx) with
+  | None -> []
+  | Some identifiers ->
+      List.filter_map
+        (fun ident ->
+          if
+            not
+              (File_view.Reference.matches_path ident
+                 [ "Stdlib"; "Obj"; "magic" ])
+          then None
+          else
+            match File_view.Reference.loc ident with
+            | Some loc -> Some (Issue.v ~loc ())
+            | None -> None)
+        identifiers
 
 let pp ppf () =
   Fmt.pf ppf "Usage of Obj.magic detected - this is extremely unsafe"

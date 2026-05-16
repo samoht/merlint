@@ -2,6 +2,9 @@
     [let suite = ("name", [])]. Used by E621 (test_ files) and E726 (fuzz_
     files), parameterised on the filename prefix. *)
 
+module Issue_location = Location
+open Ocaml_parsing
+
 (* The empty list [[]] sometimes appears under an open: [Alcobar.[]],
    [List.[]], etc. The parser renders that as [Pexp_open _ (Pexp_construct
    "[]" None)], so we descend through opens to spot it. *)
@@ -47,7 +50,7 @@ let check ~prefix ~mk_payload (ctx : Context.file) =
       && String.ends_with ~suffix:".ml" basename)
   then []
   else
-    match Context.parsetree ctx with
+    match File_view.parsetree (Context.view ctx) with
     | None -> []
     | Some structure -> (
         match find structure with
@@ -62,7 +65,7 @@ let check ~prefix ~mk_payload (ctx : Context.file) =
               else s
             in
             let loc =
-              Location.v ~file:filename ~start_line:loc.loc_start.pos_lnum
+              Issue_location.v ~file:filename ~start_line:loc.loc_start.pos_lnum
                 ~start_col:0 ~end_line:loc.loc_start.pos_lnum ~end_col:80
             in
             [ Issue.v ~loc (mk_payload suite_name) ])

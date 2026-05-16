@@ -3,6 +3,7 @@
 let src = Logs.Src.create "merlint.ast" ~doc:"AST control flow analysis"
 
 module Log = (val Logs.src_log src : Logs.LOG)
+open Ocaml_parsing
 
 type expr =
   | If_then_else of { cond : expr; then_expr : expr; else_expr : expr option }
@@ -289,48 +290,44 @@ let functions_of_structure (structure : Parsetree.structure) =
   List.iter process_structure_item structure;
   List.rev !functions
 
-(** Extract functions from a source file using compiler-libs *)
-let extract_functions filename =
-  try
-    Log.debug (fun m -> m "Parsing file: %s" filename);
-    let content = In_channel.with_open_text filename In_channel.input_all in
-    let lexbuf = Lexing.from_string content in
-    lexbuf.lex_curr_p <- { lexbuf.lex_curr_p with pos_fname = filename };
-
-    (* Check if it's an interface file *)
-    if Filename.check_suffix filename ".mli" then (
-      (* Interface files don't contain function implementations *)
-      Log.debug (fun m -> m "Skipping interface file: %s" filename);
-      [])
-    else
-      let structure = Parse.implementation lexbuf in
-      let functions = functions_of_structure structure in
-
-      Log.debug (fun m ->
-          m "Extracted %d functions from %s" (List.length functions) filename);
-      functions
-  with exn ->
-    Log.err (fun m ->
-        m "Failed to parse %s: %s" filename (Printexc.to_string exn));
-    []
-
 (** Parse a source file into a [Parsetree.structure]. Returns [None] for [.mli]
     files (no expressions) and on parse error. *)
 let parse_structure ~filename content =
   if Filename.check_suffix filename ".mli" then None
   else
     try
-      let lexbuf = Lexing.from_string content in
-      lexbuf.lex_curr_p <- { lexbuf.lex_curr_p with pos_fname = filename };
-      Some (Parse.implementation lexbuf)
+      let backend = Merlin.v () in
+      Fun.protect ~finally:(fun () -> Merlin.close backend) @@ fun () ->
+      match Merlin.parsetree ~content:(lazy content) backend ~file:filename with
+      | Ok structure -> structure
+      | Error msg ->
+          Log.debug (fun m -> m "parse_structure: %s: %s" filename msg);
+          None
     with exn ->
       Log.debug (fun m ->
           m "parse_structure: %s: %s" filename (Printexc.to_string exn));
       None
 
-(** Convert a compiler-libs [Warnings.loc] into a merlint [Location.t]. *)
-let merlint_of_loc ~filename (loc : Warnings.loc) =
-  Location.v ~file:filename ~start_line:loc.loc_start.pos_lnum
+(** Extract functions from a source file using Merlin's parser. *)
+let extract_functions filename =
+  try
+    Log.debug (fun m -> m "Parsing file: %s" filename);
+    let content = In_channel.with_open_text filename In_channel.input_all in
+    match parse_structure ~filename content with
+    | None -> []
+    | Some structure ->
+        let functions = functions_of_structure structure in
+        Log.debug (fun m ->
+            m "Extracted %d functions from %s" (List.length functions) filename);
+        functions
+  with exn ->
+    Log.err (fun m ->
+        m "Failed to parse %s: %s" filename (Printexc.to_string exn));
+    []
+
+(** Convert an OCaml parser location into a merlint [Location.t]. *)
+let merlint_of_loc ~filename (loc : Location.t) =
+  Merlin.Location.v ~file:filename ~start_line:loc.loc_start.pos_lnum
     ~start_col:(loc.loc_start.pos_cnum - loc.loc_start.pos_bol)
     ~end_line:loc.loc_end.pos_lnum
     ~end_col:(loc.loc_end.pos_cnum - loc.loc_end.pos_bol)

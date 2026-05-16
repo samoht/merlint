@@ -1,5 +1,8 @@
 (** E617: Test Suite Naming Convention *)
 
+module Issue_location = Location
+open Ocaml_parsing
+
 type issue_type =
   | Not_lowercase of string
   | Not_snake_case of string
@@ -60,9 +63,9 @@ let suite_name structure =
     structure
 
 let suite_issue ~filename ~expected_name
-    ((suite_name, name_loc) : string * Warnings.loc) =
+    ((suite_name, name_loc) : string * Location.t) =
   let loc =
-    Location.v ~file:filename ~start_line:name_loc.loc_start.pos_lnum
+    Issue_location.v ~file:filename ~start_line:name_loc.loc_start.pos_lnum
       ~start_col:0 ~end_line:name_loc.loc_start.pos_lnum ~end_col:80
   in
   if suite_name <> String.lowercase_ascii suite_name then
@@ -101,7 +104,7 @@ let issues_of_structure ~filename ~structure =
 let check (ctx : Context.file) =
   let filename = ctx.filename in
   if is_test_module_file filename then
-    match Context.parsetree ctx with
+    match File_view.parsetree (Context.view ctx) with
     | None -> []
     | Some structure -> issues_of_structure ~filename ~structure
   else []

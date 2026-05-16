@@ -6,6 +6,8 @@
     [and] is misused -- the binding should be lifted to its own [let] above or
     below the group. *)
 
+open Ocaml_parsing
+
 type kind =
   | Standalone_nonrec
       (** No references to siblings or self: [let name = ...]. *)
@@ -201,7 +203,7 @@ let pp ppf { name; kind; group } =
 
 let check (ctx : Context.file) =
   let filename = ctx.filename in
-  match Context.parsetree ctx with
+  match File_view.parsetree (Context.view ctx) with
   | None -> []
   | Some structure ->
       collect_misused_bindings structure

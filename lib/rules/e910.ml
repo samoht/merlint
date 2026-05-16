@@ -53,7 +53,7 @@ let detect_features pkg_dir =
   List.sort_uniq String.compare !features
 
 (** Read quality policy from [*.opam] files. *)
-let read_policy pkg_dir =
+let read_policy ctx pkg_dir =
   try
     let files = Sys.readdir pkg_dir |> Array.to_list in
     let opam_files =
@@ -62,25 +62,26 @@ let read_policy pkg_dir =
     List.concat_map
       (fun f ->
         let path = Filename.concat pkg_dir f in
-        try
-          let ic = open_in path in
-          let content = In_channel.input_all ic in
-          close_in ic;
-          let lines = String.split_on_char '\n' content in
-          List.concat_map
-            (fun line ->
-              let t = String.trim line in
-              let prefix = "x-quality:" in
-              let plen = String.length prefix in
-              if String.length t > plen && String.sub t 0 plen = prefix then
-                let rest = String.sub t plen (String.length t - plen) in
-                String.split_on_char '"' rest
-                |> List.filter (fun s ->
-                    let s = String.trim s in
-                    s <> "" && s <> "[" && s <> "]" && s <> " ")
-              else [])
-            lines
-        with Sys_error _ -> [])
+        match
+          try Some (File_view.content (Context.file_view ctx path))
+          with Sys_error _ | File_view.Analysis_error _ -> None
+        with
+        | None -> []
+        | Some content ->
+            let lines = String.split_on_char '\n' content in
+            List.concat_map
+              (fun line ->
+                let t = String.trim line in
+                let prefix = "x-quality:" in
+                let plen = String.length prefix in
+                if String.length t > plen && String.sub t 0 plen = prefix then
+                  let rest = String.sub t plen (String.length t - plen) in
+                  String.split_on_char '"' rest
+                  |> List.filter (fun s ->
+                      let s = String.trim s in
+                      s <> "" && s <> "[" && s <> "]" && s <> " ")
+                else [])
+              lines)
       opam_files
   with Sys_error _ -> []
 
@@ -97,7 +98,7 @@ let check (ctx : Context.project) =
       if
         dir_exists pkg_dir && pkg <> "_build" && pkg <> ".git" && pkg <> "_opam"
       then
-        let policy = read_policy pkg_dir in
+        let policy = read_policy ctx pkg_dir in
         if policy <> [] then (
           let detected = detect_features pkg_dir in
           let findings = ref [] in

@@ -1,5 +1,7 @@
 (** E616: Use failf instead of fail (Fmt.str ...) *)
 
+open Ocaml_parsing
+
 type payload = { is_alcotest : bool }
 
 let check (ctx : Context.file) =
@@ -11,7 +13,7 @@ let check (ctx : Context.file) =
       && String.ends_with ~suffix:".ml" basename)
   then []
   else
-    match Context.parsetree ctx with
+    match File_view.parsetree (Context.view ctx) with
     | None -> []
     | Some structure ->
         let issues = ref [] in

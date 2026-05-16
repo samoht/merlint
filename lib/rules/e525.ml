@@ -45,14 +45,9 @@ let has_opam_file pkg_dir =
     (fun name -> Filename.check_suffix name ".opam")
     (try_readdir pkg_dir)
 
-let read_file path =
-  try
-    let ic = open_in path in
-    let n = in_channel_length ic in
-    let s = really_input_string ic n in
-    close_in ic;
-    Some s
-  with Sys_error _ -> None
+let content ctx path =
+  try Some (File_view.content (Context.file_view ctx path))
+  with Sys_error _ | File_view.Analysis_error _ -> None
 
 let warnings_re = Re.compile (Re.str "%{dune-warnings}")
 let contains_warnings contents = Re.execp warnings_re contents
@@ -83,17 +78,17 @@ let version_too_old v =
       | _, _ -> false)
   | _ -> false
 
-let dune_issue name dune_path =
+let dune_issue ctx name dune_path =
   let loc = Location.in_file dune_path in
   if not (Sys.file_exists dune_path) then
     [ Issue.v ~loc { package = name; kind = Missing_dune } ]
   else
-    match read_file dune_path with
+    match content ctx dune_path with
     | Some c when contains_warnings c -> []
     | _ -> [ Issue.v ~loc { package = name; kind = Missing_warnings } ]
 
-let lang_issue name dp_path =
-  match read_file dp_path with
+let lang_issue ctx name dp_path =
+  match content ctx dp_path with
   | Some c -> (
       match parse_lang_version c with
       | Some version when version_too_old version ->
@@ -104,7 +99,7 @@ let lang_issue name dp_path =
       | _ -> [])
   | None -> []
 
-let check_package root name =
+let check_package ctx root name =
   if skip_entry name then []
   else
     let pkg_dir = Filename.concat root name in
@@ -112,11 +107,11 @@ let check_package root name =
     else
       let dune_path = Filename.concat pkg_dir "dune" in
       let dp_path = Filename.concat pkg_dir "dune-project" in
-      dune_issue name dune_path @ lang_issue name dp_path
+      dune_issue ctx name dune_path @ lang_issue ctx name dp_path
 
 let check (ctx : Context.project) =
   let root = ctx.project_root in
-  List.concat_map (check_package root) (try_readdir root)
+  List.concat_map (check_package ctx root) (try_readdir root)
 
 let pp ppf { package; kind } =
   match kind with

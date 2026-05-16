@@ -2,7 +2,7 @@
 
 let check (ctx : Context.file) =
   let filename = ctx.filename in
-  match Context.parsetree ctx with
+  match File_view.parsetree (Context.view ctx) with
   | None -> []
   | Some structure ->
       let issues = ref [] in

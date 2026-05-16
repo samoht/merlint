@@ -3,9 +3,9 @@
 open Merlint
 
 let parse src =
-  let lexbuf = Lexing.from_string src in
-  lexbuf.lex_curr_p <- { lexbuf.lex_curr_p with pos_fname = "scratch.ml" };
-  Parse.implementation lexbuf
+  match Ast.parse_structure ~filename:"scratch.ml" src with
+  | Some structure -> structure
+  | None -> Alcotest.fail "parse failed"
 
 let test_is_empty_list_bare () =
   let s = parse {|let _ = []|} in

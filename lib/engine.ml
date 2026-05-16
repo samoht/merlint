@@ -7,6 +7,61 @@ module Log = (val Logs.src_log src : Logs.LOG)
 type exclusion_stats = { rule : string; file : string }
 type result = { issues : Rule.Run.result list; excluded : exclusion_stats list }
 
+type io_stats = {
+  mutable files_read : int;
+  mutable merlin_calls : int;
+  reads_by_ext : (string, int) Hashtbl.t;
+  merlin_by_ext : (string, int) Hashtbl.t;
+}
+
+let io_stats () =
+  {
+    files_read = 0;
+    merlin_calls = 0;
+    reads_by_ext = Hashtbl.create 8;
+    merlin_by_ext = Hashtbl.create 8;
+  }
+
+let ext filename =
+  match Filename.extension filename with "" -> "<none>" | ext -> ext
+
+let incr_ext tbl filename =
+  let ext = ext filename in
+  Hashtbl.replace tbl ext
+    (Option.value ~default:0 (Hashtbl.find_opt tbl ext) + 1)
+
+let record_file_read stats filename =
+  stats.files_read <- stats.files_read + 1;
+  incr_ext stats.reads_by_ext filename
+
+let record_merlin_call stats filename =
+  stats.merlin_calls <- stats.merlin_calls + 1;
+  incr_ext stats.merlin_by_ext filename
+
+let sorted_ext_counts tbl =
+  Hashtbl.fold (fun ext count acc -> (ext, count) :: acc) tbl []
+  |> List.sort (fun (a, _) (b, _) -> String.compare a b)
+
+let log_io_stats stats backend =
+  let backend_stats = Merlin.stats backend in
+  let reads = sorted_ext_counts stats.reads_by_ext in
+  let merlin = sorted_ext_counts stats.merlin_by_ext in
+  let all_exts =
+    List.map fst reads @ List.map fst merlin |> List.sort_uniq String.compare
+  in
+  let lookup tbl ext = Option.value ~default:0 (Hashtbl.find_opt tbl ext) in
+  Log.info (fun m ->
+      m "IO stats: files_read=%d merlin_calls=%d cmt_hits=%d pipeline_calls=%d"
+        stats.files_read stats.merlin_calls backend_stats.cmt_hits
+        backend_stats.pipeline_calls);
+  List.iter
+    (fun ext ->
+      Log.info (fun m ->
+          m "IO stats[%s]: files_read=%d merlin_calls=%d" ext
+            (lookup stats.reads_by_ext ext)
+            (lookup stats.merlin_by_ext ext)))
+    all_exts
+
 let run_file_rule ?profiling ctx rule =
   let code = Rule.code rule in
   Log.debug (fun m -> m "Running rule %s on %s" code ctx.Context.filename);
@@ -51,13 +106,50 @@ let run_project_rule ?profiling ctx rule =
   | None -> ());
   res
 
-let setup_analysis ~filter ~dune_describe ~files_to_analyze ~index project_root
-    =
+let merlin_op ?profiling ?stats filename f =
+  Option.iter (fun stats -> record_merlin_call stats filename) stats;
+  let start = Unix.gettimeofday () in
+  let r = f () in
+  let duration = Unix.gettimeofday () -. start in
+  (match profiling with
+  | Some prof ->
+      Profiling.add_timing prof
+        { operation = Profiling.Merlin filename; duration }
+  | None -> ());
+  r
+
+let file_view ?profiling ~stats ~load_file ~backend filename =
+  let content =
+    lazy
+      (record_file_read stats filename;
+       load_file filename)
+  in
+  let load_content () = Lazy.force content in
+  let outline () =
+    merlin_op ?profiling ?stats:(Some stats) filename (fun () ->
+        Merlin.outline ~content backend ~file:filename)
+  in
+  let dump () =
+    merlin_op ?profiling ?stats:(Some stats) filename (fun () ->
+        Merlin.dump_ast ~content backend ~file:filename)
+  in
+  let parsetree () =
+    merlin_op ?profiling ?stats:(Some stats) filename (fun () ->
+        Merlin.parsetree ~content backend ~file:filename)
+  in
+  let typedtree () =
+    merlin_op ?profiling ?stats:(Some stats) filename (fun () ->
+        Merlin.typedtree ~content backend ~file:filename)
+  in
+  File_view.v ~filename ~load_content ~typedtree ~parsetree ~outline ~dump ()
+
+let setup_analysis ~filter ~dune_describe ~files_to_analyze ~index ~file_view
+    project_root =
   let config = Config.load project_root in
   let files_to_analyze_str = List.map Fpath.to_string files_to_analyze in
   let project_ctx =
     Context.project ~config ~project_root ~all_files:files_to_analyze_str
-      ~dune_describe ~index
+      ~dune_describe ~index ~file_view ()
   in
   let enabled_rules =
     Data.all_rules
@@ -105,36 +197,17 @@ let run_project_rules ?profiling enabled_rules project_ctx =
   in
   (issues, List.rev !excluded_acc)
 
-let analyze_single_file ?profiling ~backend ~config_for ~project_root
+let analyze_single_file ?profiling ~project_ctx ~config_for ~project_root
     ~file_rules filepath =
   let filename = Fpath.to_string filepath in
   let config = config_for filename in
   let excluded_acc = ref [] in
   let issues =
     try
-      (* Both Merlin calls are slow (each parses+typechecks the file via
-         merlin-kernel). Defer them: rules that don't ask for outline or
-         dump pay nothing, and a profiling record is only emitted when the
-         thunk actually runs. *)
-      let merlin_op f =
-        let start = Unix.gettimeofday () in
-        let r = f () in
-        let duration = Unix.gettimeofday () -. start in
-        (match profiling with
-        | Some prof ->
-            Profiling.add_timing prof
-              { operation = Profiling.Merlin filename; duration }
-        | None -> ());
-        r
-      in
-      let outline () =
-        merlin_op (fun () -> Merlin.outline backend ~file:filename)
-      in
-      let dump () =
-        merlin_op (fun () -> Merlin.dump_ast backend ~file:filename)
-      in
+      ignore profiling;
+      let view = Context.file_view project_ctx filename in
       let file_ctx =
-        Context.file ~filename ~config ~project_root ~outline ~dump
+        Context.file_with_view ~filename ~config ~project_root ~view
       in
       let all_results =
         List.concat_map (run_file_rule ?profiling file_ctx) file_rules
@@ -157,32 +230,51 @@ let analyze_single_file ?profiling ~backend ~config_for ~project_root
   in
   (issues, List.rev !excluded_acc)
 
-let run ~filter ~dune_describe ?files_to_analyze ~index ?profiling project_root
-    =
+(** Walk [files] sequentially with a single shared Merlin backend and per-run
+    [config_for] cache. Sequential because [Ocaml_parsing] / [Ocaml_typing] and
+    Merlin's Library backend share process-global state that domains race on;
+    parallelism here is best handled by running multiple [merlint] processes
+    against disjoint file sets. *)
+let analyze_files ~project_ctx ~project_root ~file_rules ?profiling files =
+  let config_for = config_lookup () in
+  let analyse filepath =
+    analyze_single_file ?profiling ~project_ctx ~config_for ~project_root
+      ~file_rules filepath
+  in
+  let results = List.map analyse files in
+  results
+
+let run ~load_file ~filter ~dune_describe ?files_to_analyze ~index ?profiling
+    project_root =
   Log.info (fun m -> m "Starting analysis of %s" project_root);
+  let backend = Merlin.v () in
+  let stats = io_stats () in
   let files_to_analyze =
     match files_to_analyze with
     | Some files -> files
     | None -> Dune_describe.project_files dune_describe
   in
+  let file_view = file_view ?profiling ~stats ~load_file ~backend in
   let _config, project_ctx, enabled_rules =
-    setup_analysis ~filter ~dune_describe ~files_to_analyze ~index project_root
+    setup_analysis ~filter ~dune_describe ~files_to_analyze ~index ~file_view
+      project_root
   in
-  let project_issues, project_excluded =
-    run_project_rules ?profiling enabled_rules project_ctx
-  in
-  let file_rules = List.filter Rule.is_file_scoped enabled_rules in
-  let backend = Merlin.v () in
-  let config_for = config_lookup () in
-  let analyze_file =
-    analyze_single_file ?profiling ~backend ~config_for ~project_root
-      ~file_rules
-  in
-  let file_results = List.map analyze_file files_to_analyze in
-  Merlin.close backend;
-  let file_issues = List.concat_map fst file_results in
-  let file_excluded = List.concat_map snd file_results in
-  {
-    issues = List.sort Rule.Run.compare (project_issues @ file_issues);
-    excluded = project_excluded @ file_excluded;
-  }
+  Fun.protect
+    ~finally:(fun () ->
+      log_io_stats stats backend;
+      Merlin.close backend)
+    (fun () ->
+      let project_issues, project_excluded =
+        run_project_rules ?profiling enabled_rules project_ctx
+      in
+      let file_rules = List.filter Rule.is_file_scoped enabled_rules in
+      let file_results =
+        analyze_files ~project_ctx ~project_root ~file_rules ?profiling
+          files_to_analyze
+      in
+      let file_issues = List.concat_map fst file_results in
+      let file_excluded = List.concat_map snd file_results in
+      {
+        issues = List.sort Rule.Run.compare (project_issues @ file_issues);
+        excluded = project_excluded @ file_excluded;
+      })

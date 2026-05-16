@@ -200,17 +200,17 @@ let print_summary all_issues enabled_rule_count =
     Fmt.pr "%s Some checks failed. See details above.@."
       (Merlint.Report.print_color false "✗")
 
-let run_engine ?profiling rule_filter dune_describe files_to_analyze index
-    project_root =
+let run_engine ~load_file ?profiling rule_filter dune_describe files_to_analyze
+    index project_root =
   match rule_filter with
   | Some filter ->
-      Merlint.Engine.run ~filter ~dune_describe ?files_to_analyze ~index
-        ?profiling project_root
+      Merlint.Engine.run ~load_file ~filter ~dune_describe ?files_to_analyze
+        ~index ?profiling project_root
   | None -> (
       match Merlint.Filter.parse "all" with
       | Ok filter ->
-          Merlint.Engine.run ~filter ~dune_describe ?files_to_analyze ~index
-            ?profiling project_root
+          Merlint.Engine.run ~load_file ~filter ~dune_describe ?files_to_analyze
+            ~index ?profiling project_root
       | Error _ -> { Merlint.Engine.issues = []; excluded = [] })
 
 let print_exclusion_stats all_excluded =
@@ -231,8 +231,8 @@ let print_exclusion_stats all_excluded =
     Fmt.pr "@]@."
   end
 
-let run_analysis project_root dune_describe files_to_analyze index rule_filter
-    show_profile =
+let run_analysis ~load_file project_root dune_describe files_to_analyze index
+    rule_filter show_profile =
   let profiling_state =
     if show_profile then Some (Merlint.Profiling.v ()) else None
   in
@@ -243,7 +243,7 @@ let run_analysis project_root dune_describe files_to_analyze index rule_filter
   in
   Log.info (fun m -> m "Starting visual analysis on %d files" files_count);
   let { Merlint.Engine.issues = all_issues; excluded = all_excluded } =
-    run_engine ?profiling:profiling_state rule_filter dune_describe
+    run_engine ~load_file ?profiling:profiling_state rule_filter dune_describe
       files_to_analyze index project_root
   in
   Fmt.pr "Running merlint analysis...@.@.Analyzing %d files@.@." files_count;
@@ -329,8 +329,11 @@ let build_dune_describe ~project_root files =
         (project, Some explicit)
       else (Merlint.Dune_describe.merge (List.rev !describes), None)
 
+let load_file_via_eio fs filename = Eio.Path.load Eio.Path.(fs / filename)
+
 let analyze_files mgr fs ?(exclude_patterns = []) ?rule_filter
     ?(show_profile = false) ?(no_build = false) files =
+  let load_file = load_file_via_eio fs in
   (* Find project root *)
   let project_root =
     match files with file :: _ -> Merlint.Project.root file | [] -> "."
@@ -358,8 +361,8 @@ let analyze_files mgr fs ?(exclude_patterns = []) ?rule_filter
   in
 
   let index = lazy (Project_index.build ~fs ~monorepo:(Fpath.v project_root)) in
-  run_analysis project_root filtered_describe files_to_analyze index rule_filter
-    show_profile
+  run_analysis ~load_file project_root filtered_describe files_to_analyze index
+    rule_filter show_profile
 
 let files =
   let doc =

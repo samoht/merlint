@@ -5,6 +5,8 @@
     metrics like cyclomatic complexity and nesting depth. For name extraction,
     see the Dump module. *)
 
+open Ocaml_parsing
+
 (** Control flow expression types. *)
 
 type expr =
@@ -88,7 +90,7 @@ val parse_structure : filename:string -> string -> Parsetree.structure option
 (** [parse_structure ~filename content] parses [content] into a Parsetree
     structure. Returns [None] for [.mli] files and on parse error. *)
 
-val merlint_of_loc : filename:string -> Warnings.loc -> Location.t
+val merlint_of_loc : filename:string -> Location.t -> Merlin.Location.t
 (** [merlint_of_loc ~filename loc] converts a compiler-libs location into a
     merlint location. *)
 

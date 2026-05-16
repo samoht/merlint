@@ -39,14 +39,9 @@ let dune_files root =
   in
   walk root []
 
-let read_file path =
-  try
-    let ic = open_in path in
-    let n = in_channel_length ic in
-    let s = really_input_string ic n in
-    close_in ic;
-    Some s
-  with Sys_error _ -> None
+let content ctx path =
+  try Some (File_view.content (Context.file_view ctx path))
+  with Sys_error _ | File_view.Analysis_error _ -> None
 
 let is_module_stanza = function
   | "library" | "executable" | "executables" | "test" | "tests" -> true
@@ -264,7 +259,7 @@ let check (ctx : Context.project) =
   let dunes = dune_files ctx.project_root in
   List.filter_map
     (fun path ->
-      match read_file path with
+      match content ctx path with
       | None -> None
       | Some contents -> check_dune path contents)
     dunes

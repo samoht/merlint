@@ -9,35 +9,34 @@ let md_mdx_error_re = Re.compile Re.(seq [ bol; str "```mdx-error" ])
    a failing mdx run inside a [{[ ... ]}] doc snippet. *)
 let odoc_mdx_error_re = Re.compile (Re.str "{err@mdx-error")
 
-let scan_file path =
-  try
-    let ic = open_in path in
-    Fun.protect
-      ~finally:(fun () -> close_in ic)
-      (fun () ->
-        let content = really_input_string ic (in_channel_length ic) in
-        let re =
-          if Filename.check_suffix path ".md" then md_mdx_error_re
-          else odoc_mdx_error_re
-        in
-        let line_of_offset off =
-          let count = ref 1 in
-          for i = 0 to off - 1 do
-            if content.[i] = '\n' then incr count
-          done;
-          !count
-        in
-        Re.all re content
-        |> List.map (fun g ->
-            let line = line_of_offset (Re.Group.start g 0) in
-            let loc =
-              Location.v ~file:path ~start_line:line ~start_col:0 ~end_line:line
-                ~end_col:0
-            in
-            Issue.v ~loc { file = path; line }))
-  with Sys_error _ -> []
+let scan_file ctx path =
+  match
+    try Some (File_view.content (Context.file_view ctx path))
+    with Sys_error _ | File_view.Analysis_error _ -> None
+  with
+  | None -> []
+  | Some content ->
+      let re =
+        if Filename.check_suffix path ".md" then md_mdx_error_re
+        else odoc_mdx_error_re
+      in
+      let line_of_offset off =
+        let count = ref 1 in
+        for i = 0 to off - 1 do
+          if content.[i] = '\n' then incr count
+        done;
+        !count
+      in
+      Re.all re content
+      |> List.map (fun g ->
+          let line = line_of_offset (Re.Group.start g 0) in
+          let loc =
+            Location.v ~file:path ~start_line:line ~start_col:0 ~end_line:line
+              ~end_col:0
+          in
+          Issue.v ~loc { file = path; line })
 
-let rec walk dir =
+let rec walk ctx dir =
   let entries = try Sys.readdir dir |> Array.to_list with Sys_error _ -> [] in
   List.concat_map
     (fun entry ->
@@ -45,16 +44,16 @@ let rec walk dir =
       else
         let path = Filename.concat dir entry in
         let is_dir = try Sys.is_directory path with Sys_error _ -> false in
-        if is_dir then walk path
+        if is_dir then walk ctx path
         else if
           Filename.check_suffix path ".md"
           || Filename.check_suffix path ".mli"
           || Filename.check_suffix path ".mld"
-        then scan_file path
+        then scan_file ctx path
         else [])
     entries
 
-let check (ctx : Context.project) = walk ctx.project_root
+let check (ctx : Context.project) = walk ctx ctx.project_root
 
 let pp ppf { file; line } =
   Fmt.pf ppf

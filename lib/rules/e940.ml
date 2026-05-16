@@ -21,24 +21,23 @@ let rec mentions_dune_warnings (sexp : Sexp.t) =
   | Sexp.Atom s -> Astring.String.is_infix ~affix:"dune-warnings" s
   | Sexp.List xs -> List.exists mentions_dune_warnings xs
 
-let parse_dune_sexps path =
-  try
-    let ic = open_in path in
-    Fun.protect
-      ~finally:(fun () -> close_in ic)
-      (fun () ->
-        let content = really_input_string ic (in_channel_length ic) in
-        match Sexp.Value.parse_string_many content with
-        | Ok stanzas -> Some stanzas
-        | Error _ -> Some [])
-  with Sys_error _ -> None
+let parse_dune_sexps ctx path =
+  match
+    try Some (File_view.content (Context.file_view ctx path))
+    with Sys_error _ | File_view.Analysis_error _ -> None
+  with
+  | None -> None
+  | Some content -> (
+      match Sexp.Value.parse_string_many content with
+      | Ok stanzas -> Some stanzas
+      | Error _ -> Some [])
 
 let is_env_stanza = function
   | Sexp.List (Sexp.Atom "env" :: _) -> true
   | _ -> false
 
-let dune_warning_status dune_path =
-  match parse_dune_sexps dune_path with
+let dune_warning_status ctx dune_path =
+  match parse_dune_sexps ctx dune_path with
   | None -> Some Missing_file
   | Some sexps ->
       let env_stanzas = List.filter is_env_stanza sexps in
@@ -81,7 +80,7 @@ let check (ctx : Context.project) =
         (fun kind ->
           let loc = Location.in_file dune_path in
           Issue.v ~loc { dune_path; kind })
-        (dune_warning_status dune_path))
+        (dune_warning_status ctx dune_path))
     roots
 
 let pp ppf { dune_path; kind } =

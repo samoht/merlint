@@ -28,29 +28,45 @@ type project = {
       (** Monopam package/library index: opam pkg -> dune library -> modules,
           tags, depends, source directories. Walks the monorepo source tree and
           the [_opam/lib/] install tree. Built lazily on first access. *)
+  file_view_cache : string -> File_view.t;
+      (** Project-wide memoized file views, shared by project-scoped and
+          file-scoped rules. *)
 }
 
 val file :
   filename:string ->
   config:Config.t ->
   project_root:string ->
+  load_content:(unit -> string) ->
   outline:(unit -> (Outline.t, string) result) ->
-  dump:(unit -> (Merlin.Dump.t, string) result) ->
+  dump:(unit -> (Merlin.ast_dump, string) result) ->
   file
-(** [file ~filename ~config ~project_root ~outline ~dump] creates a file
-    context. The [outline] and [dump] thunks are invoked on first access (via
-    {!val-outline} / {!val-dump}); rules that don't touch either pay no Merlin
-    cost. *)
+(** [file ~filename ~config ~project_root ~load_content ~outline ~dump] creates
+    a file context. [load_content], [outline] and [dump] are invoked on first
+    access; rules that don't touch them pay nothing. *)
+
+val file_with_view :
+  filename:string ->
+  config:Config.t ->
+  project_root:string ->
+  view:File_view.t ->
+  file
+(** [file_with_view ~filename ~config ~project_root ~view] creates a file
+    context backed by an existing shared {!File_view.t}. *)
 
 val project :
+  ?file_view:(string -> File_view.t) ->
   config:Config.t ->
   project_root:string ->
   all_files:string list ->
   dune_describe:Dune_describe.describe ->
   index:Project_index.t Lazy.t ->
+  unit ->
   project
-(** [project ~config ~project_root ~all_files ~dune_describe ~index] creates a
-    project context. [index] is the lazy monopam index (built once per run). *)
+(** [project ?file_view ~config ~project_root ~all_files ~dune_describe ~index
+     ()] creates a project context. [index] is the lazy monopam index (built
+    once per run). [file_view], when provided, is memoized and used as the
+    project-wide source for per-file views. *)
 
 val index : project -> Project_index.t
 (** [index p] forces and returns the monopam package/library index. *)
@@ -76,10 +92,6 @@ val functions : file -> (string * Ast.expr) list
 (** [functions file] returns top-level functions extracted from the shared
     parsetree. *)
 
-val parsetree : file -> Parsetree.structure option
-(** [parsetree file] returns the shared compiler-libs parsetree. [None] for
-    [.mli] and parse errors. *)
-
 (** {2 Project context accessors} *)
 
 val all_files : project -> string list
@@ -96,3 +108,7 @@ val test_modules : project -> string list
 
 val dune_describe : project -> Dune_describe.describe
 (** [dune_describe project] returns the dune project description. *)
+
+val file_view : project -> string -> File_view.t
+(** [file_view project filename] returns the shared, lazy file view for
+    [filename]. *)

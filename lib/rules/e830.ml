@@ -53,20 +53,16 @@ let suspicious_defs =
             [ "encode"; "decode"; "compute"; "calculate"; "process" ]);
   ]
 
-let scan_file path =
-  try
-    let ic = open_in path in
-    let found = ref false in
-    (try
-       while true do
-         let line = input_line ic in
-         if List.exists (fun check -> check line) suspicious_defs then
-           found := true
-       done
-     with End_of_file -> ());
-    close_in ic;
-    !found
-  with Sys_error _ -> false
+let scan_file ctx path =
+  match
+    try Some (File_view.content (Context.file_view ctx path))
+    with Sys_error _ | File_view.Analysis_error _ -> None
+  with
+  | None -> false
+  | Some content ->
+      content |> String.split_on_char '\n'
+      |> List.exists (fun line ->
+          List.exists (fun check -> check line) suspicious_defs)
 
 let check (ctx : Context.project) =
   let dirs = Interop.oracle_dirs ctx.project_root in
@@ -92,7 +88,7 @@ let check (ctx : Context.project) =
           List.filter_map
             (fun f ->
               let path = Filename.concat scripts f in
-              if scan_file path then Some f else None)
+              if scan_file ctx path then Some f else None)
             generator_files
         in
         match inlined with

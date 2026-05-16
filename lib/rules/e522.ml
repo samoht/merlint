@@ -20,14 +20,9 @@ type payload = { package : string; file : string }
 let try_readdir d = try Sys.readdir d |> Array.to_list with Sys_error _ -> []
 let is_dir p = try Sys.is_directory p with Sys_error _ -> false
 
-let read_file path =
-  try
-    let ic = open_in path in
-    let n = in_channel_length ic in
-    let s = really_input_string ic n in
-    close_in ic;
-    Some s
-  with Sys_error _ -> None
+let content ctx path =
+  try Some (File_view.content (Context.file_view ctx path))
+  with Sys_error _ | File_view.Analysis_error _ -> None
 
 (** Collect every module name that appears in a [(modules ...)] field of a
     library/executable/test stanza in [dune_path]. These names are claimed by a
@@ -49,8 +44,8 @@ let claimed_modules_of_stanza = function
       List.concat_map modules_field fields
   | _ -> []
 
-let modules_explicitly_claimed dune_path =
-  match read_file dune_path with
+let modules_explicitly_claimed ctx dune_path =
+  match content ctx dune_path with
   | None -> []
   | Some contents -> (
       match Sexp.Value.parse_string_many contents with
@@ -79,7 +74,7 @@ let check (ctx : Context.project) =
           String.map (fun c -> if c = '-' then '_' else c) p ^ "_"
         in
         let claimed =
-          modules_explicitly_claimed (Filename.concat lib_dir "dune")
+          modules_explicitly_claimed ctx (Filename.concat lib_dir "dune")
         in
         let has_ml name = Filename.check_suffix name ".ml" in
         List.iter

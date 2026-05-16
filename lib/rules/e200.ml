@@ -1,14 +1,25 @@
 (** E200: Outdated Str Module *)
 
-let check (ctx : Context.file) =
-  let dump_data = Context.dump ctx in
-  let filename = ctx.filename in
+(* Match the fully-resolved Stdlib.Str prefix. Requires typedtree; on
+   parsetree fallback we can't tell a local [Str] module from the real
+   one, so skip rather than guess. *)
+let from_stdlib_str ident =
+  match File_view.Reference.prefix ident with
+  | "Stdlib" :: "Str" :: _ -> true
+  | _ -> false
 
-  (* Check identifiers for Str module usage *)
-  (* In typedtree, we get ["Stdlib"; "Str"] or ["Str"]
-     In parsetree, we get ["Str"] for Str.function_name *)
-  Merlin.Dump.check_module_usage ~full_path:filename dump_data.identifiers "Str"
-    (fun ~loc -> Issue.v ~loc ())
+let check (ctx : Context.file) =
+  match File_view.resolved_identifiers (Context.view ctx) with
+  | None -> []
+  | Some identifiers ->
+      List.filter_map
+        (fun ident ->
+          if not (from_stdlib_str ident) then None
+          else
+            match File_view.Reference.loc ident with
+            | Some loc -> Some (Issue.v ~loc ())
+            | None -> None)
+        identifiers
 
 let pp ppf () =
   Fmt.pf ppf "Usage of deprecated Str module detected - use Re module instead"

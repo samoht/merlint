@@ -1,5 +1,8 @@
 (** E605: Missing Test File *)
 
+module Issue_location = Location
+open Ocaml_parsing
+
 type payload = { module_name : string; expected_test_file : string }
 
 let log_src = Logs.Src.create "merlint.rules.e605" ~doc:"E605 rule diagnostics"
@@ -9,41 +12,37 @@ module Log = (val Logs.src_log log_src : Logs.LOG)
 (** Check if a module only contains type definitions, module aliases, and
     delegations. This detects facade/wrapper modules that just re-export other
     modules (e.g. the top-level [Irmin] module). *)
-let contains_only_types_and_modules file_path =
-  try
-    let ic = open_in file_path in
-    let lexbuf = Lexing.from_channel ic in
-    lexbuf.lex_curr_p <- { lexbuf.lex_curr_p with pos_fname = file_path };
-    let structure = Parse.implementation lexbuf in
-    close_in ic;
-
-    let rec is_facade_mod_expr (me : Parsetree.module_expr) =
-      match me.pmod_desc with
-      | Pmod_ident _ -> true (* module M = OtherModule *)
-      | Pmod_apply _ -> true (* module M = Map.Make(String) *)
-      | Pmod_structure items -> List.for_all is_facade_item items
-      | Pmod_constraint (me, _) -> is_facade_mod_expr me
-      | Pmod_functor (_, body) -> is_facade_mod_expr body
-      | _ -> false
-    and is_facade_item (item : Parsetree.structure_item) =
-      match item.pstr_desc with
-      | Pstr_type _ | Pstr_typext _ | Pstr_modtype _ | Pstr_open _
-      | Pstr_include _ | Pstr_attribute _ ->
-          true
-      | Pstr_module { pmb_expr; _ } -> is_facade_mod_expr pmb_expr
-      | Pstr_value (_, bindings) ->
-          (* Accept simple delegations: let f = Other.f *)
-          List.for_all
-            (fun (vb : Parsetree.value_binding) ->
-              match vb.pvb_expr.pexp_desc with
-              | Pexp_ident _ -> true
-              | _ -> false)
-            bindings
-      | _ -> false
-    in
-    List.for_all is_facade_item structure
-  with Sys_error _ | Syntaxerr.Error _ | Lexer.Error _ ->
-    false (* If we can't parse, assume it needs tests *)
+let contains_only_types_and_modules ctx file_path =
+  match File_view.parsetree (Context.file_view ctx file_path) with
+  | None -> false
+  | Some structure ->
+      let rec is_facade_mod_expr (me : Parsetree.module_expr) =
+        match me.pmod_desc with
+        | Pmod_ident _ -> true (* module M = OtherModule *)
+        | Pmod_apply _ -> true (* module M = Map.Make(String) *)
+        | Pmod_structure items -> List.for_all is_facade_item items
+        | Pmod_constraint (me, _) -> is_facade_mod_expr me
+        | Pmod_functor (_, body) -> is_facade_mod_expr body
+        | _ -> false
+      and is_facade_item (item : Parsetree.structure_item) =
+        match item.pstr_desc with
+        | Pstr_type _ | Pstr_typext _ | Pstr_modtype _ | Pstr_open _
+        | Pstr_include _ | Pstr_attribute _ ->
+            true
+        | Pstr_module { pmb_expr; _ } -> is_facade_mod_expr pmb_expr
+        | Pstr_value (_, bindings) ->
+            (* Accept simple delegations: let f = Other.f *)
+            List.for_all
+              (fun (vb : Parsetree.value_binding) ->
+                match vb.pvb_expr.pexp_desc with
+                | Pexp_ident _ -> true
+                | _ -> false)
+              bindings
+        | _ -> false
+      in
+      List.for_all is_facade_item structure
+  | exception Context.Analysis_error _ ->
+      false (* If we can't parse, assume it needs tests *)
 
 (** Compute expected test file path from source file. For [lib] and [src] source
     directories, the directory is replaced with [test]. For any other source
@@ -90,7 +89,7 @@ let expected_test_path source_file =
     test *)
 let missing_test_issue module_name source_file =
   let loc =
-    Location.v ~file:source_file ~start_line:1 ~start_col:0 ~end_line:1
+    Issue_location.v ~file:source_file ~start_line:1 ~start_col:0 ~end_line:1
       ~end_col:0
   in
   let expected_path = expected_test_path source_file in
@@ -165,12 +164,12 @@ let log_project_summary ~files ~lib_modules ~test_modules =
   Log.debug (fun m -> m "E605: Analyzing %d files" (List.length files));
   log_test_sources files lib_modules
 
-let skipped_module_reason file_path =
+let skipped_module_reason ctx file_path =
   if Astring.String.is_infix ~affix:"/test/" file_path then
     Some "defined in test directory"
   else if File.is_in_examples file_path then
     Some "defined in examples directory"
-  else if contains_only_types_and_modules file_path then
+  else if contains_only_types_and_modules ctx file_path then
     Some "contains only types/modules"
   else None
 
@@ -196,11 +195,11 @@ let should_skip_module private_modules lib_mod =
     Some "listed in private_modules"
   else None
 
-let source_candidate ~files ~lib_files ~exec_files lib_mod =
+let source_candidate ctx ~files ~lib_files ~exec_files lib_mod =
   match find_lib_source ~files ~lib_files ~exec_files lib_mod with
   | None -> `Missing_source
   | Some file_path -> (
-      match skipped_module_reason file_path with
+      match skipped_module_reason ctx file_path with
       | Some reason ->
           log_skip lib_mod reason;
           `Skipped_source
@@ -214,14 +213,14 @@ let tests_missing ~files ~test_modules lib_mod =
         in_dune in_files);
   (not in_dune) && not in_files
 
-let missing_test_candidate ~files ~lib_files ~exec_files ~private_modules
+let missing_test_candidate ctx ~files ~lib_files ~exec_files ~private_modules
     ~test_modules lib_mod =
   match should_skip_module private_modules lib_mod with
   | Some reason ->
       log_skip lib_mod reason;
       None
   | None -> (
-      match source_candidate ~files ~lib_files ~exec_files lib_mod with
+      match source_candidate ctx ~files ~lib_files ~exec_files lib_mod with
       | `Missing_source ->
           log_skip lib_mod "no library source file, only in executables";
           None
@@ -243,8 +242,8 @@ let check (ctx : Context.project) =
   log_project_summary ~files ~lib_modules ~test_modules;
   lib_modules
   |> List.filter_map
-       (missing_test_candidate ~files ~lib_files ~exec_files ~private_modules
-          ~test_modules)
+       (missing_test_candidate ctx ~files ~lib_files ~exec_files
+          ~private_modules ~test_modules)
   |> List.map (fun (m, source_file) -> missing_test_issue m source_file)
 
 let pp ppf { module_name; expected_test_file } =
