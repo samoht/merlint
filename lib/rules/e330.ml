@@ -15,7 +15,7 @@ let has_redundant_prefix item_name_lower module_name filename =
        `test.ml` convention (module `test`, items `test_*`). *)
     (String.starts_with ~prefix:"test_" module_name || module_name = "test")
     && String.starts_with ~prefix:"test_" item_name_lower
-    && String.ends_with ~suffix:".ml" filename
+    && File_kind.is_ml filename
   then false
   else
     String.starts_with ~prefix:(module_name ^ "_") item_name_lower

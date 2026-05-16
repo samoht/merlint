@@ -27,12 +27,12 @@ type project = {
   file_view_cache : string -> File_view.t;
 }
 
-let file ~filename ~config ~project_root ~load_content ~outline ~dump =
+let file ~filename ~config ~project_root ~load_content ~outline =
   {
     filename;
     config;
     project_root;
-    view = File_view.v ~filename ~load_content ~outline ~dump ();
+    view = File_view.v ~filename ~load_content ~outline ();
   }
 
 let file_with_view ~filename ~config ~project_root ~view =
@@ -48,7 +48,6 @@ let default_file_view filename =
   File_view.v ~filename
     ~load_content:(default_load_content filename)
     ~outline:(fun () -> Error "Merlin outline unavailable in this context")
-    ~dump:(fun () -> Error "Merlin dump unavailable in this context")
     ()
 
 let memoize_file_view make =
@@ -63,7 +62,7 @@ let memoize_file_view make =
         view
 
 let test_module_of_file f =
-  if String.ends_with ~suffix:".ml" f then
+  if File_kind.is_ml f then
     let basename = Filename.basename f |> Filename.remove_extension in
     if String.starts_with ~prefix:"test_" basename || basename = "test" then begin
       Log.debug (fun m ->
@@ -123,7 +122,6 @@ let index ctx = Lazy.force ctx.index
 (* File context accessors *)
 let view ctx = ctx.view
 let ast ctx = File_view.ast ctx.view
-let dump ctx = File_view.dump ctx.view
 let outline ctx = File_view.outline ctx.view
 let content ctx = File_view.content ctx.view
 let functions ctx = File_view.functions ctx.view

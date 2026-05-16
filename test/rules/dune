@@ -5,6 +5,7 @@
   merlint
   alcotest
   compiler-libs.common
+  fpath
   merlin-lib.ocaml_parsing
   unix
   logs.fmt

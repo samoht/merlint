@@ -8,9 +8,7 @@ let check (ctx : Context.file) =
   let filename = ctx.filename in
   let basename = Filename.basename filename in
   if
-    not
-      (String.starts_with ~prefix:"test_" basename
-      && String.ends_with ~suffix:".ml" basename)
+    not (String.starts_with ~prefix:"test_" basename && File_kind.is_ml basename)
   then []
   else
     match File_view.parsetree (Context.view ctx) with

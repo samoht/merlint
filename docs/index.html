@@ -795,6 +795,13 @@ and replace each call site with [err_x &quot;...&quot; args] / [fail_x &quot;...
 </div>
 </div></div>
 </div>
+<div class="error-card" id="E220">
+    <div>
+        <span class="error-code">E220</span>
+        <span class="error-title">Prefer module alias over unconstrained typeof</span>
+    </div>
+    <div class="error-hint"><p>[module X : module type of Y] re-elaborates the target signature and hides type equalities behind a fresh abstraction; an alias [module X = Y] is cheaper to typecheck and preserves equalities. Keep [module type of] only when you immediately narrow with [with type t = ...] / [with module M = ...].</p></div>
+</div>
 <h2 id="naming conventions">Naming Conventions</h2>
 <div class="category">E300-E399 • Identifier naming convention violations</div>
 <div class="error-card" id="E300">

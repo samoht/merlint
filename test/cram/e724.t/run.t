@@ -28,6 +28,7 @@ Test bad example - fuzz directory missing build rules:
   
   Summary: ✗ 1 total issue (applied 1 rule)
   ✗ Some checks failed. See details above.
+    Run `merlint help E724` for the rule's description, hint, and good/bad examples.
   [1]
 
 
@@ -52,7 +53,6 @@ Test good example - fuzz directory with all required build rules:
   
   Summary: ✓ 0 total issues (applied 1 rule)
   ✓ All checks passed!
-
 
 
 

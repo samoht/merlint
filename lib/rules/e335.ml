@@ -1,44 +1,42 @@
 (** E335: Used Underscore-Prefixed Binding *)
 
-type payload = { binding_name : string; usage_locations : Location.t list }
+type payload = {
+  binding_name : string;
+  usage_locations : Merlin.Location.t list;
+}
 (** Payload for used underscore binding issues *)
 
 let check ctx =
-  (* First, collect all underscore-prefixed pattern bindings *)
-  let underscore_bindings =
-    List.filter_map
-      (fun (elt : Merlin.Dump.elt) ->
-        let name = Merlin.Dump.string_of_name elt.name in
+  let view = Context.view ctx in
+  let bindings =
+    File_view.outline_patterns view
+    |> List.filter_map (fun pattern ->
+        let name = File_view.Reference.base pattern in
         if
           String.length name > 0
           && name.[0] = '_'
           && not (String.starts_with ~prefix:"__" name)
-        (* Ignore PPX-generated code *)
         then
-          match Merlin.Dump.location elt with
-          | Some loc -> Some (name, loc)
-          | None -> None
+          Option.map (fun loc -> (name, loc)) (File_view.Reference.loc pattern)
         else None)
-      (Context.dump ctx).patterns
   in
-
-  (* For each underscore binding, check if it's used in identifiers *)
+  let usages =
+    File_view.outline_identifiers view
+    |> List.filter_map (fun ident ->
+        Option.map
+          (fun loc -> (File_view.Reference.base ident, loc))
+          (File_view.Reference.loc ident))
+  in
   List.filter_map
     (fun (binding_name, binding_loc) ->
-      (* Find all usages of this binding *)
       let usage_locations =
         List.filter_map
-          (fun (elt : Merlin.Dump.elt) ->
-            let ident_name = Merlin.Dump.string_of_name elt.name in
-            if ident_name = binding_name then Merlin.Dump.location elt else None)
-          (Context.dump ctx).identifiers
+          (fun (name, loc) -> if name = binding_name then Some loc else None)
+          usages
       in
-
-      (* If the binding is used, create an issue *)
-      if usage_locations <> [] then
-        Some (Issue.v ~loc:binding_loc { binding_name; usage_locations })
-      else None)
-    underscore_bindings
+      if usage_locations = [] then None
+      else Some (Issue.v ~loc:binding_loc { binding_name; usage_locations }))
+    bindings
 
 let pp ppf { binding_name; usage_locations } =
   let usage_count = List.length usage_locations in

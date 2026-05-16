@@ -24,10 +24,7 @@ let process_ocaml_files ctx f =
   let files = Context.all_files ctx in
   List.concat_map
     (fun filename ->
-      if
-        String.ends_with ~suffix:".ml" filename
-        || String.ends_with ~suffix:".mli" filename
-      then
+      if File_kind.is_ml_or_mli filename then
         try
           let content =
             In_channel.with_open_text filename In_channel.input_all

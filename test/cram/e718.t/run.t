@@ -30,6 +30,7 @@ Test bad example - fuzz dir with no fuzz.ml runner:
   
   Summary: ✗ 3 total issues (applied 1 rule)
   ✗ Some checks failed. See details above.
+    Run `merlint help E718` for the rule's description, hint, and good/bad examples.
   [1]
 
 Test good example - fuzz dir with proper fuzz.ml runner:

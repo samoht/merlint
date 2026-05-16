@@ -41,30 +41,6 @@ let content ctx path =
   try Some (File_view.content (Context.file_view ctx path))
   with Sys_error _ | File_view.Analysis_error _ -> None
 
-let stanza_re =
-  Re.compile
-    (Re.seq
-       [
-         Re.char '(';
-         Re.rep Re.space;
-         Re.str "implicit_transitive_deps";
-         Re.rep1 Re.space;
-         Re.group
-           (Re.alt
-              [
-                Re.str "false-if-hidden-includes-supported";
-                Re.str "false";
-                Re.str "true";
-              ]);
-         Re.rep Re.space;
-         Re.char ')';
-       ])
-
-let find_setting contents =
-  match Re.exec_opt stanza_re contents with
-  | None -> None
-  | Some g -> Some (Re.Group.get g 1)
-
 let issue_of_setting name loc = function
   | Some "false" | Some "false-if-hidden-includes-supported" -> []
   | Some "true" -> [ Issue.v ~loc { package = name; kind = Set_to_true } ]
@@ -79,8 +55,12 @@ let check_package ctx root name =
       let dp_path = Filename.concat pkg_dir "dune-project" in
       match content ctx dp_path with
       | None -> []
-      | Some c ->
-          issue_of_setting name (Location.in_file dp_path) (find_setting c)
+      | Some c -> (
+          match Dune.Project.of_string c with
+          | Error _ -> []
+          | Ok project ->
+              issue_of_setting name (Location.in_file dp_path)
+                (Dune.Project.implicit_transitive_deps project))
 
 let check (ctx : Context.project) =
   let root = ctx.project_root in

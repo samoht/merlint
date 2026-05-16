@@ -30,7 +30,7 @@ let has_deriving_show content line_num =
 
 let check (ctx : Context.file) =
   (* Only check .mli files *)
-  if not (String.ends_with ~suffix:".mli" ctx.filename) then []
+  if not (File_kind.is_mli ctx.filename) then []
   else
     let outline = Context.outline ctx in
     let content = Context.content ctx in

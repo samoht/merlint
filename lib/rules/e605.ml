@@ -121,7 +121,7 @@ let executable_file_set dune_desc =
 let module_source_name file = Filename.basename (Filename.remove_extension file)
 
 let source_matches_module lib_mod file =
-  String.ends_with ~suffix:".ml" file && module_source_name file = lib_mod
+  File_kind.is_ml file && module_source_name file = lib_mod
 
 let find_lib_source ~files ~lib_files ~exec_files lib_mod =
   let matches = List.filter (source_matches_module lib_mod) files in
@@ -137,7 +137,7 @@ let find_lib_source ~files ~lib_files ~exec_files lib_mod =
         matches
 
 let is_test_source file =
-  String.ends_with ~suffix:".ml" file
+  File_kind.is_ml file
   &&
   let basename = module_source_name file in
   String.starts_with ~prefix:"test_" basename || basename = "test"
@@ -180,7 +180,7 @@ let test_presence ~files ~test_modules expected =
   let in_files =
     List.exists
       (fun file ->
-        String.ends_with ~suffix:".ml" file
+        File_kind.is_ml file
         && String.lowercase_ascii (module_source_name file) = expected)
       files
   in

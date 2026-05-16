@@ -1,23 +1,13 @@
-(** Shared helpers for [.mli] files that should expose exactly
-    [val suite : <expected-type>] and nothing else. *)
+(** Shared helpers for [.mli] files that should expose exactly one [suite] value
+    with the expected test-suite type. *)
 
-val is_compliant : expected:string -> string -> bool
-(** [is_compliant ~expected content] is [true] iff [content]'s significant lines
-    contain exactly one [val suite : ...] declaration whose normalized suffix
-    matches [expected], and no other [val ...] exports. *)
+open Ocaml_parsing
 
-val non_comment_lines : string -> string list
-(** [non_comment_lines content] is the content split on newlines with blank
-    lines and lines that begin with a comment opener dropped. *)
+val is_compliant_signature : expected:string -> Parsetree.signature -> bool
+(** [is_compliant_signature ~expected sg] is [true] iff [sg] exposes exactly one
+    value, [suite], whose type structurally matches [expected]. Floating
+    attributes are ignored. *)
 
-val suite_line : string list -> string option
-(** [suite_line lines] is the first line matching [val suite : ...]. *)
-
-val exports_non_suite_val : string list -> bool
-(** [exports_non_suite_val lines] is [true] iff at least one line declares a
-    [val ...] that is not [val suite : ...]. *)
-
-val matches_suite_type : expected:string -> string -> bool
-(** [matches_suite_type ~expected line] is [true] iff [line] (the
-    [val suite : ...] declaration) ends in [expected] after whitespace
-    normalisation. *)
+val is_compliant_view : expected:string -> File_view.t -> bool
+(** [is_compliant_view ~expected view] checks an interface through the shared
+    file view cache. *)

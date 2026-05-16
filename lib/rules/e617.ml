@@ -89,8 +89,7 @@ let suite_issue ~filename ~expected_name
 
 let is_test_module_file filename =
   let basename = Filename.basename filename in
-  String.starts_with ~prefix:"test_" basename
-  && String.ends_with ~suffix:".ml" basename
+  String.starts_with ~prefix:"test_" basename && File_kind.is_ml basename
 
 let issues_of_structure ~filename ~structure =
   let expected_name = extract_expected_name filename in

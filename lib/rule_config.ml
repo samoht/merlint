@@ -5,7 +5,15 @@ let src =
 
 module Log = (val Logs.src_log src : Logs.LOG)
 
-type rule_pattern = { pattern : string; rules : string list }
+type rule_pattern = {
+  pattern : string;
+  rules : string list;
+  config_dir : string;
+      (** Directory of the [merlint.toml] this exclusion came from. Patterns are
+          matched against the file's path {b relative to this directory},
+          mirroring how users write them. *)
+}
+
 type t = rule_pattern list
 
 let empty = []
@@ -56,34 +64,47 @@ let matches_pattern pattern file =
     String.starts_with ~prefix:pattern file
     || String.ends_with ~suffix:pattern file
 
+(* The file path the user wrote in [merlint.toml] is relative to that
+   config's directory. Strip the [config_dir] prefix from [file] before
+   matching so [files = "lib/trace.ml"] in [memtrace/merlint.toml] matches
+   any analyzed [memtrace/lib/trace.ml] regardless of cwd. *)
+let config_relative_file ~config_dir file =
+  if config_dir = "" then file
+  else
+    let prefix =
+      if config_dir.[String.length config_dir - 1] = '/' then config_dir
+      else config_dir ^ "/"
+    in
+    if String.starts_with ~prefix file then
+      String.sub file (String.length prefix)
+        (String.length file - String.length prefix)
+    else file
+
 let should_exclude exclusions ~rule ~file =
   let rule_matches_pattern rule_pattern rule_code =
-    (* Check if rule pattern matches the rule code *)
     if String.contains rule_pattern '*' then
-      (* Wildcard pattern - convert to simple glob matching *)
       let pattern_prefix = String.split_on_char '*' rule_pattern |> List.hd in
       String.starts_with ~prefix:pattern_prefix rule_code
-    else
-      (* Exact match *)
-      rule_pattern = rule_code
+    else rule_pattern = rule_code
   in
-  let result =
-    List.exists
-      (fun pattern ->
-        let pattern_matches = matches_pattern pattern.pattern file in
-        let rule_matches =
-          List.exists
-            (fun rule_pattern -> rule_matches_pattern rule_pattern rule)
-            pattern.rules
-        in
-        if pattern_matches && rule_matches then
-          Log.debug (fun m ->
-              m "Exclusion: file %s matches pattern %s for rule %s" file
-                pattern.pattern rule);
-        pattern_matches && rule_matches)
-      exclusions
-  in
-  result
+  List.exists
+    (fun pattern ->
+      let rel = config_relative_file ~config_dir:pattern.config_dir file in
+      let pattern_matches =
+        matches_pattern pattern.pattern file
+        || matches_pattern pattern.pattern rel
+      in
+      let rule_matches =
+        List.exists
+          (fun rule_pattern -> rule_matches_pattern rule_pattern rule)
+          pattern.rules
+      in
+      if pattern_matches && rule_matches then
+        Log.debug (fun m ->
+            m "Exclusion: file %s matches pattern %s for rule %s" file
+              pattern.pattern rule);
+      pattern_matches && rule_matches)
+    exclusions
 
 let pp ppf exclusions =
   let pp_pattern ppf p =
@@ -95,5 +116,7 @@ let pp ppf exclusions =
 
 let equal exclusions1 exclusions2 =
   List.equal
-    (fun p1 p2 -> p1.pattern = p2.pattern && p1.rules = p2.rules)
+    (fun p1 p2 ->
+      p1.pattern = p2.pattern && p1.rules = p2.rules
+      && p1.config_dir = p2.config_dir)
     exclusions1 exclusions2

@@ -29,14 +29,17 @@ let should_skip_module ~executable_modules ~test_modules ml_file =
     Log.debug (fun m -> m "File %s is interface definition file" ml_file);
   is_exe || is_test || is_intf
 
-let implements_re = Re.compile (Re.seq [ Re.str "(implements"; Re.set " \t\n" ])
-
-let is_virtual_impl ml_file =
+let is_virtual_impl ctx ml_file =
   let dir = Filename.dirname ml_file in
   let dune_path = Filename.concat dir "dune" in
-  match In_channel.with_open_text dune_path In_channel.input_all with
-  | exception Sys_error _ -> false
-  | content -> Re.execp implements_re content
+  try
+    let content = File_view.content (Context.file_view ctx dune_path) in
+    match Dune.File.of_string content with
+    | Error _ -> false
+    | Ok dune ->
+        Dune.File.libraries dune
+        |> List.exists (fun lib -> Dune.File.Library.implements lib <> None)
+  with File_view.Analysis_error _ -> false
 
 let missing_mli_issue files ml_file =
   let mli_path = Filename.remove_extension ml_file ^ ".mli" in
@@ -47,17 +50,19 @@ let missing_mli_issue files ml_file =
     in
     Some (Issue.v ~loc { ml_file; expected_mli = mli_path })
 
-let check_file ~files ~executable_modules ~test_modules ml_file =
-  if not (String.ends_with ~suffix:".ml" ml_file) then None
+let check_file ctx ~files ~executable_modules ~test_modules ml_file =
+  if not (File_kind.is_ml ml_file) then None
   else if should_skip_module ~executable_modules ~test_modules ml_file then None
-  else if is_virtual_impl ml_file then None
+  else if is_virtual_impl ctx ml_file then None
   else missing_mli_issue files ml_file
 
 let check (ctx : Context.project) =
   let files = Context.all_files ctx in
   let executable_modules = Context.executable_modules ctx in
   let test_modules = Context.test_modules ctx in
-  List.filter_map (check_file ~files ~executable_modules ~test_modules) files
+  List.filter_map
+    (check_file ctx ~files ~executable_modules ~test_modules)
+    files
 
 let pp ppf { ml_file; expected_mli } =
   Fmt.pf ppf "Library module %s is missing interface file %s" ml_file

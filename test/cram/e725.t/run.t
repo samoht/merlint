@@ -26,6 +26,7 @@ Test bad example - fuzz suite name mismatch:
   
   Summary: ✗ 1 total issue (applied 1 rule)
   ✗ Some checks failed. See details above.
+    Run `merlint help E725` for the rule's description, hint, and good/bad examples.
   [1]
 
 
@@ -50,6 +51,5 @@ Test good example - fuzz suite name matches filename:
   
   Summary: ✓ 0 total issues (applied 1 rule)
   ✓ All checks passed!
-
 
 

@@ -2,6 +2,13 @@
 
 type payload = { dir : string; reason : string }
 
+let dune_file ctx dir =
+  let path = Filename.concat dir "dune" in
+  try
+    File_view.content (Context.file_view ctx path)
+    |> Dune.File.of_string |> Result.to_option
+  with File_view.Analysis_error _ -> None
+
 let check (ctx : Context.project) =
   let dirs = Interop.oracle_dirs ctx.project_root in
   List.filter_map
@@ -14,17 +21,17 @@ let check (ctx : Context.project) =
                reason = "missing traces/ directory — traces must be committed";
              })
       else if d.has_dune then
-        let dune = Interop.dune_content d.path in
-        if not (Astring.String.is_infix ~affix:"source_tree traces" dune) then
-          Some
-            (Issue.v
-               {
-                 dir = d.path;
-                 reason =
-                   "dune test stanza missing (source_tree traces) dep — test \
-                    must run from committed traces";
-               })
-        else None
+        match dune_file ctx d.path with
+        | Some dune when Dune.File.has_source_tree_dep dune "traces" -> None
+        | _ ->
+            Some
+              (Issue.v
+                 {
+                   dir = d.path;
+                   reason =
+                     "dune test stanza missing (source_tree traces) dep — test \
+                      must run from committed traces";
+                 })
       else None)
     dirs
 

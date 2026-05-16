@@ -5,24 +5,14 @@ type payload = { dir : string }
 let has_resolved_path refs path =
   List.exists (fun r -> File_view.Reference.matches_path r path) refs
 
-let has_resolved_base refs base =
-  List.exists (fun r -> File_view.Reference.base r = base) refs
-
 let hand_rolled_csv view =
   match File_view.resolved_identifiers view with
   | None -> false
   | Some refs ->
-      let has_open =
-        has_resolved_path refs [ "Stdlib"; "open_in" ]
-        || has_resolved_base refs "open_in"
-      in
-      let has_line =
-        has_resolved_path refs [ "Stdlib"; "input_line" ]
-        || has_resolved_base refs "input_line"
-      in
+      let has_open = has_resolved_path refs [ "Stdlib"; "open_in" ] in
+      let has_line = has_resolved_path refs [ "Stdlib"; "input_line" ] in
       let has_split =
         has_resolved_path refs [ "Stdlib"; "String"; "split_on_char" ]
-        || has_resolved_base refs "split_on_char"
       in
       has_open && has_line && has_split
 

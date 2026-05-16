@@ -1,46 +1,35 @@
 (** E340: Error Pattern Detection *)
 
+open Ocaml_parsing
+
 type payload = { error_message : string; suggested_function : string }
 (** Payload for error pattern issues *)
-
-let error_fmt_str_pattern =
-  Re.compile
-    (Re.seq
-       [
-         Re.str "Error";
-         Re.rep Re.space;
-         Re.str "(";
-         Re.rep Re.space;
-         Re.str "Fmt.str";
-       ])
-
-let error_msg_fmt_str_pattern =
-  Re.compile
-    (Re.seq
-       [
-         Re.str "Error";
-         Re.rep Re.space;
-         Re.str "(";
-         Re.rep Re.space;
-         Re.str "`Msg";
-         Re.rep Re.space;
-         Re.str "(";
-         Re.rep Re.space;
-         Re.str "Fmt.str";
-       ])
 
 let issue ~loc error_message =
   Issue.v ~loc { error_message; suggested_function = "err_*" }
 
-let issue_of_line ~loc line =
-  if Re.execp error_fmt_str_pattern line then
-    Some (issue ~loc "Error applied to Fmt.str")
-  else if Re.execp error_msg_fmt_str_pattern line then
-    Some (issue ~loc "Error (`Msg ...) applied to Fmt.str")
-  else None
+let rec is_fmt_str_call (expr : Parsetree.expression) =
+  match expr.pexp_desc with
+  | Pexp_apply ({ pexp_desc = Pexp_ident { txt; _ }; _ }, _) ->
+      Longident.flatten txt = [ "Fmt"; "str" ]
+  | Pexp_constraint (expr, _) | Pexp_coerce (expr, _, _) -> is_fmt_str_call expr
+  | Pexp_open (_, expr) -> is_fmt_str_call expr
+  | _ -> false
 
-let check ctx =
-  let content = Context.content ctx in
+let error_payload_message (arg : Parsetree.expression) =
+  if is_fmt_str_call arg then Some "Error applied to Fmt.str"
+  else
+    match arg.pexp_desc with
+    | Pexp_variant ("Msg", Some msg) when is_fmt_str_call msg ->
+        Some "Error (`Msg ...) applied to Fmt.str"
+    | _ -> None
+
+let error_constructor lid =
+  match List.rev (Longident.flatten lid) with
+  | "Error" :: _ -> true
+  | _ -> false
+
+let check (ctx : Context.file) =
   let filename = ctx.filename in
   let outline = Context.outline ctx in
 
@@ -60,16 +49,26 @@ let check ctx =
       error_helpers
   in
 
-  (* Check each line using the traverse helper *)
-  File.process_lines_with_location filename content
-    (fun line_idx line location ->
-      ignore line_idx;
-      let line_num = Location.start_line location in
-
-      (* Only flag if we're not inside an error helper *)
-      if not (is_inside_error_helper line_num) then
-        issue_of_line ~loc:location line
-      else None)
+  match File_view.parsetree (Context.view ctx) with
+  | None -> []
+  | Some structure ->
+      let issues = ref [] in
+      Ast.iter_expressions structure (fun (expr : Parsetree.expression) ->
+          match expr.pexp_desc with
+          | Pexp_construct ({ txt; _ }, Some arg) -> (
+              let line_num = expr.pexp_loc.loc_start.pos_lnum in
+              if error_constructor txt && not (is_inside_error_helper line_num)
+              then
+                match error_payload_message arg with
+                | Some error_message ->
+                    issues :=
+                      issue
+                        ~loc:(Ast.merlint_of_loc ~filename expr.pexp_loc)
+                        error_message
+                      :: !issues
+                | None -> ())
+          | _ -> ());
+      List.rev !issues
 
 let pp ppf { error_message; suggested_function } =
   Fmt.pf ppf

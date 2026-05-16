@@ -2,30 +2,39 @@
 
 type payload = { dir : string; pattern : string }
 
-let shell_patterns =
-  [
-    "Sys.command";
-    "Unix.system";
-    "Unix.create_process";
-    "Unix.open_process";
-    "Eio.Process";
-    "Eio_process";
-  ]
+let shell_call view =
+  let found = ref None in
+  File_view.iter_applications view (fun call ->
+      let name = File_view.Call.callee call in
+      let path = File_view.Name.prefix name @ [ File_view.Name.base name ] in
+      match (path, !found) with
+      | [ "Sys"; "command" ], None -> found := Some "Sys.command"
+      | [ "Unix"; "system" ], None -> found := Some "Unix.system"
+      | [ "Unix"; "create_process" ], None ->
+          found := Some "Unix.create_process"
+      | [ "Unix"; "open_process" ], None -> found := Some "Unix.open_process"
+      | [ "Eio"; "Process"; "run" ], None -> found := Some "Eio.Process.run"
+      | [ "Eio"; "Process"; "spawn" ], None -> found := Some "Eio.Process.spawn"
+      | [ "Eio"; "Process"; "parse_out" ], None ->
+          found := Some "Eio.Process.parse_out"
+      | [ "Eio_process"; "run" ], None -> found := Some "Eio_process.run"
+      | [ "Eio_process"; "spawn" ], None -> found := Some "Eio_process.spawn"
+      | _ -> ());
+  !found
 
 let check (ctx : Context.project) =
   let dirs = Interop.oracle_dirs ctx.project_root in
   List.filter_map
     (fun (d : Interop.oracle_dir) ->
       if d.has_test_ml then
-        let content = Interop.test_content d.path in
+        let path = Filename.concat d.path "test.ml" in
         let found =
-          List.find_opt
-            (fun pat -> Astring.String.is_infix ~affix:pat content)
-            shell_patterns
+          try shell_call (Context.file_view ctx path)
+          with File_view.Analysis_error _ -> None
         in
         match found with
         | Some pattern ->
-            let loc = Location.in_file (Filename.concat d.path "test.ml") in
+            let loc = Location.in_file path in
             Some (Issue.v ~loc { dir = d.path; pattern })
         | None -> None
       else None)

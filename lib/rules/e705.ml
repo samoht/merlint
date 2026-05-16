@@ -3,17 +3,18 @@
 type payload = { filename : string; module_name : string }
 
 (** Check if a fuzz_*.mli file exports only suite with correct type. *)
-let check_fuzz_mli_file dune_describe filename content =
+let check_fuzz_mli_file dune_describe filename view =
   let basename = Filename.basename filename in
   if
-    String.ends_with ~suffix:".mli" basename
+    File_kind.is_mli basename
     && String.starts_with ~prefix:"fuzz_" basename
     && File.is_in_fuzz_dir (Fpath.v filename)
     && (not (File.is_in_private_library dune_describe filename))
     && not (File.is_in_examples filename)
   then
     if
-      Suite_mli.is_compliant ~expected:"string * Alcobar.test_case list" content
+      Suite_mli.is_compliant_view ~expected:"string * Alcobar.test_case list"
+        view
     then []
     else
       [
@@ -29,7 +30,7 @@ let check_fuzz_mli_file dune_describe filename content =
 let check_missing_fuzz_mli dune_describe files =
   List.filter_map
     (fun ml_file ->
-      if String.ends_with ~suffix:".ml" ml_file then
+      if File_kind.is_ml ml_file then
         let fp = Fpath.v ml_file in
         let basename = Filename.basename ml_file in
         if
@@ -63,20 +64,18 @@ let check ctx =
   let content_issues =
     List.concat_map
       (fun filename ->
-        if String.ends_with ~suffix:".mli" filename then
+        if File_kind.is_mli filename then
           try
-            let content =
-              In_channel.with_open_text filename In_channel.input_all
-            in
-            check_fuzz_mli_file dune_describe filename content
-          with Sys_error _ -> []
+            let view = Context.file_view ctx filename in
+            check_fuzz_mli_file dune_describe filename view
+          with File_view.Analysis_error _ -> []
         else [])
       files
   in
   missing_mli_issues @ content_issues
 
 let pp ppf { filename; module_name = _ } =
-  if String.ends_with ~suffix:".mli" filename then
+  if File_kind.is_mli filename then
     Fmt.pf ppf
       "Fuzz module interface should only export 'suite' with type string * \
        Alcobar.test_case list"

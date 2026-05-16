@@ -20,37 +20,14 @@ type payload = { package : string; file : string }
 let try_readdir d = try Sys.readdir d |> Array.to_list with Sys_error _ -> []
 let is_dir p = try Sys.is_directory p with Sys_error _ -> false
 
-let content ctx path =
-  try Some (File_view.content (Context.file_view ctx path))
-  with Sys_error _ | File_view.Analysis_error _ -> None
-
-(** Collect every module name that appears in a [(modules ...)] field of a
-    library/executable/test stanza in [dune_path]. These names are claimed by a
-    specific stanza (often a sublibrary) and should not be flagged as "wrong
-    place" by E522 — the prefix is encoding the sublib's public name. *)
-let is_module_stanza = function
-  | "library" | "executable" | "executables" | "test" | "tests" -> true
-  | _ -> false
-
-let modules_field = function
-  | Sexp.List (Sexp.Atom "modules" :: atoms) ->
-      List.filter_map
-        (function Sexp.Atom a -> Some (String.lowercase_ascii a) | _ -> None)
-        atoms
-  | _ -> []
-
-let claimed_modules_of_stanza = function
-  | Sexp.List (Sexp.Atom kind :: fields) when is_module_stanza kind ->
-      List.concat_map modules_field fields
-  | _ -> []
-
 let modules_explicitly_claimed ctx dune_path =
-  match content ctx dune_path with
-  | None -> []
-  | Some contents -> (
-      match Sexp.Value.parse_string_many contents with
-      | Error _ -> []
-      | Ok stanzas -> List.concat_map claimed_modules_of_stanza stanzas)
+  try
+    match
+      File_view.content (Context.file_view ctx dune_path) |> Dune.File.of_string
+    with
+    | Ok file -> Dune.File.explicitly_claimed_modules file
+    | Error _ -> []
+  with File_view.Analysis_error _ -> []
 
 let check (ctx : Context.project) =
   let root = ctx.project_root in

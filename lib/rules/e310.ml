@@ -37,11 +37,16 @@ let check_value_name ~allowed name =
     else None
 
 let check (ctx : Context.file) =
-  let filename = ctx.filename in
   let allowed = ctx.config.allowed_words in
-  Merlin.Dump.check_elements ~full_path:filename (Context.dump ctx).patterns
-    (check_value_name ~allowed) (fun name_str loc expected ->
-      Issue.v ~loc { value_name = name_str; expected })
+  File_view.outline_patterns (Context.view ctx)
+  |> List.filter_map (fun pattern ->
+      let name = File_view.Reference.base pattern in
+      match
+        (check_value_name ~allowed name, File_view.Reference.loc pattern)
+      with
+      | Some expected, Some loc ->
+          Some (Issue.v ~loc { value_name = name; expected })
+      | _ -> None)
 
 let pp ppf { value_name; expected } =
   Fmt.pf ppf "Value '%s' should use snake_case: '%s'" value_name expected

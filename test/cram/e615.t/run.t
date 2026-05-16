@@ -27,6 +27,7 @@ Test bad example - should find test suite not included:
   
   Summary: ✗ 1 total issue (applied 1 rule)
   ✗ Some checks failed. See details above.
+    Run `merlint help E615` for the rule's description, hint, and good/bad examples.
   [1]
 
 Test good example - should find no issues:

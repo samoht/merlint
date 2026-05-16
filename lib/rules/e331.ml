@@ -11,9 +11,9 @@ let is_stdlib_find_alias name =
 (** [find_*] functions returning [_ option] are the canonical naming for partial
     lookups (matching E325, which positively recommends [find_] for option
     returns). Stripping the prefix would strip the partiality signal, so do not
-    flag those. Uses structural type analysis via [Parse.core_type] rather than
-    string-suffix matching, so [int -> ('a, 'b) result option] and friends are
-    detected correctly. *)
+    flag those. Uses structural type analysis via [Parsetree.core_type] rather
+    than string-suffix matching, so [int -> ('a, 'b) result option] and friends
+    are detected correctly. *)
 let is_find_option name (item : Outline.item) =
   String.starts_with ~prefix:"find_" (String.lowercase_ascii name)
   && Outline.returns_option item

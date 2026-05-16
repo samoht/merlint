@@ -3,25 +3,39 @@
 type config = { max_nesting : int }
 type payload = { name : string; depth : int; threshold : int }
 
+let is_test_file filename =
+  let module_name =
+    Filename.basename filename |> Filename.remove_extension
+    |> String.lowercase_ascii
+  in
+  String.starts_with ~prefix:"test_" module_name
+  || String.contains filename '/'
+     && String.contains (Filename.dirname filename) '/'
+     && List.exists
+          (fun part -> part = "test")
+          (String.split_on_char '/' filename)
+
 let check (ctx : Context.file) =
   let config = { max_nesting = ctx.config.max_nesting } in
   let ast = Context.ast ctx in
 
-  (* Analyze each function in the AST *)
-  List.filter_map
-    (fun (name, expr) ->
-      (* Calculate nesting depth using visitor pattern *)
-      let depth = Ast.Nesting.depth expr in
+  if is_test_file ctx.filename then []
+  else
+    (* Analyze each function in the AST *)
+    List.filter_map
+      (fun (name, expr) ->
+        (* Calculate nesting depth using visitor pattern *)
+        let depth = Ast.Nesting.depth expr in
 
-      if depth > config.max_nesting then
-        (* Create a dummy location for now - we'll improve this later *)
-        let loc =
-          Location.v ~file:ctx.filename ~start_line:1 ~start_col:0 ~end_line:1
-            ~end_col:0
-        in
-        Some (Issue.v ~loc { name; depth; threshold = config.max_nesting })
-      else None)
-    ast.functions
+        if depth > config.max_nesting then
+          (* Create a dummy location for now - we'll improve this later *)
+          let loc =
+            Location.v ~file:ctx.filename ~start_line:1 ~start_col:0 ~end_line:1
+              ~end_col:0
+          in
+          Some (Issue.v ~loc { name; depth; threshold = config.max_nesting })
+        else None)
+      ast.functions
 
 let pp ppf { name; depth; threshold } =
   Fmt.pf ppf "Function '%s' has nesting depth of %d (threshold: %d)" name depth

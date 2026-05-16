@@ -133,10 +133,10 @@ module Nesting = struct
           let handler_depths = List.map (depth_of new_depth) handlers in
           List.fold_left max (depth_of current_depth expr) handler_depths
       | Function { body; _ } ->
-          (* A function literal introduces a new control-flow body. Count a
-             top-level function from depth 1, but don't add callback nesting to
-             the enclosing expression's indentation depth. *)
-          max current_depth (depth_of 1 body)
+          (* A function literal introduces a control-flow body, but the
+             function boundary is not itself a nesting construct. Only nested
+             control-flow nodes inside the body increase depth. *)
+          depth_of current_depth body
       | Let { bindings; body } ->
           let bind_depth =
             List.fold_left
@@ -248,6 +248,9 @@ let rec of_parsetree_expr (expr : Parsetree.expression) : expr =
   | Pexp_array _ -> List (* Array literal *)
   | Pexp_record (fields, _) ->
       Record { fields = List.length fields } (* Record literal *)
+  | Pexp_constraint (body, _) -> of_parsetree_expr body
+  | Pexp_coerce (body, _, _) -> of_parsetree_expr body
+  | Pexp_newtype (_, body) -> of_parsetree_expr body
   | Pexp_apply (func, args) ->
       (* Parse function applications to find nested pattern matches *)
       Log.debug (fun m -> m "Pexp_apply with %d args" (List.length args));

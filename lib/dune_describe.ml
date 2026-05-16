@@ -266,8 +266,7 @@ let is_ocaml_source_file entry =
   (* Skip temporary files (e.g., .#main.ml) *)
   (not
      (String.length entry > 0 && entry.[0] = '.' && String.contains entry '#'))
-  && (String.ends_with ~suffix:".ml" entry
-     || String.ends_with ~suffix:".mli" entry)
+  && File_kind.is_ml_or_mli entry
 
 (** [data_or_nested_stanza_dir dir] is [true] when [dir] looks like a cram
     sandbox, a generated build dir, or contains its own [dune] file (which means
@@ -378,7 +377,7 @@ let executable_modules dune_describe =
   dune_describe.executables |> List.concat_map snd
   |> List.filter_map (fun file ->
       let file_str = Fpath.to_string file in
-      if String.ends_with ~suffix:".ml" file_str then
+      if File_kind.is_ml file_str then
         Some (String.capitalize_ascii Fpath.(file |> rem_ext |> basename))
       else None)
   |> List.sort_uniq String.compare
@@ -402,7 +401,7 @@ let lib_modules dune_describe =
     |> List.concat_map (fun (lib_info : library_info) -> lib_info.files)
     |> List.filter_map (fun file ->
         let file_str = Fpath.to_string file in
-        if String.ends_with ~suffix:".ml" file_str then
+        if File_kind.is_ml file_str then
           Some Fpath.(file |> rem_ext |> basename)
         else None)
   in
@@ -414,8 +413,7 @@ let test_modules dune_describe =
   |> List.concat_map (fun (t : test_info) -> t.files)
   |> List.filter_map (fun file ->
       let file_str = Fpath.to_string file in
-      if String.ends_with ~suffix:".ml" file_str then
-        Some Fpath.(file |> rem_ext |> basename)
+      if File_kind.is_ml file_str then Some Fpath.(file |> rem_ext |> basename)
       else None)
   |> List.sort_uniq String.compare
 

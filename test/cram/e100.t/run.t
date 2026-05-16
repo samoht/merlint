@@ -29,6 +29,7 @@ Test bad example - should find Obj.magic usage:
   
   Summary: ✗ 1 total issue (applied 1 rule)
   ✗ Some checks failed. See details above.
+    Run `merlint help E100` for the rule's description, hint, and good/bad examples.
   [1]
 
 Test good example - should find no issues:

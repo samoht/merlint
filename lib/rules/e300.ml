@@ -3,24 +3,17 @@
 type payload = { variant : string; expected : string }
 
 let check (ctx : Context.file) =
-  let filename = ctx.filename in
   let allowed = ctx.config.allowed_words in
-  Merlin.Dump.check_elements ~full_path:filename (Context.dump ctx).variants
-    (fun name ->
-      (* For qualified names, only check the basename *)
-      let name_to_check =
-        if String.contains name '.' then
-          let parts = String.split_on_char '.' name in
-          List.hd (List.rev parts)
-        else name
-      in
-      (* Skip names that match an allowed word exactly *)
-      if List.mem name_to_check allowed then None
-      else
-        let expected = Naming.to_capitalized_snake_case name_to_check in
-        if expected <> name_to_check then Some expected else None)
-    (fun variant_name loc expected ->
-      Issue.v ~loc { variant = variant_name; expected })
+  File_view.outline_variant_definitions (Context.view ctx)
+  |> List.filter_map (fun variant ->
+      let name = File_view.Reference.base variant in
+      let loc = File_view.Reference.loc variant in
+      if not (List.mem name allowed) then
+        let expected = Naming.to_capitalized_snake_case name in
+        if expected <> name then
+          Option.map (fun loc -> Issue.v ~loc { variant = name; expected }) loc
+        else None
+      else None)
 
 let pp ppf { variant; expected } =
   Fmt.pf ppf "Variant '%s' should use Snake_case: '%s'" variant expected

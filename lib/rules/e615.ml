@@ -1,5 +1,8 @@
 (** E615: Test Suite Not Included *)
 
+module Issue_location = Location
+open Ocaml_parsing
+
 type payload = { test_module : string; test_runner_file : string }
 
 let log_src = Logs.Src.create "merlint.rules.e615" ~doc:"E615 rule diagnostics"
@@ -18,12 +21,6 @@ let should_exclude_test_file dune_describe test_file declared_libraries =
     match Dune_describe.test_file_library mod_to_libs basename with
     | Some lib -> not (List.mem lib resolved)
     | None -> false
-
-let strip_comments content =
-  Re.replace_string
-    (Re.compile
-       (Re.seq [ Re.str "(*"; Re.non_greedy (Re.rep Re.any); Re.str "*)" ]))
-    ~by:"" content
 
 let test_runner files =
   List.find_opt
@@ -54,23 +51,27 @@ let test_modules dune_describe (test_info : Dune_describe.test_info) test_file =
         None)
       else Some basename)
 
-let suite_included content test_mod =
+let suite_included structure test_mod =
   let capitalized_mod = String.capitalize_ascii test_mod in
-  let suite_pattern =
-    Re.compile (Re.seq [ Re.bow; Re.str capitalized_mod; Re.str ".suite" ])
-  in
-  Re.execp suite_pattern content
+  let found = ref false in
+  Ast.iter_expressions structure (fun (expr : Parsetree.expression) ->
+      match expr.pexp_desc with
+      | Pexp_ident { txt; _ }
+        when Longident.flatten txt = [ capitalized_mod; "suite" ] ->
+          found := true
+      | _ -> ());
+  !found
 
 let missing_issue test_file test_mod =
   let loc =
-    Location.v
+    Issue_location.v
       ~file:(Fpath.to_string test_file)
       ~start_line:1 ~start_col:0 ~end_line:1 ~end_col:0
   in
   Issue.v ~loc
     { test_module = test_mod; test_runner_file = Fpath.to_string test_file }
 
-let check_test_info dune_describe (test_info : Dune_describe.test_info) =
+let check_test_info ctx dune_describe (test_info : Dune_describe.test_info) =
   Log.debug (fun m ->
       m "E615: Checking test stanza '%s' with %d files" test_info.name
         (List.length test_info.files));
@@ -78,30 +79,31 @@ let check_test_info dune_describe (test_info : Dune_describe.test_info) =
   | None -> []
   | Some test_file -> (
       try
-        let content =
-          In_channel.with_open_text
-            (Fpath.to_string test_file)
-            In_channel.input_all
-          |> strip_comments
-        in
-        let modules = test_modules dune_describe test_info test_file in
-        Log.debug (fun m ->
-            m
-              "E615: Found %d test modules in stanza '%s' (after E606 \
-               filtering): %a"
-              (List.length modules) test_info.name
-              Fmt.(list ~sep:comma string)
-              modules);
-        modules
-        |> List.filter (fun test_mod -> not (suite_included content test_mod))
-        |> List.map (missing_issue test_file)
-      with Sys_error _ -> [])
+        match
+          File_view.parsetree
+            (Context.file_view ctx (Fpath.to_string test_file))
+        with
+        | None -> []
+        | Some structure ->
+            let modules = test_modules dune_describe test_info test_file in
+            Log.debug (fun m ->
+                m
+                  "E615: Found %d test modules in stanza '%s' (after E606 \
+                   filtering): %a"
+                  (List.length modules) test_info.name
+                  Fmt.(list ~sep:comma string)
+                  modules);
+            modules
+            |> List.filter (fun test_mod ->
+                not (suite_included structure test_mod))
+            |> List.map (missing_issue test_file)
+      with File_view.Analysis_error _ -> [])
 
 (** Check if test.ml includes all test suites *)
 let check (ctx : Context.project) =
   let dune_describe = Context.dune_describe ctx in
   Dune_describe.tests dune_describe
-  |> List.concat_map (check_test_info dune_describe)
+  |> List.concat_map (check_test_info ctx dune_describe)
 
 let pp ppf { test_module; test_runner_file } =
   Fmt.pf ppf "Test module %s is not included in %s" test_module test_runner_file

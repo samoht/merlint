@@ -4,7 +4,7 @@ type payload = { value_name : string; location : Location.t; issue : string }
 
 let check (ctx : Context.file) =
   (* Only check .mli files *)
-  if not (String.ends_with ~suffix:".mli" ctx.filename) then []
+  if not (File_kind.is_mli ctx.filename) then []
   else
     let content = Context.content ctx in
     let doc_comments = Docs.extract_doc_comments content in

@@ -13,36 +13,22 @@ module Log = (val Logs.src_log log_src : Logs.LOG)
 type kind = Missing_file | Missing_flags
 type payload = { dune_path : string; kind : kind }
 
-(* Top-level (env ...) stanza references %{dune-warnings} -- the substring
-   is enough; we don't pin a specific shape so per-project variations
-   (extra fields, alternate profiles) still satisfy the rule. *)
-let rec mentions_dune_warnings (sexp : Sexp.t) =
-  match sexp with
-  | Sexp.Atom s -> Astring.String.is_infix ~affix:"dune-warnings" s
-  | Sexp.List xs -> List.exists mentions_dune_warnings xs
-
-let parse_dune_sexps ctx path =
+let parse_dune_file ctx path =
   match
     try Some (File_view.content (Context.file_view ctx path))
     with Sys_error _ | File_view.Analysis_error _ -> None
   with
   | None -> None
   | Some content -> (
-      match Sexp.Value.parse_string_many content with
-      | Ok stanzas -> Some stanzas
-      | Error _ -> Some [])
-
-let is_env_stanza = function
-  | Sexp.List (Sexp.Atom "env" :: _) -> true
-  | _ -> false
+      match Dune.File.of_string content with
+      | Ok file -> Some file
+      | Error _ -> Some (Dune.File.of_string_exn ""))
 
 let dune_warning_status ctx dune_path =
-  match parse_dune_sexps ctx dune_path with
+  match parse_dune_file ctx dune_path with
   | None -> Some Missing_file
-  | Some sexps ->
-      let env_stanzas = List.filter is_env_stanza sexps in
-      if List.exists mentions_dune_warnings env_stanzas then None
-      else Some Missing_flags
+  | Some file ->
+      if Dune.File.has_dune_warnings file then None else Some Missing_flags
 
 let is_dir path = try Sys.is_directory path with Sys_error _ -> false
 
