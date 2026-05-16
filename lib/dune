@@ -26,14 +26,14 @@
 (rule
  (target examples.ml)
  (deps
-  ../bin/generate_examples_ml.exe
+  ../scripts/generate_examples_ml.exe
   (source_tree ../test/cram))
  (action
   (chdir
    ..
    (with-stdout-to
     lib/examples.ml
-    (run bin/generate_examples_ml.exe)))))
+    (run scripts/generate_examples_ml.exe)))))
 
 (alias
  (name gen)

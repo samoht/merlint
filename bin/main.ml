@@ -485,57 +485,36 @@ let scan =
   let info = Cmd.info "scan" ~version:Version.string ~doc ~man in
   Cmd.v info analyze_term
 
-let config =
-  let doc = "Show the merlint.toml configuration file format" in
-  let man =
-    [
-      `S Manpage.s_description;
-      `P
-        "Reference for the $(b,merlint.toml) configuration file format. The \
-         file is parsed as TOML 1.1 and supports top-level settings keys plus \
-         $(b,[[rules]]) blocks that exclude rules per file pattern.";
-    ]
-    @ Merlint_doc.Config_doc.man
-  in
-  let info = Cmd.info "config" ~doc ~man in
-  Cmd.v info Term.(const () |> map (fun () -> ()))
-
-(* [merlint help <topic>] mirrors how git/opam expose subcommand manuals:
-   bare [merlint help] prints the main man, [merlint help config] prints
-   the config subcommand's man, and an unknown topic exits with a clear
-   error rather than running anything. *)
-let help =
-  let doc = "Show help for a topic (e.g. $(b,merlint help config))" in
-  let man =
-    [
-      `S Manpage.s_description;
-      `P
-        "Render the manual for $(b,merlint) or one of its subcommands. \
-         Equivalent to passing $(b,--help) to the corresponding command.";
-    ]
-  in
-  let topic =
-    let doc = "Topic to show help for. Omit for the main manual." in
-    Arg.(value & pos 0 (some string) None & info [] ~docv:"TOPIC" ~doc)
-  in
-  let known_topics = [ "config" ] in
-  let run topic =
-    match topic with
-    | None -> `Help (`Auto, None)
-    | Some t when List.mem t known_topics -> `Help (`Auto, Some t)
-    | Some t ->
-        `Error
-          ( true,
-            Fmt.str "unknown help topic %S (known: %s)" t
-              (String.concat ", " known_topics) )
-  in
-  let info = Cmd.info "help" ~doc ~man in
-  Cmd.v info Term.(ret (const run $ topic))
-
 let cmd =
   let doc = "Analyze OCaml code for style issues" in
-  let info = Cmd.info "merlint" ~version:Version.string ~doc in
-  Cmd.group ~default:analyze_term info [ scan; config; help ]
+  let man =
+    [
+      `S Manpage.s_description;
+      `P
+        "$(mname) scans OCaml source files and reports issues with modern \
+         coding conventions: complexity, naming, documentation, style, project \
+         structure, and test discipline.";
+      `S "RULES";
+      `P
+        "Each issue is tagged with an error code such as $(b,E100). To see the \
+         description, hint, and good/bad examples for a rule, run:";
+      `Pre "  $(mname) help E100";
+      `P
+        "The same renderer powers the generated HTML reference and Markdown \
+         style guide via $(b,merlint help --all --format=html|md -o FILE).";
+      `S Manpage.s_examples;
+      `P "Scan the current project:";
+      `Pre "  $(mname)";
+      `P "Browse rule E100:";
+      `Pre "  $(mname) help E100";
+      `P "Show the configuration reference:";
+      `Pre "  $(mname) help config";
+      `S Manpage.s_see_also;
+      `P "$(mname)-scan(1), $(mname)-config(1), $(mname)-help(1)";
+    ]
+  in
+  let info = Cmd.info "merlint" ~version:Version.string ~doc ~man in
+  Cmd.group ~default:analyze_term info [ scan; Cmd_config.cmd; Cmd_help.cmd ]
 
 (* Cmdliner's [Cmd.group] only invokes the default term when argv has zero
    positionals; with any other first positional it expects a subcommand name
