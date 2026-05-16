@@ -165,8 +165,9 @@ let run_rule ?index rule paths =
                   ~monorepo:(Fpath.v project_root) )
       in
       let result =
-        Merlint.Engine.run ~filter ~dune_describe ?files_to_analyze ~index
-          project_root
+        Merlint.Engine.run
+          ~load_file:(fun f -> In_channel.with_open_text f In_channel.input_all)
+          ~filter ~dune_describe ?files_to_analyze ~index project_root
       in
       result.Merlint.Engine.issues
 

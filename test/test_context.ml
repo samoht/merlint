@@ -10,7 +10,7 @@ let test_create_project () =
   let dune_describe = Merlint.Dune_describe.describe (Fpath.v ".") in
   let ctx =
     Merlint.Context.project ~config ~project_root ~all_files ~dune_describe
-      ~index:dummy_index
+      ~index:dummy_index ()
   in
   (* Test that we can access fields *)
   Alcotest.(check string) "project root" "." ctx.project_root;
@@ -48,6 +48,14 @@ let test_lazy_evaluation () =
       lib_modules = lazy [];
       test_modules = lazy [];
       index = dummy_index;
+      file_view_cache =
+        (fun filename ->
+          Merlint.File_view.v ~filename
+            ~load_content:(fun () ->
+              In_channel.with_open_text filename In_channel.input_all)
+            ~outline:(fun () -> Error "no outline")
+            ~dump:(fun () -> Error "no dump")
+            ());
     }
   in
   (* Files should not be evaluated yet *)
@@ -57,11 +65,34 @@ let test_lazy_evaluation () =
   (* Now they should be evaluated *)
   Alcotest.(check bool) "evaluated" true !files_evaluated
 
+let test_cache_canonicalizes_keys () =
+  let config = Merlint.Config.default in
+  let project_root = "." in
+  let dune_describe = Merlint.Dune_describe.describe (Fpath.v ".") in
+  let created = ref 0 in
+  let file_view filename =
+    incr created;
+    Merlint.File_view.v ~filename
+      ~load_content:(fun () -> "")
+      ~outline:(fun () -> Ok [])
+      ~dump:(fun () -> Error "no dump")
+      ()
+  in
+  let ctx =
+    Merlint.Context.project ~config ~project_root ~all_files:[ "foo.ml" ]
+      ~dune_describe ~index:dummy_index ~file_view ()
+  in
+  let a = Merlint.Context.file_view ctx "./foo.ml" in
+  let b = Merlint.Context.file_view ctx "foo.ml" in
+  Alcotest.(check bool) "same cached view" true (a == b);
+  Alcotest.(check int) "created once" 1 !created
+
 let tests =
   [
     ("create_project", `Quick, test_create_project);
     ("analysis_error", `Quick, test_analysis_error);
     ("lazy_evaluation", `Quick, test_lazy_evaluation);
+    ("file_view_cache_canonicalizes_keys", `Quick, test_cache_canonicalizes_keys);
   ]
 
 let suite = ("context", tests)

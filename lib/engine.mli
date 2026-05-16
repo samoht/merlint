@@ -7,6 +7,7 @@ type result = { issues : Rule.Run.result list; excluded : exclusion_stats list }
 (** Analysis result. *)
 
 val run :
+  load_file:(string -> string) ->
   filter:Filter.t ->
   dune_describe:Dune_describe.describe ->
   ?files_to_analyze:Fpath.t list ->
@@ -14,9 +15,12 @@ val run :
   ?profiling:Profiling.t ->
   string ->
   result
-(** [run ~filter ~dune_describe ?files_to_analyze ~index ?profiling
+(** [run ~load_file ~filter ~dune_describe ?files_to_analyze ~index ?profiling
      project_root] runs all checks. Returns detected issues and a record of
     every suppressed issue.
+
+    [load_file] reads a file's content. The CLI plumbs an Eio-backed reader so
+    file I/O goes through {!Eio.Path.load}; tests pass a stdlib reader.
 
     [dune_describe] is the project-wide view used by project-scoped rules: E605
     (Missing Test File), E610 (Test Without Library), E606 (Test File in Wrong

@@ -4,6 +4,8 @@ type wrap_kind = Err | Fail
 type variant = Inline | Rename
 type payload = { variant : variant; suggested : string }
 
+open Ocaml_parsing
+
 let is_error_construct (lid : Longident.t) =
   match List.rev (Longident.flatten lid) with
   | "Error" :: _ -> true
@@ -154,7 +156,7 @@ let mismatch_suggestion name kind =
 
 let check (ctx : Context.file) =
   let filename = ctx.filename in
-  match Context.parsetree ctx with
+  match File_view.parsetree (Context.view ctx) with
   | None -> []
   | Some structure ->
       let helpers = collect_helpers structure in

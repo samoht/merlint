@@ -1,5 +1,7 @@
 (** E217: f (Fmt.str ...) — prefer the matching Fmt helper *)
 
+open Ocaml_parsing
+
 type payload = { suggested : string }
 
 (** Outer applications already covered by a more specific rule with a dedicated
@@ -75,7 +77,7 @@ let last_positional_arg args =
 
 let check (ctx : Context.file) =
   let filename = ctx.filename in
-  match Context.parsetree ctx with
+  match File_view.parsetree (Context.view ctx) with
   | None -> []
   | Some structure ->
       let issues = ref [] in

@@ -12,6 +12,9 @@
     [nox-tls-eio] alongside [nox-tls]) are therefore scanned against their own
     tags, not their sans-IO sister's. *)
 
+module Issue_location = Location
+open Ocaml_parsing
+
 type finding = {
   file : string;
   line : int;
@@ -51,18 +54,8 @@ let suggestion_for = function
        read the wall clock"
   | _ -> "thread the time value through your state-machine state instead"
 
-let parse_structure ~filename =
-  match
-    let ic = open_in filename in
-    Fun.protect
-      ~finally:(fun () -> close_in ic)
-      (fun () -> really_input_string ic (in_channel_length ic))
-  with
-  | exception Sys_error _ -> None
-  | content -> Ast.parse_structure ~filename content
-
-let scan_file ~filename =
-  match parse_structure ~filename with
+let scan_file ctx ~filename =
+  match File_view.parsetree (Context.file_view ctx filename) with
   | None -> []
   | Some structure ->
       let findings = ref [] in
@@ -105,7 +98,7 @@ let check (ctx : Context.project) =
           |> List.concat_map library_ml_files
         in
         let findings =
-          List.concat_map (fun filename -> scan_file ~filename) mls
+          List.concat_map (fun filename -> scan_file ctx ~filename) mls
         in
         match findings with
         | [] -> []
@@ -115,7 +108,7 @@ let check (ctx : Context.project) =
               | Some path -> Fpath.to_string path
               | None -> P.name pkg ^ ".opam"
             in
-            let loc = Location.in_file opam_path in
+            let loc = Issue_location.in_file opam_path in
             [ Issue.v ~loc { package = P.name pkg; findings } ])
     (Project_index.packages_nodes index)
 

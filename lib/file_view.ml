@@ -1,6 +1,9 @@
 let src = Logs.Src.create "merlint.file_view" ~doc:"File view"
 
 module Log = (val Logs.src_log src : Logs.LOG)
+module Compiler_parsetree = Parsetree
+module Compiler_pprintast = Pprintast
+open Ocaml_parsing
 
 exception Analysis_error of string
 
@@ -9,24 +12,44 @@ let fail fmt = Fmt.kstr (fun s -> raise (Analysis_error s)) fmt
 type t = {
   filename : string;
   content : string Lazy.t;
+  typedtree : Merlin.typedtree option Lazy.t;
   parsetree : Parsetree.structure option Lazy.t;
   functions : (string * Ast.expr) list Lazy.t;
   ast : Ast.t Lazy.t;
-  dump : Merlin.Dump.t Lazy.t;
+  ast_dump : Merlin.ast_dump Lazy.t;
   outline : Outline.t Lazy.t;
 }
 
-let v ~filename ~outline ~dump =
+let v ~filename ~load_content ?typedtree ?parsetree ~outline ~dump () =
   let content =
     lazy
-      (try In_channel.with_open_text filename In_channel.input_all
+      (try load_content ()
        with exn ->
          fail "Failed to read file %s: %s" filename (Printexc.to_string exn))
   in
+  let typedtree =
+    lazy
+      (match typedtree with
+      | Some f -> ( match f () with Ok t -> t | Error msg -> fail "%s" msg)
+      | None -> None)
+  in
   let parsetree =
     lazy
-      (let content = Lazy.force content in
-       Ast.parse_structure ~filename content)
+      (let loaded_typedtree =
+         if Lazy.is_val typedtree then
+           try Lazy.force typedtree with Analysis_error _ -> None
+         else None
+       in
+       match loaded_typedtree with
+       | Some (`Implementation structure) ->
+           Some (Ocaml_typing.Untypeast.untype_structure structure)
+       | _ -> (
+           match parsetree with
+           | Some f -> (
+               match f () with Ok p -> p | Error msg -> fail "%s" msg)
+           | None ->
+               let content = Lazy.force content in
+               Ast.parse_structure ~filename content))
   in
   let functions =
     lazy
@@ -38,23 +61,36 @@ let v ~filename ~outline ~dump =
           fns)
   in
   let ast = lazy { Ast.functions = Lazy.force functions } in
-  let dump =
-    lazy
-      (let d = match dump () with Ok d -> d | Error msg -> fail "%s" msg in
-       Merlin.Dump.fix_all_paths ~full_path:filename d)
+  let fix : Merlin.ast_dump -> Merlin.ast_dump = function
+    | Typedtree d -> Typedtree (Merlin.Dump.fix_all_paths ~full_path:filename d)
+    | Parsetree d -> Parsetree (Merlin.Dump.fix_all_paths ~full_path:filename d)
+  in
+  let ast_dump =
+    lazy (match dump () with Ok d -> fix d | Error msg -> fail "%s" msg)
   in
   let outline =
     lazy (match outline () with Ok o -> o | Error msg -> fail "%s" msg)
   in
-  { filename; content; parsetree; functions; ast; dump; outline }
+  { filename; content; typedtree; parsetree; functions; ast; ast_dump; outline }
 
 let filename t = t.filename
 let content t = Lazy.force t.content
+let typedtree t = Lazy.force t.typedtree
 let parsetree t = Lazy.force t.parsetree
 let functions t = Lazy.force t.functions
 let ast t = Lazy.force t.ast
-let dump t = Lazy.force t.dump
 let outline t = Lazy.force t.outline
+
+let dump_any t =
+  match Lazy.force t.ast_dump with Typedtree d -> d | Parsetree d -> d
+
+let dump t = dump_any t
+
+let is_resolved t =
+  match Lazy.force t.ast_dump with Typedtree _ -> true | Parsetree _ -> false
+
+let typedtree_dump t =
+  match Lazy.force t.ast_dump with Typedtree d -> Some d | Parsetree _ -> None
 
 (* {2 Name} *)
 
@@ -64,14 +100,23 @@ module Name = struct
   let to_string = Merlin.Dump.string_of_name
   let base (n : t) = n.base
   let prefix (n : t) = n.prefix
-  let equals_path (n : t) path = path = n.prefix @ [ n.base ]
+
+  let equals_path (n : t) path =
+    let rec walk pre rem =
+      match (pre, rem) with
+      | [], [ b ] -> b = n.base
+      | p :: ps, r :: rs when p = r -> walk ps rs
+      | _ -> false
+    in
+    walk n.prefix path
+
   let pp ppf t = Fmt.string ppf (to_string t)
 end
 
 (* {2 Type_view} *)
 
 module Type_view = struct
-  type t = Parsetree.core_type
+  type t = Compiler_parsetree.core_type
 
   let is_function (ct : t) =
     match ct.ptyp_desc with Ptyp_arrow _ -> true | _ -> false
@@ -99,7 +144,7 @@ module Type_view = struct
     aux 0 ct
 
   let pp ppf ct =
-    Pprintast.core_type Format.str_formatter ct;
+    Compiler_pprintast.core_type Format.str_formatter ct;
     Fmt.string ppf (Format.flush_str_formatter ())
 end
 
@@ -140,7 +185,7 @@ module Item = struct
 
   let loc (t : t) =
     let loc = t.item.location in
-    Location.v ~file:t.filename ~start_line:loc.start.line
+    Merlin.Location.v ~file:t.filename ~start_line:loc.start.line
       ~start_col:loc.start.col ~end_line:loc.end_.line ~end_col:loc.end_.col
 
   let type_sig (t : t) = Outline.parsed_type t.item
@@ -156,6 +201,9 @@ module Reference = struct
 
   let name (e : t) = e.name
   let loc (e : t) = e.location
+  let base e = Name.base (name e)
+  let prefix e = Name.prefix (name e)
+  let matches_path e path = Name.equals_path (name e) path
 end
 
 (* {2 Value_sig} *)
@@ -172,7 +220,12 @@ end
 
 module Call = struct
   type arg = { arg_expr : Parsetree.expression; arg_filename : string }
-  type t = { callee : Merlin.Dump.name; args : arg list; loc : Location.t }
+
+  type t = {
+    callee : Merlin.Dump.name;
+    args : arg list;
+    loc : Merlin.Location.t;
+  }
 
   let callee t = t.callee
   let args t = t.args
@@ -201,14 +254,29 @@ end
 let items t =
   List.map (fun item -> { Item.item; filename = t.filename }) (outline t)
 
-let identifiers t = (dump t).identifiers
-let patterns t = (dump t).patterns
-let variants t = (dump t).variants
-let modules t = (dump t).modules
-let types t = (dump t).types
-let exceptions t = (dump t).exceptions
-let values t = (dump t).values
-let signatures t = (dump t).value_sigs
+let resolved_identifiers t =
+  Option.map (fun d -> d.Merlin.Dump.identifiers) (typedtree_dump t)
+
+let resolved_patterns t =
+  Option.map (fun d -> d.Merlin.Dump.patterns) (typedtree_dump t)
+
+let resolved_variants t =
+  Option.map (fun d -> d.Merlin.Dump.variants) (typedtree_dump t)
+
+let resolved_modules t =
+  Option.map (fun d -> d.Merlin.Dump.modules) (typedtree_dump t)
+
+let resolved_types t =
+  Option.map (fun d -> d.Merlin.Dump.types) (typedtree_dump t)
+
+let resolved_exceptions t =
+  Option.map (fun d -> d.Merlin.Dump.exceptions) (typedtree_dump t)
+
+let resolved_values t =
+  Option.map (fun d -> d.Merlin.Dump.values) (typedtree_dump t)
+
+let resolved_signatures t =
+  Option.map (fun d -> d.Merlin.Dump.value_sigs) (typedtree_dump t)
 
 let iter_applications t f =
   match parsetree t with

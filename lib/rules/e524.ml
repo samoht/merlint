@@ -18,21 +18,27 @@
 
 type payload = { count : int }
 
-let count_cmd_v_in_dump (dump : Merlin.Dump.t) =
+(* Match the resolved [Cmdliner.Cmd.v] path. Requires typedtree so a local
+   [Cmd] module doesn't trip the rule and an [open Cmdliner; Cmd.v] site
+   still does. *)
+let count_cmd_v identifiers =
   List.fold_left
-    (fun acc (elt : Merlin.Dump.elt) ->
-      match (elt.name.prefix, elt.name.base) with
-      | [ "Cmd" ], "v" -> acc + 1
-      | _ -> acc)
-    0 dump.identifiers
+    (fun acc ident ->
+      if File_view.Reference.matches_path ident [ "Cmdliner"; "Cmd"; "v" ] then
+        acc + 1
+      else acc)
+    0 identifiers
 
 let check (ctx : Context.file) =
   if not (Filename.check_suffix ctx.filename ".ml") then []
   else
-    let count = count_cmd_v_in_dump (Context.dump ctx) in
-    if count >= 2 then
-      [ Issue.v ~loc:(Location.in_file ctx.filename) { count } ]
-    else []
+    match File_view.resolved_identifiers (Context.view ctx) with
+    | None -> []
+    | Some identifiers ->
+        let count = count_cmd_v identifiers in
+        if count >= 2 then
+          [ Issue.v ~loc:(Location.in_file ctx.filename) { count } ]
+        else []
 
 let pp ppf { count } =
   Fmt.pf ppf

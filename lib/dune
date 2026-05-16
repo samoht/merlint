@@ -12,6 +12,8 @@
   fmt
   astring
   fpath
+  merlin-lib.ocaml_parsing
+  merlin-lib.ocaml_typing
   nox-tty
   nox-opam
   nox-dune

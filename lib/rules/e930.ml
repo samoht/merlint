@@ -66,20 +66,21 @@ let dep_is_runtime (v : Opam.Value.t) =
   | Opam.Value.Option (_, filters) -> not (List.exists is_non_runtime filters)
   | _ -> true
 
-let read_runtime_depends path =
-  try
-    let ic = open_in path in
-    Fun.protect
-      ~finally:(fun () -> close_in ic)
-      (fun () ->
-        let r = Bytesrw.Bytes.Reader.of_in_channel ic in
-        match Opam.field_reader ~file:path "depends" r with
-        | Some (Opam.Value.List entries) ->
-            List.filter_map
-              (fun e -> if dep_is_runtime e then extract_dep_name e else None)
-              entries
-        | _ -> [])
-  with Sys_error _ -> []
+let content ctx path =
+  try Some (File_view.content (Context.file_view ctx path))
+  with Sys_error _ | File_view.Analysis_error _ -> None
+
+let read_runtime_depends ctx path =
+  match content ctx path with
+  | None -> []
+  | Some content -> (
+      let r = Bytesrw.Bytes.Reader.of_string content in
+      match Opam.field_reader ~file:path "depends" r with
+      | Some (Opam.Value.List entries) ->
+          List.filter_map
+            (fun e -> if dep_is_runtime e then extract_dep_name e else None)
+            entries
+      | _ -> [])
 
 (* A bytesrw sub-library is one whose name ends in ["_bytesrw"] / ["-bytesrw"]
    or matches ["bytesrw"] inside a non-root directory of a codec package.
@@ -105,24 +106,20 @@ let library_owner lib =
       in
       Some owner
 
-let parse_dune path =
-  try
-    let ic = open_in path in
-    Fun.protect
-      ~finally:(fun () -> close_in ic)
-      (fun () ->
-        let content = really_input_string ic (in_channel_length ic) in
-        match Dune.File.of_string content with
-        | Ok file -> Dune.File.libraries file
-        | Error _ -> [])
-  with Sys_error _ -> []
+let parse_dune ctx path =
+  match content ctx path with
+  | None -> []
+  | Some content -> (
+      match Dune.File.of_string content with
+      | Ok file -> Dune.File.libraries file
+      | Error _ -> [])
 
 (* Libraries declared under a [test/] or [tests/] subdirectory are private
    test utilities (no [public_name]); they live at the IO edge and may pull
    in eio/unix freely. *)
 let is_test_subdir = function "test" | "tests" -> true | _ -> false
 
-let rec walk ~in_test dir acc =
+let rec walk ctx ~in_test dir acc =
   let entries = try Sys.readdir dir |> Array.to_list with Sys_error _ -> [] in
   List.fold_left
     (fun acc entry ->
@@ -131,9 +128,10 @@ let rec walk ~in_test dir acc =
       else
         let path = Filename.concat dir entry in
         let is_dir = try Sys.is_directory path with Sys_error _ -> false in
-        if is_dir then walk ~in_test:(in_test || is_test_subdir entry) path acc
+        if is_dir then
+          walk ctx ~in_test:(in_test || is_test_subdir entry) path acc
         else if entry = "dune" && not in_test then
-          (path, parse_dune path) :: acc
+          (path, parse_dune ctx path) :: acc
         else acc)
     acc entries
 
@@ -154,20 +152,20 @@ let pkg_name_of_opam opam =
   | Some n -> n
   | None -> opam
 
-let check_opam ~pkg_dir opam =
+let check_opam ctx ~pkg_dir opam =
   let path = Filename.concat pkg_dir opam in
   let tags = Opam_tags.read path in
   let kind = kind_of_tags tags in
   let banned = banned_for kind in
   let pkg_name = pkg_name_of_opam opam in
   let findings = ref [] in
-  let deps = read_runtime_depends path in
+  let deps = read_runtime_depends ctx path in
   List.iter
     (fun dep ->
       if lib_matches ~banned dep then
         findings := Banned_in_depends { dep } :: !findings)
     deps;
-  let dunes = walk ~in_test:false pkg_dir [] in
+  let dunes = walk ctx ~in_test:false pkg_dir [] in
   List.iter
     (fun (dune_file, libs) ->
       let owned = List.filter (library_belongs_to ~pkg_name) libs in
@@ -212,7 +210,7 @@ let check (ctx : Context.project) =
         else
           List.concat_map
             (fun opam ->
-              match check_opam ~pkg_dir opam with
+              match check_opam ctx ~pkg_dir opam with
               | [] -> []
               | findings ->
                   let loc = Location.in_file (Filename.concat pkg opam) in

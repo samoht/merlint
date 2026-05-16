@@ -2,24 +2,39 @@
 
 type payload = { dir : string }
 
+let has_resolved_path refs path =
+  List.exists (fun r -> File_view.Reference.matches_path r path) refs
+
+let has_resolved_base refs base =
+  List.exists (fun r -> File_view.Reference.base r = base) refs
+
+let hand_rolled_csv view =
+  match File_view.resolved_identifiers view with
+  | None -> false
+  | Some refs ->
+      let has_open =
+        has_resolved_path refs [ "Stdlib"; "open_in" ]
+        || has_resolved_base refs "open_in"
+      in
+      let has_line =
+        has_resolved_path refs [ "Stdlib"; "input_line" ]
+        || has_resolved_base refs "input_line"
+      in
+      let has_split =
+        has_resolved_path refs [ "Stdlib"; "String"; "split_on_char" ]
+        || has_resolved_base refs "split_on_char"
+      in
+      has_open && has_line && has_split
+
 let check (ctx : Context.project) =
   let dirs = Interop.oracle_dirs ctx.project_root in
   List.filter_map
     (fun (d : Interop.oracle_dir) ->
       if d.has_test_ml then
-        let content = Interop.test_content d.path in
-        (* Detect the common hand-rolled pattern: open_in + input_line +
-           split_on_char ',' *)
-        let has_open_in = Astring.String.is_infix ~affix:"open_in" content in
-        let has_input_line =
-          Astring.String.is_infix ~affix:"input_line" content
-        in
-        let has_split_comma =
-          Astring.String.is_infix ~affix:"split_on_char" content
-          && Astring.String.is_infix ~affix:"','" content
-        in
-        if has_open_in && has_input_line && has_split_comma then
-          let loc = Location.in_file (Filename.concat d.path "test.ml") in
+        let path = Filename.concat d.path "test.ml" in
+        let view = Context.file_view ctx path in
+        if hand_rolled_csv view then
+          let loc = Location.in_file path in
           Some (Issue.v ~loc { dir = d.path })
         else None
       else None)

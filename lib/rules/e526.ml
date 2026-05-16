@@ -37,14 +37,9 @@ let has_opam_file pkg_dir =
     (fun name -> Filename.check_suffix name ".opam")
     (try_readdir pkg_dir)
 
-let read_file path =
-  try
-    let ic = open_in path in
-    let n = in_channel_length ic in
-    let s = really_input_string ic n in
-    close_in ic;
-    Some s
-  with Sys_error _ -> None
+let content ctx path =
+  try Some (File_view.content (Context.file_view ctx path))
+  with Sys_error _ | File_view.Analysis_error _ -> None
 
 let stanza_re =
   Re.compile
@@ -75,21 +70,21 @@ let issue_of_setting name loc = function
   | Some "true" -> [ Issue.v ~loc { package = name; kind = Set_to_true } ]
   | Some _ | None -> [ Issue.v ~loc { package = name; kind = Missing } ]
 
-let check_package root name =
+let check_package ctx root name =
   if skip_entry name then []
   else
     let pkg_dir = Filename.concat root name in
     if (not (is_dir pkg_dir)) || not (has_opam_file pkg_dir) then []
     else
       let dp_path = Filename.concat pkg_dir "dune-project" in
-      match read_file dp_path with
+      match content ctx dp_path with
       | None -> []
       | Some c ->
           issue_of_setting name (Location.in_file dp_path) (find_setting c)
 
 let check (ctx : Context.project) =
   let root = ctx.project_root in
-  List.concat_map (check_package root) (try_readdir root)
+  List.concat_map (check_package ctx root) (try_readdir root)
 
 let pp ppf { package; kind } =
   match kind with

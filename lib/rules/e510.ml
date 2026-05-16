@@ -16,50 +16,57 @@ let log_functions =
     ("Log", "app");
   ]
 
+module Ref = File_view.Reference
+
 let uses_logging identifiers =
   List.exists
     (fun (module_name, func_name) ->
       List.exists
-        (fun (ident : Merlin.Dump.elt) ->
-          match ident.name.prefix with
+        (fun ident ->
+          match Ref.prefix ident with
           | prefix_mod :: _ when prefix_mod = module_name ->
-              ident.name.base = func_name
+              Ref.base ident = func_name
           | _ -> false)
         identifiers)
     log_functions
 
-let has_log_source dump_data identifiers =
+let has_log_source values identifiers =
   List.exists
-    (fun (ident : Merlin.Dump.elt) ->
-      match (ident.name.prefix, ident.name.base) with
+    (fun ident ->
+      match (Ref.prefix ident, Ref.base ident) with
       | [ "Logs"; "Src" ], "create" -> true
       | [ "Logs" ], "src_log" -> true
       | _, ("log_src" | "src") ->
-          List.exists
-            (fun (value : Merlin.Dump.elt) -> value.name.base = ident.name.base)
-            dump_data.Merlin.Dump.values
+          let base = Ref.base ident in
+          List.exists (fun value -> Ref.base value = base) values
       | _ -> false)
     identifiers
 
+(* Looks for resolved [Logs.X] / [Log.X] calls and a corresponding log
+   source declaration. Requires typedtree so a user's local [Logs]
+   module doesn't trip the rule; the engine surfaces the missing-
+   resolution count. *)
 let check (ctx : Context.file) =
   try
-    let dump_data = Context.dump ctx in
-    let identifiers = dump_data.Merlin.Dump.identifiers in
-    if uses_logging identifiers && not (has_log_source dump_data identifiers)
-    then
-      let module_name =
-        Filename.basename ctx.filename
-        |> Filename.remove_extension |> String.capitalize_ascii
-      in
-      let loc =
-        let pos = { Location.line = 1; col = 0 } in
-        { Location.file = ctx.filename; start = pos; end_ = pos }
-      in
-      [ Issue.v ~loc { module_name } ]
-    else []
-  with Context.Analysis_error _ ->
-    (* If we can't parse the dump, skip this check *)
-    []
+    let view = Context.view ctx in
+    match
+      (File_view.resolved_identifiers view, File_view.resolved_values view)
+    with
+    | None, _ | _, None -> []
+    | Some identifiers, Some values ->
+        if uses_logging identifiers && not (has_log_source values identifiers)
+        then
+          let module_name =
+            Filename.basename ctx.filename
+            |> Filename.remove_extension |> String.capitalize_ascii
+          in
+          let loc =
+            let pos = { Location.line = 1; col = 0 } in
+            { Location.file = ctx.filename; start = pos; end_ = pos }
+          in
+          [ Issue.v ~loc { module_name } ]
+        else []
+  with File_view.Analysis_error _ -> []
 
 let pp ppf { module_name } =
   Fmt.pf ppf "Module '%s' uses logging but has no log source defined"

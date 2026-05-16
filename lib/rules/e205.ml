@@ -8,24 +8,29 @@ let is_printf_function base =
   || String.ends_with ~suffix:"sprintf" base
   || String.ends_with ~suffix:"asprintf" base
 
+(* Resolved typedtree paths only — a user's local [Printf] / [Format]
+   should not trip this rule. Skip the file when only parsetree is
+   available; the engine surfaces the missing-resolution count. *)
 let check (ctx : Context.file) =
-  let issues = ref [] in
-
-  (* Check identifiers for Printf/Format module usage *)
-  Merlin.Dump.iter_identifiers_with_location (Context.dump ctx) (fun id loc ->
-      let name = id.name in
-      let prefix = name.prefix in
-      let base = name.base in
-
-      (* Check for Printf/Format module usage (with or without Stdlib prefix) *)
-      match prefix with
-      | [ "Stdlib"; "Printf" ] | [ "Printf" ] ->
-          issues := Issue.v ~loc { module_used = "Printf" } :: !issues
-      | ([ "Stdlib"; "Format" ] | [ "Format" ]) when is_printf_function base ->
-          issues := Issue.v ~loc { module_used = "Format" } :: !issues
-      | _ -> ());
-
-  !issues
+  match File_view.resolved_identifiers (Context.view ctx) with
+  | None -> []
+  | Some identifiers ->
+      let issues = ref [] in
+      List.iter
+        (fun ident ->
+          match File_view.Reference.loc ident with
+          | None -> ()
+          | Some loc -> (
+              let prefix = File_view.Reference.prefix ident in
+              let base = File_view.Reference.base ident in
+              match prefix with
+              | [ "Stdlib"; "Printf" ] ->
+                  issues := Issue.v ~loc { module_used = "Printf" } :: !issues
+              | [ "Stdlib"; "Format" ] when is_printf_function base ->
+                  issues := Issue.v ~loc { module_used = "Format" } :: !issues
+              | _ -> ()))
+        identifiers;
+      !issues
 
 let pp ppf { module_used } =
   Fmt.pf ppf "Consider using Fmt module instead of %s for better formatting"

@@ -1,11 +1,13 @@
 (** Shared detector for empty Alcotest / alcobar suites of the form
     [let suite = ("name", [])]. *)
 
+open Ocaml_parsing
+
 val is_empty_list : Parsetree.expression -> bool
 (** [is_empty_list e] is [true] iff [e] is [[]], possibly under one or more
     [open ... in] / [M.[]] layers. *)
 
-val find : Parsetree.structure -> Warnings.loc option
+val find : Parsetree.structure -> Location.t option
 (** [find s] returns the binding location of any top-level
     [let suite = ("name", [])], or [None]. *)
 

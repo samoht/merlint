@@ -1,5 +1,8 @@
 (** E610: Test Without Library *)
 
+module Issue_location = Location
+open Ocaml_parsing
+
 type payload = { test_file : string; expected_module : string }
 
 let log_src = Logs.Src.create "merlint.rules.e610" ~doc:"E610 rule diagnostics"
@@ -156,33 +159,29 @@ let collect_refs_in_signature signature acc =
   iter.signature iter signature;
   !acc
 
-let with_lexbuf path f =
-  try
-    let ic = open_in path in
-    Fun.protect
-      ~finally:(fun () -> close_in ic)
-      (fun () ->
-        let lexbuf = Lexing.from_channel ic in
-        lexbuf.lex_curr_p <- { lexbuf.lex_curr_p with pos_fname = path };
-        Some (f lexbuf))
-  with Sys_error _ | Syntaxerr.Error _ | Lexer.Error _ -> None
+let collect_refs_in_interface ctx path acc =
+  match File_view.typedtree (Context.file_view ctx path) with
+  | Some (`Interface signature) ->
+      signature |> Ocaml_typing.Untypeast.untype_signature |> fun signature ->
+      collect_refs_in_signature signature acc
+  | Some (`Implementation _) | None -> acc
+  | exception Context.Analysis_error _ -> acc
 
 (** Project-wide set of module names referenced anywhere in [files]. Parse each
     [.ml] / [.mli] once via compiler-libs and walk the AST. The resulting set is
     consulted by per-test lookups to decide whether a test's expected library
     module is referenced (and therefore counts as "exists in some library
     form"). *)
-let collect_referenced_modules files =
+let collect_referenced_modules ctx files =
   List.fold_left
     (fun acc path ->
       if Filename.check_suffix path ".ml" then
-        match with_lexbuf path Parse.implementation with
+        match File_view.parsetree (Context.file_view ctx path) with
         | None -> acc
         | Some structure -> collect_refs_in_structure structure acc
+        | exception Context.Analysis_error _ -> acc
       else if Filename.check_suffix path ".mli" then
-        match with_lexbuf path Parse.interface with
-        | None -> acc
-        | Some signature -> collect_refs_in_signature signature acc
+        collect_refs_in_interface ctx path acc
       else acc)
     String_set.empty files
 
@@ -205,7 +204,7 @@ let module_path_matches ~expected_path lib_path =
 
 let missing_library_issue file expected_path =
   let loc =
-    Location.v ~file:(Fpath.to_string file) ~start_line:1 ~start_col:0
+    Issue_location.v ~file:(Fpath.to_string file) ~start_line:1 ~start_col:0
       ~end_line:1 ~end_col:0
   in
   Issue.v ~loc
@@ -242,7 +241,7 @@ let check ctx =
   let libraries = Dune_describe.libraries dune_describe in
   let library_module_paths = library_module_paths libraries in
   let referenced_modules =
-    collect_referenced_modules (library_source_files libraries)
+    collect_referenced_modules ctx (library_source_files libraries)
   in
   Log.debug (fun m ->
       m "E610: library_module_paths = %a"

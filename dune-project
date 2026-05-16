@@ -38,6 +38,7 @@
   eio_main
   nox-memtrace
   ocaml-project-index
+  dune-build-info
   (alcotest :with-test)
   (mdx :with-test)
   nox-loc))
