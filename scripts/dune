@@ -1,3 +1,13 @@
+(executable
+ (name generate_examples_ml)
+ (modules generate_examples_ml)
+ (libraries unix fmt))
+
+(executable
+ (name check_test_integrity)
+ (modules check_test_integrity)
+ (libraries merlint unix re fmt))
+
 (mdx
  (libraries merlint)
  (files README.md))

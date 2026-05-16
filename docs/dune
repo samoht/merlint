@@ -1,15 +1,22 @@
+; The HTML reference and the Markdown style guide are rendered from the
+; same source via [merlint help --all --format=html|md]. The build
+; depends on the merlint executable plus the library sources that
+; define the rules.
+
 (rule
  (target index.html)
  (deps
-  (source_tree ../lib))
+  (source_tree ../lib)
+  ../bin/main.exe)
  (action
-  (run ../bin/generate_docs.exe %{target}))
+  (run ../bin/main.exe help --all --format=html -o %{target}))
  (mode promote))
 
 (rule
  (target STYLE_GUIDE.md)
  (deps
-  (source_tree ../lib))
+  (source_tree ../lib)
+  ../bin/main.exe)
  (action
-  (run ../bin/generate_style_guide.exe %{target}))
+  (run ../bin/main.exe help --all --format=md -o %{target}))
  (mode promote))

@@ -136,13 +136,6 @@ pre code {
     background-color: #bbf7d0;
     color: #14532d;
 }
-.example-description {
-    padding: 8px 12px;
-    margin: 0;
-    color: #4b5563;
-    font-size: 0.9em;
-    line-height: 1.5;
-}
 .example pre {
     margin: 0;
     padding: 12px 16px;
@@ -216,46 +209,19 @@ pre code {
 .back-to-top:hover {
     opacity: 1;
 }
-/* Additional styling */
-.error-code {
-    font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
-    font-size: 1.1em;
-    font-weight: bold;
-    color: #dc2626;
-    display: inline-block;
-    background: #fee;
-    padding: 3px 8px;
-    border-radius: 4px;
-    margin-right: 10px;
-}
-.error-title {
-    font-size: 1.05em;
-    font-weight: 600;
-    color: #1f2937;
-    display: inline-block;
-}
+/* Syntax highlighting */
+.kw { color: #0000ff; font-weight: 600; }
+.st { color: #a31515; }
+.cm { color: #008200; font-style: italic; }
+.nu { color: #098658; }
+.cn { color: #267f99; }
+.md { color: #267f99; font-weight: 600; }
+.fn { color: #795E26; }
 
-/* Syntax highlighting - minimal but effective */
-.kw { color: #0000ff; font-weight: 600; }  /* keywords */
-.st { color: #a31515; }  /* strings */
-.cm { color: #008200; font-style: italic; }  /* comments */
-.nu { color: #098658; }  /* numbers */
-.cn { color: #267f99; }  /* constructors */
-.md { color: #267f99; font-weight: 600; }  /* modules */
-.fn { color: #795E26; }  /* functions */
-
-/* Responsive design */
 @media (max-width: 768px) {
-    body {
-        padding: 10px;
-    }
-    .error-card {
-        padding: 15px;
-    }
-    pre {
-        padding: 10px;
-        font-size: 0.8em;
-    }
+    body { padding: 10px; }
+    .error-card { padding: 15px; }
+    pre { padding: 10px; font-size: 0.8em; }
 }
     </style>
 </head>
@@ -730,14 +696,14 @@ pre code {
         <span class="error-title">Prefer the matching Fmt helper over (Fmt.str ...)</span>
     </div>
     <div class="error-hint"><p>Most calls of the shape [&lt;f&gt; (Fmt.str ...)] have a direct [Fmt.X] equivalent that avoids the intermediate [Fmt.str] string allocation and reads better:
-  - [Buffer.add_string buf (Fmt.str ...)] -&gt; [Fmt.pf (Fmt.with_buffer buf) "..."]
+  - [Buffer.add_string buf (Fmt.str ...)] -&gt; [Fmt.pf (Fmt.with_buffer buf) &quot;...&quot;]
     (hoist the formatter outside any hot loop to avoid re-allocating);
-  - [print_endline (Fmt.str ...)] -&gt; [Fmt.pr "...@."];
-  - [print_string (Fmt.str ...)] -&gt; [Fmt.pr "..."];
-  - [prerr_endline (Fmt.str ...)] -&gt; [Fmt.epr "...@."];
-  - [prerr_string (Fmt.str ...)] -&gt; [Fmt.epr "..."];
-  - [Error (... formatted with Fmt.str ...)] -&gt; [Fmt.kstr (fun e -&gt; Error e) "..."], or a one-shot [error_msgf] helper in the package;
-  - any other [&lt;f&gt; (Fmt.str ...)] -&gt; [Fmt.kstr &lt;f&gt; "..."].
+  - [print_endline (Fmt.str ...)] -&gt; [Fmt.pr &quot;...@.&quot;];
+  - [print_string (Fmt.str ...)] -&gt; [Fmt.pr &quot;...&quot;];
+  - [prerr_endline (Fmt.str ...)] -&gt; [Fmt.epr &quot;...@.&quot;];
+  - [prerr_string (Fmt.str ...)] -&gt; [Fmt.epr &quot;...&quot;];
+  - [Error (... formatted with Fmt.str ...)] -&gt; [Fmt.kstr (fun e -&gt; Error e) &quot;...&quot;], or a one-shot [error_msgf] helper in the package;
+  - any other [&lt;f&gt; (Fmt.str ...)] -&gt; [Fmt.kstr &lt;f&gt; &quot;...&quot;].
 Specialised cases for [failwith], [invalid_arg], [Alcotest.fail], and bare [fail] are handled by E215, E216, and E616 respectively.</p><div class="examples-grid">
 <div class="example bad">
   <h4>BAD</h4>
@@ -773,7 +739,7 @@ Specialised cases for [failwith], [invalid_arg], [Alcotest.fail], and bare [fail
   let err_x  fmt = Fmt.kstr (fun s -&gt; Error (Constructor s)) fmt
   let fail_x fmt = Fmt.kstr (fun s -&gt; raise (Constructor s)) fmt
 
-and replace each call site with [err_x "..." args] / [fail_x "..." args]. The lambda reads as noise at the call site; the helper reads as the domain operation ("emit a wire error", "raise a parse failure"). For a single one-off site the inline form is fine — the helper is a deduplication tool. The rule only flags inline call sites (kstr with a literal-string format) and skips helper definitions, which thread a [fmt] parameter.</p><div class="examples-grid">
+and replace each call site with [err_x &quot;...&quot; args] / [fail_x &quot;...&quot; args]. The lambda reads as noise at the call site; the helper reads as the domain operation (&quot;emit a wire error&quot;, &quot;raise a parse failure&quot;). For a single one-off site the inline form is fine — the helper is a deduplication tool. The rule only flags inline call sites (kstr with a literal-string format) and skips helper definitions, which thread a [fmt] parameter.</p><div class="examples-grid">
 <div class="example bad">
   <h4>BAD</h4>
   <pre><code><span class="kw">exception</span> <span class="cn">Parse_error</span> <span class="kw">of</span> string
@@ -1610,7 +1576,7 @@ and replace each call site with [err_x "..." args] / [fail_x "..." args]. The la
         <span class="error-code">E510</span>
         <span class="error-title">Missing Log Source</span>
     </div>
-    <div class="error-hint"><p>Modules that use logging should declare a log source for better debugging and log filtering. Add 'let src = Logs.Src.create "module.name" ~doc:"..."'</p>
+    <div class="error-hint"><p>Modules that use logging should declare a log source for better debugging and log filtering. Add 'let src = Logs.Src.create &quot;module.name&quot; ~doc:&quot;...&quot;'</p>
 <div class="example good">
   <h4>GOOD</h4>
   <pre><code><span class="kw">let</span> log_src = <span class="cn">Logs</span>.<span class="cn">Src</span>.create &quot;project_name.module_name&quot;
@@ -1899,7 +1865,7 @@ and replace each call site with [err_x "..." args] / [fail_x "..." args]. The la
         <span class="error-code">E725</span>
         <span class="error-title">Fuzz Test Suite Mismatch</span>
     </div>
-    <div class="error-hint"><p>Fuzz tests must declare let suite = ("&lt;module&gt;", [...]) where &lt;module&gt; matches the filename: fuzz_&lt;module&gt;.ml should use suite:"&lt;module&gt;".</p></div>
+    <div class="error-hint"><p>Fuzz tests must declare let suite = (&quot;&lt;module&gt;&quot;, [...]) where &lt;module&gt; matches the filename: fuzz_&lt;module&gt;.ml should use suite:&quot;&lt;module&gt;&quot;.</p></div>
 </div>
 <div class="error-card" id="E726">
     <div>
@@ -2041,7 +2007,7 @@ and replace each call site with [err_x "..." args] / [fail_x "..." args]. The la
         <span class="error-code">E915</span>
         <span class="error-title">Opam tag metadata</span>
     </div>
-    <div class="error-hint"><p>Runs only when the project root has a sources.toml (monopam monorepo marker) or a categories.toml (the tag vocabulary). When it does run, every *.opam must declare tags: ["org:&lt;your-org&gt;" "&lt;topic&gt;" ...] where each topic is a slug from categories.toml / merlint.toml's topics list. Edit the package's dune-project so dune regenerates the opam file.</p></div>
+    <div class="error-hint"><p>Runs only when the project root has a sources.toml (monopam monorepo marker) or a categories.toml (the tag vocabulary). When it does run, every *.opam must declare tags: [&quot;org:&lt;your-org&gt;&quot; &quot;&lt;topic&gt;&quot; ...] where each topic is a slug from categories.toml / merlint.toml's topics list. Edit the package's dune-project so dune regenerates the opam file.</p></div>
 </div>
 <div class="error-card" id="E920">
     <div>
@@ -2090,7 +2056,7 @@ and replace each call site with [err_x "..." args] / [fail_x "..." args]. The la
         <span class="error-code">E943</span>
         <span class="error-title">Misclassified test / dev dependency</span>
     </div>
-    <div class="error-hint"><p>A dep used only from [(test ...)] / [(tests ...)] or a runtest-attached private executable belongs in [:with-test]. A dep used only from a private executable that's not attached to [runtest] (generator, benchmark, dev tool) belongs in [:with-dev-setup]. Add the appropriate filter: in a hand-written [&lt;pkg&gt;.opam], wrap the entry as ["alcotest" {with-test}] or ["bench" {with-dev-setup}]; in a [dune-project] [(package (depends ...))] stanza, write [(alcotest :with-test)] or [(bench :with-dev-setup)]. Build-tool packages dune resolves separately (dune, dune-configurator, js_of_ocaml, ocaml) and [conf-*] system wrappers are exempt.</p></div>
+    <div class="error-hint"><p>A dep used only from [(test ...)] / [(tests ...)] or a runtest-attached private executable belongs in [:with-test]. A dep used only from a private executable that's not attached to [runtest] (generator, benchmark, dev tool) belongs in [:with-dev-setup]. Add the appropriate filter: in a hand-written [&lt;pkg&gt;.opam], wrap the entry as [&quot;alcotest&quot; {with-test}] or [&quot;bench&quot; {with-dev-setup}]; in a [dune-project] [(package (depends ...))] stanza, write [(alcotest :with-test)] or [(bench :with-dev-setup)]. Build-tool packages dune resolves separately (dune, dune-configurator, js_of_ocaml, ocaml) and [conf-*] system wrappers are exempt.</p></div>
 </div>
 <div class="error-card" id="E944">
     <div>

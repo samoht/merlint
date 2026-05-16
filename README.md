@@ -104,6 +104,21 @@ $ # Filter rules (e.g., run all rules except E110)
 $ merlint --rules A-E110
 ```
 
+Every issue is tagged with an error code (e.g. `E100`). To see what a
+rule means and how to fix it, ask `merlint help`:
+
+```sh
+$ # Describe a single rule on the terminal
+$ merlint help E100
+
+$ # Describe the configuration file format
+$ merlint help config
+
+$ # Render the full reference as HTML or Markdown
+$ merlint help --all --format=html -o docs/index.html
+$ merlint help --all --format=md -o STYLE_GUIDE.md
+```
+
 ## Configuration
 
 Merlint reads `merlint.toml` from your project root. Run

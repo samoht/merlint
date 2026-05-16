@@ -23,6 +23,7 @@
   cmdliner
   eio
   ocaml-merlin
+  merlin-lib
   re
   fpath
   logs
