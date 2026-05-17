@@ -1,6 +1,10 @@
 Bad fixture: dune file present but missing the %{dune-warnings} stanza.
 
+Build bad fixture project:
+  $ (cd bad && dune build @check)
+
   $ merlint -B -r E940 bad/
+  Dune root: $TESTCASE_ROOT/bad/
   Running merlint analysis...
   
   Analyzing 0 files
@@ -30,11 +34,16 @@ Bad fixture: dune file present but missing the %{dune-warnings} stanza.
   
   Summary: ✗ 1 total issue (applied 1 rule)
   ✗ Some checks failed. See details above.
+    Run `merlint help E940` for the rule's description, hint, and good/bad examples.
   [1]
 
 Good fixture: dune file enables %{dune-warnings} on dev.
 
+Build good fixture project:
+  $ (cd good && dune build @check)
+
   $ merlint -B -r E940 good/
+  Dune root: $TESTCASE_ROOT/good/
   Running merlint analysis...
   
   Analyzing 0 files

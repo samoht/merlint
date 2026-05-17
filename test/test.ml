@@ -15,7 +15,6 @@ let () =
       Test_rule_config.suite;
       Test_project.suite;
       Test_outline.suite;
-      Test_ast.suite;
       Test_dune_describe.suite;
       Test_issue.suite;
       Test_location.suite;

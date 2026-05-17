@@ -1,5 +1,9 @@
+Build fixture project:
+  $ dune build @check
+
 Test bad example - should find bad documentation style:
   $ merlint -B -r E410 bad.mli
+  Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
   Analyzing 1 files
@@ -32,10 +36,12 @@ Test bad example - should find bad documentation style:
   
   Summary: ✗ 4 total issues (applied 1 rule)
   ✗ Some checks failed. See details above.
+    Run `merlint help E410` for the rule's description, hint, and good/bad examples.
   [1]
 
 Test good example - should find no issues:
   $ merlint -B -r E410 good.mli
+  Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
   Analyzing 1 files

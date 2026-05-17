@@ -1,7 +1,11 @@
 Test E607: Test Stanza Mixes Multiple Libraries
 
 Test stanza with no deps mixing test files from multiple libraries:
+Build bad fixture project:
+  $ (cd bad && dune build @check)
+
   $ merlint -B -r E607 bad/
+  Dune root: $TESTCASE_ROOT/bad/
   Running merlint analysis...
   
   Analyzing 5 files
@@ -29,10 +33,15 @@ Test stanza with no deps mixing test files from multiple libraries:
   
   Summary: ✗ 1 total issue (applied 1 rule)
   ✗ Some checks failed. See details above.
+    Run `merlint help E607` for the rule's description, hint, and good/bad examples.
   [1]
 
 Test stanza with files from only one library (no issue):
+Build good fixture project:
+  $ (cd good && dune build @check)
+
   $ merlint -B -r E607 good/
+  Dune root: $TESTCASE_ROOT/good/
   Running merlint analysis...
   
   Analyzing 3 files

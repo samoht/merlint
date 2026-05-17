@@ -1,3 +1,4 @@
 (library
  (name test_e510)
- (libraries logs))
+ (libraries logs)
+ (flags :standard -warn-error -a))

@@ -32,27 +32,31 @@ let check (ctx : Context.file) =
   (* Only check .mli files *)
   if not (File_kind.is_mli ctx.filename) then []
   else
-    let outline = Context.outline ctx in
+    let items = File_view.items (Context.view ctx) in
     let content = Context.content ctx in
 
     (* Find type 't' in the outline *)
     let type_t =
       List.find_opt
-        (fun (item : Outline.item) -> item.name = "t" && item.kind = Type)
-        outline
+        (fun item ->
+          File_view.Item.name item = "t"
+          && File_view.Item.kind item = File_view.Item.Type)
+        items
     in
 
     match type_t with
     | None -> [] (* No type t, nothing to check *)
     | Some t_item ->
         (* Get line number for the type *)
-        let line_num = t_item.location.start.line in
+        let line_num = (File_view.Item.loc t_item).start.line in
 
         (* Check if pp function exists in the outline *)
         let has_pp =
           List.exists
-            (fun (item : Outline.item) -> item.name = "pp" && item.kind = Value)
-            outline
+            (fun item ->
+              File_view.Item.name item = "pp"
+              && File_view.Item.kind item = File_view.Item.Value)
+            items
         in
 
         (* Check for deriving show *)

@@ -1,5 +1,9 @@
+Build fixture project:
+  $ dune build @check
+
 Test bad example - should find bad value naming:
   $ merlint -B -r E310 bad.ml
+  Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
   Analyzing 1 files
@@ -28,10 +32,12 @@ Test bad example - should find bad value naming:
   
   Summary: ✗ 2 total issues (applied 1 rule)
   ✗ Some checks failed. See details above.
+    Run `merlint help E310` for the rule's description, hint, and good/bad examples.
   [1]
 
 Test good example - should find no issues:
   $ merlint -B -r E310 good.ml
+  Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
   Analyzing 1 files

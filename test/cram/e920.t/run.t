@@ -1,6 +1,10 @@
 Bad: README.md and lib/foo.mli have OCaml code blocks but no mdx stanza references them.
 
+Build bad fixture project:
+  $ (cd bad && dune build @check)
+
   $ merlint -B -r E920 bad/
+  Dune root: $TESTCASE_ROOT/bad/
   Running merlint analysis...
   
   Analyzing 1 files
@@ -29,6 +33,7 @@ Bad: README.md and lib/foo.mli have OCaml code blocks but no mdx stanza referenc
   
   Summary: ✗ 2 total issues (applied 1 rule)
   ✗ Some checks failed. See details above.
+    Run `merlint help E920` for the rule's description, hint, and good/bad examples.
   [1]
 
 
@@ -38,7 +43,11 @@ Bad: README.md and lib/foo.mli have OCaml code blocks but no mdx stanza referenc
 
 Good: every doc file with OCaml code is referenced by an mdx stanza.
 
+Build good fixture project:
+  $ (cd good && dune build @check)
+
   $ merlint -B -r E920 good/
+  Dune root: $TESTCASE_ROOT/good/
   Running merlint analysis...
   
   Analyzing 1 files

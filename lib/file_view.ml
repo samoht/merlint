@@ -1,19 +1,23 @@
 let src = Logs.Src.create "merlint.file_view" ~doc:"File view"
 
 module Log = (val Logs.src_log src : Logs.LOG)
-module Compiler_parsetree = Parsetree
-module Compiler_pprintast = Pprintast
 module Typedtree = Ocaml_typing.Typedtree
 module Tast_iterator = Ocaml_typing.Tast_iterator
 module Typed_ident = Ocaml_typing.Ident
 module Typed_path = Ocaml_typing.Path
+module Typed_predef = Ocaml_typing.Predef
+module Typed_types = Ocaml_typing.Types
 open Ocaml_parsing
 
 exception Analysis_error of string
 
 let fail fmt = Fmt.kstr (fun s -> raise (Analysis_error s)) fmt
 
-let name_of_parts = function
+let clean_name_part s =
+  match String.index_opt s '!' with None -> s | Some i -> String.sub s 0 i
+
+let name_of_parts parts =
+  match List.map clean_name_part parts with
   | [] -> { Merlin.Refs.prefix = []; base = "" }
   | parts ->
       let rev = List.rev parts in
@@ -40,8 +44,7 @@ let name_of_longident lid =
   name_of_parts (parts [] lid)
 
 let loc_of_typed_loc ~filename loc =
-  if loc.Location.loc_ghost then None
-  else Some (Ast.merlint_of_loc ~filename loc)
+  if loc.Location.loc_ghost then None else Some (Loc.of_typed ~filename loc)
 
 let elt_of_name ~filename name loc =
   { Merlin.Refs.name; location = loc_of_typed_loc ~filename loc }
@@ -129,95 +132,9 @@ let collected_refs_of_acc acc =
     type_definitions = List.rev !(acc.type_definitions);
   }
 
-let add_local ~filename target name loc =
-  push target (elt_of_name ~filename (name_of_parts [ name ]) loc)
-
-let add_path ~filename target (lid : Longident.t Asttypes.loc) loc =
-  push target (elt_of_name ~filename (name_of_longident lid.txt) loc)
-
 let add_definition target definitions elt =
   push target elt;
   push definitions elt
-
-let add_named_definition ~filename target definitions name loc =
-  let elt = elt_of_name ~filename (name_of_parts [ name ]) loc in
-  add_definition target definitions elt
-
-let iter_parsetree_expr ~filename acc this (expr : Parsetree.expression) =
-  (match expr.pexp_desc with
-  | Pexp_ident lid -> add_path ~filename acc.identifiers lid expr.pexp_loc
-  | Pexp_construct (lid, _) -> add_path ~filename acc.variants lid expr.pexp_loc
-  | _ -> ());
-  Ast_iterator.default_iterator.expr this expr
-
-let iter_parsetree_pat ~filename acc this (pat : Parsetree.pattern) =
-  (match pat.ppat_desc with
-  | Ppat_var name ->
-      add_local ~filename acc.patterns name.txt name.loc;
-      add_local ~filename acc.values name.txt name.loc
-  | Ppat_construct (lid, _) -> add_path ~filename acc.variants lid pat.ppat_loc
-  | Ppat_exception p -> Ast_iterator.default_iterator.pat this p
-  | _ -> ());
-  Ast_iterator.default_iterator.pat this pat
-
-let iter_parsetree_module_expr ~filename acc this
-    (mexpr : Parsetree.module_expr) =
-  (match mexpr.pmod_desc with
-  | Pmod_ident lid -> add_path ~filename acc.modules lid mexpr.pmod_loc
-  | _ -> ());
-  Ast_iterator.default_iterator.module_expr this mexpr
-
-let iter_parsetree_module_binding ~filename acc this
-    (mb : Parsetree.module_binding) =
-  Option.iter
-    (fun name ->
-      add_named_definition ~filename acc.modules acc.module_definitions name
-        mb.pmb_name.loc)
-    mb.pmb_name.txt;
-  Ast_iterator.default_iterator.module_binding this mb
-
-let iter_parsetree_type_declaration ~filename acc this
-    (decl : Parsetree.type_declaration) =
-  add_named_definition ~filename acc.types acc.type_definitions
-    decl.ptype_name.txt decl.ptype_name.loc;
-  Ast_iterator.default_iterator.type_declaration this decl
-
-let iter_parsetree_constructor_declaration ~filename acc this
-    (cd : Parsetree.constructor_declaration) =
-  add_named_definition ~filename acc.variants acc.variant_definitions
-    cd.pcd_name.txt cd.pcd_name.loc;
-  Ast_iterator.default_iterator.constructor_declaration this cd
-
-let iter_parsetree_extension_constructor ~filename acc this
-    (ext : Parsetree.extension_constructor) =
-  add_named_definition ~filename acc.variants acc.variant_definitions
-    ext.pext_name.txt ext.pext_name.loc;
-  Ast_iterator.default_iterator.extension_constructor this ext
-
-let iter_parsetree_type_exception ~filename acc this
-    (exn : Parsetree.type_exception) =
-  add_local ~filename acc.exceptions exn.ptyexn_constructor.pext_name.txt
-    exn.ptyexn_constructor.pext_name.loc;
-  Ast_iterator.default_iterator.type_exception this exn
-
-let collect_parsetree_outline ~filename (structure : Parsetree.structure) =
-  let acc = refs_acc () in
-  let iterator =
-    {
-      Ast_iterator.default_iterator with
-      expr = iter_parsetree_expr ~filename acc;
-      pat = iter_parsetree_pat ~filename acc;
-      module_expr = iter_parsetree_module_expr ~filename acc;
-      module_binding = iter_parsetree_module_binding ~filename acc;
-      type_declaration = iter_parsetree_type_declaration ~filename acc;
-      constructor_declaration =
-        iter_parsetree_constructor_declaration ~filename acc;
-      extension_constructor = iter_parsetree_extension_constructor ~filename acc;
-      type_exception = iter_parsetree_type_exception ~filename acc;
-    }
-  in
-  iterator.structure iterator structure;
-  collected_refs_of_acc acc
 
 let rec pattern_value_names : type k.
     filename:string -> k Typedtree.general_pattern -> Merlin.Refs.elt list =
@@ -371,83 +288,78 @@ let collect_resolved ~filename (tree : Merlin.typedtree) =
   | `Interface signature -> iterator.signature iterator signature);
   collected_refs_of_acc acc
 
-type t = {
-  filename : string;
-  content : string Lazy.t;
-  typedtree : Merlin.typedtree option Lazy.t;
-  parsetree : Parsetree.structure option Lazy.t;
-  signature_ : Parsetree.signature option Lazy.t;
-  functions : (string * Ast.expr) list Lazy.t;
-  ast : Ast.t Lazy.t;
-  reference_outline : collected_refs Lazy.t;
-  resolved : collected_refs option Lazy.t;
-  outline : Outline.t Lazy.t;
+type item_kind =
+  | Item_value
+  | Item_type
+  | Item_module
+  | Item_module_type
+  | Item_class
+  | Item_class_type
+  | Item_constructor
+  | Item_exception
+  | Item_field
+
+type file_item = {
+  item_name : string;
+  item_kind : item_kind;
+  item_loc : Location.t;
+  item_deprecated : bool;
+  item_type : Typed_types.type_expr option;
+  item_children : file_item list;
 }
 
-let lazy_content ~filename ~load_content =
-  lazy
-    (try load_content ()
-     with exn ->
-       fail "Failed to read file %s: %s" filename (Printexc.to_string exn))
+type application_arg = {
+  arg_callee : Merlin.Refs.name option;
+  arg_loc : Location.t;
+}
 
-let lazy_typedtree typedtree =
-  lazy
-    (match typedtree with
-    | Some f -> ( match f () with Ok t -> t | Error msg -> fail "%s" msg)
-    | None -> None)
+type application_site = {
+  call_callee : Merlin.Refs.name;
+  call_loc : Location.t;
+  call_args : application_arg list;
+}
 
-let lazy_parsetree ~filename ~typedtree ~parsetree ~content =
-  lazy
-    (let loaded_typedtree =
-       if Lazy.is_val typedtree then
-         try Lazy.force typedtree with Analysis_error _ -> None
-       else None
-     in
-     match loaded_typedtree with
-     | Some (`Implementation structure) ->
-         Some (Ocaml_typing.Untypeast.untype_structure structure)
-     | _ -> (
-         match parsetree with
-         | Some f -> ( match f () with Ok p -> p | Error msg -> fail "%s" msg)
-         | None ->
-             let content = Lazy.force content in
-             Ast.parse_structure ~filename content))
+type t = {
+  filename : string;
+  typedtree : Merlin.typedtree option Lazy.t;
+  values : Function_metrics.value list Lazy.t;
+  reference_outline : collected_refs Lazy.t;
+  items : file_item list Lazy.t;
+  resolved : collected_refs option Lazy.t;
+  module_names : string list Lazy.t;
+  applications : application_site list Lazy.t;
+      (** Cache of every typed application site whose head is a path identifier.
+          One typedtree walk per file regardless of how many rules call
+          {!iter_applications}. *)
+}
 
-let lazy_signature ~typedtree ~signature =
-  lazy
-    (let loaded_typedtree =
-       if Lazy.is_val typedtree then
-         try Lazy.force typedtree with Analysis_error _ -> None
-       else None
-     in
-     match loaded_typedtree with
-     | Some (`Interface signature) ->
-         Some (Ocaml_typing.Untypeast.untype_signature signature)
-     | Some (`Implementation _) | None -> (
-         match signature with
-         | Some f -> ( match f () with Ok s -> s | Error msg -> fail "%s" msg)
-         | None -> None))
+let warn_missing_typedtree filename =
+  Log.warn (fun m ->
+      m
+        "No usable typedtree found for %s; please run dune build @check before \
+         running typedtree-backed merlint rules"
+        filename)
 
-let lazy_functions parsetree =
+let lazy_typedtree ~filename typedtree =
   lazy
-    (match Lazy.force parsetree with
-    | None -> []
-    | Some structure ->
-        let fns = Ast.functions_of_structure structure in
-        Log.debug (fun m -> m "File_view: %d functions" (List.length fns));
-        fns)
+    (match typedtree () with
+    | Ok (Some _ as tree) -> tree
+    | Ok None ->
+        warn_missing_typedtree filename;
+        None
+    | Error msg ->
+        Log.warn (fun m ->
+            m
+              "Failed to load typedtree for %s: %s; please run dune build \
+               @check before running typedtree-backed merlint rules"
+              filename msg);
+        fail "%s" msg)
 
-let lazy_reference_outline ~filename ~typedtree ~parsetree =
+let lazy_reference_outline ~filename ~typedtree =
   lazy
     (match Lazy.force typedtree with
     | Some tree -> collect_resolved ~filename tree
-    | None -> (
-        match Lazy.force parsetree with
-        | None -> empty_refs
-        | Some structure -> collect_parsetree_outline ~filename structure))
-
-let lazy_outline outline =
-  lazy (match outline () with Ok o -> o | Error msg -> fail "%s" msg)
+    | None -> empty_refs)
 
 let lazy_resolved ~filename ~typedtree =
   lazy
@@ -455,39 +367,338 @@ let lazy_resolved ~filename ~typedtree =
     | None -> None
     | Some tree -> Some (collect_resolved ~filename tree))
 
-let v ~filename ~load_content ?typedtree ?parsetree ?signature ~outline () =
-  let content = lazy_content ~filename ~load_content in
-  let typedtree = lazy_typedtree typedtree in
-  let parsetree = lazy_parsetree ~filename ~typedtree ~parsetree ~content in
-  let signature_ = lazy_signature ~typedtree ~signature in
-  let functions = lazy_functions parsetree in
-  let ast = lazy { Ast.functions = Lazy.force functions } in
-  let reference_outline =
-    lazy_reference_outline ~filename ~typedtree ~parsetree
+let typed_has_deprecated attrs =
+  List.exists
+    (fun (attr : Parsetree.attribute) ->
+      attr.attr_name.txt = "deprecated"
+      || attr.attr_name.txt = "ocaml.deprecated")
+    attrs
+
+let typed_item ~name ~kind ?item_type ?(children = []) ?(deprecated = false) loc
+    =
+  {
+    item_name = name;
+    item_kind = kind;
+    item_loc = loc;
+    item_deprecated = deprecated;
+    item_type;
+    item_children = children;
+  }
+
+let rec typed_pattern_items ?loc (pat : Typedtree.pattern) =
+  let item_loc = Option.value loc ~default:pat.pat_loc in
+  match pat.pat_desc with
+  | Tpat_var (_ident, name, _) ->
+      [
+        typed_item ~name:name.txt ~kind:Item_value ~item_type:pat.pat_type
+          item_loc;
+      ]
+  | Tpat_alias (p, _ident, name, _, _) ->
+      typed_item ~name:name.txt ~kind:Item_value ~item_type:pat.pat_type
+        item_loc
+      :: typed_pattern_items ?loc p
+  | Tpat_tuple fields ->
+      List.concat_map (fun (_, p) -> typed_pattern_items ?loc p) fields
+  | Tpat_construct (_, _, args, _) ->
+      List.concat_map (typed_pattern_items ?loc) args
+  | Tpat_variant (_, arg, _) -> (
+      match arg with None -> [] | Some p -> typed_pattern_items ?loc p)
+  | Tpat_record (fields, _) ->
+      List.concat_map (fun (_, _, p) -> typed_pattern_items ?loc p) fields
+  | Tpat_array (_, pats) -> List.concat_map (typed_pattern_items ?loc) pats
+  | Tpat_or (lhs, rhs, _) ->
+      typed_pattern_items ?loc lhs @ typed_pattern_items ?loc rhs
+  | Tpat_lazy p -> typed_pattern_items ?loc p
+  | Tpat_any | Tpat_constant _ -> []
+
+let typed_type_children (decl : Typedtree.type_declaration) =
+  match decl.typ_kind with
+  | Ttype_record labels ->
+      List.map
+        (fun (ld : Typedtree.label_declaration) ->
+          typed_item ~name:ld.ld_name.txt ~kind:Item_field
+            ~item_type:ld.ld_type.ctyp_type
+            ~deprecated:(typed_has_deprecated ld.ld_attributes)
+            ld.ld_loc)
+        labels
+  | Ttype_variant constructors ->
+      List.map
+        (fun (cd : Typedtree.constructor_declaration) ->
+          typed_item ~name:cd.cd_name.txt ~kind:Item_constructor
+            ~deprecated:(typed_has_deprecated cd.cd_attributes)
+            cd.cd_loc)
+        constructors
+  | Ttype_abstract | Ttype_open -> []
+
+let typed_type_item (decl : Typedtree.type_declaration) =
+  typed_item ~name:decl.typ_name.txt ~kind:Item_type
+    ?item_type:
+      (Option.map
+         (fun (ct : Typedtree.core_type) -> ct.ctyp_type)
+         decl.typ_manifest)
+    ~children:(typed_type_children decl)
+    ~deprecated:(typed_has_deprecated decl.typ_attributes)
+    decl.typ_loc
+
+let typed_extension_item (ext : Typedtree.extension_constructor) =
+  typed_item ~name:ext.ext_name.txt ~kind:Item_constructor
+    ~deprecated:(typed_has_deprecated ext.ext_attributes)
+    ext.ext_loc
+
+let typed_exception_item (exn : Typedtree.type_exception) =
+  let ext = exn.tyexn_constructor in
+  typed_item ~name:ext.ext_name.txt ~kind:Item_exception
+    ~deprecated:(typed_has_deprecated ext.ext_attributes)
+    ext.ext_loc
+
+let rec typed_structure_items (structure : Typedtree.structure) =
+  List.concat_map typed_structure_item structure.str_items
+
+and typed_structure_item (item : Typedtree.structure_item) =
+  match item.str_desc with
+  | Tstr_value (_, bindings) ->
+      List.concat_map
+        (fun (vb : Typedtree.value_binding) ->
+          typed_pattern_items ~loc:vb.vb_loc vb.vb_pat)
+        bindings
+  | Tstr_primitive vd ->
+      [
+        typed_item ~name:vd.val_name.txt ~kind:Item_value
+          ~item_type:vd.val_desc.ctyp_type
+          ~deprecated:(typed_has_deprecated vd.val_attributes)
+          vd.val_loc;
+      ]
+  | Tstr_type (_, decls) -> List.map typed_type_item decls
+  | Tstr_module mb ->
+      Option.fold mb.mb_name.txt ~none:[] ~some:(fun name ->
+          let children =
+            match mb.mb_expr.mod_desc with
+            | Tmod_structure s -> typed_structure_items s
+            | _ -> []
+          in
+          [
+            typed_item ~name ~kind:Item_module ~children
+              ~deprecated:(typed_has_deprecated mb.mb_attributes)
+              mb.mb_loc;
+          ])
+  | Tstr_recmodule mods ->
+      List.filter_map
+        (fun (mb : Typedtree.module_binding) ->
+          Option.map
+            (fun name ->
+              let children =
+                match mb.mb_expr.mod_desc with
+                | Tmod_structure s -> typed_structure_items s
+                | _ -> []
+              in
+              typed_item ~name ~kind:Item_module ~children
+                ~deprecated:(typed_has_deprecated mb.mb_attributes)
+                mb.mb_loc)
+            mb.mb_name.txt)
+        mods
+  | Tstr_modtype mtd ->
+      [
+        typed_item ~name:mtd.mtd_name.txt ~kind:Item_module_type
+          ~children:
+            (match mtd.mtd_type with
+            | Some { mty_desc = Tmty_signature s; _ } -> typed_signature_items s
+            | _ -> [])
+          ~deprecated:(typed_has_deprecated mtd.mtd_attributes)
+          mtd.mtd_loc;
+      ]
+  | Tstr_exception exn -> [ typed_exception_item exn ]
+  | Tstr_typext te -> List.map typed_extension_item te.tyext_constructors
+  | Tstr_class classes ->
+      List.map
+        (fun ((cd, _) : Typedtree.class_declaration * string list) ->
+          typed_item ~name:cd.ci_id_name.txt ~kind:Item_class cd.ci_loc)
+        classes
+  | Tstr_class_type classes ->
+      List.map
+        (fun ((_, name, cd) :
+               Typed_ident.t
+               * string Ocaml_parsing.Asttypes.loc
+               * Typedtree.class_type_declaration) ->
+          typed_item ~name:name.txt ~kind:Item_class_type cd.ci_loc)
+        classes
+  | Tstr_eval _ | Tstr_open _ | Tstr_include _ | Tstr_attribute _ -> []
+
+and typed_signature_items (signature : Typedtree.signature) =
+  List.concat_map typed_signature_item signature.sig_items
+
+and typed_signature_item (item : Typedtree.signature_item) =
+  match item.sig_desc with
+  | Tsig_value vd ->
+      [
+        typed_item ~name:vd.val_name.txt ~kind:Item_value
+          ~item_type:vd.val_desc.ctyp_type
+          ~deprecated:(typed_has_deprecated vd.val_attributes)
+          vd.val_loc;
+      ]
+  | Tsig_type (_, decls) | Tsig_typesubst decls ->
+      List.map typed_type_item decls
+  | Tsig_module md ->
+      Option.fold md.md_name.txt ~none:[] ~some:(fun name ->
+          [
+            typed_item ~name ~kind:Item_module
+              ~children:
+                (match md.md_type.mty_desc with
+                | Tmty_signature s -> typed_signature_items s
+                | _ -> [])
+              ~deprecated:(typed_has_deprecated md.md_attributes)
+              md.md_loc;
+          ])
+  | Tsig_recmodule mods ->
+      List.filter_map
+        (fun (md : Typedtree.module_declaration) ->
+          Option.map
+            (fun name ->
+              typed_item ~name ~kind:Item_module
+                ~children:
+                  (match md.md_type.mty_desc with
+                  | Tmty_signature s -> typed_signature_items s
+                  | _ -> [])
+                ~deprecated:(typed_has_deprecated md.md_attributes)
+                md.md_loc)
+            md.md_name.txt)
+        mods
+  | Tsig_modtype mtd ->
+      [
+        typed_item ~name:mtd.mtd_name.txt ~kind:Item_module_type
+          ~children:
+            (match mtd.mtd_type with
+            | Some { mty_desc = Tmty_signature s; _ } -> typed_signature_items s
+            | _ -> [])
+          ~deprecated:(typed_has_deprecated mtd.mtd_attributes)
+          mtd.mtd_loc;
+      ]
+  | Tsig_exception exn -> [ typed_exception_item exn ]
+  | Tsig_typext te -> List.map typed_extension_item te.tyext_constructors
+  | Tsig_class classes ->
+      List.map
+        (fun (cd : Typedtree.class_description) ->
+          typed_item ~name:cd.ci_id_name.txt ~kind:Item_class cd.ci_loc)
+        classes
+  | Tsig_class_type classes ->
+      List.map
+        (fun (cd : Typedtree.class_type_declaration) ->
+          typed_item ~name:cd.ci_id_name.txt ~kind:Item_class_type cd.ci_loc)
+        classes
+  | Tsig_open _ | Tsig_include _ | Tsig_attribute _ | Tsig_modsubst _
+  | Tsig_modtypesubst _ ->
+      []
+
+let lazy_items typedtree =
+  lazy
+    (match Lazy.force typedtree with
+    | Some (`Implementation structure) -> typed_structure_items structure
+    | Some (`Interface signature) -> typed_signature_items signature
+    | None -> [])
+
+let lazy_values typedtree =
+  lazy
+    (match Lazy.force typedtree with
+    | Some (`Implementation structure) ->
+        Function_metrics.of_structure structure
+    | Some (`Interface _) | None -> [])
+
+let typed_expr_callee_name (expr : Typedtree.expression) =
+  let rec aux (expr : Typedtree.expression) =
+    match expr.exp_desc with
+    | Texp_ident (path, _, _) -> Some (name_of_path path)
+    | Texp_apply (fn, _) -> aux fn
+    | Texp_construct (lid, _, _) -> Some (name_of_longident lid.txt)
+    | Texp_open (_, body) -> aux body
+    | _ -> None
   in
-  let outline = lazy_outline outline in
+  aux expr
+
+let lazy_applications typedtree =
+  lazy
+    (match Lazy.force typedtree with
+    | None | Some (`Interface _) -> []
+    | Some (`Implementation structure) ->
+        let calls = ref [] in
+        let iterator =
+          {
+            Tast_iterator.default_iterator with
+            expr =
+              (fun this expr ->
+                (match expr.exp_desc with
+                | Texp_apply (fn, args) ->
+                    Option.iter
+                      (fun call_callee ->
+                        let call_args =
+                          List.filter_map
+                            (function
+                              | _, Typedtree.Omitted _ -> None
+                              | _, Typedtree.Arg (expr : Typedtree.expression)
+                                ->
+                                  Some
+                                    {
+                                      arg_callee = typed_expr_callee_name expr;
+                                      arg_loc = expr.exp_loc;
+                                    })
+                            args
+                        in
+                        push calls
+                          { call_callee; call_loc = expr.exp_loc; call_args })
+                      (typed_expr_callee_name fn)
+                | _ -> ());
+                Tast_iterator.default_iterator.expr this expr);
+          }
+        in
+        iterator.structure iterator structure;
+        List.rev !calls)
+
+let is_module_name name =
+  String.length name > 0
+  && Char.uppercase_ascii name.[0] = name.[0]
+  && Char.lowercase_ascii name.[0] <> name.[0]
+
+let add_module_name acc name = if is_module_name name then name :: acc else acc
+
+let module_names_of_name (name : Merlin.Refs.name) acc =
+  List.fold_left add_module_name (add_module_name acc name.base) name.prefix
+
+let module_names_of_ref acc (elt : Merlin.Refs.elt) =
+  module_names_of_name elt.name acc
+
+let lazy_module_names refs =
+  lazy
+    (let refs = (Lazy.force refs).refs in
+     let names = [] in
+     let names = List.fold_left module_names_of_ref names refs.modules in
+     let names = List.fold_left module_names_of_ref names refs.types in
+     let names = List.fold_left module_names_of_ref names refs.exceptions in
+     let names = List.fold_left module_names_of_ref names refs.variants in
+     let names = List.fold_left module_names_of_ref names refs.identifiers in
+     let names = List.fold_left module_names_of_ref names refs.patterns in
+     let names = List.fold_left module_names_of_ref names refs.values in
+     List.sort_uniq String.compare names)
+
+let v ~filename ~typedtree () =
+  let typedtree = lazy_typedtree ~filename typedtree in
+  let values = lazy_values typedtree in
+  let reference_outline = lazy_reference_outline ~filename ~typedtree in
+  let items = lazy_items typedtree in
   let resolved = lazy_resolved ~filename ~typedtree in
+  let module_names = lazy_module_names reference_outline in
+  let applications = lazy_applications typedtree in
   {
     filename;
-    content;
     typedtree;
-    parsetree;
-    signature_;
-    functions;
-    ast;
+    values;
     reference_outline;
+    items;
     resolved;
-    outline;
+    module_names;
+    applications;
   }
 
 let filename t = t.filename
-let content t = Lazy.force t.content
 let typedtree t = Lazy.force t.typedtree
-let parsetree t = Lazy.force t.parsetree
-let signature t = Lazy.force t.signature_
-let functions t = Lazy.force t.functions
-let ast t = Lazy.force t.ast
-let outline t = Lazy.force t.outline
+let values t = Lazy.force t.values
 let is_resolved t = Option.is_some (Lazy.force t.typedtree)
 
 (* {2 Name} *)
@@ -514,35 +725,108 @@ end
 (* {2 Type_view} *)
 
 module Type_view = struct
-  type t = Compiler_parsetree.core_type
+  type t = Typed_types.type_expr
 
-  let is_function (ct : t) =
-    match ct.ptyp_desc with Ptyp_arrow _ -> true | _ -> false
+  let arrow ct =
+    match Typed_types.get_desc ct with
+    | Typed_types.Tarrow (label, dom, ret, _) -> Some (label, dom, ret)
+    | _ -> None
+
+  let is_function (ct : t) = Option.is_some (arrow ct)
+
+  let is_variable ct =
+    match Typed_types.get_desc ct with
+    | Typed_types.Tvar _ | Typed_types.Tunivar _ -> true
+    | _ -> false
+
+  let tuple ct =
+    match Typed_types.get_desc ct with
+    | Typed_types.Ttuple fields -> Some (List.map snd fields)
+    | _ -> None
+
+  let constr ct =
+    match Typed_types.get_desc ct with
+    | Typed_types.Tconstr (path, args, _) -> Some (name_of_path path, args)
+    | _ -> None
+
+  let constr_path ct =
+    match Typed_types.get_desc ct with
+    | Typed_types.Tconstr (path, _, _) -> Some path
+    | _ -> None
+
+  let rec constrs ct =
+    match Typed_types.get_desc ct with
+    | Typed_types.Tconstr (path, args, _) ->
+        name_of_path path :: List.concat_map constrs args
+    | Typed_types.Ttuple fields ->
+        List.concat_map (fun (_, t) -> constrs t) fields
+    | Typed_types.Tarrow (_, dom, ret, _) -> constrs dom @ constrs ret
+    | Typed_types.Tpoly (body, args) ->
+        constrs body @ List.concat_map constrs args
+    | Typed_types.Tvariant row -> (
+        match Typed_types.row_name row with
+        | Some (path, args) -> name_of_path path :: List.concat_map constrs args
+        | None -> [])
+    | _ -> []
+
+  let is_constr ct ~path =
+    match constr ct with
+    | Some (name, _) -> Name.equals_path name path
+    | None -> false
+
+  let is_predef ct path =
+    match constr_path ct with
+    | Some actual -> Typed_path.same actual path
+    | None -> false
+
+  let is_unit ct =
+    is_predef ct Typed_predef.path_unit
+    || is_constr ct ~path:[ "Stdlib"; "unit" ]
+
+  let is_bool ct =
+    is_predef ct Typed_predef.path_bool
+    || is_constr ct ~path:[ "Stdlib"; "bool" ]
+
+  let is_string ct =
+    is_predef ct Typed_predef.path_string
+    || is_constr ct ~path:[ "Stdlib"; "string" ]
+
+  let is_list ct ~elem =
+    match (constr_path ct, constr ct) with
+    | Some path, Some (_, [ arg ])
+      when Typed_path.same path Typed_predef.path_list ->
+        elem arg
+    | _, Some (name, [ arg ]) ->
+        Name.equals_path name [ "Stdlib"; "list" ] && elem arg
+    | _ -> false
 
   let rec return_type (ct : t) : t option =
-    match ct.ptyp_desc with
-    | Ptyp_arrow (_, _, ret) -> return_type ret
+    match Typed_types.get_desc ct with
+    | Typed_types.Tarrow (_, _, ret, _) -> return_type ret
     | _ -> Some ct
 
   let rec returns_option (ct : t) =
-    match ct.ptyp_desc with
-    | Ptyp_arrow (_, _, ret) -> returns_option ret
-    | Ptyp_constr ({ txt = Lident "option"; _ }, _) -> true
+    match Typed_types.get_desc ct with
+    | Typed_types.Tarrow (_, _, ret, _) -> returns_option ret
+    | Typed_types.Tconstr (path, _, _) ->
+        Typed_path.same path Typed_predef.path_option
+        || name_of_path path |> fun n ->
+           Name.equals_path n [ "Stdlib"; "option" ]
     | _ -> false
 
   let count_unlabelled (ct : t) ~match_ =
     let rec aux acc (ct : t) =
-      match ct.ptyp_desc with
-      | Ptyp_arrow (Nolabel, dom, rest) ->
+      match Typed_types.get_desc ct with
+      | Typed_types.Tarrow (Asttypes.Nolabel, dom, rest, _) ->
           let acc = if match_ dom then acc + 1 else acc in
           aux acc rest
-      | Ptyp_arrow (_, _, rest) -> aux acc rest
+      | Typed_types.Tarrow (_, _, rest, _) -> aux acc rest
       | _ -> acc
     in
     aux 0 ct
 
-  let pp ppf ct =
-    Compiler_pprintast.core_type Format.str_formatter ct;
+  let pp ppf (ct : t) =
+    Ocaml_typing.Printtyp.type_expr Format.str_formatter ct;
     Fmt.string ppf (Format.flush_str_formatter ())
 end
 
@@ -559,37 +843,28 @@ module Item = struct
     | Constructor
     | Exception
     | Field
-    | Method
-    | Label
 
-  type t = { item : Outline.item; filename : string }
+  type t = { item : file_item; filename : string }
 
-  let kind_of_outline : Outline.kind -> kind = function
-    | Value -> Value
-    | Type -> Type
-    | Module -> Module
-    | Module_type -> Module_type
-    | Class -> Class
-    | Class_type -> Class_type
-    | Constructor -> Constructor
-    | Exception -> Exception
-    | Field -> Field
-    | Method -> Method
-    | Label -> Label
+  let kind_of_item = function
+    | Item_value -> Value
+    | Item_type -> Type
+    | Item_module -> Module
+    | Item_module_type -> Module_type
+    | Item_class -> Class
+    | Item_class_type -> Class_type
+    | Item_constructor -> Constructor
+    | Item_exception -> Exception
+    | Item_field -> Field
 
-  let name (t : t) = t.item.name
-  let kind (t : t) = kind_of_outline t.item.kind
-  let deprecated (t : t) = t.item.deprecated
-
-  let loc (t : t) =
-    let loc = t.item.location in
-    Merlin.Location.v ~file:t.filename ~start_line:loc.start.line
-      ~start_col:loc.start.col ~end_line:loc.end_.line ~end_col:loc.end_.col
-
-  let type_sig (t : t) = Outline.parsed_type t.item
+  let name (t : t) = t.item.item_name
+  let kind (t : t) = kind_of_item t.item.item_kind
+  let deprecated (t : t) = t.item.item_deprecated
+  let loc (t : t) = Loc.of_typed ~filename:t.filename t.item.item_loc
+  let type_sig (t : t) = t.item.item_type
 
   let children (t : t) =
-    List.map (fun item -> { item; filename = t.filename }) t.item.children
+    List.map (fun item -> { item; filename = t.filename }) t.item.item_children
 end
 
 (* {2 Reference} *)
@@ -617,7 +892,11 @@ end
 (* {2 Call} *)
 
 module Call = struct
-  type arg = { arg_expr : Parsetree.expression; arg_filename : string }
+  type arg = {
+    arg_callee : Merlin.Refs.name option;
+    arg_loc : Location.t;
+    arg_filename : string;
+  }
 
   type t = {
     callee : Merlin.Refs.name;
@@ -629,28 +908,30 @@ module Call = struct
   let args t = t.args
   let loc t = t.loc
 
-  let name_of_lident (lid : Longident.t) : Merlin.Refs.name =
-    let rec parts acc : Longident.t -> string list = function
-      | Lident s -> s :: acc
-      | Ldot (l, s) -> parts (s.txt :: acc) l.txt
-      | Lapply _ -> acc
-    in
-    match parts [] lid with
-    | [] -> { prefix = []; base = "" }
-    | xs ->
-        let rev = List.rev xs in
-        { prefix = List.rev (List.tl rev); base = List.hd rev }
-
   module Arg = struct
-    let loc a = Ast.merlint_of_loc ~filename:a.arg_filename a.arg_expr.pexp_loc
-    let is_call a ~path = Ast.is_apply_of path a.arg_expr
+    let loc a = Loc.of_typed ~filename:a.arg_filename a.arg_loc
+
+    let is_call a ~path =
+      match a.arg_callee with
+      | None -> false
+      | Some name -> Name.equals_path name path
   end
 end
 
-(* {2 Top-level accessors over Outline / Dump} *)
+(* {2 Top-level accessors} *)
 
 let items t =
-  List.map (fun item -> { Item.item; filename = t.filename }) (outline t)
+  List.map
+    (fun item -> { Item.item; filename = t.filename })
+    (Lazy.force t.items)
+
+let rec flatten_items items =
+  List.concat_map (fun item -> item :: flatten_items (Item.children item)) items
+
+let all_items t = flatten_items (items t)
+
+let value_items t =
+  List.filter (fun item -> Item.kind item = Item.Value) (all_items t)
 
 let outline_refs t = (Lazy.force t.reference_outline).refs
 let outline_identifiers t = (outline_refs t).identifiers
@@ -697,17 +978,46 @@ let resolved_values t =
 let resolved_signatures t =
   Option.map (fun d -> d.refs.Merlin.Refs.value_sigs) (Lazy.force t.resolved)
 
+let referenced_module_names t = Lazy.force t.module_names
+
 let iter_applications t f =
-  match parsetree t with
-  | None -> ()
-  | Some structure ->
-      Ast.iter_apply structure (fun expr fn args ->
-          let loc = Ast.merlint_of_loc ~filename:t.filename expr.pexp_loc in
-          let args =
-            List.map
-              (fun (_lbl, e) ->
-                { Call.arg_expr = e; arg_filename = t.filename })
-              args
-          in
-          let call = { Call.callee = Call.name_of_lident fn; args; loc } in
-          f call)
+  Lazy.force t.applications
+  |> List.iter (fun { call_callee; call_loc; call_args } ->
+      let loc = Loc.of_typed ~filename:t.filename call_loc in
+      let args =
+        List.map
+          (fun { arg_callee; arg_loc } ->
+            { Call.arg_callee; arg_loc; arg_filename = t.filename })
+          call_args
+      in
+      let call = { Call.callee = call_callee; args; loc } in
+      f call)
+
+let calls_path t path =
+  let found = ref false in
+  iter_applications t (fun call ->
+      if Name.equals_path (Call.callee call) path then found := true);
+  !found
+
+let references_path t path =
+  match resolved_identifiers t with
+  | None -> false
+  | Some refs -> List.exists (fun r -> Reference.matches_path r path) refs
+
+let ends_with ~suffix path =
+  let rec drop n xs =
+    if n <= 0 then xs else match xs with [] -> [] | _ :: xs -> drop (n - 1) xs
+  in
+  let len = List.length path in
+  let suffix_len = List.length suffix in
+  len >= suffix_len && drop (len - suffix_len) path = suffix
+
+let references_suffix t suffix =
+  match resolved_identifiers t with
+  | None -> false
+  | Some refs ->
+      List.exists
+        (fun r ->
+          let name = Reference.name r in
+          ends_with ~suffix (Name.prefix name @ [ Name.base name ]))
+        refs

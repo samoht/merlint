@@ -1,7 +1,7 @@
 (** E617: Test Suite Naming Convention *)
 
 module Issue_location = Location
-open Ocaml_parsing
+module T = Ocaml_typing.Typedtree
 
 type issue_type =
   | Not_lowercase of string
@@ -28,45 +28,41 @@ let extract_expected_name filename =
   else if basename = "test.ml" then "test"
   else Filename.chop_extension basename
 
-(** Extract suite name from a [let suite = ...] binding using the AST. Handles
-    both [let suite = ("name", ...)] and [let suite = \n  ("name", ...)]. *)
-let extract_suite_name_of_expr (expr : Parsetree.expression) =
-  match expr.pexp_desc with
-  | Pexp_tuple
-      (( _,
-         {
-           pexp_desc =
-             Pexp_constant { pconst_desc = Pconst_string (name, _, _); _ };
-           _;
-         } )
-      :: _) ->
-      Some (name, expr.pexp_loc)
+(** Extract suite name from a [let suite = ...] binding using the typedtree.
+    Handles both [let suite = ("name", ...)] and
+    [let suite = \n  ("name", ...)]. *)
+let extract_suite_name_of_expr (expr : T.expression) =
+  match expr.exp_desc with
+  | Texp_tuple ((None, name_expr) :: _) ->
+      Option.map
+        (fun name -> (name, expr.exp_loc))
+        (Query.Expr.string name_expr)
   | _ -> None
 
-(** Locate the suite name from a parsed structure by looking for
+(** Locate the suite name from a typed structure by looking for
     [let suite = ("name", ...)] bindings. *)
-let suite_name structure =
-  List.find_map
-    (fun (item : Parsetree.structure_item) ->
-      match item.pstr_desc with
-      | Pstr_value
-          ( _,
-            [
-              {
-                pvb_pat = { ppat_desc = Ppat_var { txt = "suite"; _ }; _ };
-                pvb_expr;
-                _;
-              };
-            ] ) ->
-          extract_suite_name_of_expr pvb_expr
-      | _ -> None)
-    structure
+let suite_name view =
+  let found = ref None in
+  Query.iter_structure_items view (fun (item : T.structure_item) ->
+      match (item.str_desc, !found) with
+      | Tstr_value (_, bindings), None ->
+          found :=
+            List.find_map
+              (fun (vb : T.value_binding) ->
+                match Query.Pattern.var_name vb.vb_pat with
+                | Some "suite" -> extract_suite_name_of_expr vb.vb_expr
+                | _ -> None)
+              bindings
+      | _ -> ());
+  !found
 
 let suite_issue ~filename ~expected_name
-    ((suite_name, name_loc) : string * Location.t) =
+    ((suite_name, name_loc) : string * Ocaml_parsing.Location.t) =
   let loc =
-    Issue_location.v ~file:filename ~start_line:name_loc.loc_start.pos_lnum
-      ~start_col:0 ~end_line:name_loc.loc_start.pos_lnum ~end_col:80
+    Issue_location.v ~file:filename
+      ~start_line:name_loc.Ocaml_parsing.Location.loc_start.pos_lnum
+      ~start_col:0 ~end_line:name_loc.Ocaml_parsing.Location.loc_start.pos_lnum
+      ~end_col:80
   in
   if suite_name <> String.lowercase_ascii suite_name then
     Some
@@ -91,9 +87,9 @@ let is_test_module_file filename =
   let basename = Filename.basename filename in
   String.starts_with ~prefix:"test_" basename && File_kind.is_ml basename
 
-let issues_of_structure ~filename ~structure =
+let issues_of_view ~filename view =
   let expected_name = extract_expected_name filename in
-  match suite_name structure with
+  match suite_name view with
   | None -> []
   | Some found -> (
       match suite_issue ~filename ~expected_name found with
@@ -103,9 +99,7 @@ let issues_of_structure ~filename ~structure =
 let check (ctx : Context.file) =
   let filename = ctx.filename in
   if is_test_module_file filename then
-    match File_view.parsetree (Context.view ctx) with
-    | None -> []
-    | Some structure -> issues_of_structure ~filename ~structure
+    issues_of_view ~filename (Context.view ctx)
   else []
 
 let pp ppf { suite_name; issue_type } =

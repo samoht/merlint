@@ -2,27 +2,23 @@
 
 type payload = { function_name : string; bool_count : int }
 
-let is_bool (ct : Parsetree.core_type) =
-  match ct.ptyp_desc with
-  | Ptyp_constr ({ txt = Lident "bool"; _ }, []) -> true
-  | _ -> false
-
 let check ctx =
-  let outline_data = Context.outline ctx in
-  let filename = ctx.Context.filename in
   List.filter_map
-    (fun (item : Outline.item) ->
-      match item.kind with
-      | Outline.Value when Outline.is_function_type item ->
-          let bool_count = Outline.count_parameters item ~matches:is_bool in
+    (fun item ->
+      let module Item = File_view.Item in
+      match (Item.kind item, Item.type_sig item) with
+      | Item.Value, Some typ when File_view.Type_view.is_function typ ->
+          let bool_count =
+            File_view.Type_view.count_unlabelled typ
+              ~match_:File_view.Type_view.is_bool
+          in
           if bool_count >= 2 then
-            match Outline.location filename item with
-            | Some loc ->
-                Some (Issue.v ~loc { function_name = item.name; bool_count })
-            | None -> None
+            Some
+              (Issue.v ~loc:(Item.loc item)
+                 { function_name = Item.name item; bool_count })
           else None
       | _ -> None)
-    outline_data
+    (File_view.items (Context.view ctx))
 
 let pp ppf { function_name; bool_count } =
   Fmt.pf ppf

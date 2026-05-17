@@ -1,5 +1,9 @@
 Test bad example - foo/lib/foo_bar.ml has package-prefixed module name:
+Build bad fixture project:
+  $ (cd bad && dune build @check)
+
   $ merlint -B -r E522 bad/
+  Dune root: $TESTCASE_ROOT/bad/
   Running merlint analysis...
   
   Analyzing 1 files
@@ -29,10 +33,15 @@ Test bad example - foo/lib/foo_bar.ml has package-prefixed module name:
   
   Summary: ✗ 1 total issue (applied 1 rule)
   ✗ Some checks failed. See details above.
+    Run `merlint help E522` for the rule's description, hint, and good/bad examples.
   [1]
 
 Test good example - foo/lib/bar.ml has no package prefix:
+Build good fixture project:
+  $ (cd good && dune build @check)
+
   $ merlint -B -r E522 good/
+  Dune root: $TESTCASE_ROOT/good/
   Running merlint analysis...
   
   Analyzing 1 files

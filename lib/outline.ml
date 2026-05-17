@@ -1,4 +1,4 @@
-(** OCamlmerlin outline output - thin re-export over [Merlin.outline]. *)
+(** Declaration outline helpers shared by File_view and rules. *)
 
 type kind = Merlin.Outline.symbol_kind =
   | Value

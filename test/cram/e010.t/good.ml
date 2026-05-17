@@ -12,3 +12,9 @@ let process x y z =
   if x <= 0 || y <= 0 || z <= 0 then 0
   else if x >= 100 then 0
   else x + y + z
+
+(* Record literals carrying inert data don't count as nesting -- only
+   records whose fields contain closures or control flow do. *)
+type point = { x : int; y : int; z : int }
+
+let translate p dx dy dz = { x = p.x + dx; y = p.y + dy; z = p.z + dz }

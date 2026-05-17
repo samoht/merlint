@@ -1,12 +1,9 @@
 (** E200: Outdated Str Module *)
 
-(* Match the fully-resolved Stdlib.Str prefix. Requires typedtree; on
-   parsetree fallback we can't tell a local [Str] module from the real
-   one, so skip rather than guess. *)
-let from_stdlib_str ident =
-  match File_view.Reference.prefix ident with
-  | "Stdlib" :: "Str" :: _ -> true
-  | _ -> false
+(* Match the resolved [Str] library module. This is not under [Stdlib]; a local
+   shadow module resolves to its defining module path instead. *)
+let from_str_library ident =
+  match File_view.Reference.prefix ident with "Str" :: _ -> true | _ -> false
 
 let check (ctx : Context.file) =
   match File_view.resolved_identifiers (Context.view ctx) with
@@ -14,7 +11,7 @@ let check (ctx : Context.file) =
   | Some identifiers ->
       List.filter_map
         (fun ident ->
-          if not (from_stdlib_str ident) then None
+          if not (from_str_library ident) then None
           else
             match File_view.Reference.loc ident with
             | Some loc -> Some (Issue.v ~loc ())

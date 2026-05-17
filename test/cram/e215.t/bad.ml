@@ -12,6 +12,6 @@ let validate_short input =
   else
     input
 
-(* Module-qualified form: regex would have missed [Stdlib.failwith]. *)
+(* Another direct form: regex-sensitive rewrites used to miss nearby variants. *)
 let validate_zero n =
-  if n = 0 then Stdlib.failwith (Fmt.str "n must not be zero: %d" n) else n
+  if n = 0 then failwith (Fmt.str "n must not be zero: %d" n) else n

@@ -2,7 +2,11 @@ Bad examples: a single-stanza dune with an explicit (modules ...) is
 redundant, and two sibling stanzas that don't cover every .ml in the
 directory silently drop files from the build:
 
+Build bad fixture project:
+  $ (cd bad && dune build @check)
+
   $ merlint -B -r E523 bad/
+  Dune root: $TESTCASE_ROOT/bad/
   Running merlint analysis...
   
   Analyzing 4 files
@@ -34,6 +38,7 @@ directory silently drop files from the build:
   
   Summary: ✗ 2 total issues (applied 1 rule)
   ✗ Some checks failed. See details above.
+    Run `merlint help E523` for the rule's description, hint, and good/bad examples.
   [1]
 
 
@@ -46,7 +51,11 @@ the source directory: select branches, generate_sites_module, rule targets,
 ocamllex, copy_files, and include_subdirs (which suppresses the rule
 because subdirectory modules merge into the stanza):
 
+Build good fixture project:
+  $ (cd good && dune build @check)
+
   $ merlint -B -r E523 good/
+  Dune root: $TESTCASE_ROOT/good/
   Running merlint analysis...
   
   Analyzing 14 files

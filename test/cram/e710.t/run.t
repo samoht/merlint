@@ -1,5 +1,9 @@
 Test bad example - fuzz_missing.ml has no corresponding library module:
+Build bad fixture project:
+  $ (cd bad && dune build @check)
+
   $ merlint -B -r E710 bad/
+  Dune root: $TESTCASE_ROOT/bad/
   Running merlint analysis...
   
   Analyzing 3 files
@@ -27,10 +31,15 @@ Test bad example - fuzz_missing.ml has no corresponding library module:
   
   Summary: ✗ 1 total issue (applied 1 rule)
   ✗ Some checks failed. See details above.
+    Run `merlint help E710` for the rule's description, hint, and good/bad examples.
   [1]
 
 Test good example - fuzz_parser.ml has corresponding parser.ml:
+Build good fixture project:
+  $ (cd good && dune build @check)
+
   $ merlint -B -r E710 good/
+  Dune root: $TESTCASE_ROOT/good/
   Running merlint analysis...
   
   Analyzing 3 files

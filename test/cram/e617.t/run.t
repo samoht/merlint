@@ -1,5 +1,9 @@
+Build fixture project:
+  $ dune build @check
+
 Test bad examples - should find naming issues:
   $ merlint -B -r E617 test_bad.ml
+  Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
   Analyzing 1 files
@@ -28,9 +32,11 @@ Test bad examples - should find naming issues:
   
   Summary: ✗ 1 total issue (applied 1 rule)
   ✗ Some checks failed. See details above.
+    Run `merlint help E617` for the rule's description, hint, and good/bad examples.
   [1]
 
   $ merlint -B -r E617 test_config.ml
+  Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
   Analyzing 1 files
@@ -59,9 +65,11 @@ Test bad examples - should find naming issues:
   
   Summary: ✗ 1 total issue (applied 1 rule)
   ✗ Some checks failed. See details above.
+    Run `merlint help E617` for the rule's description, hint, and good/bad examples.
   [1]
 
   $ merlint -B -r E617 test_parser.ml
+  Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
   Analyzing 1 files
@@ -90,9 +98,11 @@ Test bad examples - should find naming issues:
   
   Summary: ✗ 1 total issue (applied 1 rule)
   ✗ Some checks failed. See details above.
+    Run `merlint help E617` for the rule's description, hint, and good/bad examples.
   [1]
 
   $ merlint -B -r E617 test_user_auth.ml  
+  Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
   Analyzing 1 files
@@ -121,10 +131,12 @@ Test bad examples - should find naming issues:
   
   Summary: ✗ 1 total issue (applied 1 rule)
   ✗ Some checks failed. See details above.
+    Run `merlint help E617` for the rule's description, hint, and good/bad examples.
   [1]
 
 Test multi-line suite definition:
   $ merlint -B -r E617 test_multiline.ml
+  Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
   Analyzing 1 files
@@ -153,10 +165,12 @@ Test multi-line suite definition:
   
   Summary: ✗ 1 total issue (applied 1 rule)
   ✗ Some checks failed. See details above.
+    Run `merlint help E617` for the rule's description, hint, and good/bad examples.
   [1]
 
 Test good examples - should find no issues:
   $ merlint -B -r E617 good/test_config.ml good/test_parser.ml good/test_user_auth.ml
+  Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
   Analyzing 3 files

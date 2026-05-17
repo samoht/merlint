@@ -1,3 +1,4 @@
 (library
  (name test_e200)
- (libraries str re))
+ (libraries str re)
+ (flags :standard -warn-error -a))

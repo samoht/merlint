@@ -1,3 +1,5 @@
 (library
  (name test_e335)
-)
+ (libraries fmt alcotest compiler-libs.common unix str re logs)
+
+ (flags :standard -warn-error -a))

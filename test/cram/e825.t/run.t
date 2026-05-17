@@ -1,8 +1,12 @@
 Test bad example - CSV traces but no csv lib in dune:
+Build bad fixture project:
+  $ (cd bad && dune build @check)
+
   $ merlint -B -r E825 bad/
+  Dune root: $TESTCASE_ROOT/bad/
   Running merlint analysis...
   
-  Analyzing 0 files
+  Analyzing 1 files
   
   ✓ Code Quality (0 total issues)
   ✓ Code Style (0 total issues)
@@ -26,13 +30,18 @@ Test bad example - CSV traces but no csv lib in dune:
   
   Summary: ✗ 1 total issue (applied 1 rule)
   ✗ Some checks failed. See details above.
+    Run `merlint help E825` for the rule's description, hint, and good/bad examples.
   [1]
 
 Test good example - CSV traces with csv lib in dune:
+Build good fixture project:
+  $ (cd good && dune build @check)
+
   $ merlint -B -r E825 good/
+  Dune root: $TESTCASE_ROOT/good/
   Running merlint analysis...
   
-  Analyzing 0 files
+  Analyzing 2 files
   
   ✓ Code Quality (0 total issues)
   ✓ Code Style (0 total issues)

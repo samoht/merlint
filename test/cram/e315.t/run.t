@@ -1,5 +1,9 @@
+Build fixture project:
+  $ dune build @check
+
 Test bad example - should find bad type naming:
   $ merlint -B -r E315 bad.ml
+  Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
   Analyzing 1 files
@@ -11,7 +15,7 @@ Test bad example - should find bad type naming:
     Type names should use snake_case. The primary type in a module should be named
     t, and identifiers should be id. This convention helps maintain consistency
     across the codebase.
-    - bad.ml:1:0: Type name 'userProfile' should use snake_case: 'user_profile'
+    - bad.ml:1:5: Type name 'userProfile' should use snake_case: 'user_profile'
   ✓ Documentation (0 total issues)
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
@@ -27,10 +31,12 @@ Test bad example - should find bad type naming:
   
   Summary: ✗ 1 total issue (applied 1 rule)
   ✗ Some checks failed. See details above.
+    Run `merlint help E315` for the rule's description, hint, and good/bad examples.
   [1]
 
 Test good example - should find no issues:
   $ merlint -B -r E315 good.ml
+  Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
   Analyzing 1 files

@@ -21,5 +21,6 @@ let chain n = n |> Fmt.str "%a" pp_int |> String.length
    string and cannot be wrapped as [Fmt.kstr op "..."]. The rule should
    NOT flag these. *)
 let ( % ) cmd s = cmd ^ " " ^ s
+let ( ++ ) cmd s = cmd ^ " " ^ s
 let cmd1 base name = base % Fmt.str "name=%s" name
-let cmd2 base region = base ^^ Fmt.str "region=%s" region
+let cmd2 base region = base ++ Fmt.str "region=%s" region

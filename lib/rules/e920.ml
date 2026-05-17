@@ -20,7 +20,7 @@ let md_ocaml_re =
 let odoc_block_re = Re.compile (Re.str "{[")
 
 let content ctx path =
-  try Some (File_view.content (Context.file_view ctx path))
+  try Some (Context.file_content ctx path)
   with Sys_error _ | File_view.Analysis_error _ -> None
 
 let has_ocaml_code ctx path =
@@ -64,13 +64,14 @@ let rec dune_files dir =
   let entries = try Sys.readdir dir |> Array.to_list with Sys_error _ -> [] in
   List.concat_map
     (fun entry ->
-      if String.length entry > 0 && (entry.[0] = '.' || entry.[0] = '_') then []
-      else
-        let path = Filename.concat dir entry in
-        let is_dir = try Sys.is_directory path with Sys_error _ -> false in
-        if entry = "dune" && not is_dir then [ path ]
-        else if is_dir then dune_files path
-        else [])
+      let path = Filename.concat dir entry in
+      let is_dir = try Sys.is_directory path with Sys_error _ -> false in
+      if entry = "dune" && not is_dir then [ path ]
+      else if
+        is_dir
+        && not (Dune_describe.skippable_subdir ~parent_dir:(Fpath.v dir) entry)
+      then dune_files path
+      else [])
     entries
 
 let check (ctx : Context.project) =

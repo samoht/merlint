@@ -1,5 +1,9 @@
 Test bad example - foo/test/interop/oracle/ has no traces/ dir:
+Build bad fixture project:
+  $ (cd bad && dune build @check)
+
   $ merlint -B -r E802 bad/
+  Dune root: $TESTCASE_ROOT/bad/
   Running merlint analysis...
   
   Analyzing 0 files
@@ -27,10 +31,15 @@ Test bad example - foo/test/interop/oracle/ has no traces/ dir:
   
   Summary: ✗ 1 total issue (applied 1 rule)
   ✗ Some checks failed. See details above.
+    Run `merlint help E802` for the rule's description, hint, and good/bad examples.
   [1]
 
 Test good example - foo/test/interop/oracle/ has traces/ and dune (source_tree traces):
+Build good fixture project:
+  $ (cd good && dune build @check)
+
   $ merlint -B -r E802 good/
+  Dune root: $TESTCASE_ROOT/good/
   Running merlint analysis...
   
   Analyzing 0 files

@@ -22,9 +22,7 @@ let is_dir p = try Sys.is_directory p with Sys_error _ -> false
 
 let modules_explicitly_claimed ctx dune_path =
   try
-    match
-      File_view.content (Context.file_view ctx dune_path) |> Dune.File.of_string
-    with
+    match Context.file_content ctx dune_path |> Dune.File.of_string with
     | Ok file -> Dune.File.explicitly_claimed_modules file
     | Error _ -> []
   with File_view.Analysis_error _ -> []

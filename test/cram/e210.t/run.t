@@ -1,5 +1,9 @@
+Build fixture project:
+  $ dune build @check
+
 Test bad example - should find double underscore patterns:
   $ merlint -B -r E210 bad.ml
+  Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
   Analyzing 1 files
@@ -10,8 +14,8 @@ Test bad example - should find double underscore patterns:
     Avoid using double underscore module access like 'Module__Submodule'. Use dot
     notation 'Module.Submodule' instead. Double underscore notation is internal to
     the OCaml module system and should not be used in application code.
-    - bad.ml:1:15: Use 'Printf.sprintf.sprintf' instead of 'Printf__sprintf.sprintf' - avoid double underscore module access
-    - bad.ml:2:15: Use 'String.length.length' instead of 'String__length.length' - avoid double underscore module access
+    - bad.ml:1:15: Use 'Printf.sprintf' instead of 'Printf__sprintf.sprintf' - avoid double underscore module access
+    - bad.ml:2:15: Use 'String.length' instead of 'String__length.length' - avoid double underscore module access
   ✓ Naming Conventions (0 total issues)
   ✓ Documentation (0 total issues)
   ✓ Project Structure (0 total issues)
@@ -28,10 +32,12 @@ Test bad example - should find double underscore patterns:
   
   Summary: ✗ 2 total issues (applied 1 rule)
   ✗ Some checks failed. See details above.
+    Run `merlint help E210` for the rule's description, hint, and good/bad examples.
   [1]
 
 Test good example - should find no issues:
   $ merlint -B -r E210 good.ml
+  Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
   Analyzing 1 files

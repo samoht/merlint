@@ -1,5 +1,9 @@
+Build fixture project:
+  $ dune build @check
+
 Test bad example - should find fail (Fmt.str) patterns:
   $ merlint -B -r E616 test_bad.ml
+  Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
   Analyzing 1 files
@@ -31,10 +35,12 @@ Test bad example - should find fail (Fmt.str) patterns:
   
   Summary: ✗ 5 total issues (applied 1 rule)
   ✗ Some checks failed. See details above.
+    Run `merlint help E616` for the rule's description, hint, and good/bad examples.
   [1]
 
 Test good example - should find no issues:
   $ merlint -B -r E616 test_good.ml
+  Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
   Analyzing 1 files

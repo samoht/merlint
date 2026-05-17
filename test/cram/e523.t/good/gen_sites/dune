@@ -1,9 +1,13 @@
 (library
  (name gs_a)
- (modules main_a site_mod)
- (generate_sites_module
-  (module site_mod)
-  (sites mypkg)))
+ (modules main_a site_mod))
+
+(rule
+ (target site_mod.ml)
+ (action
+  (with-stdout-to
+   %{target}
+   (echo "let sites = []\n"))))
 
 (library
  (name gs_b)

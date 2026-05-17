@@ -15,7 +15,7 @@ let validate_id id =
       (Fmt.str "Invalid id: %d" id)
   else id
 
-(* Module-qualified form: regex would have missed [Stdlib.invalid_arg]. *)
+(* Another direct form: regex-sensitive rewrites used to miss nearby variants. *)
 let validate_size n =
-  if n < 0 then Stdlib.invalid_arg (Fmt.str "Size must be non-negative: %d" n)
+  if n < 0 then invalid_arg (Fmt.str "Size must be non-negative: %d" n)
   else n

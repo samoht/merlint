@@ -1,1 +1,2 @@
-(* This should be named test_bad.ml to be a proper test file *)
+let tests = []
+let suite = ("BadName", tests)

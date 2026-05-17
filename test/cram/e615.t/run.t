@@ -1,6 +1,10 @@
 
 Test bad example - should find test suite not included:
+Build bad fixture project:
+  $ (cd bad && dune build @check)
+
   $ merlint -B -r E615 bad/
+  Dune root: $TESTCASE_ROOT/bad/
   Running merlint analysis...
   
   Analyzing 2 files
@@ -31,7 +35,11 @@ Test bad example - should find test suite not included:
   [1]
 
 Test good example - should find no issues:
+Build good fixture project:
+  $ (cd good && dune build @check)
+
   $ merlint -B -r E615 good/
+  Dune root: $TESTCASE_ROOT/good/
   Running merlint analysis...
   
   Analyzing 2 files

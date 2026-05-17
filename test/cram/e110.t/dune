@@ -1,3 +1,6 @@
 (library
  (name test_e110)
-)
+ (libraries fmt alcotest compiler-libs.common unix str re logs)
+ (modules bad good)
+
+ (flags :standard -warn-error -a))

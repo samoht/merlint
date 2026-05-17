@@ -33,7 +33,7 @@ let is_virtual_impl ctx ml_file =
   let dir = Filename.dirname ml_file in
   let dune_path = Filename.concat dir "dune" in
   try
-    let content = File_view.content (Context.file_view ctx dune_path) in
+    let content = Context.file_content ctx dune_path in
     match Dune.File.of_string content with
     | Error _ -> false
     | Ok dune ->
@@ -57,7 +57,7 @@ let check_file ctx ~files ~executable_modules ~test_modules ml_file =
   else missing_mli_issue files ml_file
 
 let check (ctx : Context.project) =
-  let files = Context.all_files ctx in
+  let files = Context.files_to_analyze ctx in
   let executable_modules = Context.executable_modules ctx in
   let test_modules = Context.test_modules ctx in
   List.filter_map

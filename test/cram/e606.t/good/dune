@@ -3,5 +3,6 @@
  (modules parser))
 
 (test
- (name test)
- (modules test_parser))
+ (name test_parser)
+ (modules test_parser)
+ (libraries mylib))

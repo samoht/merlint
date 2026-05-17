@@ -1,5 +1,9 @@
+Build fixture project:
+  $ dune build @check
+
 Test bad example - should flag a printer not named pp / pp_<type>:
-  $ merlint -B -r E336 bad.ml
+  $ merlint -B -r E336 bad.mli
+  Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
   Analyzing 1 files
@@ -12,7 +16,7 @@ Test bad example - should flag a printer not named pp / pp_<type>:
     unit] — follow a fixed naming convention: [pp] when the value type is the
     module's main type [t], and [pp_<type>] otherwise. The convention matches
     [Fmt.pp_print_*] and [Format.pp_print_*] in the stdlib.
-    - bad.ml:5:0: Pretty-printer 'print' should be named 'pp_print' (functions of type [_ Fmt.t] or [Format.formatter -> _ -> unit] use the [pp]/[pp_<type>] convention)
+    - bad.mli:3:0: Pretty-printer 'print' should be named 'pp' (functions of type [_ Fmt.t] or [Format.formatter -> _ -> unit] use the [pp]/[pp_<type>] convention)
   ✓ Documentation (0 total issues)
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
@@ -28,12 +32,14 @@ Test bad example - should flag a printer not named pp / pp_<type>:
   
   Summary: ✗ 1 total issue (applied 1 rule)
   ✗ Some checks failed. See details above.
+    Run `merlint help E336` for the rule's description, hint, and good/bad examples.
   [1]
 
 
 
 Test good example - should find no issues:
   $ merlint -B -r E336 good.ml
+  Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
   Analyzing 1 files

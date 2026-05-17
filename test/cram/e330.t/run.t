@@ -1,5 +1,9 @@
 Test bad example - should find redundant module name:
+Build bad fixture project:
+  $ (cd bad && dune build @check)
+
   $ merlint -B -r E330 bad/process.ml
+  Dune root: $TESTCASE_ROOT/bad
   Running merlint analysis...
   
   Analyzing 1 files
@@ -29,10 +33,15 @@ Test bad example - should find redundant module name:
   
   Summary: ✗ 3 total issues (applied 1 rule)
   ✗ Some checks failed. See details above.
+    Run `merlint help E330` for the rule's description, hint, and good/bad examples.
   [1]
 
 Test good example - should find no issues:
+Build good fixture project:
+  $ (cd good && dune build @check)
+
   $ merlint -B -r E330 good/process.ml
+  Dune root: $TESTCASE_ROOT/good
   Running merlint analysis...
   
   Analyzing 1 files
@@ -51,6 +60,7 @@ Test good example - should find no issues:
 
 Test pp module - pp function should be allowed:
   $ merlint -B -r E330 good/pp.ml
+  Dune root: $TESTCASE_ROOT/good
   Running merlint analysis...
   
   Analyzing 1 files
@@ -69,6 +79,7 @@ Test pp module - pp function should be allowed:
 
 Test test functions - test_* functions in test_*.ml files should be allowed:
   $ merlint -B -r E330 good/test_example.ml
+  Dune root: $TESTCASE_ROOT/good
   Running merlint analysis...
   
   Analyzing 1 files

@@ -1,5 +1,9 @@
+Build fixture project:
+  $ dune build @check
+
 Test bad example - flags useless and-bindings while sparing genuine mutual recursion:
   $ merlint -B -r E219 bad.ml
+  Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
   Analyzing 1 files
@@ -33,10 +37,12 @@ Test bad example - flags useless and-bindings while sparing genuine mutual recur
   
   Summary: ✗ 4 total issues (applied 1 rule)
   ✗ Some checks failed. See details above.
+    Run `merlint help E219` for the rule's description, hint, and good/bad examples.
   [1]
 
 Test good example - no flags after linearisation:
   $ merlint -B -r E219 good.ml
+  Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
   Analyzing 1 files

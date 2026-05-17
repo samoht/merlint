@@ -1,8 +1,12 @@
 Test bad example - test.ml calls Sys.command:
+Build bad fixture project:
+  $ (cd bad && dune build @check)
+
   $ merlint -B -r E803 bad/
+  Dune root: $TESTCASE_ROOT/bad/
   Running merlint analysis...
   
-  Analyzing 0 files
+  Analyzing 1 files
   
   ✓ Code Quality (0 total issues)
   ✓ Code Style (0 total issues)
@@ -15,7 +19,7 @@ Test bad example - test.ml calls Sys.command:
     Interop tests must run from committed traces without needing the external tool
     at test time. The test.ml should only read trace files, never shell out to run
     the oracle. If you need the oracle, put it in the generator script.
-    - bad/foo/test/interop/oracle/test.ml:1:0: Interop test bad/foo/test/interop/oracle/test.ml calls Sys.command — test must run from traces alone
+    - bad/foo/test/interop/oracle/test.ml:1:16: Interop test bad/foo/test/interop/oracle/test.ml calls Sys.command — test must run from traces alone
   ✓ Code Generation (0 total issues)
   
   ╭─────────────────┬───────────────────────────────────────────╮
@@ -31,10 +35,14 @@ Test bad example - test.ml calls Sys.command:
   [1]
 
 Test good example - test.ml only reads trace files:
+Build good fixture project:
+  $ (cd good && dune build @check)
+
   $ merlint -B -r E803 good/
+  Dune root: $TESTCASE_ROOT/good/
   Running merlint analysis...
   
-  Analyzing 0 files
+  Analyzing 1 files
   
   ✓ Code Quality (0 total issues)
   ✓ Code Style (0 total issues)

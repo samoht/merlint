@@ -1,5 +1,9 @@
 Test bad example - fuzz_parser not included in fuzz.ml:
+Build bad fixture project:
+  $ (cd bad && dune build @check)
+
   $ merlint -B -r E715 bad/
+  Dune root: $TESTCASE_ROOT/bad/
   Running merlint analysis...
   
   Analyzing 3 files
@@ -30,7 +34,11 @@ Test bad example - fuzz_parser not included in fuzz.ml:
   [1]
 
 Test good example - all fuzz modules included:
+Build good fixture project:
+  $ (cd good && dune build @check)
+
   $ merlint -B -r E715 good/
+  Dune root: $TESTCASE_ROOT/good/
   Running merlint analysis...
   
   Analyzing 3 files

@@ -1,5 +1,9 @@
 Test bad example - library and test in same directory:
+Build bad fixture project:
+  $ (cd bad && dune build @check)
+
   $ merlint -B -r E515 bad/
+  Dune root: $TESTCASE_ROOT/bad/
   Running merlint analysis...
   
   Analyzing 2 files
@@ -27,6 +31,7 @@ Test bad example - library and test in same directory:
   
   Summary: ✗ 1 total issue (applied 1 rule)
   ✗ Some checks failed. See details above.
+    Run `merlint help E515` for the rule's description, hint, and good/bad examples.
   [1]
 
 
@@ -35,7 +40,11 @@ Test bad example - library and test in same directory:
 
 
 Test good example - library and test in separate directories:
+Build good fixture project:
+  $ (cd good && dune build @check)
+
   $ merlint -B -r E515 good/
+  Dune root: $TESTCASE_ROOT/good/
   Running merlint analysis...
   
   Analyzing 2 files

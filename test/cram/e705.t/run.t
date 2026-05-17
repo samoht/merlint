@@ -1,5 +1,9 @@
 Test bad example - missing fuzz .mli file:
+Build bad fixture project:
+  $ (cd bad && dune build @check)
+
   $ merlint -B -r E705 bad/
+  Dune root: $TESTCASE_ROOT/bad/
   Running merlint analysis...
   
   Analyzing 3 files
@@ -27,10 +31,15 @@ Test bad example - missing fuzz .mli file:
   
   Summary: ✗ 1 total issue (applied 1 rule)
   ✗ Some checks failed. See details above.
+    Run `merlint help E705` for the rule's description, hint, and good/bad examples.
   [1]
 
 Test good example - fuzz .mli file present with correct type:
+Build good fixture project:
+  $ (cd good && dune build @check)
+
   $ merlint -B -r E705 good/
+  Dune root: $TESTCASE_ROOT/good/
   Running merlint analysis...
   
   Analyzing 4 files

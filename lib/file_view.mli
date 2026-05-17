@@ -1,53 +1,26 @@
 (** Unified per-file view for rules.
 
-    Hides the underlying sources — native Merlin typedtree, compiler-libs
-    parsetree, and raw bytes — behind a single API rules call into. A file can
-    be observed at multiple levels of richness; each accessor commits to one
-    level and is explicit when that level is unavailable.
-
-    Two name-resolution levels are surfaced separately. They are NOT
-    interchangeable:
-
-    - {b Typedtree} (resolved): identifiers carry their fully-qualified
-      [Path.t]. [Stdlib.Printf.printf], [Cmdliner.Cmd.v], a user's shadowing
-      local [Fmt] all show up at their resolved paths. Rules that ask "is this
-      the real [Stdlib.X]?" need this level.
-    - {b Parsetree} (as-written): identifiers appear exactly as the user typed
-      them. [Printf.printf] in source stays [Printf.printf] regardless of
-      resolution; a user with a local [Printf] module is indistinguishable from
-      the stdlib. Rules that lint surface syntax / convention need this level.
-
-    Resolved accessors return [None] when only parsetree is available. The
-    outline accessors prefer typedtree data and degrade to parsetree data. *)
+    File_view is typedtree-backed. The engine supplies a lazy [.cmt]/[.cmti]
+    load, and all rule-facing derived data is memoized from that typedtree. If
+    no typedtree is available, typedtree-derived accessors return [None] or an
+    empty collection rather than parsing source. *)
 
 exception Analysis_error of string
 (** Raised by the lazy accessors when the underlying source cannot be read (file
     I/O failure, Merlin error, ...). *)
 
-open Ocaml_parsing
-
 type t
 
 val v :
   filename:string ->
-  load_content:(unit -> string) ->
-  ?typedtree:(unit -> (Merlin.typedtree option, string) result) ->
-  ?parsetree:(unit -> (Parsetree.structure option, string) result) ->
-  ?signature:(unit -> (Parsetree.signature option, string) result) ->
-  outline:(unit -> (Outline.t, string) result) ->
+  typedtree:(unit -> (Merlin.typedtree option, string) result) ->
   unit ->
   t
-(** [v ~filename ~load_content ?typedtree ?parsetree ?signature ~outline ()]
-    builds a fresh view over [filename]. The [load_content] / [typedtree] /
-    [parsetree] / [signature] / [outline] thunks are called on first access and
-    never twice. When [parsetree] is omitted, the view falls back to parsing
-    [load_content] directly. *)
+(** [v ~filename ~typedtree ()] builds a fresh view over [filename]. The
+    [typedtree] thunk is called on first access and never twice. *)
 
 val filename : t -> string
 (** [filename t] is the source file this view describes. *)
-
-val content : t -> string
-(** [content t] is the raw bytes of the file. *)
 
 val is_resolved : t -> bool
 (** [is_resolved t] is [true] iff the AST dump came back at typedtree level.
@@ -83,8 +56,33 @@ end
 module Type_view : sig
   type t
 
+  val arrow : t -> (Ocaml_parsing.Asttypes.arg_label * t * t) option
+  (** [arrow t] returns the top-level arrow shape, if any. *)
+
   val is_function : t -> bool
   (** [is_function t] is [true] when [t] is an arrow type. *)
+
+  val is_variable : t -> bool
+  (** [is_variable t] is [true] for unresolved/inferred type variables. *)
+
+  val tuple : t -> t list option
+  (** [tuple t] returns tuple fields when [t] is a tuple type. *)
+
+  val constr : t -> (Name.t * t list) option
+  (** [constr t] returns the resolved constructor path and arguments when [t] is
+      a named type constructor. *)
+
+  val constrs : t -> Name.t list
+  (** [constrs t] returns every named type constructor reachable from [t],
+      including nested type arguments. *)
+
+  val is_constr : t -> path:string list -> bool
+  (** [is_constr t ~path] checks whether [t] is exactly constructor [path]. *)
+
+  val is_unit : t -> bool
+  val is_bool : t -> bool
+  val is_string : t -> bool
+  val is_list : t -> elem:(t -> bool) -> bool
 
   val returns_option : t -> bool
   (** [returns_option t] is [true] when [t]'s final return position is
@@ -114,8 +112,6 @@ module Item : sig
     | Constructor
     | Exception
     | Field
-    | Method
-    | Label
 
   type t
 
@@ -177,12 +173,7 @@ module Value_sig : sig
   *)
 end
 
-(** {2 Function-application sites — parsetree-level syntactic walk}
-
-    [iter_applications] always works (it parses the source directly); it
-    surfaces syntax exactly as written and is the right primitive for
-    style/convention rules. Rules that need resolved callees should use the
-    resolved accessors below instead. *)
+(** {2 Function-application sites — typedtree walk} *)
 module Call : sig
   type t
   type arg
@@ -213,12 +204,17 @@ end
 val items : t -> Item.t list
 (** [items t] is the file's top-level outline. *)
 
-(** {3 Resolved (typedtree) — [None] when only parsetree is available}
+val all_items : t -> Item.t list
+(** [all_items t] returns top-level and nested outline items. *)
+
+val value_items : t -> Item.t list
+(** [value_items t] returns all value declarations from {!all_items}. *)
+
+(** {3 Resolved typedtree accessors}
 
     These return fully-qualified, resolution-correct names. A rule that matches
     by path uses these; if it gets [None], it should skip the file rather than
-    fall back to unresolved names. The engine reports every file where resolved
-    info was missing, so silent misses are impossible. *)
+    fall back to unresolved names. *)
 
 val resolved_identifiers : t -> Reference.t list option
 (** Every value identifier use-site, fully resolved. *)
@@ -244,74 +240,61 @@ val resolved_values : t -> Reference.t list option
 val resolved_signatures : t -> Value_sig.t list option
 (** Value-signature declarations in an interface source, resolved. *)
 
-(** {3 Parsetree-level — for syntactic rules}
-
-    These walk the source as written, before resolution. Use them for rules
-    whose intent is "did the user type X.y here?" (style / convention rules). *)
+val referenced_module_names : t -> string list
+(** Capitalized module path components seen in the shared typedtree reference
+    outline. *)
 
 val iter_applications : t -> (Call.t -> unit) -> unit
 (** [iter_applications t f] applies [f] to every [Pexp_apply] site whose callee
     is a path identifier. *)
 
+val calls_path : t -> string list -> bool
+(** [calls_path t path] is [true] when [t] contains a call to resolved [path].
+*)
+
+val references_path : t -> string list -> bool
+(** [references_path t path] is [true] when [t] contains a value reference to
+    resolved [path]. *)
+
+val references_suffix : t -> string list -> bool
+(** [references_suffix t suffix] is [true] when [t] contains a value reference
+    whose resolved path ends in [suffix]. *)
+
 val outline_identifiers : t -> Reference.t list
-(** Value identifier use-sites from the typedtree outline, or from the parsetree
-    outline when typedtree is unavailable. *)
+(** Value identifier use-sites from the typedtree outline. *)
 
 val outline_patterns : t -> Reference.t list
-(** Value-binding pattern names from the typedtree outline, or from the
-    parsetree outline when typedtree is unavailable. *)
+(** Value-binding pattern names from the typedtree outline. *)
 
 val outline_variants : t -> Reference.t list
-(** Variant constructor declarations and use-sites from the typedtree outline,
-    or from the parsetree outline when typedtree is unavailable. *)
+(** Variant constructor declarations and use-sites from the typedtree outline.
+*)
 
 val outline_variant_definitions : t -> Reference.t list
-(** Variant constructor declarations only, from the typedtree outline, or from
-    the parsetree outline when typedtree is unavailable. *)
+(** Variant constructor declarations only, from the typedtree outline. *)
 
 val outline_modules : t -> Reference.t list
-(** Module declarations and references from the typedtree outline, or from the
-    parsetree outline when typedtree is unavailable. *)
+(** Module declarations and references from the typedtree outline. *)
 
 val outline_module_definitions : t -> Reference.t list
-(** Module declarations only, from the typedtree outline, or from the parsetree
-    outline when typedtree is unavailable. *)
+(** Module declarations only, from the typedtree outline. *)
 
 val outline_types : t -> Reference.t list
-(** Type declarations from the typedtree outline, or from the parsetree outline
-    when typedtree is unavailable. *)
+(** Type declarations from the typedtree outline. *)
 
 val outline_type_definitions : t -> Reference.t list
-(** Type declarations only, from the typedtree outline, or from the parsetree
-    outline when typedtree is unavailable. *)
+(** Type declarations only, from the typedtree outline. *)
 
 val outline_exceptions : t -> Reference.t list
-(** Exception declarations from the typedtree outline, or from the parsetree
-    outline when typedtree is unavailable. *)
+(** Exception declarations from the typedtree outline. *)
 
 val outline_values : t -> Reference.t list
-(** Value definitions from the typedtree outline, or from the parsetree outline
-    when typedtree is unavailable. *)
-
-(** {2 Legacy accessors — to be removed once all rules migrate} *)
-
-val parsetree : t -> Parsetree.structure option
-(** [parsetree t] is the compiler-libs parsetree of the file, when available. *)
-
-val signature : t -> Parsetree.signature option
-(** [signature t] is the interface parsetree of the file when a fresh typedtree
-    made it available. *)
+(** Value definitions from the typedtree outline. *)
 
 val typedtree : t -> Merlin.typedtree option
 (** [typedtree t] is the typedtree for the file, when a fresh [.cmt] made it
     available. *)
 
-val functions : t -> (string * Ast.expr) list
-(** [functions t] is the file's top-level functions, derived from the shared
-    parsetree. *)
-
-val ast : t -> Ast.t
-(** [ast t] is the control-flow AST, derived from the shared parsetree. *)
-
-val outline : t -> Outline.t
-(** [outline t] is the underlying Merlin outline; prefer {!items}. *)
+val values : t -> Function_metrics.value list
+(** [values t] is the file's top-level value bindings with typedtree-derived
+    control-flow metrics. *)

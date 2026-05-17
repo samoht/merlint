@@ -1,5 +1,9 @@
+Build fixture project:
+  $ dune build @check
+
 Test bad example - should find boolean blindness:
-  $ merlint -B -r E350 bad.ml
+  $ merlint -B -r E350 bad.mli
+  Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
   Analyzing 1 files
@@ -9,7 +13,7 @@ Test bad example - should find boolean blindness:
     Functions with multiple boolean parameters are hard to use correctly. It's
     easy to mix up the order of arguments at call sites. Consider using variant
     types, labeled arguments, or a configuration record instead.
-    - bad.ml:1:0: Function 'create_window' has 3 boolean parameters - consider using a variant type or record for clarity
+    - bad.mli:1:0: Function 'create_window' has 3 boolean parameters - consider using a variant type or record for clarity
   ✓ Code Style (0 total issues)
   ✓ Naming Conventions (0 total issues)
   ✓ Documentation (0 total issues)
@@ -27,10 +31,12 @@ Test bad example - should find boolean blindness:
   
   Summary: ✗ 1 total issue (applied 1 rule)
   ✗ Some checks failed. See details above.
+    Run `merlint help E350` for the rule's description, hint, and good/bad examples.
   [1]
 
 Test good example - should find no issues:
   $ merlint -B -r E350 good.ml
+  Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
   Analyzing 1 files

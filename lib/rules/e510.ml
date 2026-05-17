@@ -42,6 +42,52 @@ let has_log_source values identifiers =
       | _ -> false)
     identifiers
 
+let call_matches call module_name func_name =
+  let callee = File_view.Call.callee call in
+  match File_view.Name.prefix callee with
+  | prefix_mod :: _ when prefix_mod = module_name ->
+      File_view.Name.base callee = func_name
+  | _ -> false
+
+let uses_logging_surface view =
+  let found = ref false in
+  File_view.iter_applications view (fun call ->
+      if
+        List.exists
+          (fun (module_name, func_name) ->
+            call_matches call module_name func_name)
+          log_functions
+      then found := true);
+  !found
+
+let has_log_source_surface view =
+  let value_names =
+    List.map File_view.Reference.base (File_view.outline_values view)
+  in
+  let has_source_value =
+    List.exists (fun name -> name = "log_src" || name = "src") value_names
+  in
+  if has_source_value then true
+  else
+    let found = ref false in
+    File_view.iter_applications view (fun call ->
+        let callee = File_view.Call.callee call in
+        match (File_view.Name.prefix callee, File_view.Name.base callee) with
+        | [ "Logs"; "Src" ], "create" | [ "Logs" ], "src_log" -> found := true
+        | _ -> ());
+    !found
+
+let issue ctx =
+  let module_name =
+    Filename.basename ctx.Context.filename
+    |> Filename.remove_extension |> String.capitalize_ascii
+  in
+  let loc =
+    let pos = { Location.line = 1; col = 0 } in
+    { Location.file = ctx.filename; start = pos; end_ = pos }
+  in
+  Issue.v ~loc { module_name }
+
 (* Looks for resolved [Logs.X] / [Log.X] calls and a corresponding log
    source declaration. Requires typedtree so a user's local [Logs]
    module doesn't trip the rule; the engine surfaces the missing-
@@ -52,19 +98,13 @@ let check (ctx : Context.file) =
     match
       (File_view.resolved_identifiers view, File_view.resolved_values view)
     with
-    | None, _ | _, None -> []
+    | None, _ | _, None ->
+        if uses_logging_surface view && not (has_log_source_surface view) then
+          [ issue ctx ]
+        else []
     | Some identifiers, Some values ->
         if uses_logging identifiers && not (has_log_source values identifiers)
-        then
-          let module_name =
-            Filename.basename ctx.filename
-            |> Filename.remove_extension |> String.capitalize_ascii
-          in
-          let loc =
-            let pos = { Location.line = 1; col = 0 } in
-            { Location.file = ctx.filename; start = pos; end_ = pos }
-          in
-          [ Issue.v ~loc { module_name } ]
+        then [ issue ctx ]
         else []
   with File_view.Analysis_error _ -> []
 

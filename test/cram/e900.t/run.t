@@ -1,8 +1,12 @@
 Test bad example - foo uses Wire.Codec but has no c/ directory:
+Build bad fixture project:
+  $ (cd bad && dune build @check)
+
   $ merlint -B -r E900 bad/
+  Dune root: $TESTCASE_ROOT/bad/
   Running merlint analysis...
   
-  Analyzing 0 files
+  Analyzing 2 files
   
   ✓ Code Quality (0 total issues)
   ✓ Code Style (0 total issues)
@@ -31,10 +35,14 @@ Test bad example - foo uses Wire.Codec but has no c/ directory:
   [1]
 
 Test good example - foo uses Wire.Codec and has a c/ directory:
+Build good fixture project:
+  $ (cd good && dune build @check)
+
   $ merlint -B -r E900 good/
+  Dune root: $TESTCASE_ROOT/good/
   Running merlint analysis...
   
-  Analyzing 0 files
+  Analyzing 2 files
   
   ✓ Code Quality (0 total issues)
   ✓ Code Style (0 total issues)

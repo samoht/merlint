@@ -1,7 +1,8 @@
 (** E351: Detection of global mutable state patterns.
 
     Reads native typedtree value signatures and flags [val x : T] declarations
-    whose outer type path resolves to [Stdlib.ref] or [Stdlib.array].
+    whose outer type path resolves to [Stdlib.ref] or the compiler primitive
+    [array].
 
     Because the path comes from the typed tree, a local definition like
 
@@ -21,7 +22,7 @@ type payload = { kind : string; name : string }
 let is_stdlib_mutable path =
   match (File_view.Name.prefix path, File_view.Name.base path) with
   | [ "Stdlib" ], "ref" -> Some "ref"
-  | [ "Stdlib" ], "array" -> Some "array"
+  | [ "Stdlib" ], "array" | [], "array" -> Some "array"
   | _ -> None
 
 let check (ctx : Context.file) =

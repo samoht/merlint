@@ -1,7 +1,11 @@
 Two local packages: pkg-b uses pkg-a.helper only from its [(test ...)]
 stanza, but lists pkg-a in its runtime [depends:]. E943 flags it.
 
+Build bad fixture project:
+  $ (cd bad && dune build @check)
+
   $ merlint -B -r E943 bad/
+  Dune root: $TESTCASE_ROOT/bad/
   Running merlint analysis...
   
   Analyzing 3 files
@@ -35,11 +39,16 @@ stanza, but lists pkg-a in its runtime [depends:]. E943 flags it.
   
   Summary: ✗ 1 total issue (applied 1 rule)
   ✗ Some checks failed. See details above.
+    Run `merlint help E943` for the rule's description, hint, and good/bad examples.
   [1]
 
 Same setup, but pkg-b.opam now declares pkg-a with {with-test}. No findings.
 
+Build good fixture project:
+  $ (cd good && dune build @check)
+
   $ merlint -B -r E943 good/
+  Dune root: $TESTCASE_ROOT/good/
   Running merlint analysis...
   
   Analyzing 3 files

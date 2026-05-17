@@ -9,58 +9,53 @@ let is_stdlib_find_collection_name name =
 
 (** A type-variable [Ptyp_var "a"] means merlin couldn't resolve the type; skip
     the rule rather than guess. *)
-let is_unresolved_type ct =
-  match ct.Parsetree.ptyp_desc with Ptyp_var _ | Ptyp_any -> true | _ -> false
+let issue_for_return_shape ~loc ~name ~is_option =
+  if (String.starts_with ~prefix:"get_" name || name = "get") && is_option then
+    Some
+      (Issue.v ~loc
+         {
+           function_name = name;
+           expected =
+             (if name = "get" then "find"
+              else
+                let suffix = String.sub name 4 (String.length name - 4) in
+                "find_" ^ suffix);
+         })
+  else if
+    (String.starts_with ~prefix:"find_" name || name = "find")
+    && (not is_option)
+    && not (is_stdlib_find_collection_name name)
+  then
+    Some
+      (Issue.v ~loc
+         {
+           function_name = name;
+           expected =
+             (if name = "find" then "get"
+              else
+                let suffix = String.sub name 5 (String.length name - 5) in
+                "get_" ^ suffix);
+         })
+  else None
 
-let check_single_function (item : Outline.item) loc =
-  if item.kind <> Outline.Value then None
-  else if not (Outline.is_function_type item) then None
-  else
-    let n = item.name in
-    match Outline.return_type item with
-    | None -> None
-    | Some ret when is_unresolved_type ret -> None
-    | Some ret ->
-        let is_option = Outline.returns_option item in
-        if (String.starts_with ~prefix:"get_" n || n = "get") && is_option then
-          Some
-            (Issue.v ~loc
-               {
-                 function_name = n;
-                 expected =
-                   (if n = "get" then "find"
-                    else
-                      let suffix = String.sub n 4 (String.length n - 4) in
-                      "find_" ^ suffix);
-               })
-        else if
-          (String.starts_with ~prefix:"find_" n || n = "find")
-          && (not is_option)
-          && not (is_stdlib_find_collection_name n)
-        then
-          Some
-            (Issue.v ~loc
-               {
-                 function_name = n;
-                 expected =
-                   (if n = "find" then "get"
-                    else
-                      let suffix = String.sub n 5 (String.length n - 5) in
-                      "get_" ^ suffix);
-               })
-        else
-          let _ = ret in
-          None
+let check_single_function item loc =
+  let module Item = File_view.Item in
+  match (Item.kind item, Item.type_sig item) with
+  | Item.Value, Some typ when File_view.Type_view.is_function typ -> (
+      let n = Item.name item in
+      let return_type = File_view.Type_view.return_type typ in
+      match return_type with
+      | None -> None
+      | Some ret when File_view.Type_view.is_variable ret -> None
+      | Some _ ->
+          issue_for_return_shape ~loc ~name:n
+            ~is_option:(File_view.Type_view.returns_option typ))
+  | _ -> None
 
 let check ctx =
-  let outline_data = Context.outline ctx in
-  let filename = ctx.filename in
   List.filter_map
-    (fun (item : Outline.item) ->
-      match Outline.location filename item with
-      | Some loc -> check_single_function item loc
-      | None -> None)
-    outline_data
+    (fun item -> check_single_function item (File_view.Item.loc item))
+    (File_view.items (Context.view ctx))
 
 let pp ppf { function_name; expected } =
   Fmt.pf ppf "Function '%s' naming convention: consider '%s'" function_name

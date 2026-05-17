@@ -1,7 +1,6 @@
 (** E725: Fuzz Test Suite Mismatch *)
 
 module Issue_location = Location
-open Ocaml_parsing
 
 type payload = {
   fuzz_file : string;
@@ -16,38 +15,9 @@ let expected_suite file =
     Some (String.sub basename 5 (String.length basename - 5))
   else None
 
-(** Extract suite names from [let suite = ("name", [...])] declarations. *)
-let suite_name_of_expr (expr : Parsetree.expression) =
-  match expr.pexp_desc with
-  | Pexp_tuple
-      (( _,
-         {
-           pexp_desc =
-             Pexp_constant { pconst_desc = Pconst_string (name, _, _); _ };
-           _;
-         } )
-      :: _) ->
-      Some name
-  | _ -> None
-
-let extract_suites structure =
-  List.filter_map
-    (fun (item : Parsetree.structure_item) ->
-      match item.pstr_desc with
-      | Pstr_value (_, bindings) ->
-          List.find_map
-            (fun (binding : Parsetree.value_binding) ->
-              match binding.pvb_pat.ppat_desc with
-              | Ppat_var { txt = "suite"; _ } ->
-                  suite_name_of_expr binding.pvb_expr
-              | _ -> None)
-            bindings
-      | _ -> None)
-    structure
-
 (** Check that suite name in fuzz_foo.ml matches "foo". *)
 let check ctx =
-  let files = Context.all_files ctx in
+  let files = Context.files_to_analyze ctx in
   List.concat_map
     (fun filename ->
       let fp = Fpath.v filename in
@@ -57,9 +27,10 @@ let check ctx =
         | Some expected ->
             let suites =
               try
-                match File_view.parsetree (Context.file_view ctx filename) with
-                | None -> []
-                | Some structure -> extract_suites structure
+                Context.file_view ctx filename
+                |> Suite_bindings.of_view ~filename
+                |> List.filter_map (fun (binding : Suite_bindings.t) ->
+                    binding.name)
               with File_view.Analysis_error _ -> []
             in
             List.filter_map

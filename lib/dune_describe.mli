@@ -7,6 +7,23 @@ val describe : Fpath.t -> describe
 (** [describe project_path] returns parsed dune describe output for a project.
 *)
 
+val excluded_subdirs_of_dune : Fpath.t -> string list
+(** [excluded_subdirs_of_dune dir] reads [dir/dune] (when it exists) and returns
+    the union of its [(data_only_dirs ...)] and [(vendored_dirs ...)]
+    subdirectory lists. The directory walker uses this to skip subdirs the user
+    has already opted out of for compilation purposes. Returns [[]] when no dune
+    file is present, when the file fails to parse, or when neither stanza is
+    set. *)
+
+val skippable_subdir : parent_dir:Fpath.t -> string -> bool
+(** [skippable_subdir ~parent_dir entry] is the single source of truth for
+    "should we descend into [parent_dir/entry]?". Returns [true] for: empty
+    names, names starting with ['.'] or ['_'] (dotfiles, [_build], [_opam],
+    ad-hoc scratch), and any entry listed in [parent_dir]'s dune file
+    [(data_only_dirs ...)] / [(vendored_dirs ...)] stanzas. Every filesystem
+    walker — discovery and per-rule — calls this so the exclusion semantics stay
+    consistent with what dune itself walks. *)
+
 val ensure_project_built :
   path:string -> _ Eio.Process.mgr -> (unit, string) result
 (** [ensure_project_built ~path mgr] ensures the project at [path] is built by

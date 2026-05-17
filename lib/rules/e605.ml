@@ -1,7 +1,6 @@
 (** E605: Missing Test File *)
 
 module Issue_location = Location
-open Ocaml_parsing
 
 type payload = { module_name : string; expected_test_file : string }
 
@@ -13,36 +12,20 @@ module Log = (val Logs.src_log log_src : Logs.LOG)
     delegations. This detects facade/wrapper modules that just re-export other
     modules (e.g. the top-level [Irmin] module). *)
 let contains_only_types_and_modules ctx file_path =
-  match File_view.parsetree (Context.file_view ctx file_path) with
-  | None -> false
-  | Some structure ->
-      let rec is_facade_mod_expr (me : Parsetree.module_expr) =
-        match me.pmod_desc with
-        | Pmod_ident _ -> true (* module M = OtherModule *)
-        | Pmod_apply _ -> true (* module M = Map.Make(String) *)
-        | Pmod_structure items -> List.for_all is_facade_item items
-        | Pmod_constraint (me, _) -> is_facade_mod_expr me
-        | Pmod_functor (_, body) -> is_facade_mod_expr body
-        | _ -> false
-      and is_facade_item (item : Parsetree.structure_item) =
-        match item.pstr_desc with
-        | Pstr_type _ | Pstr_typext _ | Pstr_modtype _ | Pstr_open _
-        | Pstr_include _ | Pstr_attribute _ ->
-            true
-        | Pstr_module { pmb_expr; _ } -> is_facade_mod_expr pmb_expr
-        | Pstr_value (_, bindings) ->
-            (* Accept simple delegations: let f = Other.f *)
-            List.for_all
-              (fun (vb : Parsetree.value_binding) ->
-                match vb.pvb_expr.pexp_desc with
-                | Pexp_ident _ -> true
-                | _ -> false)
-              bindings
-        | _ -> false
-      in
-      List.for_all is_facade_item structure
-  | exception Context.Analysis_error _ ->
-      false (* If we can't parse, assume it needs tests *)
+  try
+    let view = Context.file_view ctx file_path in
+    let items = File_view.all_items view in
+    let has_non_facade_item =
+      List.exists
+        (fun item ->
+          match File_view.Item.kind item with
+          | Type | Module | Module_type | Constructor | Exception | Field ->
+              false
+          | Value | Class | Class_type -> true)
+        items
+    in
+    not has_non_facade_item
+  with Context.Analysis_error _ -> false
 
 (** Compute expected test file path from source file. For [lib] and [src] source
     directories, the directory is replaced with [test]. For any other source
@@ -123,7 +106,7 @@ let module_source_name file = Filename.basename (Filename.remove_extension file)
 let source_matches_module lib_mod file =
   File_kind.is_ml file && module_source_name file = lib_mod
 
-let find_lib_source ~files ~lib_files ~exec_files lib_mod =
+let lib_source ~files ~lib_files ~exec_files lib_mod =
   let matches = List.filter (source_matches_module lib_mod) files in
   match
     List.find_opt
@@ -165,7 +148,7 @@ let log_project_summary ~files ~lib_modules ~test_modules =
   log_test_sources files lib_modules
 
 let skipped_module_reason ctx file_path =
-  if Astring.String.is_infix ~affix:"/test/" file_path then
+  if File.is_in_test_dir (Fpath.v file_path) then
     Some "defined in test directory"
   else if File.is_in_examples file_path then
     Some "defined in examples directory"
@@ -196,7 +179,7 @@ let should_skip_module private_modules lib_mod =
   else None
 
 let source_candidate ctx ~files ~lib_files ~exec_files lib_mod =
-  match find_lib_source ~files ~lib_files ~exec_files lib_mod with
+  match lib_source ~files ~lib_files ~exec_files lib_mod with
   | None -> `Missing_source
   | Some file_path -> (
       match skipped_module_reason ctx file_path with
@@ -231,7 +214,7 @@ let missing_test_candidate ctx ~files ~lib_files ~exec_files ~private_modules
           else None)
 
 let check (ctx : Context.project) =
-  let files = Context.all_files ctx in
+  let files = Context.files_to_analyze ctx in
   let lib_modules = Context.lib_modules ctx in
   let test_modules = Context.test_modules ctx in
   let dune_desc = Context.dune_describe ctx in

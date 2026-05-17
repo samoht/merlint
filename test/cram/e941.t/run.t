@@ -1,7 +1,11 @@
 Two local packages: pkg-b uses pkg-a.helper but doesn't declare pkg-a
 in its [depends:]. E941 flags it.
 
+Build bad fixture project:
+  $ (cd bad && dune build @check)
+
   $ merlint -B -r E941 bad/
+  Dune root: $TESTCASE_ROOT/bad/
   Running merlint analysis...
   
   Analyzing 2 files
@@ -36,11 +40,16 @@ in its [depends:]. E941 flags it.
   
   Summary: ✗ 1 total issue (applied 1 rule)
   ✗ Some checks failed. See details above.
+    Run `merlint help E941` for the rule's description, hint, and good/bad examples.
   [1]
 
 Same setup, but pkg-b.opam now declares "pkg-a". No findings.
 
+Build good fixture project:
+  $ (cd good && dune build @check)
+
   $ merlint -B -r E941 good/
+  Dune root: $TESTCASE_ROOT/good/
   Running merlint analysis...
   
   Analyzing 2 files

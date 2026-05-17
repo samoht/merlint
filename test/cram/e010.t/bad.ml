@@ -3,7 +3,9 @@ let process x y z =
     if y > 0 then
       if z > 0 then
         if x < 100 then
-          x + y + z
+          if y < 100 then
+            x + y + z
+          else 0
         else 0
       else 0
     else 0
@@ -25,3 +27,24 @@ let classify_with_work x =
         else `Huge
       in
       bucket
+
+(* Closure literal stashed inside a record literal: visually this is just
+   as nested as the same logic written with explicit if/match levels, so
+   each layer (record, closure, control flow) bumps the depth. *)
+type 'a visitor = { visit : 'a visitor -> 'a -> unit }
+
+let collect xs =
+  let acc = ref [] in
+  let visitor =
+    {
+      visit =
+        (fun _this x ->
+          if x > 0 then
+            if x > 10 then
+              if x > 100 then acc := x :: !acc else ()
+            else ()
+          else ());
+    }
+  in
+  List.iter (visitor.visit visitor) xs;
+  !acc

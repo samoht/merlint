@@ -2,5 +2,5 @@
 
 type t = int
 
-val create : unit -> t
-val get : t -> int
+let create () = 0
+let get t = t

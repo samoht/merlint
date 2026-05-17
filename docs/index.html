@@ -421,7 +421,9 @@ pre code {
     <span class="kw">if</span> y &gt; <span class="nu">0</span> <span class="kw">then</span>
       <span class="kw">if</span> z &gt; <span class="nu">0</span> <span class="kw">then</span>
         <span class="kw">if</span> x &lt; <span class="nu">100</span> <span class="kw">then</span>
-          x + y + z
+          <span class="kw">if</span> y &lt; <span class="nu">100</span> <span class="kw">then</span>
+            x + y + z
+          <span class="kw">else</span> <span class="nu">0</span>
         <span class="kw">else</span> <span class="nu">0</span>
       <span class="kw">else</span> <span class="nu">0</span>
     <span class="kw">else</span> <span class="nu">0</span>
@@ -442,7 +444,29 @@ pre code {
         <span class="kw">else</span> <span class="kw">if</span> abs_x &lt; <span class="nu">1000</span> <span class="kw">then</span> `<span class="cn">Large</span>
         <span class="kw">else</span> `<span class="cn">Huge</span>
       <span class="kw">in</span>
-      bucket</code></pre>
+      bucket
+
+(* <span class="cn">Closure</span> literal stashed inside a record literal: visually this is just
+   <span class="kw">as</span> nested <span class="kw">as</span> the same logic written <span class="kw">with</span> explicit <span class="kw">if</span>/<span class="kw">match</span> levels, so
+   each layer (record, closure, control flow) bumps the depth. *)
+<span class="kw">type</span> 'a visitor = { visit : 'a visitor -&gt; 'a -&gt; unit }
+
+<span class="kw">let</span> collect xs =
+  <span class="kw">let</span> acc = <span class="kw">ref</span> [] <span class="kw">in</span>
+  <span class="kw">let</span> visitor =
+    {
+      visit =
+        (<span class="kw">fun</span> _this x -&gt;
+          <span class="kw">if</span> x &gt; <span class="nu">0</span> <span class="kw">then</span>
+            <span class="kw">if</span> x &gt; <span class="nu">10</span> <span class="kw">then</span>
+              <span class="kw">if</span> x &gt; <span class="nu">100</span> <span class="kw">then</span> acc := x :: !acc <span class="kw">else</span> ()
+            <span class="kw">else</span> ()
+          <span class="kw">else</span> ());
+    }
+  <span class="kw">in</span>
+  <span class="cn">List</span>.iter (visitor.visit visitor) xs;
+  !acc
+</code></pre>
 </div>
 <div class="example good">
   <h4>GOOD</h4>
@@ -459,7 +483,13 @@ pre code {
 <span class="kw">let</span> process x y z =
   <span class="kw">if</span> x &lt;= <span class="nu">0</span> || y &lt;= <span class="nu">0</span> || z &lt;= <span class="nu">0</span> <span class="kw">then</span> <span class="nu">0</span>
   <span class="kw">else</span> <span class="kw">if</span> x &gt;= <span class="nu">100</span> <span class="kw">then</span> <span class="nu">0</span>
-  <span class="kw">else</span> x + y + z</code></pre>
+  <span class="kw">else</span> x + y + z
+
+(* <span class="cn">Record</span> literals carrying inert data don't count <span class="kw">as</span> nesting -- only
+   records whose fields contain closures <span class="kw">or</span> control flow <span class="kw">do</span>. *)
+<span class="kw">type</span> point = { x : int; y : int; z : int }
+
+<span class="kw">let</span> translate p dx dy dz = { x = p.x + dx; y = p.y + dy; z = p.z + dz }</code></pre>
 </div>
 </div></div>
 </div>
@@ -473,7 +503,8 @@ pre code {
     <div class="error-hint"><p>Obj.magic completely bypasses OCaml's type system and is extremely dangerous. It can lead to segmentation faults, data corruption, and unpredictable behavior. Instead, use proper type definitions, GADTs, or polymorphic variants. If you absolutely must use unsafe features, document why and isolate the usage.</p><div class="examples-grid">
 <div class="example bad">
   <h4>BAD</h4>
-  <pre><code><span class="kw">let</span> coerce x = <span class="cn">Stdlib</span>.<span class="cn">Obj</span>.magic x</code></pre>
+  <pre><code><span class="kw">let</span> coerce x = <span class="cn">Obj</span>.magic x
+</code></pre>
 </div>
 <div class="example good">
   <h4>GOOD</h4>
@@ -608,9 +639,12 @@ pre code {
 <div class="example bad">
   <h4>BAD</h4>
   <pre><code><span class="kw">let</span> make_error msg line = 
-  <span class="cn">Stdlib</span>.<span class="cn">Printf</span>.sprintf &quot;<span class="cn">Error</span>: %s at line %d&quot; msg line
+  <span class="cn">Printf</span>.sprintf &quot;<span class="cn">Error</span>: %s at line %d&quot; msg line
 <span class="kw">let</span> print_count n = 
-  <span class="cn">Stdlib</span>.<span class="cn">Printf</span>.printf &quot;<span class="cn">Processing</span> %d items...\n&quot; n</code></pre>
+  <span class="cn">Printf</span>.printf &quot;<span class="cn">Processing</span> %d items...\n&quot; n
+<span class="kw">let</span> format_count n =
+  <span class="cn">Format</span>.asprintf &quot;<span class="cn">Processing</span> %d items...&quot; n
+</code></pre>
 </div>
 <div class="example good">
   <h4>GOOD</h4>
@@ -1159,23 +1193,23 @@ and replace each call site with [err_x &quot;...&quot; args] / [fail_x &quot;...
         <span class="error-code">E333</span>
         <span class="error-title">Prefer _of_ over _to_ / _from_</span>
     </div>
-    <div class="error-hint"><p>Standalone conversion functions in OCaml use the [&lt;dst&gt;_of_&lt;src&gt;] form ([int_of_string], [string_of_float], ...) — never [&lt;src&gt;_to_&lt;dst&gt;], [&lt;dst&gt;_from_&lt;src&gt;], [&lt;X&gt;_of_t], or [t_of_&lt;X&gt;]. The convention reads as 'an X out of a Y' and matches the stdlib precedent. The [to_&lt;X&gt;] prefix is reserved for conversions whose source is the module's own [t] ([List.to_seq], [Bytes.to_string]); use [&lt;X&gt;_of_&lt;src&gt;] when the source is anything else. The rule runs on [.mli] only -- naming is a public-API concern; private helpers in [.ml] are not flagged. The rule only flags single-arrow functions ([T1 -&gt; T2] with non-unit [T2]), so multi-argument actions ([add_to_set : 'a -&gt; 'a list -&gt; 'a list]) and writes-into-sink functions ([print_to_buffer : Buffer.t -&gt; string -&gt; unit]) are skipped by their type. Add domain-specific exceptions to [allowed_words].</p><div class="examples-grid">
+    <div class="error-hint"><p>Standalone conversion functions in OCaml use the [&lt;dst&gt;_of_&lt;src&gt;] form ([int_of_string], [string_of_float], ...) — never [&lt;src&gt;_to_&lt;dst&gt;], [&lt;dst&gt;_from_&lt;src&gt;], [&lt;X&gt;_of_t], or [t_of_&lt;X&gt;]. The convention reads as 'an X out of a Y' and matches the stdlib precedent. The [to_&lt;X&gt;] prefix is reserved for conversions whose source is the module's own [t] ([List.to_seq], [Bytes.to_string]); use [&lt;X&gt;_of_&lt;src&gt;] when the source is anything else. The rule checks top-level declarations in [.ml] and [.mli] files. It only flags single-arrow functions ([T1 -&gt; T2] with non-unit [T2]), so multi-argument actions ([add_to_set : 'a -&gt; 'a list -&gt; 'a list]) and writes-into-sink functions ([print_to_buffer : Buffer.t -&gt; string -&gt; unit]) are skipped by their type. Add domain-specific exceptions to [allowed_words].</p><div class="examples-grid">
 <div class="example bad">
   <h4>BAD</h4>
   <pre><code>(* <span class="cn">Bad</span> examples: single-arrow [<span class="cn">T1</span> -&gt; <span class="cn">T2</span>] <span class="kw">with</span> non-unit [<span class="cn">T2</span>] — these are
    real conversions <span class="kw">and</span> should use the [&lt;dst&gt;_of_&lt;src&gt;] form. *)
 
-<span class="kw">let</span> int_to_string n = string_of_int n
+<span class="kw">let</span> int_to_string : int -&gt; string = <span class="kw">fun</span> n -&gt; string_of_int n
 
-<span class="kw">let</span> bytes_to_hex (b : bytes) =
+<span class="kw">let</span> bytes_to_hex : bytes -&gt; string = <span class="kw">fun</span> b -&gt;
   <span class="kw">let</span> buf = <span class="cn">Buffer</span>.create (<span class="cn">Bytes</span>.length b * <span class="nu">2</span>) <span class="kw">in</span>
   <span class="cn">Bytes</span>.iter (<span class="kw">fun</span> c -&gt; <span class="cn">Buffer</span>.add_string buf (<span class="cn">Printf</span>.sprintf &quot;%02x&quot; (<span class="cn">Char</span>.code c))) b;
   <span class="cn">Buffer</span>.contents buf
 
-<span class="kw">let</span> path_to_uri p = &quot;file://&quot; ^ p
+<span class="kw">let</span> path_to_uri : string -&gt; string = <span class="kw">fun</span> p -&gt; &quot;file://&quot; ^ p
 
-<span class="kw">let</span> value_from_string s = int_of_string s
-<span class="kw">let</span> bytes_from_hex h = <span class="cn">Bytes</span>.of_string h
+<span class="kw">let</span> value_from_string : string -&gt; int = <span class="kw">fun</span> s -&gt; int_of_string s
+<span class="kw">let</span> bytes_from_hex : string -&gt; bytes = <span class="kw">fun</span> h -&gt; <span class="cn">Bytes</span>.of_string h
 
 (* <span class="cn">Inside</span> a <span class="kw">module</span> whose abstract <span class="kw">type</span> is [t], the [t] <span class="kw">in</span> conversion
    names is implicit; [&lt;<span class="cn">X</span>&gt;_of_t] <span class="kw">and</span> [t_of_&lt;<span class="cn">X</span>&gt;] should collapse <span class="kw">to</span>
@@ -1183,15 +1217,15 @@ and replace each call site with [err_x &quot;...&quot; args] / [fail_x &quot;...
 
 <span class="kw">type</span> t = int
 
-<span class="kw">let</span> int_of_t (x : t) = x
-<span class="kw">let</span> t_of_int n : t = n
+<span class="kw">let</span> int_of_t : t -&gt; int = <span class="kw">fun</span> x -&gt; x
+<span class="kw">let</span> t_of_int : int -&gt; t = <span class="kw">fun</span> n -&gt; n
 
 (* [to_&lt;<span class="cn">X</span>&gt;] is only canonical <span class="kw">when</span> the source is the <span class="kw">module</span>'s [t] (<span class="kw">or</span>
    one <span class="kw">of</span> [t]'s transparent aliases <span class="kw">when</span> the [.ml] omits an annotation).
    <span class="cn">A</span> <span class="kw">function</span> whose source is unrelated <span class="kw">to</span> [t] is a disguised
    [&lt;src&gt;_to_&lt;<span class="cn">X</span>&gt;] <span class="kw">and</span> must use [&lt;<span class="cn">X</span>&gt;_of_&lt;src&gt;] instead. *)
 
-<span class="kw">let</span> to_pair (s : string) = (s, s)
+<span class="kw">let</span> to_pair : string -&gt; string * string = <span class="kw">fun</span> s -&gt; (s, s)
 </code></pre>
 </div>
 <div class="example good">
@@ -1308,7 +1342,7 @@ and replace each call site with [err_x &quot;...&quot; args] / [fail_x &quot;...
 
 (* <span class="cn">Bad</span>: [print] is a printer-typed value but doesn't start <span class="kw">with</span> [pp]/[pp_]
    <span class="kw">or</span> [dump]/[dump_]. *)
-<span class="kw">let</span> print fmt v = <span class="cn">Format</span>.fprintf fmt &quot;%d&quot; v
+<span class="kw">let</span> print : int <span class="cn">Fmt</span>.t = <span class="kw">fun</span> fmt v -&gt; <span class="cn">Format</span>.fprintf fmt &quot;%d&quot; v
 
 (* <span class="cn">Good</span>: [dump_widget] is accepted <span class="kw">as</span> an <span class="kw">in</span>-tree convention <span class="kw">for</span> human-readable
    diagnostic dumps. *)
@@ -1443,7 +1477,12 @@ and replace each call site with [err_x &quot;...&quot; args] / [fail_x &quot;...
   <span class="cn">Hashtbl</span>.replace cache key value
 
 <span class="kw">let</span> cache_clear () = 
-  <span class="cn">Hashtbl</span>.clear cache</code></pre>
+  <span class="cn">Hashtbl</span>.clear cache
+
+<span class="kw">let</span> process _ _ = <span class="nu">0</span>
+<span class="kw">let</span> build _ = [||]
+<span class="kw">let</span> update_counter _ = ()
+</code></pre>
 </div>
 </div></div>
 </div>

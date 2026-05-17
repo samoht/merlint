@@ -1,6 +1,10 @@
 
 Test bad example - fuzz dir with no fuzz.ml runner:
+Build bad fixture project:
+  $ (cd bad && dune build @check)
+
   $ merlint -B -r E718 bad/
+  Dune root: $TESTCASE_ROOT/bad/
   Running merlint analysis...
   
   Analyzing 3 files
@@ -34,7 +38,11 @@ Test bad example - fuzz dir with no fuzz.ml runner:
   [1]
 
 Test good example - fuzz dir with proper fuzz.ml runner:
+Build good fixture project:
+  $ (cd good && dune build @check)
+
   $ merlint -B -r E718 good/
+  Dune root: $TESTCASE_ROOT/good/
   Running merlint analysis...
   
   Analyzing 3 files

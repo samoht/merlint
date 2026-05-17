@@ -346,11 +346,13 @@ let analyze_files mgr fs ?(exclude_patterns = []) ?rule_filter
   let load_file = load_file_via_eio fs in
   (* Find project root *)
   let project_root =
-    match files with file :: _ -> Merlint.Project.root file | [] -> "."
+    match files with
+    | file :: _ -> Merlint.Project.root file
+    | [] -> Merlint.Project.root "."
   in
 
-  Log.info (fun m ->
-      m "Project root: %s (cwd: %s)" project_root (Sys.getcwd ()));
+  Log.info (fun m -> m "Dune root: %s (cwd: %s)" project_root (Sys.getcwd ()));
+  Fmt.pr "Dune root: %s@." project_root;
 
   (* Ensure project is built before running merlin-based analyses *)
   if not no_build then (
@@ -370,7 +372,16 @@ let analyze_files mgr fs ?(exclude_patterns = []) ?rule_filter
     else Merlint.Dune_describe.exclude exclude_patterns dune_describe
   in
 
-  let index = lazy (Project_index.build ~fs ~monorepo:(Fpath.v project_root)) in
+  let monorepo = Fpath.v project_root in
+  let resolve_root raw =
+    let p = Fpath.v raw in
+    if Fpath.is_abs p then Fpath.normalize p
+    else Fpath.normalize Fpath.(v (Sys.getcwd ()) // p)
+  in
+  let index_roots =
+    match files with [] -> None | xs -> Some (List.map resolve_root xs)
+  in
+  let index = lazy (Project_index.build ?roots:index_roots ~fs ~monorepo ()) in
   run_analysis ~load_file project_root filtered_describe files_to_analyze index
     rule_filter show_profile
 

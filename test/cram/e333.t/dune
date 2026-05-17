@@ -1,5 +1,6 @@
 (executable
  (name bad)
+ (libraries fmt alcotest compiler-libs.common unix str re logs)
  (modules bad)
  (flags -w -32-69))
 

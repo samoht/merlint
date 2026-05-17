@@ -10,14 +10,19 @@ type file = {
   config : Config.t;  (** The merlint configuration. *)
   project_root : string;  (** The project root directory. *)
   view : File_view.t;
-      (** Unified file view: shared parsetree, raw content, Merlin outline /
-          dump. See {!File_view}. *)
+      (** Unified typedtree-backed file view. See {!File_view}. *)
+  content : string Lazy.t;
+      (** Raw file bytes for text-only rules. OCaml semantic rules should use
+          {!view}. *)
 }
 
 type project = {
   config : Config.t;  (** The merlint configuration. *)
   project_root : string;  (** The project root directory. *)
-  all_files : string list Lazy.t;  (** All files in the project (lazy). *)
+  files_to_analyze : string list;
+      (** The user's request: the source files matched by the [merlint <args>]
+          command. Project-scoped rules use this to limit their scan to what was
+          actually asked about, rather than walking the whole monorepo. *)
   dune_describe : Dune_describe.describe Lazy.t;
       (** Dune project description (lazy). *)
   executable_modules : string list Lazy.t;
@@ -31,6 +36,8 @@ type project = {
   file_view_cache : string -> File_view.t;
       (** Project-wide memoized file views, shared by project-scoped and
           file-scoped rules. *)
+  file_content_cache : string -> string;
+      (** Project-wide memoized raw file bytes for text-format rules. *)
 }
 
 val file :
@@ -38,34 +45,34 @@ val file :
   config:Config.t ->
   project_root:string ->
   load_content:(unit -> string) ->
-  outline:(unit -> (Outline.t, string) result) ->
   file
-(** [file ~filename ~config ~project_root ~load_content ~outline] creates a file
-    context. [load_content] and [outline] are invoked on first access; rules
-    that don't touch them pay nothing. *)
+(** [file ~filename ~config ~project_root ~load_content] creates a file context.
+    [load_content] is invoked on first access; rules that don't touch source
+    data pay nothing. *)
 
 val file_with_view :
   filename:string ->
   config:Config.t ->
   project_root:string ->
   view:File_view.t ->
+  load_content:(unit -> string) ->
   file
 (** [file_with_view ~filename ~config ~project_root ~view] creates a file
     context backed by an existing shared {!File_view.t}. *)
 
 val project :
   ?file_view:(string -> File_view.t) ->
+  ?file_content:(string -> string) ->
   config:Config.t ->
   project_root:string ->
-  all_files:string list ->
+  files_to_analyze:string list ->
   dune_describe:Dune_describe.describe ->
   index:Project_index.t Lazy.t ->
   unit ->
   project
-(** [project ?file_view ~config ~project_root ~all_files ~dune_describe ~index
-     ()] creates a project context. [index] is the lazy monopam index (built
-    once per run). [file_view], when provided, is memoized and used as the
-    project-wide source for per-file views. *)
+(** [project ~files_to_analyze ...] creates a project context.
+    [files_to_analyze] is the source set matched by the user's [merlint <args>]
+    invocation; project-scoped rules should restrict their work to it. *)
 
 val index : project -> Project_index.t
 (** [index p] forces and returns the monopam package/library index. *)
@@ -75,23 +82,18 @@ val index : project -> Project_index.t
 val view : file -> File_view.t
 (** [view file] returns the underlying {!File_view.t}. *)
 
-val ast : file -> Ast.t
-(** [ast file] returns the control-flow AST. *)
-
-val outline : file -> Outline.t
-(** [outline file] returns the Merlin outline. *)
-
 val content : file -> string
 (** [content file] returns the raw file bytes. *)
 
-val functions : file -> (string * Ast.expr) list
-(** [functions file] returns top-level functions extracted from the shared
-    parsetree. *)
+val values : file -> Function_metrics.value list
+(** [values file] returns top-level value bindings with typedtree-derived
+    control-flow metrics. *)
 
 (** {2 Project context accessors} *)
 
-val all_files : project -> string list
-(** [all_files project] returns all files. *)
+val files_to_analyze : project -> string list
+(** [files_to_analyze p] is the user's analyze-set: the source files matched by
+    the [merlint <args>] invocation. *)
 
 val executable_modules : project -> string list
 (** [executable_modules project] returns executable module names. *)
@@ -107,4 +109,8 @@ val dune_describe : project -> Dune_describe.describe
 
 val file_view : project -> string -> File_view.t
 (** [file_view project filename] returns the shared, lazy file view for
+    [filename]. *)
+
+val file_content : project -> string -> string
+(** [file_content project filename] returns the shared raw file bytes for
     [filename]. *)

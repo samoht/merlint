@@ -4,52 +4,51 @@ type wrap_kind = Err | Fail
 type variant = Inline | Rename
 type payload = { variant : variant; suggested : string }
 
-open Ocaml_parsing
+module T = Ocaml_typing.Typedtree
 
-let is_error_construct (lid : Longident.t) =
-  match List.rev (Longident.flatten lid) with
+let is_error_construct lid =
+  match List.rev (Query.Longident.parts lid) with
   | "Error" :: _ -> true
   | _ -> false
 
-let is_raise_ident (lid : Longident.t) =
-  match List.rev (Longident.flatten lid) with
+let is_raise_path path =
+  match List.rev path with
   | ("raise" | "raise_notrace") :: _ -> true
   | _ -> false
 
 (** [Pexp_function (_, _, Pfunction_body body)] whose [body] is [Error ...]
     (returns [Some (Err, payload)]) or [raise ...] (returns
     [Some (Fail, exn_expr)]). Otherwise [None]. *)
-let wraps_error_or_raise (expr : Parsetree.expression) =
+let wraps_error_or_raise (expr : T.expression) =
   let body =
-    match expr.pexp_desc with
-    | Pexp_function (_, _, Pfunction_body body) -> Some body
+    match expr.exp_desc with
+    | Texp_function (_, Tfunction_body body) -> Some body
     | _ -> None
   in
   match body with
-  | Some { pexp_desc = Pexp_construct ({ txt; _ }, Some payload); _ }
-    when is_error_construct txt ->
+  | Some { exp_desc = Texp_construct (lid, _, [ payload ]); _ }
+    when is_error_construct lid.txt ->
       Some (Err, payload)
-  | Some
-      {
-        pexp_desc =
-          Pexp_apply
-            ( { pexp_desc = Pexp_ident { txt; _ }; _ },
-              [ (Asttypes.Nolabel, exn) ] );
-        _;
-      }
-    when is_raise_ident txt ->
-      Some (Fail, exn)
+  | Some { exp_desc = Texp_apply (fn, args); _ } -> (
+      match (Query.Expr.callee_parts fn, Query.Expr.positional_args args) with
+      | Some path, [ exn ] when is_raise_path path -> Some (Fail, exn)
+      | _ -> None)
   | _ -> None
 
 (** Lowercased constructor or function name, used purely as a hint stem in the
     suggested helper name. The user picks the final domain-appropriate name when
     they actually extract. *)
-let stem_of_payload (payload : Parsetree.expression) =
-  match payload.pexp_desc with
-  | Pexp_apply ({ pexp_desc = Pexp_ident { txt; _ }; _ }, _)
-  | Pexp_construct ({ txt; _ }, _) ->
-      let last = Longident.flatten txt |> List.rev |> List.hd in
-      Some (String.lowercase_ascii last)
+let stem_of_payload (payload : T.expression) =
+  match payload.exp_desc with
+  | Texp_apply (fn, _) ->
+      Option.bind (Query.Expr.callee_parts fn) (fun path ->
+          match List.rev path with
+          | last :: _ -> Some (String.lowercase_ascii last)
+          | [] -> None)
+  | Texp_construct (lid, _, _) -> (
+      match List.rev (Query.Longident.parts lid.txt) with
+      | last :: _ -> Some (String.lowercase_ascii last)
+      | [] -> None)
   | _ -> None
 
 let helper_name kind stem =
@@ -65,49 +64,38 @@ let suggestion kind stem =
   in
   Fmt.str "let %s fmt = %s    (call: %s \"...\")" helper body helper
 
-let is_literal_format (expr : Parsetree.expression) =
-  match expr.pexp_desc with
-  | Pexp_constant { pconst_desc = Pconst_string _; _ } -> true
-  | _ -> false
-
-let kstr_wrap_fn (expr : Parsetree.expression) =
-  match expr.pexp_desc with
-  | Pexp_apply (_, args) when Ast.is_apply_of [ "Fmt"; "kstr" ] expr ->
-      let positional =
-        List.filter_map
-          (fun (lbl, e) -> if lbl = Asttypes.Nolabel then Some e else None)
-          args
-      in
-      Some positional
-  | _ -> None
+let kstr_wrap_fn (expr : T.expression) =
+  let rec flatten_apply expr =
+    match expr.T.exp_desc with
+    | Texp_apply (fn, args) ->
+        let head, previous_args = flatten_apply fn in
+        (head, previous_args @ Query.Expr.positional_args args)
+    | _ -> (expr, [])
+  in
+  let head, args = flatten_apply expr in
+  if Query.Expr.callee_ends_with head [ "Fmt"; "kstr" ] then Some args else None
 
 (** Match [Fmt.kstr (fun s -> Error/raise _) ...] regardless of whether the
     format is a literal or a threaded [fmt] parameter. Returns the wrap kind
     plus the [Error]/[raise] payload. *)
-let flagged_kstr_any (expr : Parsetree.expression) =
+let flagged_kstr_any (expr : T.expression) =
   match kstr_wrap_fn expr with
   | Some (wrap_fn :: _) -> wraps_error_or_raise wrap_fn
   | _ -> None
 
-(** Inline call site: [Fmt.kstr (fun s -> Error/raise _) "literal" ...].
-    Distinguished from a helper definition (which threads a [fmt] parameter) by
-    the literal format. *)
-let flagged_kstr_inline (expr : Parsetree.expression) =
+(** Inline call site: [Fmt.kstr (fun s -> Error/raise _) ...]. Top-level helpers
+    are skipped by location before this predicate is consulted. *)
+let flagged_kstr_inline (expr : T.expression) =
   match kstr_wrap_fn expr with
-  | Some (wrap_fn :: fmt_arg :: _) when is_literal_format fmt_arg ->
-      wraps_error_or_raise wrap_fn
+  | Some (wrap_fn :: _fmt_arg :: _) -> wraps_error_or_raise wrap_fn
   | _ -> None
 
 (** Descend through curried-function layers to the body of a let binding.
     [let f x y = body] -> [body]; [let f = body] -> [body]. *)
-let rec body_of_function (expr : Parsetree.expression) =
-  match expr.pexp_desc with
-  | Pexp_function (_, _, Pfunction_body inner) -> body_of_function inner
-  | _ -> expr
+let body_of_function = Query.Expr.body
 
 (** Extract the name of a pattern binding, if it's a simple [Ppat_var]. *)
-let name_of_pattern (pat : Parsetree.pattern) =
-  match pat.ppat_desc with Ppat_var { txt; _ } -> Some txt | _ -> None
+let name_of_pattern = Query.Pattern.var_name
 
 (** Naming convention: an [Err]-wrapping helper should be [err] or [err_*]; a
     [Fail]-wrapping helper should be [fail] or [fail_*]. *)
@@ -120,31 +108,17 @@ let name_matches_kind name kind =
     [(body_loc, binding_name, kind, payload)]. The body location is so the
     inline-call iterator can skip it; the name is so we can flag mis-named
     helpers. *)
-let collect_helpers structure =
+let collect_helpers view =
   let helpers = ref [] in
-  let collect_binding (vb : Parsetree.value_binding) =
-    let body = body_of_function vb.pvb_expr in
+  let collect_binding (vb : T.value_binding) =
+    let body = body_of_function vb.vb_expr in
     match flagged_kstr_any body with
     | None -> ()
     | Some (kind, payload) ->
-        let name = name_of_pattern vb.pvb_pat in
-        helpers := (body.pexp_loc, name, kind, payload) :: !helpers
+        let name = name_of_pattern vb.vb_pat in
+        helpers := (body.exp_loc, name, kind, payload) :: !helpers
   in
-  let rec walk_str_item (item : Parsetree.structure_item) =
-    match item.pstr_desc with
-    | Pstr_value (_, bindings) -> List.iter collect_binding bindings
-    | Pstr_module mb -> walk_module_expr mb.pmb_expr
-    | Pstr_recmodule mbs ->
-        List.iter
-          (fun (mb : Parsetree.module_binding) -> walk_module_expr mb.pmb_expr)
-          mbs
-    | _ -> ()
-  and walk_module_expr (me : Parsetree.module_expr) =
-    match me.pmod_desc with
-    | Pmod_structure s -> List.iter walk_str_item s
-    | _ -> ()
-  in
-  List.iter walk_str_item structure;
+  Query.iter_value_bindings view collect_binding;
   !helpers
 
 let mismatch_suggestion name kind =
@@ -156,38 +130,36 @@ let mismatch_suggestion name kind =
 
 let check (ctx : Context.file) =
   let filename = ctx.filename in
-  match File_view.parsetree (Context.view ctx) with
-  | None -> []
-  | Some structure ->
-      let helpers = collect_helpers structure in
-      let helper_locs = List.map (fun (loc, _, _, _) -> loc) helpers in
-      let issues = ref [] in
-      List.iter
-        (fun (loc, name, kind, _payload) ->
-          match name with
-          | Some n when not (name_matches_kind n kind) ->
-              let suggested = mismatch_suggestion n kind in
-              issues :=
-                Issue.v
-                  ~loc:(Ast.merlint_of_loc ~filename loc)
-                  { variant = Rename; suggested }
-                :: !issues
-          | _ -> ())
-        helpers;
-      Ast.iter_expressions structure (fun expr ->
-          let is_helper = List.mem expr.Parsetree.pexp_loc helper_locs in
-          if is_helper then ()
-          else
-            match flagged_kstr_inline expr with
-            | None -> ()
-            | Some (kind, payload) ->
-                let suggested = suggestion kind (stem_of_payload payload) in
-                issues :=
-                  Issue.v
-                    ~loc:(Ast.merlint_of_loc ~filename expr.pexp_loc)
-                    { variant = Inline; suggested }
-                  :: !issues);
-      List.rev !issues
+  let view = Context.view ctx in
+  let helpers = collect_helpers view in
+  let helper_locs = List.map (fun (loc, _, _, _) -> loc) helpers in
+  let issues = ref [] in
+  List.iter
+    (fun (loc, name, kind, _payload) ->
+      match name with
+      | Some n when not (name_matches_kind n kind) ->
+          let suggested = mismatch_suggestion n kind in
+          issues :=
+            Issue.v
+              ~loc:(Loc.of_typed ~filename loc)
+              { variant = Rename; suggested }
+            :: !issues
+      | _ -> ())
+    helpers;
+  Query.iter_expressions view (fun expr ->
+      let is_helper = List.mem expr.T.exp_loc helper_locs in
+      if is_helper then ()
+      else
+        match flagged_kstr_inline expr with
+        | None -> ()
+        | Some (kind, payload) ->
+            let suggested = suggestion kind (stem_of_payload payload) in
+            issues :=
+              Issue.v
+                ~loc:(Loc.of_typed ~filename expr.exp_loc)
+                { variant = Inline; suggested }
+              :: !issues);
+  List.rev !issues
 
 let pp ppf { variant; suggested } =
   match variant with

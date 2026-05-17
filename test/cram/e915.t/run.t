@@ -1,5 +1,9 @@
 Test bad example - three packages each with a different tag problem:
+Build bad fixture project:
+  $ (cd bad && dune build @check)
+
   $ merlint -B -r E915 bad/
+  Dune root: $TESTCASE_ROOT/bad/
   Running merlint analysis...
   
   Analyzing 0 files
@@ -31,6 +35,7 @@ Test bad example - three packages each with a different tag problem:
   
   Summary: ✗ 3 total issues (applied 1 rule)
   ✗ Some checks failed. See details above.
+    Run `merlint help E915` for the rule's description, hint, and good/bad examples.
   [1]
 
 
@@ -40,7 +45,11 @@ Test bad example - three packages each with a different tag problem:
 
 
 Test good example - well-formed opam metadata:
+Build good fixture project:
+  $ (cd good && dune build @check)
+
   $ merlint -B -r E915 good/
+  Dune root: $TESTCASE_ROOT/good/
   Running merlint analysis...
   
   Analyzing 0 files

@@ -256,7 +256,7 @@ let process_run_t_line line state =
       output_lines = [];
       acc = new_acc;
     }
-  else if state.in_output && Re.execp re_two_spaces line then
+  else if state.in_output && (line = "" || Re.execp re_two_spaces line) then
     (* Part of the output *)
     { state with output_lines = line :: state.output_lines }
   else

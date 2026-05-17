@@ -1,5 +1,9 @@
 Test bad example - declared test quality is missing:
+Build bad fixture project:
+  $ (cd bad && dune build @check)
+
   $ merlint -B -r E910 bad/
+  Dune root: $TESTCASE_ROOT/bad/
   Running merlint analysis...
   
   Analyzing 1 files
@@ -26,10 +30,15 @@ Test bad example - declared test quality is missing:
   
   Summary: ✗ 1 total issue (applied 1 rule)
   ✗ Some checks failed. See details above.
+    Run `merlint help E910` for the rule's description, hint, and good/bad examples.
   [1]
 
 Test good example - declared quality exists:
+Build good fixture project:
+  $ (cd good && dune build @check)
+
   $ merlint -B -r E910 good/
+  Dune root: $TESTCASE_ROOT/good/
   Running merlint analysis...
   
   Analyzing 1 files

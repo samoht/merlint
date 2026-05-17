@@ -8,16 +8,6 @@ let is_stdlib_find_alias name =
   name = "find_all" || name = "find_map" || name = "find_many"
   || name = "find_index" || name = "find_last" || name = "find_first"
 
-(** [find_*] functions returning [_ option] are the canonical naming for partial
-    lookups (matching E325, which positively recommends [find_] for option
-    returns). Stripping the prefix would strip the partiality signal, so do not
-    flag those. Uses structural type analysis via [Parsetree.core_type] rather
-    than string-suffix matching, so [int -> ('a, 'b) result option] and friends
-    are detected correctly. *)
-let is_find_option name (item : Outline.item) =
-  String.starts_with ~prefix:"find_" (String.lowercase_ascii name)
-  && Outline.returns_option item
-
 type prefix_type = Create | Make | Get | Find
 
 type payload = {
@@ -62,13 +52,12 @@ let module_create_prefix ~module_name name =
 let redundant_prefix_issue ~loc ~name ~suggested_name ~prefix_type ~context =
   Issue.v ~loc { function_name = name; suggested_name; prefix_type; context }
 
-let item_issue ~filename ~allowed ~module_name (item : Outline.item) =
-  let name = item.name in
-  match (item.kind, Outline.location filename item) with
-  | Outline.Value, Some loc
-    when (not (List.mem name allowed))
-         && (not (is_stdlib_find_alias name))
-         && not (is_find_option name item) -> (
+let item_issue ~allowed ~module_name item =
+  let name = File_view.Item.name item in
+  match File_view.Item.kind item with
+  | File_view.Item.Value
+    when (not (List.mem name allowed)) && not (is_stdlib_find_alias name) -> (
+      let loc = File_view.Item.loc item in
       match prefixed_name name with
       | Some (prefix_type, suggested_name) ->
           Some
@@ -85,15 +74,14 @@ let item_issue ~filename ~allowed ~module_name (item : Outline.item) =
   | _ -> None
 
 let check (ctx : Context.file) =
-  let filename = ctx.filename in
   let allowed = ctx.config.allowed_words in
   let module_name =
-    Filename.basename filename |> Filename.remove_extension
-    |> String.lowercase_ascii
+    Filename.basename ctx.filename
+    |> Filename.remove_extension |> String.lowercase_ascii
   in
   List.filter_map
-    (item_issue ~filename ~allowed ~module_name)
-    (Context.outline ctx)
+    (item_issue ~allowed ~module_name)
+    (File_view.items (Context.view ctx))
 
 let pp ppf { function_name = _; suggested_name; prefix_type; context } =
   let prefix_str = string_of_prefix_type prefix_type in

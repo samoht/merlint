@@ -1,3 +1,4 @@
 (library
  (name test_e340)
- (libraries fmt))
+ (libraries fmt)
+ (flags :standard -warn-error -a))

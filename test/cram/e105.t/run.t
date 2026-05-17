@@ -1,5 +1,9 @@
+Build fixture project:
+  $ dune build @check
+
 Test bad example - should find catch-all exception handler:
   $ merlint -B -r E105 bad.ml
+  Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
   Analyzing 1 files
@@ -32,6 +36,7 @@ Test bad example - should find catch-all exception handler:
 
 Test good example - should find no issues:
   $ merlint -B -r E105 good.ml
+  Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
   Analyzing 1 files

@@ -46,7 +46,7 @@ let has_opam_file pkg_dir =
     (try_readdir pkg_dir)
 
 let content ctx path =
-  try Some (File_view.content (Context.file_view ctx path))
+  try Some (Context.file_content ctx path)
   with Sys_error _ | File_view.Analysis_error _ -> None
 
 let version_too_old v =
