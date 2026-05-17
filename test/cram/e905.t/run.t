@@ -1,5 +1,9 @@
 Test bad example - foo.mli exposes Wire.struct_ symbol:
+Build bad fixture project:
+  $ (cd bad && dune build @check)
+
   $ merlint -B -r E905 bad/
+  Dune root: $TESTCASE_ROOT/bad/
   Running merlint analysis...
   
   Analyzing 0 files
@@ -31,7 +35,11 @@ Test bad example - foo.mli exposes Wire.struct_ symbol:
   [1]
 
 Test good example - foo.mli keeps Wire EverParse symbols out of the public API:
+Build good fixture project:
+  $ (cd good && dune build @check)
+
   $ merlint -B -r E905 good/
+  Dune root: $TESTCASE_ROOT/good/
   Running merlint analysis...
   
   Analyzing 0 files

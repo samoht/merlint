@@ -1,3 +1,4 @@
 (library
  (name pkg)
- (public_name pkg))
+ (public_name pkg)
+ (libraries unix))

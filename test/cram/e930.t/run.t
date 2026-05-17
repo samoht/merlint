@@ -1,5 +1,9 @@
 Test bad example - pure sans-IO package depends on Unix:
+Build bad fixture project:
+  $ (cd bad && dune build @check)
+
   $ merlint -B -r E930 bad/
+  Dune root: $TESTCASE_ROOT/bad/
   Running merlint analysis...
   
   Analyzing 1 files
@@ -30,10 +34,15 @@ Test bad example - pure sans-IO package depends on Unix:
   
   Summary: ✗ 1 total issue (applied 1 rule)
   ✗ Some checks failed. See details above.
+    Run `merlint help E930` for the rule's description, hint, and good/bad examples.
   [1]
 
 Test good example - pure sans-IO package avoids runtime IO dependencies:
+Build good fixture project:
+  $ (cd good && dune build @check)
+
   $ merlint -B -r E930 good/
+  Dune root: $TESTCASE_ROOT/good/
   Running merlint analysis...
   
   Analyzing 1 files

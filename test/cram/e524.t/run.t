@@ -1,5 +1,9 @@
 Test bad example - main.ml defines two Cmd.v subcommands:
+Build bad fixture project:
+  $ (cd bad && dune build @check)
+
   $ merlint -B -r E524 bad/
+  Dune root: $TESTCASE_ROOT/bad/
   Running merlint analysis...
   
   Analyzing 1 files
@@ -28,10 +32,15 @@ Test bad example - main.ml defines two Cmd.v subcommands:
   
   Summary: ✗ 1 total issue (applied 1 rule)
   ✗ Some checks failed. See details above.
+    Run `merlint help E524` for the rule's description, hint, and good/bad examples.
   [1]
 
 Test good example - main.ml defines a single Cmd.v subcommand:
+Build good fixture project:
+  $ (cd good && dune build @check)
+
   $ merlint -B -r E524 good/
+  Dune root: $TESTCASE_ROOT/good/
   Running merlint analysis...
   
   Analyzing 1 files

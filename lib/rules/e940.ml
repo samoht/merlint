@@ -15,7 +15,7 @@ type payload = { dune_path : string; kind : kind }
 
 let parse_dune_file ctx path =
   match
-    try Some (File_view.content (Context.file_view ctx path))
+    try Some (Context.file_content ctx path)
     with Sys_error _ | File_view.Analysis_error _ -> None
   with
   | None -> None

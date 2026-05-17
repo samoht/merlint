@@ -1,3 +1,6 @@
 (library
  (name test_e005)
-)
+ (libraries fmt alcotest compiler-libs.common unix str re logs)
+ (modules bad good long_record pattern_match)
+
+ (flags :standard -warn-error -a))

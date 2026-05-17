@@ -1,1 +1,1 @@
-let test_parse () = assert (Parser.parse "42" = 42)
+let () = assert (Mylib.Parser.parse "42" = 42)

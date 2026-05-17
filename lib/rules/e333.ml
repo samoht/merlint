@@ -33,25 +33,24 @@ let split_separator_pattern ~sep name =
       Some (left, right)
   | _ -> None
 
-(** Strip leading [~lab:T] / [?lab:T] arguments from a type. *)
-let rec strip_labeled_args (ct : Parsetree.core_type) =
-  match ct.ptyp_desc with
-  | Ptyp_arrow ((Asttypes.Labelled _ | Asttypes.Optional _), _, rest) ->
+let rec strip_labeled_args typ =
+  match File_view.Type_view.arrow typ with
+  | Some
+      ( (Ocaml_parsing.Asttypes.Labelled _ | Ocaml_parsing.Asttypes.Optional _),
+        _,
+        rest ) ->
       strip_labeled_args rest
-  | _ -> ct
-
-let is_unit (ct : Parsetree.core_type) =
-  match ct.ptyp_desc with
-  | Ptyp_constr ({ txt = Lident "unit"; _ }, []) -> true
-  | _ -> false
+  | _ -> typ
 
 (** [(unit, _) result] is the conventional return type for an imperative action
     that may fail ([Slack.invite_to_channel], [Slack.kick_from_channel], ...).
     Treat it like [unit] for naming purposes -- the function is a verb, not a
     constructor of an [`a`]. *)
-let is_unit_result (ct : Parsetree.core_type) =
-  match ct.ptyp_desc with
-  | Ptyp_constr ({ txt = Lident "result"; _ }, [ ok; _ ]) -> is_unit ok
+let is_unit_result typ =
+  match File_view.Type_view.constr typ with
+  | Some (name, [ ok; _ ]) ->
+      File_view.Name.equals_path name [ "Stdlib"; "result" ]
+      && File_view.Type_view.is_unit ok
   | _ -> false
 
 (** Conversion shape: after stripping leading labeled/optional args, the type
@@ -63,34 +62,29 @@ let is_unit_result (ct : Parsetree.core_type) =
     The OCaml convention [<dst>_of_<src>] only fits genuine
     single-source/single-result conversions. *)
 let is_conversion_type ct =
-  match (strip_labeled_args ct).ptyp_desc with
-  | Ptyp_arrow (Asttypes.Nolabel, _, ret) -> (
-      match ret.ptyp_desc with
-      | Ptyp_arrow _ -> false (* second arrow: multi-arg *)
-      | _ -> (not (is_unit ret)) && not (is_unit_result ret))
+  match File_view.Type_view.arrow (strip_labeled_args ct) with
+  | Some (Ocaml_parsing.Asttypes.Nolabel, _, ret) ->
+      (not (File_view.Type_view.is_function ret))
+      && (not (File_view.Type_view.is_unit ret))
+      && not (is_unit_result ret)
   | _ -> false
 
 (** Pretty-print the source type of a single-arrow conversion. *)
 let source_type_pretty ct =
-  match (strip_labeled_args ct).ptyp_desc with
-  | Ptyp_arrow (Asttypes.Nolabel, src, _) ->
-      Fmt.kstr Option.some "%a" Pprintast.core_type src
+  match File_view.Type_view.arrow (strip_labeled_args ct) with
+  | Some (Ocaml_parsing.Asttypes.Nolabel, src, _) ->
+      Fmt.kstr Option.some "%a" File_view.Type_view.pp src
   | _ -> None
 
 (** Source type-name of a single-arrow conversion, when one exists. Returns
     [None] for variable, tuple, arrow, or otherwise structurally-complex source
     types. *)
 let source_type_name ct =
-  let rec last = function
-    | Longident.Lident s -> s
-    | Longident.Ldot (_, s) -> s.txt
-    | Longident.Lapply (_, r) -> last r.txt
-  in
-  match (strip_labeled_args ct).ptyp_desc with
-  | Ptyp_arrow (Asttypes.Nolabel, src, _) -> (
-      match src.ptyp_desc with
-      | Ptyp_constr ({ txt; _ }, _) -> Some (last txt)
-      | _ -> None)
+  match File_view.Type_view.arrow (strip_labeled_args ct) with
+  | Some (Ocaml_parsing.Asttypes.Nolabel, src, _) -> (
+      match File_view.Type_view.constr src with
+      | Some (name, _) -> Some (File_view.Name.base name)
+      | None -> None)
   | _ -> None
 
 (** Collect every constructor name reachable from a [core_type]: both the outer
@@ -98,47 +92,32 @@ let source_type_name ct =
     [["list"; "int"]]; for [(string * int) list], [["list"; "string"; "int"]].
     The shape of the inferred type Merlin gives for an unannotated body may
     unfold or fold the alias, so both names are accepted. *)
-let rec core_type_constrs (ct : Parsetree.core_type) =
-  let rec last_id = function
-    | Longident.Lident s -> s
-    | Longident.Ldot (_, s) -> s.txt
-    | Longident.Lapply (_, r) -> last_id r.txt
-  in
-  match ct.ptyp_desc with
-  | Ptyp_constr ({ txt; _ }, args) ->
-      last_id txt :: List.concat_map core_type_constrs args
-  | Ptyp_tuple cts -> List.concat_map (fun (_, ct) -> core_type_constrs ct) cts
-  | Ptyp_alias (inner, _) -> core_type_constrs inner
-  | _ -> []
+let core_type_constrs typ =
+  List.map File_view.Name.base (File_view.Type_view.constrs typ)
 
-(** [t_aliases outline] is the set of constructor names reachable from any
-    [type t = ...] manifest in [outline]. Merlin parses the manifest and exposes
-    it via [Outline.parsed_type]; if that returns [None], the [.cmt] / [.cmti]
-    for the file isn't built (or merlin can't see it). *)
-let t_aliases (outline : Outline.t) =
+(** [t_aliases items] is the set of constructor names reachable from any
+    [type t = ...] manifest in [items]. *)
+let t_aliases items =
   List.concat_map
-    (fun (item : Outline.item) ->
-      if item.kind = Outline.Type && item.name = "t" then
-        match Outline.parsed_type item with
-        | Some ct -> core_type_constrs ct
+    (fun item ->
+      if
+        File_view.Item.kind item = File_view.Item.Type
+        && File_view.Item.name item = "t"
+      then
+        match File_view.Item.type_sig item with
+        | Some typ -> core_type_constrs typ
         | None -> []
       else [])
-    (Outline.flatten outline)
+    (File_view.all_items items)
 
 (** A [Ptyp_constr] whose argument list contains a type variable, e.g.
     ['a list], ['a option], ['a Hashtbl.t]. These cases stay flagged ([to_<X>]
     on a polymorphic container still isn't t-sourced), but the diagnostic omits
     the [<X>_of_<head>] suggestion because it would hide the polymorphic
     parameter and read worse than the original. *)
-let has_polymorphic_arg (ct : Parsetree.core_type) =
-  let rec is_var (ct : Parsetree.core_type) =
-    match ct.ptyp_desc with
-    | Ptyp_var _ -> true
-    | Ptyp_alias (inner, _) -> is_var inner
-    | _ -> false
-  in
-  match ct.ptyp_desc with
-  | Ptyp_constr (_, args) -> List.exists is_var args
+let has_polymorphic_arg typ =
+  match File_view.Type_view.constr typ with
+  | Some (_, args) -> List.exists File_view.Type_view.is_variable args
   | _ -> false
 
 (** [to_<X>] is legitimate when the source is [t] or one of [t]'s aliases. Only
@@ -147,10 +126,10 @@ let has_polymorphic_arg (ct : Parsetree.core_type) =
     variants, tuples, function types) are accepted: they're the inferred shape
     of an [.ml] body that the [.mli] constrains to [t -> ...]. *)
 let is_t_sourced ~aliases ct =
-  match (strip_labeled_args ct).ptyp_desc with
-  | Ptyp_arrow (Asttypes.Nolabel, src, _) -> (
-      match src.ptyp_desc with
-      | Ptyp_constr _ -> (
+  match File_view.Type_view.arrow (strip_labeled_args ct) with
+  | Some (Ocaml_parsing.Asttypes.Nolabel, src, _) -> (
+      match File_view.Type_view.constr src with
+      | Some _ -> (
           match source_type_name ct with
           | None -> true
           | Some n -> n = "t" || List.mem n aliases)
@@ -190,7 +169,7 @@ let try_t_pattern name =
       Some ("to_" ^ left)
   | _ -> None
 
-let find_pattern name =
+let pattern name =
   match try_pattern ~sep:"_to_" name with
   | Some _ as r -> r
   | None -> (
@@ -216,7 +195,7 @@ let try_to_prefix_pattern name =
    check shallow. *)
 
 let sep_or_t_issue ~loc ~name ~ct =
-  match find_pattern name with
+  match pattern name with
   | Some suggested when is_conversion_type ct ->
       Some
         (Issue.v ~loc
@@ -231,8 +210,9 @@ let to_prefix_issue ~loc ~aliases ~name ~ct =
         Option.value (source_type_pretty ct) ~default:src_type_name
       in
       let polymorphic_arg =
-        match (strip_labeled_args ct).ptyp_desc with
-        | Ptyp_arrow (Asttypes.Nolabel, src, _) -> has_polymorphic_arg src
+        match File_view.Type_view.arrow (strip_labeled_args ct) with
+        | Some (Ocaml_parsing.Asttypes.Nolabel, src, _) ->
+            has_polymorphic_arg src
         | _ -> false
       in
       let suggested = dst ^ "_of_" ^ src_type_name in
@@ -253,18 +233,19 @@ let to_prefix_issue ~loc ~aliases ~name ~ct =
    way the rename isn't safe — leave these alone. *)
 let is_underscore_prefixed name = String.length name > 0 && name.[0] = '_'
 
-let check_item ~filename ~allowed ~aliases (item : Outline.item) =
-  let name = item.name in
-  if item.kind <> Outline.Value then None
+let check_item ~allowed ~aliases item =
+  let name = File_view.Item.name item in
+  if File_view.Item.kind item <> File_view.Item.Value then None
   else if List.mem name allowed then None
   else if is_underscore_prefixed name then None
   else
-    match (Outline.location filename item, Outline.parsed_type item) with
-    | Some loc, Some ct -> (
-        match sep_or_t_issue ~loc ~name ~ct with
+    match File_view.Item.type_sig item with
+    | Some typ -> (
+        let loc = File_view.Item.loc item in
+        match sep_or_t_issue ~loc ~name ~ct:typ with
         | Some _ as r -> r
-        | None -> to_prefix_issue ~loc ~aliases ~name ~ct)
-    | _ -> None
+        | None -> to_prefix_issue ~loc ~aliases ~name ~ct:typ)
+    | None -> None
 
 let is_test_file filename =
   let basename = Filename.basename filename in
@@ -273,11 +254,16 @@ let is_test_file filename =
 let check (ctx : Context.file) =
   let filename = ctx.filename in
   if is_test_file filename then []
-  else
-    let outline_data = Context.outline ctx in
+  else if
+    Filename.check_suffix filename ".ml"
+    || Filename.check_suffix filename ".mli"
+  then
+    let items = File_view.items (Context.view ctx) in
     let allowed = ctx.config.allowed_words in
-    let aliases = t_aliases outline_data in
-    List.filter_map (check_item ~filename ~allowed ~aliases) outline_data
+    let aliases = t_aliases (Context.view ctx) in
+    let outline_issues = List.filter_map (check_item ~allowed ~aliases) items in
+    outline_issues
+  else []
 
 let pp ppf { function_name; suggested; kind } =
   match kind with
@@ -313,13 +299,12 @@ let rule =
        'an X out of a Y' and matches the stdlib precedent. The [to_<X>] prefix \
        is reserved for conversions whose source is the module's own [t] \
        ([List.to_seq], [Bytes.to_string]); use [<X>_of_<src>] when the source \
-       is anything else. The rule runs on [.mli] only -- naming is a \
-       public-API concern; private helpers in [.ml] are not flagged. The rule \
-       only flags single-arrow functions ([T1 -> T2] with non-unit [T2]), so \
-       multi-argument actions ([add_to_set : 'a -> 'a list -> 'a list]) and \
-       writes-into-sink functions ([print_to_buffer : Buffer.t -> string -> \
-       unit]) are skipped by their type. Add domain-specific exceptions to \
-       [allowed_words]."
+       is anything else. The rule checks top-level declarations in [.ml] and \
+       [.mli] files. It only flags single-arrow functions ([T1 -> T2] with \
+       non-unit [T2]), so multi-argument actions ([add_to_set : 'a -> 'a list \
+       -> 'a list]) and writes-into-sink functions ([print_to_buffer : \
+       Buffer.t -> string -> unit]) are skipped by their type. Add \
+       domain-specific exceptions to [allowed_words]."
     ~examples:
       [ Example.bad Examples.E333.bad_ml; Example.good Examples.E333.good_ml ]
     ~pp (File check)

@@ -1,7 +1,6 @@
 (** E715: Fuzz Module Not Included *)
 
 module Issue_location = Location
-open Ocaml_parsing
 
 type payload = { fuzz_module : string; fuzz_runner_file : string }
 
@@ -19,16 +18,8 @@ let fuzz_modules runner_file fuzz_files =
         else None)
     fuzz_files
 
-let module_in_runner structure fuzz_mod =
-  let capitalized = String.capitalize_ascii fuzz_mod in
-  let found = ref false in
-  Ast.iter_expressions structure (fun (expr : Parsetree.expression) ->
-      match expr.pexp_desc with
-      | Pexp_ident { txt; _ }
-        when Longident.flatten txt = [ capitalized; "suite" ] ->
-          found := true
-      | _ -> ());
-  !found
+let module_in_runner view fuzz_mod =
+  Suite_refs.references_suite view (String.capitalize_ascii fuzz_mod)
 
 let missing_include_issue runner_file fuzz_mod =
   let loc =
@@ -51,20 +42,14 @@ let check_stanza ctx stanza_name files =
   | None -> []
   | Some runner_file -> (
       try
-        match
-          File_view.parsetree
-            (Context.file_view ctx (Fpath.to_string runner_file))
-        with
-        | None -> []
-        | Some structure ->
-            let modules = fuzz_modules runner_file fuzz_files in
-            Log.debug (fun m ->
-                m "E715: stanza '%s' has %d fuzz modules" stanza_name
-                  (List.length modules));
-            modules
-            |> List.filter (fun fuzz_mod ->
-                not (module_in_runner structure fuzz_mod))
-            |> List.map (missing_include_issue runner_file)
+        let view = Context.file_view ctx (Fpath.to_string runner_file) in
+        let modules = fuzz_modules runner_file fuzz_files in
+        Log.debug (fun m ->
+            m "E715: stanza '%s' has %d fuzz modules" stanza_name
+              (List.length modules));
+        modules
+        |> List.filter (fun fuzz_mod -> not (module_in_runner view fuzz_mod))
+        |> List.map (missing_include_issue runner_file)
       with File_view.Analysis_error _ -> [])
 
 (** Check if fuzz.ml includes all fuzz modules via Fuzz_*.suite *)

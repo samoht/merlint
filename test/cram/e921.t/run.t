@@ -1,6 +1,10 @@
 Bad: README.md and foo.mli contain dune-promoted mdx-error blocks.
 
+Build bad fixture project:
+  $ (cd bad && dune build @check)
+
   $ merlint -B -r E921 bad/
+  Dune root: $TESTCASE_ROOT/bad/
   Running merlint analysis...
   
   Analyzing 0 files
@@ -30,11 +34,16 @@ Bad: README.md and foo.mli contain dune-promoted mdx-error blocks.
   
   Summary: ✗ 2 total issues (applied 1 rule)
   ✗ Some checks failed. See details above.
+    Run `merlint help E921` for the rule's description, hint, and good/bad examples.
   [1]
 
 Good: no mdx-error blocks anywhere.
 
+Build good fixture project:
+  $ (cd good && dune build @check)
+
   $ merlint -B -r E921 good/
+  Dune root: $TESTCASE_ROOT/good/
   Running merlint analysis...
   
   Analyzing 0 files

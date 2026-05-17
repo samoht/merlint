@@ -1,6 +1,10 @@
 
 Test bad example - multiple fuzz stanzas in same directory:
+Build bad fixture project:
+  $ (cd bad && dune build @check)
+
   $ merlint -B -r E720 bad/
+  Dune root: $TESTCASE_ROOT/bad/
   Running merlint analysis...
   
   Analyzing 3 files
@@ -28,10 +32,15 @@ Test bad example - multiple fuzz stanzas in same directory:
   
   Summary: ✗ 1 total issue (applied 1 rule)
   ✗ Some checks failed. See details above.
+    Run `merlint help E720` for the rule's description, hint, and good/bad examples.
   [1]
 
 Test good example - single fuzz stanza:
+Build good fixture project:
+  $ (cd good && dune build @check)
+
   $ merlint -B -r E720 good/
+  Dune root: $TESTCASE_ROOT/good/
   Running merlint analysis...
   
   Analyzing 3 files

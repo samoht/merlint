@@ -24,3 +24,7 @@ let cache_set key value =
 
 let cache_clear () = 
   Hashtbl.clear cache
+
+let process _ _ = 0
+let build _ = [||]
+let update_counter _ = ()

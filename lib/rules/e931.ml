@@ -13,7 +13,6 @@
     tags, not their sans-IO sister's. *)
 
 module Issue_location = Location
-open Ocaml_parsing
 
 type finding = {
   file : string;
@@ -55,28 +54,36 @@ let suggestion_for = function
   | _ -> "thread the time value through your state-machine state instead"
 
 let scan_file ctx ~filename =
-  match File_view.parsetree (Context.file_view ctx filename) with
-  | None -> []
-  | Some structure ->
-      let findings = ref [] in
-      Ast.iter_expressions structure (fun expr ->
-          match expr.pexp_desc with
-          | Pexp_apply ({ pexp_desc = Pexp_ident { txt; _ }; _ }, _) ->
-              let path = Longident.flatten txt in
-              if List.exists (( = ) path) banned_idents then begin
-                let pos = expr.pexp_loc.loc_start in
-                findings :=
-                  {
-                    file = filename;
-                    line = pos.pos_lnum;
-                    col = pos.pos_cnum - pos.pos_bol;
-                    ident = String.concat "." path;
-                    suggestion = suggestion_for path;
-                  }
-                  :: !findings
-              end
-          | _ -> ());
-      List.rev !findings
+  let view = Context.file_view ctx filename in
+  let findings = ref [] in
+  File_view.iter_applications view (fun call ->
+      let callee = File_view.Call.callee call in
+      let path =
+        File_view.Name.prefix callee @ [ File_view.Name.base callee ]
+      in
+      List.iter
+        (fun banned ->
+          if List.length path >= List.length banned then
+            let suffix =
+              let rec drop n xs =
+                if n <= 0 then xs
+                else match xs with [] -> [] | _ :: xs -> drop (n - 1) xs
+              in
+              drop (List.length path - List.length banned) path
+            in
+            if suffix = banned then
+              let loc = File_view.Call.loc call in
+              findings :=
+                {
+                  file = filename;
+                  line = loc.start.line;
+                  col = loc.start.col;
+                  ident = String.concat "." banned;
+                  suggestion = suggestion_for banned;
+                }
+                :: !findings)
+        banned_idents);
+  List.rev !findings
 
 (* Source [.ml] files for a library, exactly as dune sees them: the
    [(modules ...)] spec from the [dune] stanza, expanded against the

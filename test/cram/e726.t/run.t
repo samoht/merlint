@@ -1,5 +1,9 @@
 Test bad example - empty fuzz suites:
+Build bad fixture project:
+  $ (cd bad && dune build @check)
+
   $ merlint -B -r E726 bad/
+  Dune root: $TESTCASE_ROOT/bad/
   Running merlint analysis...
   
   Analyzing 2 files
@@ -16,7 +20,7 @@ Test bad example - empty fuzz suites:
     invariants (decode(encode(x)) = x), (3) exercise state machine transitions
     including invalid ones, (4) cover boundary conditions and edge cases that unit
     tests miss. A suite with no test cases will never find bugs.
-    - bad/fuzz_encoder.ml:3:0: Fuzz suite 'encoder' is empty — add meaningful fuzz tests covering parsers, encoders, state machines, and edge cases
+    - bad/fuzz_encoder.ml:1:0: Fuzz suite 'encoder' is empty — add meaningful fuzz tests covering parsers, encoders, state machines, and edge cases
     - bad/fuzz_parser.ml:1:0: Fuzz suite 'parser' is empty — add meaningful fuzz tests covering parsers, encoders, state machines, and edge cases
   ✓ Interop Testing (0 total issues)
   ✓ Code Generation (0 total issues)
@@ -30,10 +34,15 @@ Test bad example - empty fuzz suites:
   
   Summary: ✗ 2 total issues (applied 1 rule)
   ✗ Some checks failed. See details above.
+    Run `merlint help E726` for the rule's description, hint, and good/bad examples.
   [1]
 
 Test good example - non-empty fuzz suite:
+Build good fixture project:
+  $ (cd good && dune build @check)
+
   $ merlint -B -r E726 good/
+  Dune root: $TESTCASE_ROOT/good/
   Running merlint analysis...
   
   Analyzing 1 files

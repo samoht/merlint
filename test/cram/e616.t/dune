@@ -1,4 +1,5 @@
 (library
  (name test_e616)
  (libraries alcotest fmt)
- (flags :standard -w -32))
+ (modules test_bad test_good)
+ (flags :standard -w -32 -warn-error -a))

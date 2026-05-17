@@ -1,22 +1,16 @@
 (** E216: Use Fmt.invalid_arg instead of invalid_arg (Fmt.str ...) *)
 
 let check (ctx : Context.file) =
-  let filename = ctx.filename in
-  match File_view.parsetree (Context.view ctx) with
-  | None -> []
-  | Some structure ->
-      let issues = ref [] in
-      Ast.iter_apply structure (fun expr fn args ->
-          if
-            Ast.lident_last_eq "invalid_arg" fn
-            && List.exists
-                 (fun (_, arg) -> Ast.is_apply_of [ "Fmt"; "str" ] arg)
-                 args
-          then
-            issues :=
-              Issue.v ~loc:(Ast.merlint_of_loc ~filename expr.pexp_loc) ()
-              :: !issues);
-      List.rev !issues
+  let issues = ref [] in
+  File_view.iter_applications (Context.view ctx) (fun call ->
+      let callee = File_view.Call.callee call in
+      if
+        File_view.Name.base callee = "invalid_arg"
+        && List.exists
+             (fun arg -> File_view.Call.Arg.is_call arg ~path:[ "Fmt"; "str" ])
+             (File_view.Call.args call)
+      then issues := Issue.v ~loc:(File_view.Call.loc call) () :: !issues);
+  List.rev !issues
 
 let pp ppf () =
   Fmt.pf ppf

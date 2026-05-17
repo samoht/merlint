@@ -1,3 +1,3 @@
 (** Fuzz parser module. *)
 
-let run () = ()
+let suite = ("parser", [])

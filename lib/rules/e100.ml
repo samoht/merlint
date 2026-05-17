@@ -1,36 +1,20 @@
 (** E100: No Obj.magic *)
 
-module Parsetree = Ocaml_parsing.Parsetree
-module Ast_iterator = Ocaml_parsing.Ast_iterator
-module Longident = Ocaml_parsing.Longident
-
-let is_obj_magic lid =
-  match Longident.flatten lid with
-  | [ "Obj"; "magic" ] | [ "Stdlib"; "Obj"; "magic" ] -> true
-  | _ -> false
+let is_obj_magic_ref ref_ =
+  File_view.Reference.matches_path ref_ [ "Stdlib"; "Obj"; "magic" ]
 
 let check ctx =
-  match File_view.parsetree (Context.view ctx) with
+  match File_view.resolved_identifiers (Context.view ctx) with
   | None -> []
-  | Some structure ->
-      let issues = ref [] in
-      let iterator =
-        {
-          Ast_iterator.default_iterator with
-          expr =
-            (fun self expr ->
-              (match expr.Parsetree.pexp_desc with
-              | Pexp_ident { txt; _ } when is_obj_magic txt ->
-                  let loc =
-                    Ast.merlint_of_loc ~filename:ctx.filename expr.pexp_loc
-                  in
-                  issues := Issue.v ~loc () :: !issues
-              | _ -> ());
-              Ast_iterator.default_iterator.expr self expr);
-        }
-      in
-      iterator.structure iterator structure;
-      List.rev !issues
+  | Some identifiers ->
+      List.filter_map
+        (fun ref_ ->
+          if not (is_obj_magic_ref ref_) then None
+          else
+            Option.map
+              (fun loc -> Issue.v ~loc ())
+              (File_view.Reference.loc ref_))
+        identifiers
 
 let pp ppf () =
   Fmt.pf ppf "Usage of Obj.magic detected - this is extremely unsafe"

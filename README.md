@@ -107,6 +107,7 @@ $ merlint --rules A-E110
 Every issue is tagged with an error code (e.g. `E100`). To see what a
 rule means and how to fix it, ask `merlint help`:
 
+<!-- $MDX non-deterministic=command -->
 ```sh
 $ # Describe a single rule on the terminal
 $ merlint help E100

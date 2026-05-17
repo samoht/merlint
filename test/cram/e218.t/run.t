@@ -1,5 +1,9 @@
+Build fixture project:
+  $ dune build @check
+
 Test bad example - should flag two inline Fmt.kstr Error wrappers:
   $ merlint -B -r E218 bad.ml
+  Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
   Analyzing 1 files
@@ -39,10 +43,12 @@ Test bad example - should flag two inline Fmt.kstr Error wrappers:
   
   Summary: ✗ 4 total issues (applied 1 rule)
   ✗ Some checks failed. See details above.
+    Run `merlint help E218` for the rule's description, hint, and good/bad examples.
   [1]
 
 Test good example - top-of-file [err_wire] helper, no flags:
   $ merlint -B -r E218 good.ml
+  Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
   Analyzing 1 files

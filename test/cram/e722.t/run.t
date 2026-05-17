@@ -1,6 +1,10 @@
 
 Test bad example - fuzz stanza using (test ...) instead of (executable ...):
+Build bad fixture project:
+  $ (cd bad && dune build @check)
+
   $ merlint -B -r E722 bad/
+  Dune root: $TESTCASE_ROOT/bad/
   Running merlint analysis...
   
   Analyzing 2 files
@@ -29,10 +33,15 @@ Test bad example - fuzz stanza using (test ...) instead of (executable ...):
   
   Summary: ✗ 1 total issue (applied 1 rule)
   ✗ Some checks failed. See details above.
+    Run `merlint help E722` for the rule's description, hint, and good/bad examples.
   [1]
 
 Test good example - fuzz stanza using (executable ...):
+Build good fixture project:
+  $ (cd good && dune build @check)
+
   $ merlint -B -r E722 good/
+  Dune root: $TESTCASE_ROOT/good/
   Running merlint analysis...
   
   Analyzing 2 files

@@ -1,5 +1,9 @@
 Test bad example - cram test at test/ rather than test/cram/:
+Build bad fixture project:
+  $ (cd bad && dune build @check)
+
   $ merlint -B -r E521 bad/
+  Dune root: $TESTCASE_ROOT/bad/
   Running merlint analysis...
   
   Analyzing 0 files
@@ -27,6 +31,7 @@ Test bad example - cram test at test/ rather than test/cram/:
   
   Summary: ✗ 1 total issue (applied 1 rule)
   ✗ Some checks failed. See details above.
+    Run `merlint help E521` for the rule's description, hint, and good/bad examples.
   [1]
 
 
@@ -35,7 +40,11 @@ Test bad example - cram test at test/ rather than test/cram/:
 
 
 Test good example - cram test under test/cram/:
+Build good fixture project:
+  $ (cd good && dune build @check)
+
   $ merlint -B -r E521 good/
+  Dune root: $TESTCASE_ROOT/good/
   Running merlint analysis...
   
   Analyzing 0 files

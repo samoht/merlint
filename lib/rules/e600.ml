@@ -1,8 +1,6 @@
 (** E600: Test Module Convention *)
 
-module Parsetree = Ocaml_parsing.Parsetree
-module Ast_iterator = Ocaml_parsing.Ast_iterator
-module Longident = Ocaml_parsing.Longident
+module T = Ocaml_typing.Typedtree
 
 type reason =
   | Runner_defines_inline_tests
@@ -20,62 +18,36 @@ let is_test_file filename =
   (* Only test executables named test.ml should follow this convention *)
   Filename.basename filename = "test.ml"
 
-let lident_path lid = Longident.flatten lid
-
-let has_ident view pred =
-  match File_view.parsetree view with
-  | None -> false
-  | Some structure ->
-      let found = ref false in
-      let iterator =
-        {
-          Ast_iterator.default_iterator with
-          expr =
-            (fun self expr ->
-              (match expr.Parsetree.pexp_desc with
-              | Pexp_ident { txt; _ } when pred (lident_path txt) ->
-                  found := true
-              | _ -> ());
-              if not !found then Ast_iterator.default_iterator.expr self expr);
-        }
-      in
-      iterator.structure iterator structure;
-      !found
-
-let has_test_runner view =
-  has_ident view (function [ "Alcotest"; "run" ] -> true | _ -> false)
+let has_test_runner view = File_view.calls_path view [ "Alcotest"; "run" ]
 
 let uses_test_module_suites view =
-  has_ident view (function
-    | [ module_name; "suite" ] -> String.starts_with ~prefix:"Test_" module_name
-    | _ -> false)
+  Suite_refs.references_suite_with_prefix view ~prefix:"Test_"
 
-let pat_name (pat : Parsetree.pattern) =
-  match pat.ppat_desc with Ppat_var { txt; _ } -> Some txt | _ -> None
-
-let rec is_list_expr (expr : Parsetree.expression) =
-  match expr.pexp_desc with
-  | Pexp_construct ({ txt = Lident "[]"; _ }, None) -> true
-  | Pexp_construct ({ txt = Lident "::"; _ }, Some _) -> true
-  | Pexp_constraint (expr, _) | Pexp_coerce (expr, _, _) -> is_list_expr expr
+let rec is_list_expr (expr : T.expression) =
+  match expr.exp_desc with
+  | Texp_construct (lid, _, _) ->
+      List.mem (Ocaml_parsing.Longident.flatten lid.txt) [ [ "[]" ]; [ "::" ] ]
+  | Texp_open (_, expr) -> is_list_expr expr
   | _ -> false
 
 let defines_own_tests view =
-  match File_view.parsetree view with
-  | None -> false
-  | Some structure ->
+  match File_view.typedtree view with
+  | Some (`Implementation structure) ->
       List.exists
-        (fun (item : Parsetree.structure_item) ->
-          match item.pstr_desc with
-          | Pstr_value (_, bindings) ->
+        (fun (item : T.structure_item) ->
+          match item.str_desc with
+          | Tstr_value (_, bindings) ->
               List.exists
-                (fun (vb : Parsetree.value_binding) ->
-                  match pat_name vb.pvb_pat with
-                  | Some ("tests" | "suite") -> is_list_expr vb.pvb_expr
+                (fun (vb : T.value_binding) ->
+                  match vb.vb_pat.pat_desc with
+                  | Tpat_var (_, name, _)
+                    when List.mem name.txt [ "tests"; "suite" ] ->
+                      is_list_expr vb.vb_expr
                   | _ -> false)
                 bindings
           | _ -> false)
-        structure
+        structure.str_items
+  | Some (`Interface _) | None -> false
 
 let test_mli_needs_issue view =
   not
@@ -212,7 +184,7 @@ let check_missing_test_mli ctx dune_describe files =
 
 (** Check all files for test convention issues *)
 let check ctx =
-  let files = Context.all_files ctx in
+  let files = Context.files_to_analyze ctx in
   let dune_describe = Context.dune_describe ctx in
   (* Debug log to see what files we're analyzing *)
   Log.debug (fun m -> m "E600: Analyzing %d files:" (List.length files));

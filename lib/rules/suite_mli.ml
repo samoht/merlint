@@ -1,8 +1,6 @@
 (** Shared helpers for [.mli] files that should expose exactly one [suite] value
     with the expected test-suite type. *)
 
-open Ocaml_parsing
-
 type expected = Alcotest | Alcobar
 
 let expected_of_string = function
@@ -10,50 +8,50 @@ let expected_of_string = function
   | "string * Alcobar.test_case list" -> Some Alcobar
   | _ -> None
 
-let rec type_constr path arg_matches (ct : Parsetree.core_type) =
-  match ct.ptyp_desc with
-  | Ptyp_constr ({ txt; _ }, args) ->
-      Longident.flatten txt = path
-      && List.length args = List.length arg_matches
-      && List.for_all2 (fun matches arg -> matches arg) arg_matches args
-  | Ptyp_alias (ct, _) | Ptyp_poly (_, ct) -> type_constr path arg_matches ct
-  | _ -> false
-
-let string_type = type_constr [ "string" ] []
-let unit_type = type_constr [ "unit" ] []
-let list_type elem = type_constr [ "list" ] [ elem ]
+let string_type = File_view.Type_view.is_string
+let unit_type = File_view.Type_view.is_unit
+let list_type elem = File_view.Type_view.is_list ~elem
 
 let alcotest_case_list =
-  list_type (type_constr [ "Alcotest"; "test_case" ] [ unit_type ])
+  list_type (fun typ ->
+      match File_view.Type_view.constr typ with
+      | Some (name, [ arg ]) ->
+          File_view.Name.equals_path name [ "Alcotest"; "test_case" ]
+          && unit_type arg
+      | _ -> false)
 
-let alcobar_case_list = list_type (type_constr [ "Alcobar"; "test_case" ] [])
+let alcobar_case_list =
+  list_type (fun typ ->
+      match File_view.Type_view.constr typ with
+      | Some (name, []) ->
+          File_view.Name.equals_path name [ "Alcobar"; "test_case" ]
+      | _ -> false)
 
-let rec suite_type expected (ct : Parsetree.core_type) =
-  match ct.ptyp_desc with
-  | Ptyp_tuple [ (None, name); (None, cases) ] -> (
+let suite_type expected ct =
+  match File_view.Type_view.tuple ct with
+  | Some [ name; cases ] -> (
       string_type name
       &&
       match expected with
       | Alcotest -> alcotest_case_list cases
       | Alcobar -> alcobar_case_list cases)
-  | Ptyp_alias (ct, _) | Ptyp_poly (_, ct) -> suite_type expected ct
   | _ -> false
 
-let is_value_suite expected (vd : Parsetree.value_description) =
-  vd.pval_name.txt = "suite" && suite_type expected vd.pval_type
+let is_value_suite expected item =
+  File_view.Item.name item = "suite"
+  &&
+  match File_view.Item.type_sig item with
+  | Some typ -> suite_type expected typ
+  | None -> false
 
-let significant_item (item : Parsetree.signature_item) =
-  match item.psig_desc with Psig_attribute _ -> None | _ -> Some item
-
-let is_compliant_signature ~expected signature =
+let is_compliant_items ~expected items =
   match expected_of_string expected with
   | None -> false
   | Some expected -> (
-      match List.filter_map significant_item signature with
-      | [ { psig_desc = Psig_value vd; _ } ] -> is_value_suite expected vd
+      match items with
+      | [ item ] when File_view.Item.kind item = File_view.Item.Value ->
+          is_value_suite expected item
       | _ -> false)
 
 let is_compliant_view ~expected view =
-  match File_view.signature view with
-  | None -> false
-  | Some signature -> is_compliant_signature ~expected signature
+  is_compliant_items ~expected (File_view.items view)

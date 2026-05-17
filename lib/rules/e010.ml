@@ -17,25 +17,32 @@ let is_test_file filename =
 
 let check (ctx : Context.file) =
   let config = { max_nesting = ctx.config.max_nesting } in
-  let ast = Context.ast ctx in
+  let item_loc name =
+    File_view.items (Context.view ctx)
+    |> List.find_map (fun item ->
+        if
+          File_view.Item.kind item = File_view.Item.Value
+          && File_view.Item.name item = name
+        then Some (File_view.Item.loc item)
+        else None)
+    |> Option.value
+         ~default:
+           (Location.v ~file:ctx.filename ~start_line:1 ~start_col:0 ~end_line:1
+              ~end_col:0)
+  in
 
   if is_test_file ctx.filename then []
   else
-    (* Analyze each function in the AST *)
     List.filter_map
-      (fun (name, expr) ->
-        (* Calculate nesting depth using visitor pattern *)
-        let depth = Ast.Nesting.depth expr in
-
-        if depth > config.max_nesting then
-          (* Create a dummy location for now - we'll improve this later *)
-          let loc =
-            Location.v ~file:ctx.filename ~start_line:1 ~start_col:0 ~end_line:1
-              ~end_col:0
-          in
-          Some (Issue.v ~loc { name; depth; threshold = config.max_nesting })
+      (fun ({ name; nesting = depth; is_function; _ } : Function_metrics.value)
+         ->
+        if is_function && depth > config.max_nesting then
+          Some
+            (Issue.v ~loc:(item_loc name)
+               { name; depth; threshold = config.max_nesting })
         else None)
-      ast.functions
+      (Context.values ctx)
+    |> List.sort Issue.compare
 
 let pp ppf { name; depth; threshold } =
   Fmt.pf ppf "Function '%s' has nesting depth of %d (threshold: %d)" name depth

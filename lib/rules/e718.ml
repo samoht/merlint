@@ -70,7 +70,7 @@ let has_fuzz_modules files =
 let dune_has_gen_corpus ctx dir =
   try
     let dune_file = Filename.concat dir "dune" in
-    let content = File_view.content (Context.file_view ctx dune_file) in
+    let content = Context.file_content ctx dune_file in
     match Dune.File.of_string content with
     | Error _ -> false
     | Ok dune ->

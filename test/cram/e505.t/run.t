@@ -1,5 +1,9 @@
+Build fixture project:
+  $ dune build @check
+
 Test bad example - should find missing interface file:
   $ merlint -B -r E505 bad.ml
+  Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
   Analyzing 1 files
@@ -27,10 +31,12 @@ Test bad example - should find missing interface file:
   
   Summary: ✗ 1 total issue (applied 1 rule)
   ✗ Some checks failed. See details above.
+    Run `merlint help E505` for the rule's description, hint, and good/bad examples.
   [1]
 
 Test good example - should find no issues:
   $ merlint -B -r E505 good.ml good.mli
+  Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
   Analyzing 2 files
@@ -49,6 +55,7 @@ Test good example - should find no issues:
 
 Test interface definition file - should not require .mli:
   $ merlint -B -r E505 test_intf.ml
+  Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
   Analyzing 1 files

@@ -29,11 +29,27 @@ let count_cmd_v identifiers =
       else acc)
     0 identifiers
 
+let is_cmd_v_call call =
+  let callee = File_view.Call.callee call in
+  match (File_view.Name.prefix callee, File_view.Name.base callee) with
+  | [ "Cmd" ], "v" | [ "Cmdliner"; "Cmd" ], "v" -> true
+  | _ -> false
+
+let count_cmd_v_surface view =
+  let count = ref 0 in
+  File_view.iter_applications view (fun call ->
+      if is_cmd_v_call call then incr count);
+  !count
+
 let check (ctx : Context.file) =
   if not (Filename.check_suffix ctx.filename ".ml") then []
   else
     match File_view.resolved_identifiers (Context.view ctx) with
-    | None -> []
+    | None ->
+        let count = count_cmd_v_surface (Context.view ctx) in
+        if count >= 2 then
+          [ Issue.v ~loc:(Location.in_file ctx.filename) { count } ]
+        else []
     | Some identifiers ->
         let count = count_cmd_v identifiers in
         if count >= 2 then

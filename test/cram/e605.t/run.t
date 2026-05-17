@@ -1,5 +1,9 @@
 Test bad example - should find missing test files:
+Build bad fixture project:
+  $ (cd bad && dune build @check)
+
   $ merlint -B -r E605 bad/
+  Dune root: $TESTCASE_ROOT/bad/
   Running merlint analysis...
   
   Analyzing 5 files
@@ -37,10 +41,15 @@ Test bad example - should find missing test files:
   
   Summary: ✗ 2 total issues (applied 1 rule)
   ✗ Some checks failed. See details above.
+    Run `merlint help E605` for the rule's description, hint, and good/bad examples.
   [1]
 
 Test good example - should find no issues (includes bin/common.ml which is an executable module, not a library, and lib/internal.ml which is a private module):
+Build good fixture project:
+  $ (cd good && dune build @check)
+
   $ merlint -B -r E605 good/
+  Dune root: $TESTCASE_ROOT/good/
   Running merlint analysis...
   
   Analyzing 10 files
@@ -61,11 +70,39 @@ Test good example - should find no issues (includes bin/common.ml which is an ex
 
 
 Test multidir - analyzing lib and test together should not report missing tests when they exist:
-  $ merlint -B -r E605 good/lib good/test 2>&1 | grep -c "missing test file"
-  0
-  [1]
+  $ merlint -B -r E605 good/lib good/test
+  Dune root: $TESTCASE_ROOT/good
+  Running merlint analysis...
+  
+  Analyzing 8 files
+  
+  ✓ Code Quality (0 total issues)
+  ✓ Code Style (0 total issues)
+  ✓ Naming Conventions (0 total issues)
+  ✓ Documentation (0 total issues)
+  ✓ Project Structure (0 total issues)
+  ✓ Test Quality (0 total issues)
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
+  
+  Summary: ✓ 0 total issues (applied 1 rule)
+  ✓ All checks passed!
 
 Test executable modules are not flagged - bin/common.ml should not require a test:
-  $ merlint -B -r E605 good/ 2>&1 | grep -c "common"
-  0
-  [1]
+  $ merlint -B -r E605 good/bin/common.ml
+  Dune root: $TESTCASE_ROOT/good
+  Running merlint analysis...
+  
+  Analyzing 1 files
+  
+  ✓ Code Quality (0 total issues)
+  ✓ Code Style (0 total issues)
+  ✓ Naming Conventions (0 total issues)
+  ✓ Documentation (0 total issues)
+  ✓ Project Structure (0 total issues)
+  ✓ Test Quality (0 total issues)
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
+  
+  Summary: ✓ 0 total issues (applied 1 rule)
+  ✓ All checks passed!

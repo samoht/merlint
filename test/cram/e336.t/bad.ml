@@ -2,7 +2,7 @@ type t = int
 
 (* Bad: [print] is a printer-typed value but doesn't start with [pp]/[pp_]
    or [dump]/[dump_]. *)
-let print fmt v = Format.fprintf fmt "%d" v
+let print : int Fmt.t = fun fmt v -> Format.fprintf fmt "%d" v
 
 (* Good: [dump_widget] is accepted as an in-tree convention for human-readable
    diagnostic dumps. *)

@@ -183,6 +183,63 @@ let test_exclude_substring () =
             file_str)
     files
 
+let with_temp_dune content f =
+  let dir = Filename.temp_file "merlint_dune_describe" "" in
+  Sys.remove dir;
+  Unix.mkdir dir 0o755;
+  let dune_path = Filename.concat dir "dune" in
+  let oc = open_out dune_path in
+  output_string oc content;
+  close_out oc;
+  Fun.protect
+    ~finally:(fun () ->
+      (try Sys.remove dune_path with _ -> ());
+      try Unix.rmdir dir with _ -> ())
+    (fun () -> f (Fpath.v dir))
+
+let test_excluded_subdirs_missing_dune () =
+  let dir = Filename.temp_file "merlint_dune_describe_empty" "" in
+  Sys.remove dir;
+  Unix.mkdir dir 0o755;
+  Fun.protect
+    ~finally:(fun () -> try Unix.rmdir dir with _ -> ())
+    (fun () ->
+      Alcotest.(check (list string))
+        "no dune file -> no excluded subdirs" []
+        (Merlint.Dune_describe.excluded_subdirs_of_dune (Fpath.v dir)))
+
+let test_excluded_subdirs_empty () =
+  with_temp_dune "(library (name foo))" (fun dir ->
+      Alcotest.(check (list string))
+        "no data_only / vendored stanza -> no excluded subdirs" []
+        (Merlint.Dune_describe.excluded_subdirs_of_dune dir))
+
+let test_excluded_subdirs_data_only () =
+  with_temp_dune "(data_only_dirs fixtures traces)" (fun dir ->
+      Alcotest.(check (list string))
+        "data_only_dirs entries are excluded" [ "fixtures"; "traces" ]
+        (Merlint.Dune_describe.excluded_subdirs_of_dune dir))
+
+let test_excluded_subdirs_vendored () =
+  with_temp_dune "(vendored_dirs third_party)" (fun dir ->
+      Alcotest.(check (list string))
+        "vendored_dirs entries are excluded" [ "third_party" ]
+        (Merlint.Dune_describe.excluded_subdirs_of_dune dir))
+
+let test_excluded_subdirs_both () =
+  with_temp_dune
+    "(data_only_dirs corpora)\n(vendored_dirs upstream)\n(library (name foo))"
+    (fun dir ->
+      Alcotest.(check (list string))
+        "data_only and vendored combine in order" [ "corpora"; "upstream" ]
+        (Merlint.Dune_describe.excluded_subdirs_of_dune dir))
+
+let test_excluded_subdirs_malformed () =
+  with_temp_dune "(this is (((((not a valid dune file" (fun dir ->
+      Alcotest.(check (list string))
+        "malformed dune file -> no crash, empty result" []
+        (Merlint.Dune_describe.excluded_subdirs_of_dune dir))
+
 let suite =
   ( "dune_describe",
     [
@@ -196,4 +253,16 @@ let suite =
       Alcotest.test_case "get_test_modules" `Quick test_get_test_modules;
       Alcotest.test_case "ensure_project_built" `Quick test_ensure_project_built;
       Alcotest.test_case "cram exclusion" `Quick test_cram_exclusion;
+      Alcotest.test_case "excluded_subdirs: no dune file" `Quick
+        test_excluded_subdirs_missing_dune;
+      Alcotest.test_case "excluded_subdirs: no data_only/vendored stanza" `Quick
+        test_excluded_subdirs_empty;
+      Alcotest.test_case "excluded_subdirs: data_only_dirs" `Quick
+        test_excluded_subdirs_data_only;
+      Alcotest.test_case "excluded_subdirs: vendored_dirs" `Quick
+        test_excluded_subdirs_vendored;
+      Alcotest.test_case "excluded_subdirs: both stanzas" `Quick
+        test_excluded_subdirs_both;
+      Alcotest.test_case "excluded_subdirs: malformed dune file" `Quick
+        test_excluded_subdirs_malformed;
     ] )

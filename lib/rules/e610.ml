@@ -1,7 +1,6 @@
 (** E610: Test Without Library *)
 
 module Issue_location = Location
-open Ocaml_parsing
 
 type payload = { test_file : string; expected_module : string }
 
@@ -11,14 +10,14 @@ module Log = (val Logs.src_log log_src : Logs.LOG)
 
 (** Find "test/" in path, handling both absolute (/test/) and relative (test/)
     paths. Returns the index after "test/" if found. *)
-let find_test_prefix path =
+let test_prefix path =
   match Astring.String.find_sub ~sub:"/test/" path with
   | Some idx -> Some (idx + 6)
   | None -> if String.starts_with ~prefix:"test/" path then Some 5 else None
 
 (** Find "lib/" in path, handling both absolute (/lib/) and relative (lib/)
     paths. Returns the index after "lib/" if found. *)
-let find_lib_prefix path =
+let lib_prefix path =
   match Astring.String.find_sub ~sub:"/lib/" path with
   | Some idx -> Some (idx + 5)
   | None -> if String.starts_with ~prefix:"lib/" path then Some 4 else None
@@ -28,7 +27,7 @@ let find_lib_prefix path =
 let expected_lib_path test_file =
   let path = Fpath.to_string test_file in
   (* Find "test/" in the path and extract what comes after *)
-  match find_test_prefix path with
+  match test_prefix path with
   | Some idx ->
       let after_test = String.sub path idx (String.length path - idx) in
       (* Replace test_x.ml with x.ml *)
@@ -51,7 +50,7 @@ let library_module_path file =
   if not (Fpath.has_ext ".ml" file) then None
   else
     let path = Fpath.to_string file in
-    match find_lib_prefix path with
+    match lib_prefix path with
     | Some idx ->
         let result = String.sub path idx (String.length path - idx) in
         Log.debug (fun m -> m "E610: lib path %s -> %s" path result);
@@ -79,109 +78,18 @@ let library_source_files libraries =
 
 module String_set = Set.Make (String)
 
-(** AST iterator that records the leading segment of every module path in the
-    tree (the [Foo] of [Foo.x], [Foo.Bar.t], [open Foo], [include Foo],
-    [module M = Foo], [type t = Foo.t], constructor patterns, etc.). The leading
-    segment alone is enough for E610: it just needs to know whether a given
-    module name is referenced anywhere. *)
-let rec head_of_lid : Longident.t -> string option = function
-  | Lident s -> Some s
-  | Ldot (l, _) -> head_of_lid l.txt
-  | Lapply (l, _) -> head_of_lid l.txt
-
-let module_ref_iterator acc =
-  let add_lid lid =
-    match head_of_lid lid with
-    | Some head
-      when String.length head > 0 && head.[0] >= 'A' && head.[0] <= 'Z' ->
-        acc := String_set.add head !acc
-    | _ -> ()
-  in
-  let add_name name = acc := String_set.add name !acc in
-  {
-    Ast_iterator.default_iterator with
-    module_binding =
-      (fun self mb ->
-        (match mb.pmb_name.txt with Some n -> add_name n | None -> ());
-        Ast_iterator.default_iterator.module_binding self mb);
-    module_declaration =
-      (fun self md ->
-        (match md.pmd_name.txt with Some n -> add_name n | None -> ());
-        Ast_iterator.default_iterator.module_declaration self md);
-    expr =
-      (fun self e ->
-        (match e.pexp_desc with
-        | Pexp_ident { txt; _ } | Pexp_construct ({ txt; _ }, _) -> add_lid txt
-        | _ -> ());
-        Ast_iterator.default_iterator.expr self e);
-    typ =
-      (fun self c ->
-        (match c.ptyp_desc with
-        | Ptyp_constr ({ txt; _ }, _) | Ptyp_class ({ txt; _ }, _) ->
-            add_lid txt
-        | _ -> ());
-        Ast_iterator.default_iterator.typ self c);
-    pat =
-      (fun self p ->
-        (match p.ppat_desc with
-        | Ppat_construct ({ txt; _ }, _) -> add_lid txt
-        | _ -> ());
-        Ast_iterator.default_iterator.pat self p);
-    module_expr =
-      (fun self me ->
-        (match me.pmod_desc with
-        | Pmod_ident { txt; _ } -> add_lid txt
-        | _ -> ());
-        Ast_iterator.default_iterator.module_expr self me);
-    module_type =
-      (fun self mty ->
-        (match mty.pmty_desc with
-        | Pmty_ident { txt; _ } | Pmty_alias { txt; _ } -> add_lid txt
-        | _ -> ());
-        Ast_iterator.default_iterator.module_type self mty);
-    open_declaration =
-      (fun self od ->
-        (match od.popen_expr.pmod_desc with
-        | Pmod_ident { txt; _ } -> add_lid txt
-        | _ -> ());
-        Ast_iterator.default_iterator.open_declaration self od);
-  }
-
-let collect_refs_in_structure structure acc =
-  let acc = ref acc in
-  let iter = module_ref_iterator acc in
-  iter.structure iter structure;
-  !acc
-
-let collect_refs_in_signature signature acc =
-  let acc = ref acc in
-  let iter = module_ref_iterator acc in
-  iter.signature iter signature;
-  !acc
-
-let collect_refs_in_interface ctx path acc =
-  match File_view.typedtree (Context.file_view ctx path) with
-  | Some (`Interface signature) ->
-      signature |> Ocaml_typing.Untypeast.untype_signature |> fun signature ->
-      collect_refs_in_signature signature acc
-  | Some (`Implementation _) | None -> acc
-  | exception Context.Analysis_error _ -> acc
-
-(** Project-wide set of module names referenced anywhere in [files]. Parse each
-    [.ml] / [.mli] once via compiler-libs and walk the AST. The resulting set is
-    consulted by per-test lookups to decide whether a test's expected library
-    module is referenced (and therefore counts as "exists in some library
-    form"). *)
+(** Project-wide set of module names referenced anywhere in [files]. The
+    per-file view owns the typedtree/parsetree traversal cache; E610 only merges
+    its module-name projection across library files. *)
 let collect_referenced_modules ctx files =
   List.fold_left
     (fun acc path ->
-      if Filename.check_suffix path ".ml" then
-        match File_view.parsetree (Context.file_view ctx path) with
-        | None -> acc
-        | Some structure -> collect_refs_in_structure structure acc
-        | exception Context.Analysis_error _ -> acc
-      else if Filename.check_suffix path ".mli" then
-        collect_refs_in_interface ctx path acc
+      if Filename.check_suffix path ".ml" || Filename.check_suffix path ".mli"
+      then
+        try
+          File_view.referenced_module_names (Context.file_view ctx path)
+          |> List.fold_left (fun acc name -> String_set.add name acc) acc
+        with Context.Analysis_error _ -> acc
       else acc)
     String_set.empty files
 

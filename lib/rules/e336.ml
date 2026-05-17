@@ -2,44 +2,33 @@
 
 type payload = { function_name : string; expected : string }
 
-(* Match [Format.formatter] (qualified or aliased to [formatter]). *)
-let is_formatter (ct : Parsetree.core_type) =
-  match ct.ptyp_desc with
-  | Ptyp_constr
-      ( {
-          txt = Ldot ({ txt = Lident "Format"; _ }, { txt = "formatter"; _ });
-          _;
-        },
-        [] ) ->
-      true
-  | Ptyp_constr ({ txt = Lident "formatter"; _ }, []) -> true
-  | _ -> false
-
-let is_unit (ct : Parsetree.core_type) =
-  match ct.ptyp_desc with
-  | Ptyp_constr ({ txt = Lident "unit"; _ }, []) -> true
-  | _ -> false
+let is_formatter typ =
+  File_view.Type_view.is_constr typ ~path:[ "Format"; "formatter" ]
 
 (* Return [Some value_type] if the given core type matches a printer
    signature [_ Fmt.t] or [Format.formatter -> _ -> unit]. *)
-let printer_value_type (ct : Parsetree.core_type) =
-  match ct.ptyp_desc with
-  | Ptyp_constr
-      ( { txt = Ldot ({ txt = Lident "Fmt"; _ }, { txt = "t"; _ }); _ },
-        [ value ] ) ->
+let printer_value_type typ =
+  match File_view.Type_view.constr typ with
+  | Some (name, [ value ]) when File_view.Name.equals_path name [ "Fmt"; "t" ]
+    ->
       Some value
-  | Ptyp_arrow (Asttypes.Nolabel, fmt, rest) when is_formatter fmt -> (
-      match rest.ptyp_desc with
-      | Ptyp_arrow (Asttypes.Nolabel, value, ret) when is_unit ret -> Some value
+  | _ -> (
+      match File_view.Type_view.arrow typ with
+      | Some (Ocaml_parsing.Asttypes.Nolabel, fmt, rest) when is_formatter fmt
+        -> (
+          match File_view.Type_view.arrow rest with
+          | Some (Ocaml_parsing.Asttypes.Nolabel, value, ret)
+            when File_view.Type_view.is_unit ret ->
+              Some value
+          | _ -> None)
       | _ -> None)
-  | _ -> None
 
 (* True when the printer is for the local module's main type [t] -- in that
    case the canonical name is the bare [pp]. *)
-let is_local_t (ct : Parsetree.core_type) =
-  match ct.ptyp_desc with
-  | Ptyp_constr ({ txt = Lident "t"; _ }, _) -> true
-  | _ -> false
+let is_local_t typ =
+  match File_view.Type_view.constr typ with
+  | Some (name, _) -> File_view.Name.base name = "t"
+  | None -> false
 
 (* Suggested rename. When the printer is for the local [t], canonical name
    is [pp]. Otherwise prefix the existing name with [pp_] so the
@@ -57,22 +46,23 @@ let name_matches_convention name =
   || String.starts_with ~prefix:"dump_" name
 
 let check (ctx : Context.file) =
-  let outline_data = Context.outline ctx in
-  let filename = ctx.filename in
   List.filter_map
-    (fun (item : Outline.item) ->
-      match (item.kind, Outline.parsed_type item) with
-      | Outline.Value, Some ct
-        when (not (name_matches_convention item.name))
-             && Option.is_some (printer_value_type ct) -> (
-          let value_type = Option.get (printer_value_type ct) in
-          let expected = suggested_name ~name:item.name ~value_type in
-          match Outline.location filename item with
-          | Some loc ->
-              Some (Issue.v ~loc { function_name = item.name; expected })
-          | None -> None)
+    (fun item ->
+      let module Item = File_view.Item in
+      match (Item.kind item, Item.type_sig item) with
+      | Item.Value, Some typ when not (name_matches_convention (Item.name item))
+        -> (
+          match printer_value_type typ with
+          | None -> None
+          | Some value_type ->
+              let expected =
+                suggested_name ~name:(Item.name item) ~value_type
+              in
+              Some
+                (Issue.v ~loc:(Item.loc item)
+                   { function_name = Item.name item; expected }))
       | _ -> None)
-    outline_data
+    (File_view.items (Context.view ctx))
 
 let pp ppf { function_name; expected } =
   Fmt.pf ppf

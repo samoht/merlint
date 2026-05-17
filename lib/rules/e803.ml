@@ -4,21 +4,38 @@ type payload = { dir : string; pattern : string }
 
 let shell_call view =
   let found = ref None in
+  let ends_with path suffix =
+    let rec drop n xs =
+      if n <= 0 then xs
+      else match xs with [] -> [] | _ :: xs -> drop (n - 1) xs
+    in
+    let len = List.length path in
+    let suffix_len = List.length suffix in
+    len >= suffix_len && drop (len - suffix_len) path = suffix
+  in
+  let set call pattern = found := Some (pattern, File_view.Call.loc call) in
   File_view.iter_applications view (fun call ->
       let name = File_view.Call.callee call in
       let path = File_view.Name.prefix name @ [ File_view.Name.base name ] in
       match (path, !found) with
-      | [ "Sys"; "command" ], None -> found := Some "Sys.command"
-      | [ "Unix"; "system" ], None -> found := Some "Unix.system"
-      | [ "Unix"; "create_process" ], None ->
-          found := Some "Unix.create_process"
-      | [ "Unix"; "open_process" ], None -> found := Some "Unix.open_process"
-      | [ "Eio"; "Process"; "run" ], None -> found := Some "Eio.Process.run"
-      | [ "Eio"; "Process"; "spawn" ], None -> found := Some "Eio.Process.spawn"
-      | [ "Eio"; "Process"; "parse_out" ], None ->
-          found := Some "Eio.Process.parse_out"
-      | [ "Eio_process"; "run" ], None -> found := Some "Eio_process.run"
-      | [ "Eio_process"; "spawn" ], None -> found := Some "Eio_process.spawn"
+      | _, None when ends_with path [ "Sys"; "command" ] ->
+          set call "Sys.command"
+      | _, None when ends_with path [ "Unix"; "system" ] ->
+          set call "Unix.system"
+      | _, None when ends_with path [ "Unix"; "create_process" ] ->
+          set call "Unix.create_process"
+      | _, None when ends_with path [ "Unix"; "open_process" ] ->
+          set call "Unix.open_process"
+      | _, None when ends_with path [ "Eio"; "Process"; "run" ] ->
+          set call "Eio.Process.run"
+      | _, None when ends_with path [ "Eio"; "Process"; "spawn" ] ->
+          set call "Eio.Process.spawn"
+      | _, None when ends_with path [ "Eio"; "Process"; "parse_out" ] ->
+          set call "Eio.Process.parse_out"
+      | _, None when ends_with path [ "Eio_process"; "run" ] ->
+          set call "Eio_process.run"
+      | _, None when ends_with path [ "Eio_process"; "spawn" ] ->
+          set call "Eio_process.spawn"
       | _ -> ());
   !found
 
@@ -33,9 +50,7 @@ let check (ctx : Context.project) =
           with File_view.Analysis_error _ -> None
         in
         match found with
-        | Some pattern ->
-            let loc = Location.in_file path in
-            Some (Issue.v ~loc { dir = d.path; pattern })
+        | Some (pattern, loc) -> Some (Issue.v ~loc { dir = d.path; pattern })
         | None -> None
       else None)
     dirs

@@ -39,7 +39,20 @@ let clean_original name =
   else name
 
 let clean_suggested original =
-  Re.replace_string (Re.compile (Re.str "__")) ~by:"." original
+  let parts = String.split_on_char '.' original in
+  let convert part =
+    match String.split_on_char '_' part with
+    | [ _ ] -> [ part ]
+    | raw_parts ->
+        let non_empty = List.filter (fun s -> s <> "") raw_parts in
+        non_empty
+  in
+  let rec dedupe_adjacent = function
+    | a :: b :: rest when a = b -> dedupe_adjacent (b :: rest)
+    | a :: rest -> a :: dedupe_adjacent rest
+    | [] -> []
+  in
+  parts |> List.concat_map convert |> dedupe_adjacent |> String.concat "."
 
 let issue_of_identifier ref_ =
   let name = File_view.Name.to_string (File_view.Reference.name ref_) in

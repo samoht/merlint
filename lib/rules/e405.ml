@@ -50,28 +50,25 @@ let check (ctx : Context.file) =
   if not (File_kind.is_mli ctx.filename) then []
   else
     let content = Context.content ctx in
-    let outline = Context.outline ctx in
 
     (* Check all public values in the outline *)
     List.filter_map
-      (fun (item : Outline.item) ->
-        match item.kind with
-        | Outline.Value ->
-            let item_loc = item.location in
+      (fun item ->
+        let module Item = File_view.Item in
+        match Item.kind item with
+        | Item.Value ->
+            let item_loc = Item.loc item in
             let has_doc_before = has_doc_comment content item_loc.start.line in
             let has_doc_after =
               has_doc_comment_after content item_loc.end_.line
             in
             if (not has_doc_before) && not has_doc_after then
-              let loc =
-                Location.v ~file:ctx.filename ~start_line:item_loc.start.line
-                  ~start_col:item_loc.start.col ~end_line:item_loc.end_.line
-                  ~end_col:item_loc.end_.col
-              in
-              Some (Issue.v ~loc { value_name = item.name; location = loc })
+              Some
+                (Issue.v ~loc:item_loc
+                   { value_name = Item.name item; location = item_loc })
             else None
         | _ -> None)
-      (Outline.values outline)
+      (File_view.value_items (Context.view ctx))
 
 let pp ppf { value_name; location = _ } =
   Fmt.pf ppf "Public value '%s' is missing documentation" value_name

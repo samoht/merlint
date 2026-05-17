@@ -1,3 +1,4 @@
 (library
  (name test_e617)
- (libraries alcotest))
+ (libraries alcotest)
+ (flags :standard -warn-error -a))

@@ -1,5 +1,9 @@
 Test bad example - should find test without library:
+Build bad fixture project:
+  $ (cd bad && dune build @check)
+
   $ merlint -B -r E610 bad/
+  Dune root: $TESTCASE_ROOT/bad/
   Running merlint analysis...
   
   Analyzing 4 files
@@ -28,10 +32,15 @@ Test bad example - should find test without library:
   
   Summary: ✗ 2 total issues (applied 1 rule)
   ✗ Some checks failed. See details above.
+    Run `merlint help E610` for the rule's description, hint, and good/bad examples.
   [1]
 
 Test good example with library subdirectories - test files match library modules in subdirs:
+Build good fixture project:
+  $ (cd good && dune build @check)
+
   $ merlint -B -r E610 good-subdir/
+  Dune root: $TESTCASE_ROOT/good-subdir/
   Running merlint analysis...
   
   Analyzing 4 files
@@ -50,6 +59,7 @@ Test good example with library subdirectories - test files match library modules
 
 Test good example - all test files have corresponding library modules:
   $ merlint -B -r E610 good/
+  Dune root: $TESTCASE_ROOT/good/
   Running merlint analysis...
   
   Analyzing 6 files

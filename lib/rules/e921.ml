@@ -11,7 +11,7 @@ let odoc_mdx_error_re = Re.compile (Re.str "{err@mdx-error")
 
 let scan_file ctx path =
   match
-    try Some (File_view.content (Context.file_view ctx path))
+    try Some (Context.file_content ctx path)
     with Sys_error _ | File_view.Analysis_error _ -> None
   with
   | None -> []
@@ -40,17 +40,18 @@ let rec walk ctx dir =
   let entries = try Sys.readdir dir |> Array.to_list with Sys_error _ -> [] in
   List.concat_map
     (fun entry ->
-      if String.length entry > 0 && (entry.[0] = '.' || entry.[0] = '_') then []
-      else
-        let path = Filename.concat dir entry in
-        let is_dir = try Sys.is_directory path with Sys_error _ -> false in
-        if is_dir then walk ctx path
-        else if
-          Filename.check_suffix path ".md"
-          || Filename.check_suffix path ".mli"
-          || Filename.check_suffix path ".mld"
-        then scan_file ctx path
-        else [])
+      let path = Filename.concat dir entry in
+      let is_dir = try Sys.is_directory path with Sys_error _ -> false in
+      if is_dir then
+        if Dune_describe.skippable_subdir ~parent_dir:(Fpath.v dir) entry then
+          []
+        else walk ctx path
+      else if
+        Filename.check_suffix path ".md"
+        || Filename.check_suffix path ".mli"
+        || Filename.check_suffix path ".mld"
+      then scan_file ctx path
+      else [])
     entries
 
 let check (ctx : Context.project) = walk ctx ctx.project_root

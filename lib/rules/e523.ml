@@ -26,21 +26,19 @@ let dune_files root =
   let rec walk dir acc =
     List.fold_left
       (fun acc name ->
-        if
-          name = "_build" || name = "_opam" || name = ".git"
-          || String.starts_with ~prefix:"." name
-        then acc
-        else
-          let p = Filename.concat dir name in
-          if is_dir p then walk p acc
-          else if name = "dune" then p :: acc
-          else acc)
+        let p = Filename.concat dir name in
+        if is_dir p then
+          if Dune_describe.skippable_subdir ~parent_dir:(Fpath.v dir) name then
+            acc
+          else walk p acc
+        else if name = "dune" then p :: acc
+        else acc)
       acc (try_readdir dir)
   in
   walk root []
 
 let content ctx path =
-  try Some (File_view.content (Context.file_view ctx path))
+  try Some (Context.file_content ctx path)
   with Sys_error _ | File_view.Analysis_error _ -> None
 
 (** [.ml] files dune auto-discovers as modules. Files with extra dots in the

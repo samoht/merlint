@@ -1,5 +1,9 @@
 Test bad example - should find test exports module name:
+Build bad fixture project:
+  $ (cd bad && dune build @check)
+
   $ merlint -B -r E600 bad/
+  Dune root: $TESTCASE_ROOT/bad/
   Running merlint analysis...
   
   Analyzing 3 files
@@ -35,7 +39,11 @@ Test bad example - should find test exports module name:
   [1]
 
 Test good example - should find no issues:
+Build good fixture project:
+  $ (cd good && dune build @check)
+
   $ merlint -B -r E600 good/
+  Dune root: $TESTCASE_ROOT/good/
   Running merlint analysis...
   
   Analyzing 3 files

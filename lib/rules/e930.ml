@@ -67,7 +67,7 @@ let dep_is_runtime (v : Opam.Value.t) =
   | _ -> true
 
 let content ctx path =
-  try Some (File_view.content (Context.file_view ctx path))
+  try Some (Context.file_content ctx path)
   with Sys_error _ | File_view.Analysis_error _ -> None
 
 let read_runtime_depends ctx path =
@@ -123,16 +123,15 @@ let rec walk ctx ~in_test dir acc =
   let entries = try Sys.readdir dir |> Array.to_list with Sys_error _ -> [] in
   List.fold_left
     (fun acc entry ->
-      if String.length entry > 0 && (entry.[0] = '.' || entry.[0] = '_') then
-        acc
-      else
-        let path = Filename.concat dir entry in
-        let is_dir = try Sys.is_directory path with Sys_error _ -> false in
-        if is_dir then
-          walk ctx ~in_test:(in_test || is_test_subdir entry) path acc
-        else if entry = "dune" && not in_test then
-          (path, parse_dune ctx path) :: acc
-        else acc)
+      let path = Filename.concat dir entry in
+      let is_dir = try Sys.is_directory path with Sys_error _ -> false in
+      if is_dir then
+        if Dune_describe.skippable_subdir ~parent_dir:(Fpath.v dir) entry then
+          acc
+        else walk ctx ~in_test:(in_test || is_test_subdir entry) path acc
+      else if entry = "dune" && not in_test then
+        (path, parse_dune ctx path) :: acc
+      else acc)
     acc entries
 
 let kind_of_tags tags =

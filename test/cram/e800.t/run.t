@@ -1,5 +1,9 @@
 Test bad example - foo/test/interop/oracle/scripts/ exists but no generate.sh:
+Build bad fixture project:
+  $ (cd bad && dune build @check)
+
   $ merlint -B -r E800 bad/
+  Dune root: $TESTCASE_ROOT/bad/
   Running merlint analysis...
   
   Analyzing 0 files
@@ -26,10 +30,15 @@ Test bad example - foo/test/interop/oracle/scripts/ exists but no generate.sh:
   
   Summary: ✗ 1 total issue (applied 1 rule)
   ✗ Some checks failed. See details above.
+    Run `merlint help E800` for the rule's description, hint, and good/bad examples.
   [1]
 
 Test good example - foo/test/interop/oracle/scripts/generate.sh exists:
+Build good fixture project:
+  $ (cd good && dune build @check)
+
   $ merlint -B -r E800 good/
+  Dune root: $TESTCASE_ROOT/good/
   Running merlint analysis...
   
   Analyzing 0 files

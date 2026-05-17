@@ -1,38 +1,18 @@
 (** E700: Fuzz Module Convention *)
 
 module Issue_location = Location
-open Ocaml_parsing
 
 type payload = { filename : string; module_name : string }
 
-let suite_ref lid =
-  match Longident.flatten lid with
-  | [ module_name; "suite" ] when String.starts_with ~prefix:"Fuzz_" module_name
-    ->
-      true
-  | _ -> false
+let uses_fuzz_module_suites view =
+  Suite_refs.references_suite_with_prefix view ~prefix:"Fuzz_"
 
-let uses_fuzz_module_suites structure =
-  let found = ref false in
-  Ast.iter_expressions structure (fun (expr : Parsetree.expression) ->
-      match expr.pexp_desc with
-      | Pexp_ident { txt; _ } when suite_ref txt -> found := true
-      | _ -> ());
-  !found
-
-let defines_own_tests structure =
-  let found = ref false in
-  Ast.iter_apply structure (fun _ fn _ ->
-      match Longident.flatten fn with
-      | [ "Alcobar"; "test_case" ] | [ "Alcotest"; "test_case" ] ->
-          found := true
-      | _ -> ());
-  !found
+let defines_own_tests = Suite_refs.calls_test_case
 
 (** Check if fuzz.ml properly delegates to fuzz modules via Fuzz_*.suite instead
     of defining its own tests inline. *)
 let check ctx =
-  let files = Context.all_files ctx in
+  let files = Context.files_to_analyze ctx in
   List.concat_map
     (fun filename ->
       let fp = Fpath.v filename in
@@ -41,21 +21,16 @@ let check ctx =
         && Fpath.(fp |> rem_ext |> basename) = "fuzz"
       then
         try
-          match File_view.parsetree (Context.file_view ctx filename) with
-          | None -> []
-          | Some structure ->
-              if
-                defines_own_tests structure
-                && not (uses_fuzz_module_suites structure)
-              then
-                [
-                  Issue.v
-                    ~loc:
-                      (Issue_location.v ~file:filename ~start_line:1
-                         ~start_col:0 ~end_line:1 ~end_col:0)
-                    { filename; module_name = "fuzz" };
-                ]
-              else []
+          let view = Context.file_view ctx filename in
+          if defines_own_tests view && not (uses_fuzz_module_suites view) then
+            [
+              Issue.v
+                ~loc:
+                  (Issue_location.v ~file:filename ~start_line:1 ~start_col:0
+                     ~end_line:1 ~end_col:0)
+                { filename; module_name = "fuzz" };
+            ]
+          else []
         with File_view.Analysis_error _ -> []
       else [])
     files

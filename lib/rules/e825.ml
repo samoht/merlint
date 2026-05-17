@@ -4,9 +4,7 @@ type payload = { dir : string }
 
 let dune_file ctx dir =
   let path = Filename.concat dir "dune" in
-  try
-    File_view.content (Context.file_view ctx path)
-    |> Dune.File.of_string |> Result.to_option
+  try Context.file_content ctx path |> Dune.File.of_string |> Result.to_option
   with File_view.Analysis_error _ -> None
 
 (* Match either the library name [csv] or its public name [nox-csv] (the

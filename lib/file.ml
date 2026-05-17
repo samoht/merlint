@@ -21,18 +21,14 @@ let is_in_private_library dune_describe filename =
     (Dune_describe.libraries dune_describe)
 
 let process_ocaml_files ctx f =
-  let files = Context.all_files ctx in
-  List.concat_map
-    (fun filename ->
+  Context.files_to_analyze ctx
+  |> List.concat_map (fun filename ->
       if File_kind.is_ml_or_mli filename then
         try
-          let content =
-            In_channel.with_open_text filename In_channel.input_all
-          in
+          let content = Context.file_content ctx filename in
           f filename content
         with Sys_error _ -> []
       else [])
-    files
 
 let process_lines_with_location filename content f =
   let lines = String.split_on_char '\n' content in

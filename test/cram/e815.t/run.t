@@ -1,5 +1,9 @@
 Test bad example - dune uses REGEN_TRACES env sentinel:
+Build bad fixture project:
+  $ (cd bad && dune build @check)
+
   $ merlint -B -r E815 bad/
+  Dune root: $TESTCASE_ROOT/bad/
   Running merlint analysis...
   
   Analyzing 0 files
@@ -27,10 +31,15 @@ Test bad example - dune uses REGEN_TRACES env sentinel:
   
   Summary: ✗ 1 total issue (applied 1 rule)
   ✗ Some checks failed. See details above.
+    Run `merlint help E815` for the rule's description, hint, and good/bad examples.
   [1]
 
 Test good example - dune has plain regen-traces alias without sentinel:
+Build good fixture project:
+  $ (cd good && dune build @check)
+
   $ merlint -B -r E815 good/
+  Dune root: $TESTCASE_ROOT/good/
   Running merlint analysis...
   
   Analyzing 0 files

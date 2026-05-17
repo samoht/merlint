@@ -2,9 +2,13 @@
 
 type payload = { package : string }
 
-let try_readdir d = try Sys.readdir d |> Array.to_list with Sys_error _ -> []
-let is_dir p = Sys.file_exists p && Sys.is_directory p
-let skip_pkg = function "_build" | ".git" | "_opam" -> true | _ -> false
+let ends_with path suffix =
+  let rec drop n xs =
+    if n <= 0 then xs else match xs with [] -> [] | _ :: xs -> drop (n - 1) xs
+  in
+  let len = List.length path in
+  let suffix_len = List.length suffix in
+  len >= suffix_len && drop (len - suffix_len) path = suffix
 
 let file_uses_wire ctx path =
   try
@@ -12,30 +16,38 @@ let file_uses_wire ctx path =
     File_view.iter_applications (Context.file_view ctx path) (fun call ->
         let name = File_view.Call.callee call in
         match File_view.Name.prefix name @ [ File_view.Name.base name ] with
-        | [ "Wire"; "Codec"; "v" ] -> uses := true
+        | path when ends_with path [ "Wire"; "Codec"; "v" ] -> uses := true
         | _ -> ());
     !uses
   with File_view.Analysis_error _ -> false
 
-let package_uses_wire ctx lib_dir =
-  try_readdir lib_dir
-  |> List.filter (fun f ->
-      Filename.check_suffix f ".ml" && not (Filename.check_suffix f ".mli"))
-  |> List.exists (fun f -> file_uses_wire ctx (Filename.concat lib_dir f))
+let library_uses_wire ctx lib =
+  Project_index.Library.files lib
+  |> List.exists (fun fp ->
+      let f = Fpath.to_string fp in
+      Filename.check_suffix f ".ml"
+      && (not (Filename.check_suffix f ".mli"))
+      && file_uses_wire ctx f)
 
-let check_package ctx root pkg =
-  let pkg_dir = Filename.concat root pkg in
-  let lib_dir = Filename.concat pkg_dir "lib" in
-  let c_dir = Filename.concat pkg_dir "c" in
-  if skip_pkg pkg || not (is_dir pkg_dir && is_dir lib_dir) then []
-  else if (not (package_uses_wire ctx lib_dir)) || is_dir c_dir then []
-  else
-    let loc = Location.in_file (Filename.concat pkg "dune-project") in
-    [ Issue.v ~loc { package = pkg } ]
+let has_c_dir pkg_dir =
+  let c = Fpath.to_string (Fpath.add_seg pkg_dir "c") in
+  try Sys.is_directory c with Sys_error _ -> false
+
+let check_package ctx pkg =
+  let name = Project_index.Package.name pkg in
+  match Project_index.Package.source_dir pkg with
+  | None -> []
+  | Some pkg_dir when has_c_dir pkg_dir -> []
+  | Some _ ->
+      let libs = Project_index.package_libraries pkg in
+      if not (List.exists (library_uses_wire ctx) libs) then []
+      else
+        let loc = Location.in_file (Filename.concat name "dune-project") in
+        [ Issue.v ~loc { package = name } ]
 
 let check (ctx : Context.project) =
-  let root = ctx.project_root in
-  List.concat_map (check_package ctx root) (try_readdir root)
+  Context.index ctx |> Project_index.source_packages_nodes
+  |> List.concat_map (check_package ctx)
 
 let pp ppf { package } =
   Fmt.pf ppf

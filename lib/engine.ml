@@ -42,6 +42,16 @@ let sorted_ext_counts tbl =
   Hashtbl.fold (fun ext count acc -> (ext, count) :: acc) tbl []
   |> List.sort (fun (a, _) (b, _) -> String.compare a b)
 
+let warn_missing_cmts n =
+  if n > 0 then
+    Log.warn (fun m ->
+        m
+          "%d typedtree-backed quer%s found no fresh .cmt file -- typedtree \
+           rules silently saw nothing for those files. Run [dune build @check] \
+           (or pass [-B]) before merlint so the build artefacts are present."
+          n
+          (if n = 1 then "y" else "ies"))
+
 let log_io_stats stats backend =
   let backend_stats = Merlin.stats backend in
   let reads = sorted_ext_counts stats.reads_by_ext in
@@ -52,18 +62,19 @@ let log_io_stats stats backend =
   let lookup tbl ext = Option.value ~default:0 (Hashtbl.find_opt tbl ext) in
   Log.info (fun m ->
       m
-        "IO stats: files_read=%d merlin_calls=%d cmt_hits=%d pipeline_calls=%d \
-         cmt_reads=%d cmt_cache_hits=%d"
+        "IO stats: files_read=%d merlin_calls=%d cmt_hits=%d cmt_misses=%d \
+         source_parses=%d cmt_reads=%d cmt_cache_hits=%d"
         stats.files_read stats.merlin_calls backend_stats.cmt_hits
-        backend_stats.pipeline_calls backend_stats.cmt_reads
-        backend_stats.cmt_cache_hits);
+        backend_stats.cmt_misses backend_stats.source_parses
+        backend_stats.cmt_reads backend_stats.cmt_cache_hits);
   List.iter
     (fun ext ->
       Log.info (fun m ->
           m "IO stats[%s]: files_read=%d merlin_calls=%d" ext
             (lookup stats.reads_by_ext ext)
             (lookup stats.merlin_by_ext ext)))
-    all_exts
+    all_exts;
+  warn_missing_cmts backend_stats.cmt_misses
 
 let run_file_rule ?profiling ctx rule =
   let code = Rule.code rule in
@@ -127,33 +138,20 @@ let file_view ?profiling ~stats ~load_file ~backend filename =
       (record_file_read stats filename;
        load_file filename)
   in
-  let load_content () = Lazy.force content in
-  let outline () =
-    merlin_op ?profiling ?stats:(Some stats) filename (fun () ->
-        Merlin.outline ~content backend ~file:filename)
-  in
-  let parsetree () =
-    merlin_op ?profiling ?stats:(Some stats) filename (fun () ->
-        Merlin.parsetree ~content backend ~file:filename)
-  in
-  let signature () =
-    merlin_op ?profiling ?stats:(Some stats) filename (fun () ->
-        Merlin.signature ~content backend ~file:filename)
-  in
+  let source = Merlin.Source.v ~file:filename ~content in
   let typedtree () =
     merlin_op ?profiling ?stats:(Some stats) filename (fun () ->
-        Merlin.typedtree ~content backend ~file:filename)
+        Merlin.typedtree backend ~source)
   in
-  File_view.v ~filename ~load_content ~typedtree ~parsetree ~signature ~outline
-    ()
+  File_view.v ~filename ~typedtree ()
 
 let setup_analysis ~filter ~dune_describe ~files_to_analyze ~index ~file_view
     project_root =
   let config = Config.load project_root in
-  let files_to_analyze_str = List.map Fpath.to_string files_to_analyze in
+  let files_to_analyze = List.map Fpath.to_string files_to_analyze in
   let project_ctx =
-    Context.project ~config ~project_root ~all_files:files_to_analyze_str
-      ~dune_describe ~index ~file_view ()
+    Context.project ~config ~project_root ~files_to_analyze ~dune_describe
+      ~index ~file_view ()
   in
   let enabled_rules =
     Data.all_rules
@@ -212,6 +210,7 @@ let analyze_single_file ?profiling ~project_ctx ~config_for ~project_root
       let view = Context.file_view project_ctx filename in
       let file_ctx =
         Context.file_with_view ~filename ~config ~project_root ~view
+          ~load_content:(fun () -> Context.file_content project_ctx filename)
       in
       let all_results =
         List.concat_map (run_file_rule ?profiling file_ctx) file_rules
@@ -251,7 +250,7 @@ let analyze_files ~project_ctx ~project_root ~file_rules ?profiling files =
 let run ~load_file ~filter ~dune_describe ?files_to_analyze ~index ?profiling
     project_root =
   Log.info (fun m -> m "Starting analysis of %s" project_root);
-  let backend = Merlin.v () in
+  let backend = Merlin.v ~root_dir:project_root () in
   let stats = io_stats () in
   let files_to_analyze =
     match files_to_analyze with

@@ -1,5 +1,9 @@
+Build fixture project:
+  $ dune build @check
+
 Test bad example - should find function length issues:
   $ merlint -B -r E005 bad.ml
+  Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
   Analyzing 1 files
@@ -30,10 +34,12 @@ Test bad example - should find function length issues:
   
   Summary: ✗ 1 total issue (applied 1 rule)
   ✗ Some checks failed. See details above.
+    Run `merlint help E005` for the rule's description, hint, and good/bad examples.
   [1]
 
 Test pattern matching example - should handle additional allowance:
   $ merlint -B -r E005 pattern_match.ml
+  Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
   Analyzing 1 files
@@ -52,6 +58,7 @@ Test pattern matching example - should handle additional allowance:
 
 Test good example - should find no issues:
   $ merlint -B -r E005 good.ml
+  Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
   Analyzing 1 files
@@ -70,6 +77,7 @@ Test good example - should find no issues:
 
 Test long record - should not be flagged as long function:
   $ merlint -B -r E005 long_record.ml
+  Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
   Analyzing 1 files

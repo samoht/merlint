@@ -63,7 +63,7 @@ let read_policy ctx pkg_dir =
       (fun f ->
         let path = Filename.concat pkg_dir f in
         match
-          try Some (File_view.content (Context.file_view ctx path))
+          try Some (Context.file_content ctx path)
           with Sys_error _ | File_view.Analysis_error _ -> None
         with
         | None -> []

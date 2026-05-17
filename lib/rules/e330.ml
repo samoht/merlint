@@ -27,29 +27,31 @@ let redundant_name_issue item_name module_name location item_type =
     { item_name; module_name = String.capitalize_ascii module_name; item_type }
 
 let check (ctx : Context.file) =
-  let outline_data = Context.outline ctx in
   let filename = ctx.filename in
   let module_name =
     Filename.basename filename |> Filename.remove_extension
     |> String.lowercase_ascii
   in
   List.filter_map
-    (fun (item : Outline.item) ->
-      let name = item.name in
-      let location = Outline.location filename item in
+    (fun item ->
+      let module Item = File_view.Item in
+      let name = Item.name item in
+      let location = Some (Item.loc item) in
       let item_name_lower = String.lowercase_ascii name in
       if has_redundant_prefix item_name_lower module_name filename then
-        match (item.kind, location) with
-        | Outline.Value, Some loc ->
+        match (Item.kind item, location) with
+        | Item.Value, Some loc ->
             let kind_label =
-              if Outline.is_function_type item then "function" else "value"
+              match Item.type_sig item with
+              | Some typ when File_view.Type_view.is_function typ -> "function"
+              | _ -> "value"
             in
             Some (redundant_name_issue name module_name loc kind_label)
-        | Outline.Type, Some loc ->
+        | Item.Type, Some loc ->
             Some (redundant_name_issue name module_name loc "type")
         | _ -> None
       else None)
-    outline_data
+    (File_view.items (Context.view ctx))
 
 let pp ppf { item_name; module_name; item_type } =
   Fmt.pf ppf "%s '%s' has redundant module prefix from %s"

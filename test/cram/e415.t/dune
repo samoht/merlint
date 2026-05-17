@@ -1,3 +1,5 @@
 (library
  (name test_e415)
- (modules_without_implementation function_good))
+ (libraries fmt alcotest compiler-libs.common unix str re logs)
+ (modules_without_implementation function_good)
+ (flags :standard -warn-error -a))

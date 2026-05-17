@@ -1,5 +1,9 @@
 Test bad example - foo/dune-project lacks (implicit_transitive_deps false):
+Build bad fixture project:
+  $ (cd bad && dune build @check)
+
   $ merlint -B -r E526 bad/
+  Dune root: $TESTCASE_ROOT/bad/
   Running merlint analysis...
   
   Analyzing 0 files
@@ -31,10 +35,15 @@ Test bad example - foo/dune-project lacks (implicit_transitive_deps false):
   
   Summary: ✗ 1 total issue (applied 1 rule)
   ✗ Some checks failed. See details above.
+    Run `merlint help E526` for the rule's description, hint, and good/bad examples.
   [1]
 
 Test good example - foo/dune-project sets (implicit_transitive_deps false):
+Build good fixture project:
+  $ (cd good && dune build @check)
+
   $ merlint -B -r E526 good/
+  Dune root: $TESTCASE_ROOT/good/
   Running merlint analysis...
   
   Analyzing 0 files

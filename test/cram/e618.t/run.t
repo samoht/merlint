@@ -1,6 +1,10 @@
 
 Test bad example - should find non-test file in test stanza:
+Build bad fixture project:
+  $ (cd bad && dune build @check)
+
   $ merlint -B -r E618 bad/
+  Dune root: $TESTCASE_ROOT/bad/
   Running merlint analysis...
   
   Analyzing 3 files
@@ -29,6 +33,7 @@ Test bad example - should find non-test file in test stanza:
   
   Summary: ✗ 1 total issue (applied 1 rule)
   ✗ Some checks failed. See details above.
+    Run `merlint help E618` for the rule's description, hint, and good/bad examples.
   [1]
 
 
@@ -37,7 +42,11 @@ Test bad example - should find non-test file in test stanza:
 
 
 Test good example - should find no issues:
+Build good fixture project:
+  $ (cd good && dune build @check)
+
   $ merlint -B -r E618 good/
+  Dune root: $TESTCASE_ROOT/good/
   Running merlint analysis...
   
   Analyzing 3 files

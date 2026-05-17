@@ -90,7 +90,7 @@ let fuzz_content_issues ~loc dir dune =
 let check_dir ctx dir =
   let dune_file = Filename.concat dir "dune" in
   try
-    let content = File_view.content (Context.file_view ctx dune_file) in
+    let content = Context.file_content ctx dune_file in
     match Dune.File.of_string content with
     | Error _ -> []
     | Ok dune ->

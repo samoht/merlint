@@ -1,7 +1,6 @@
 (** E615: Test Suite Not Included *)
 
 module Issue_location = Location
-open Ocaml_parsing
 
 type payload = { test_module : string; test_runner_file : string }
 
@@ -17,22 +16,26 @@ let should_exclude_test_file dune_describe test_file declared_libraries =
     let resolved =
       List.map (Dune_describe.resolve_library dune_describe) declared_libraries
     in
-    let basename = Fpath.(test_file |> rem_ext |> basename) in
+    let basename =
+      Filename.remove_extension (Filename.basename (Fpath.to_string test_file))
+    in
     match Dune_describe.test_file_library mod_to_libs basename with
     | Some lib -> not (List.mem lib resolved)
     | None -> false
 
+let module_basename f =
+  Filename.remove_extension (Filename.basename (Fpath.to_string f))
+
 let test_runner files =
   List.find_opt
-    (fun f ->
-      Fpath.has_ext ".ml" f && Fpath.(f |> rem_ext |> basename) = "test")
+    (fun f -> File_kind.is_ml (Fpath.to_string f) && module_basename f = "test")
     files
 
 let all_test_modules test_file files =
   List.filter_map
     (fun f ->
-      if Fpath.has_ext ".ml" f && f <> test_file then
-        let basename = Fpath.(f |> rem_ext |> basename) in
+      if File_kind.is_ml (Fpath.to_string f) && f <> test_file then
+        let basename = module_basename f in
         if
           String.starts_with ~prefix:"test_" basename
           && basename <> "test_helpers"
@@ -51,16 +54,8 @@ let test_modules dune_describe (test_info : Dune_describe.test_info) test_file =
         None)
       else Some basename)
 
-let suite_included structure test_mod =
-  let capitalized_mod = String.capitalize_ascii test_mod in
-  let found = ref false in
-  Ast.iter_expressions structure (fun (expr : Parsetree.expression) ->
-      match expr.pexp_desc with
-      | Pexp_ident { txt; _ }
-        when Longident.flatten txt = [ capitalized_mod; "suite" ] ->
-          found := true
-      | _ -> ());
-  !found
+let suite_included view test_mod =
+  Suite_refs.references_suite view (String.capitalize_ascii test_mod)
 
 let missing_issue test_file test_mod =
   let loc =
@@ -79,24 +74,20 @@ let check_test_info ctx dune_describe (test_info : Dune_describe.test_info) =
   | None -> []
   | Some test_file -> (
       try
-        match
-          File_view.parsetree
-            (Context.file_view ctx (Fpath.to_string test_file))
-        with
-        | None -> []
-        | Some structure ->
-            let modules = test_modules dune_describe test_info test_file in
-            Log.debug (fun m ->
-                m
-                  "E615: Found %d test modules in stanza '%s' (after E606 \
-                   filtering): %a"
-                  (List.length modules) test_info.name
-                  Fmt.(list ~sep:comma string)
-                  modules);
-            modules
-            |> List.filter (fun test_mod ->
-                not (suite_included structure test_mod))
-            |> List.map (missing_issue test_file)
+        let view = Context.file_view ctx (Fpath.to_string test_file) in
+        if not (File_view.is_resolved view) then []
+        else
+          let modules = test_modules dune_describe test_info test_file in
+          Log.debug (fun m ->
+              m
+                "E615: Found %d test modules in stanza '%s' (after E606 \
+                 filtering): %a"
+                (List.length modules) test_info.name
+                Fmt.(list ~sep:comma string)
+                modules);
+          modules
+          |> List.filter (fun test_mod -> not (suite_included view test_mod))
+          |> List.map (missing_issue test_file)
       with File_view.Analysis_error _ -> [])
 
 (** Check if test.ml includes all test suites *)

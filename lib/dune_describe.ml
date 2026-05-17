@@ -68,7 +68,51 @@ let is_executable dune_describe ml_file =
            files)
     dune_describe.executables
 
-(** Find all dune files in a directory tree *)
+(* Extract subdirectory names from [(data_only_dirs ...)] and
+   [(vendored_dirs ...)] stanzas in the dune file at [dir/dune]. Returns the
+   empty set when no dune file is present or those stanzas are absent. dune
+   treats those subdirs as opaque (no stanza processing for data_only; relaxed
+   processing for vendored), and merlint must do the same — analysing files
+   inside them produces noise the user has already opted out of. *)
+let excluded_subdirs_of_dune dir =
+  let dune_path = Fpath.to_string Fpath.(dir / "dune") in
+  if
+    not
+      (Sys.file_exists dune_path
+      && not (try Sys.is_directory dune_path with Sys_error _ -> true))
+  then []
+  else
+    let content =
+      try
+        let ic = open_in dune_path in
+        let s = really_input_string ic (in_channel_length ic) in
+        close_in ic;
+        Some s
+      with Sys_error _ | End_of_file -> None
+    in
+    match content with
+    | None -> []
+    | Some content -> (
+        match Dune.File.of_string content with
+        | Error _ -> []
+        | Ok f -> Dune.File.data_only_dirs f @ Dune.File.vendored_dirs f)
+
+(* [skippable_subdir ~parent_dir entry] is the single source of truth for
+   "should we descend into [parent_dir/entry]?". Mirrors what dune itself does:
+   skip dotfile / underscore-prefixed dirs, plus any subdir the parent's dune
+   file declares as data_only or vendored. All filesystem walkers in merlint
+   call into this so the exclusion semantics match the discovery walker. *)
+let skippable_subdir ~parent_dir entry =
+  if String.length entry = 0 then true
+  else if entry.[0] = '.' || entry.[0] = '_' then true
+  else
+    let excluded = excluded_subdirs_of_dune parent_dir in
+    List.mem entry excluded
+
+(** Find all dune files in a directory tree. Skips dotfile dirs, [_*] dirs
+    (build outputs, switch prefixes, ad-hoc scratch), and any subdir listed in
+    the parent dune file's [(data_only_dirs ...)] / [(vendored_dirs ...)]
+    stanzas. *)
 let rec files dir =
   let dir_path = dir in
   let entries =
@@ -78,14 +122,14 @@ let rec files dir =
   |> List.concat_map (fun entry ->
       let path = Fpath.(dir_path / entry) in
       let path_str = Fpath.to_string path in
-      let first_char = if String.length entry > 0 then entry.[0] else '\000' in
-      if first_char = '.' || first_char = '_' then []
-      else if
+      if
         entry = "dune" && Sys.file_exists path_str
         && not (try Sys.is_directory path_str with Sys_error _ -> true)
       then [ path ]
-      else if try Sys.is_directory path_str with Sys_error _ -> false then
-        files path
+      else if
+        (try Sys.is_directory path_str with Sys_error _ -> false)
+        && not (skippable_subdir ~parent_dir:dir entry)
+      then files path
       else [])
 
 (** Parse a dune file and extract module information *)
@@ -269,13 +313,13 @@ let is_ocaml_source_file entry =
   && File_kind.is_ml_or_mli entry
 
 (** [data_or_nested_stanza_dir dir] is [true] when [dir] looks like a cram
-    sandbox, a generated build dir, or contains its own [dune] file (which means
-    it has its own stanzas and shouldn't be sucked up by an
-    [include_subdirs unqualified] parent). *)
+    sandbox, a build / switch / scratch dir (anything starting with [_] or [.]),
+    or contains its own [dune] file (which means it has its own stanzas and
+    shouldn't be sucked up by an [include_subdirs unqualified] parent). *)
 let data_or_nested_stanza_dir dir =
   let name = Fpath.basename dir in
-  if name = "_build" || name = "_opam" || name = ".git" then true
-  else if name = "" || name.[0] = '.' then true
+  if name = "" then true
+  else if name.[0] = '.' || name.[0] = '_' then true
   else
     let nested_dune = Fpath.(dir / "dune") |> Fpath.normalize in
     Sys.file_exists (Fpath.to_string nested_dune)
@@ -649,8 +693,9 @@ let executables describe = describe.executables
 let tests describe = describe.tests
 
 let add_module_lib acc lib_name file =
-  if Fpath.has_ext ".ml" file then
-    let module_name = Fpath.(file |> rem_ext |> basename) in
+  let s = Fpath.to_string file in
+  if File_kind.is_ml s then
+    let module_name = Filename.remove_extension (Filename.basename s) in
     match List.assoc_opt module_name acc with
     | Some libs ->
         (module_name, lib_name :: libs) :: List.remove_assoc module_name acc

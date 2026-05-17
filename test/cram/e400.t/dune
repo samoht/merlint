@@ -1,3 +1,6 @@
 (library
  (name test_e400)
-)
+ (libraries fmt alcotest compiler-libs.common unix str re logs)
+ (modules_without_implementation license)
+
+ (flags :standard -warn-error -a))

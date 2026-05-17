@@ -1,5 +1,9 @@
 Test bad example - foo/ has .opam but no foo/dune with %{dune-warnings}:
+Build bad fixture project:
+  $ (cd bad && dune build @check)
+
   $ merlint -B -r E525 bad/
+  Dune root: $TESTCASE_ROOT/bad/
   Running merlint analysis...
   
   Analyzing 0 files
@@ -29,10 +33,15 @@ Test bad example - foo/ has .opam but no foo/dune with %{dune-warnings}:
   
   Summary: ✗ 1 total issue (applied 1 rule)
   ✗ Some checks failed. See details above.
+    Run `merlint help E525` for the rule's description, hint, and good/bad examples.
   [1]
 
 Test good example - foo/ has dune enabling %{dune-warnings} and modern dune-project:
+Build good fixture project:
+  $ (cd good && dune build @check)
+
   $ merlint -B -r E525 good/
+  Dune root: $TESTCASE_ROOT/good/
   Running merlint analysis...
   
   Analyzing 0 files

@@ -1,5 +1,9 @@
+Build fixture project:
+  $ dune build @check
+
 Test bad example - should find bad module naming:
   $ merlint -B -r E305 bad.ml
+  Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
   Analyzing 1 files
@@ -11,7 +15,7 @@ Test bad example - should find bad module naming:
     Module names should use Snake_case (e.g., My_module, User_profile) or
     all-uppercase for acronyms (e.g., HTML, JSON, ONF). File names use
     lowercase_with_underscores which OCaml automatically converts to module names.
-    - bad.ml:1:0: Module 'UserProfile' should use Snake_case: 'User_profile'
+    - bad.ml:1:7: Module 'UserProfile' should use Snake_case: 'User_profile'
   ✓ Documentation (0 total issues)
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
@@ -27,10 +31,12 @@ Test bad example - should find bad module naming:
   
   Summary: ✗ 1 total issue (applied 1 rule)
   ✗ Some checks failed. See details above.
+    Run `merlint help E305` for the rule's description, hint, and good/bad examples.
   [1]
 
 Test good example - should find no issues:
   $ merlint -B -r E305 good.ml
+  Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
   Analyzing 1 files

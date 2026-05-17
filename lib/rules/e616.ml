@@ -1,7 +1,5 @@
 (** E616: Use failf instead of fail (Fmt.str ...) *)
 
-open Ocaml_parsing
-
 type payload = { is_alcotest : bool }
 
 let check (ctx : Context.file) =
@@ -11,26 +9,25 @@ let check (ctx : Context.file) =
     not (String.starts_with ~prefix:"test_" basename && File_kind.is_ml basename)
   then []
   else
-    match File_view.parsetree (Context.view ctx) with
-    | None -> []
-    | Some structure ->
-        let issues = ref [] in
-        Ast.iter_apply structure (fun expr fn args ->
-            let path = Longident.flatten fn in
-            let is_alcotest_fail = path = [ "Alcotest"; "fail" ] in
-            let is_bare_fail = path = [ "fail" ] in
-            if
-              (is_alcotest_fail || is_bare_fail)
-              && List.exists
-                   (fun (_, arg) -> Ast.is_apply_of [ "Fmt"; "str" ] arg)
-                   args
-            then
-              issues :=
-                Issue.v
-                  ~loc:(Ast.merlint_of_loc ~filename expr.pexp_loc)
-                  { is_alcotest = is_alcotest_fail }
-                :: !issues);
-        List.rev !issues
+    let issues = ref [] in
+    File_view.iter_applications (Context.view ctx) (fun call ->
+        let callee = File_view.Call.callee call in
+        let is_alcotest_fail =
+          File_view.Name.equals_path callee [ "Alcotest"; "fail" ]
+        in
+        let is_bare_fail = File_view.Name.base callee = "fail" in
+        if
+          (is_alcotest_fail || is_bare_fail)
+          && List.exists
+               (fun arg ->
+                 File_view.Call.Arg.is_call arg ~path:[ "Fmt"; "str" ])
+               (File_view.Call.args call)
+        then
+          issues :=
+            Issue.v ~loc:(File_view.Call.loc call)
+              { is_alcotest = is_alcotest_fail }
+            :: !issues);
+    List.rev !issues
 
 let pp ppf { is_alcotest } =
   if is_alcotest then

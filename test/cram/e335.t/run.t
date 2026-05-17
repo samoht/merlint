@@ -1,5 +1,9 @@
+Build fixture project:
+  $ dune build @check
+
 Test bad example - should find used underscore-prefixed binding:
   $ merlint -B -r E335 bad.ml
+  Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
   Analyzing 1 files
@@ -29,10 +33,12 @@ Test bad example - should find used underscore-prefixed binding:
   
   Summary: ✗ 1 total issue (applied 1 rule)
   ✗ Some checks failed. See details above.
+    Run `merlint help E335` for the rule's description, hint, and good/bad examples.
   [1]
 
 Test PPX-generated code - should only flag regular underscore bindings:
   $ merlint -B -r E335 ppx_generated.ml
+  Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
   Analyzing 1 files
@@ -62,10 +68,12 @@ Test PPX-generated code - should only flag regular underscore bindings:
   
   Summary: ✗ 1 total issue (applied 1 rule)
   ✗ Some checks failed. See details above.
+    Run `merlint help E335` for the rule's description, hint, and good/bad examples.
   [1]
 
 Test good example - should find no issues:
   $ merlint -B -r E335 good.ml
+  Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
   Analyzing 1 files

@@ -29,7 +29,8 @@ Obj.magic completely bypasses OCaml's type system and is extremely dangerous. It
 
 **Bad:**
 ```ocaml
-let coerce x = Stdlib.Obj.magic x
+let coerce x = Obj.magic x
+
 ```
 
 **Good:**
@@ -102,9 +103,12 @@ The Fmt module provides a more modern and composable approach to formatting. It 
 **Bad:**
 ```ocaml
 let make_error msg line = 
-  Stdlib.Printf.sprintf "Error: %s at line %d" msg line
+  Printf.sprintf "Error: %s at line %d" msg line
 let print_count n = 
-  Stdlib.Printf.printf "Processing %d items...\n" n
+  Printf.printf "Processing %d items...\n" n
+let format_count n =
+  Format.asprintf "Processing %d items..." n
+
 ```
 
 **Good:**
@@ -710,7 +714,9 @@ let process x y z =
     if y > 0 then
       if z > 0 then
         if x < 100 then
-          x + y + z
+          if y < 100 then
+            x + y + z
+          else 0
         else 0
       else 0
     else 0
@@ -732,6 +738,28 @@ let classify_with_work x =
         else `Huge
       in
       bucket
+
+(* Closure literal stashed inside a record literal: visually this is just
+   as nested as the same logic written with explicit if/match levels, so
+   each layer (record, closure, control flow) bumps the depth. *)
+type 'a visitor = { visit : 'a visitor -> 'a -> unit }
+
+let collect xs =
+  let acc = ref [] in
+  let visitor =
+    {
+      visit =
+        (fun _this x ->
+          if x > 0 then
+            if x > 10 then
+              if x > 100 then acc := x :: !acc else ()
+            else ()
+          else ());
+    }
+  in
+  List.iter (visitor.visit visitor) xs;
+  !acc
+
 ```
 
 **Good:**
@@ -750,6 +778,12 @@ let process x y z =
   if x <= 0 || y <= 0 || z <= 0 then 0
   else if x >= 100 then 0
   else x + y + z
+
+(* Record literals carrying inert data don't count as nesting -- only
+   records whose fields contain closures or control flow do. *)
+type point = { x : int; y : int; z : int }
+
+let translate p dx dy dz = { x = p.x + dx; y = p.y + dy; z = p.z + dz }
 ```
 
 

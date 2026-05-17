@@ -6,7 +6,8 @@
     [and] is misused -- the binding should be lifted to its own [let] above or
     below the group. *)
 
-open Ocaml_parsing
+module T = Ocaml_typing.Typedtree
+module Tast_iterator = Ocaml_typing.Tast_iterator
 
 type kind =
   | Standalone_nonrec
@@ -15,27 +16,32 @@ type kind =
 
 type payload = { name : string; kind : kind; group : string list }
 
-let pat_name (pat : Parsetree.pattern) =
-  match pat.ppat_desc with Ppat_var { txt; _ } -> Some txt | _ -> None
+let pat_name pat = Query.Pattern.var_name pat
 
-(** Collect every [Pexp_ident] inside [expr] whose [Longident] is an unqualified
-    name found in [names]. We ignore shadowing: a local [let name = ...] inside
-    the body still counts as a reference to the outer binding. The undercount
-    this would cause flips the lint the safe way -- we'd see a self-shadowed
-    identifier as "still referenced" and decline to flag, which is a false
-    negative, never a false positive. *)
-let collect_unqualified_refs ~names expr =
+(** Collect every resolved identifier inside [expr] whose final path component
+    is found in [names].
+
+    The rule is about a local [let rec] group, so the relevant paths are local
+    identifiers. A shadowed local with the same printed name still counts as a
+    reference and may suppress an issue, which is a false negative rather than a
+    false positive. *)
+let collect_refs ~names expr =
   let found = ref [] in
+  let add_path path =
+    match List.rev (Query.Path.parts path) with
+    | name :: _ when List.mem name names && not (List.mem name !found) ->
+        found := name :: !found
+    | _ -> ()
+  in
   let iter =
     {
-      Ast_iterator.default_iterator with
+      Tast_iterator.default_iterator with
       expr =
         (fun this e ->
-          (match e.Parsetree.pexp_desc with
-          | Pexp_ident { txt = Lident s; _ } when List.mem s names ->
-              if not (List.mem s !found) then found := s :: !found
+          (match e.T.exp_desc with
+          | Texp_ident (path, _, _) -> add_path path
           | _ -> ());
-          Ast_iterator.default_iterator.expr this e);
+          Tast_iterator.default_iterator.expr this e);
     }
   in
   iter.expr iter expr;
@@ -80,8 +86,8 @@ let classify_binding ~scc ~self_loop =
 let graph_of_named_bindings named =
   let names = List.map snd named in
   List.map
-    (fun ((vb : Parsetree.value_binding), name) ->
-      (name, collect_unqualified_refs ~names vb.pvb_expr))
+    (fun ((vb : T.value_binding), name) ->
+      (name, collect_refs ~names vb.vb_expr))
     named
 
 let classify_named_binding ~graph ~siblings name =
@@ -89,100 +95,45 @@ let classify_named_binding ~graph ~siblings name =
   let scc = scc_of_node ~graph ~siblings name in
   classify_binding ~scc ~self_loop:(List.mem name refs)
 
-let walk_expr issues expr =
-  (* Nested [let rec ... and ...] inside an expression body. *)
-  let iter =
-    {
-      Ast_iterator.default_iterator with
-      expr =
-        (fun this e ->
-          (match e.Parsetree.pexp_desc with
-          | Pexp_let (Recursive, bindings, _) when List.length bindings >= 2 ->
-              let named =
-                List.filter_map
-                  (fun (vb : Parsetree.value_binding) ->
-                    match pat_name vb.pvb_pat with
-                    | Some n -> Some (vb, n)
-                    | None -> None)
-                  bindings
-              in
-              if List.length named = List.length bindings then
-                let siblings = List.map snd named in
-                let graph = graph_of_named_bindings named in
-                List.iter
-                  (fun ((vb : Parsetree.value_binding), name) ->
-                    match classify_named_binding ~graph ~siblings name with
-                    | `Mutually_recursive -> ()
-                    | `Standalone_rec ->
-                        issues :=
-                          ( vb.pvb_loc,
-                            { name; kind = Standalone_rec; group = siblings } )
-                          :: !issues
-                    | `Standalone_nonrec ->
-                        issues :=
-                          ( vb.pvb_loc,
-                            { name; kind = Standalone_nonrec; group = siblings }
-                          )
-                          :: !issues)
-                  named
-          | _ -> ());
-          Ast_iterator.default_iterator.expr this e);
-    }
-  in
-  iter.expr iter expr
+let classify_group issues bindings =
+  if List.length bindings >= 2 then
+    let named =
+      List.filter_map
+        (fun (vb : T.value_binding) ->
+          match pat_name vb.vb_pat with Some n -> Some (vb, n) | None -> None)
+        bindings
+    in
+    if List.length named = List.length bindings then
+      let siblings = List.map snd named in
+      let graph = graph_of_named_bindings named in
+      List.iter
+        (fun ((vb : T.value_binding), name) ->
+          match classify_named_binding ~graph ~siblings name with
+          | `Mutually_recursive -> ()
+          | `Standalone_rec ->
+              issues :=
+                (vb.vb_loc, { name; kind = Standalone_rec; group = siblings })
+                :: !issues
+          | `Standalone_nonrec ->
+              issues :=
+                (vb.vb_loc, { name; kind = Standalone_nonrec; group = siblings })
+                :: !issues)
+        named
 
 (** Walk every top-level (and nested) structure looking for
     [Pstr_value (Recursive, bindings)] with at least two bindings whose patterns
     are [Ppat_var]. Returns a list of [(loc, name, kind, group_names)] for each
     misused [and]-binding. *)
-let collect_misused_bindings structure =
+let collect_misused_bindings view =
   let issues = ref [] in
-  let rec walk_item (item : Parsetree.structure_item) =
-    match item.pstr_desc with
-    | Pstr_value (Recursive, bindings) when List.length bindings >= 2 ->
-        let named =
-          List.filter_map
-            (fun (vb : Parsetree.value_binding) ->
-              match pat_name vb.pvb_pat with
-              | Some n -> Some (vb, n)
-              | None -> None)
-            bindings
-        in
-        if List.length named = List.length bindings then (
-          let siblings = List.map snd named in
-          let graph = graph_of_named_bindings named in
-          List.iter
-            (fun ((vb : Parsetree.value_binding), name) ->
-              match classify_named_binding ~graph ~siblings name with
-              | `Mutually_recursive -> ()
-              | `Standalone_rec ->
-                  issues :=
-                    ( vb.pvb_loc,
-                      { name; kind = Standalone_rec; group = siblings } )
-                    :: !issues
-              | `Standalone_nonrec ->
-                  issues :=
-                    ( vb.pvb_loc,
-                      { name; kind = Standalone_nonrec; group = siblings } )
-                    :: !issues)
-            named;
-          List.iter
-            (fun (vb, _) -> walk_expr issues vb.Parsetree.pvb_expr)
-            named)
-    | Pstr_value (_, bindings) ->
-        List.iter (fun vb -> walk_expr issues vb.Parsetree.pvb_expr) bindings
-    | Pstr_module mb -> walk_module_expr mb.pmb_expr
-    | Pstr_recmodule mbs ->
-        List.iter
-          (fun (mb : Parsetree.module_binding) -> walk_module_expr mb.pmb_expr)
-          mbs
-    | _ -> ()
-  and walk_module_expr (me : Parsetree.module_expr) =
-    match me.pmod_desc with
-    | Pmod_structure s -> List.iter walk_item s
-    | _ -> ()
-  in
-  List.iter walk_item structure;
+  Query.iter_structure_items view (fun (item : T.structure_item) ->
+      match item.str_desc with
+      | Tstr_value (Recursive, bindings) -> classify_group issues bindings
+      | _ -> ());
+  Query.iter_expressions view (fun (expr : T.expression) ->
+      match expr.exp_desc with
+      | Texp_let (Recursive, bindings, _) -> classify_group issues bindings
+      | _ -> ());
   List.rev !issues
 
 let pp ppf { name; kind; group } =
@@ -203,12 +154,9 @@ let pp ppf { name; kind; group } =
 
 let check (ctx : Context.file) =
   let filename = ctx.filename in
-  match File_view.parsetree (Context.view ctx) with
-  | None -> []
-  | Some structure ->
-      collect_misused_bindings structure
-      |> List.map (fun (loc, payload) ->
-          Issue.v ~loc:(Ast.merlint_of_loc ~filename loc) payload)
+  collect_misused_bindings (Context.view ctx)
+  |> List.map (fun (loc, payload) ->
+      Issue.v ~loc:(Loc.of_typed ~filename loc) payload)
 
 let rule =
   Rule.v ~code:"E219" ~title:"Useless [and] in [let rec ... and ...] groups"

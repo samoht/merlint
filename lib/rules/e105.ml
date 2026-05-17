@@ -1,31 +1,26 @@
 open Examples
 (** E105: Catch-all Exception Handler *)
 
-open Ocaml_parsing
+module T = Ocaml_typing.Typedtree
 
-let is_wildcard_case (case : Parsetree.case) =
-  match case.pc_lhs.ppat_desc with Ppat_any -> true | _ -> false
+let is_wildcard_case (case : T.value T.case) =
+  match case.c_lhs.pat_desc with Tpat_any -> true | _ -> false
 
 let check (ctx : Context.file) =
   let filename = ctx.Context.filename in
-  match File_view.parsetree (Context.view ctx) with
-  | None -> []
-  | Some structure ->
-      let issues = ref [] in
-      Ast.iter_expressions structure (fun (expr : Parsetree.expression) ->
-          match expr.pexp_desc with
-          | Pexp_try (_, cases) ->
-              List.iter
-                (fun (case : Parsetree.case) ->
-                  if is_wildcard_case case then
-                    issues :=
-                      Issue.v
-                        ~loc:(Ast.merlint_of_loc ~filename case.pc_lhs.ppat_loc)
-                        ()
-                      :: !issues)
-                cases
-          | _ -> ());
-      List.rev !issues
+  let issues = ref [] in
+  Query.iter_expressions (Context.view ctx) (fun (expr : T.expression) ->
+      match expr.exp_desc with
+      | Texp_try (_, cases, _) ->
+          List.iter
+            (fun case ->
+              if is_wildcard_case case then
+                issues :=
+                  Issue.v ~loc:(Loc.of_typed ~filename case.c_lhs.pat_loc) ()
+                  :: !issues)
+            cases
+      | _ -> ());
+  List.rev !issues
 
 let pp ppf () =
   Fmt.pf ppf

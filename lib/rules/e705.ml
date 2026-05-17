@@ -58,7 +58,7 @@ let check_missing_fuzz_mli dune_describe files =
     files
 
 let check ctx =
-  let files = Context.all_files ctx in
+  let files = Context.files_to_analyze ctx in
   let dune_describe = Context.dune_describe ctx in
   let missing_mli_issues = check_missing_fuzz_mli dune_describe files in
   let content_issues =

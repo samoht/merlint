@@ -1,5 +1,9 @@
 Test bad example - package uses src/ instead of lib/:
+Build bad fixture project:
+  $ (cd bad && dune build @check)
+
   $ merlint -B -r E520 bad/
+  Dune root: $TESTCASE_ROOT/bad/
   Running merlint analysis...
   
   Analyzing 0 files
@@ -27,6 +31,7 @@ Test bad example - package uses src/ instead of lib/:
   
   Summary: ✗ 1 total issue (applied 1 rule)
   ✗ Some checks failed. See details above.
+    Run `merlint help E520` for the rule's description, hint, and good/bad examples.
   [1]
 
 
@@ -35,7 +40,11 @@ Test bad example - package uses src/ instead of lib/:
 
 
 Test good example - package uses lib/:
+Build good fixture project:
+  $ (cd good && dune build @check)
+
   $ merlint -B -r E520 good/
+  Dune root: $TESTCASE_ROOT/good/
   Running merlint analysis...
   
   Analyzing 0 files
