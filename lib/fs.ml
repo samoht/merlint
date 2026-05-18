@@ -1,10 +1,10 @@
-(** Thin counted wrappers around [Sys] / [Stdlib] filesystem primitives so
-    rules can be profiled by I/O class (directory scans, existence checks,
+(** Thin counted wrappers around [Sys] / [Stdlib] filesystem primitives so rules
+    can be profiled by I/O class (directory scans, existence checks,
     open-for-read).
 
     The counters are process-level and reset by {!reset_stats}; the engine
-    snapshots them via {!stats} after each run and logs them alongside the
-    other I/O numbers. *)
+    snapshots them via {!stats} after each run and logs them alongside the other
+    I/O numbers. *)
 
 type counters = {
   mutable readdirs : int;
@@ -21,7 +21,12 @@ type stats = {
 }
 
 let stats_record : counters =
-  { readdirs = 0; is_directory_checks = 0; file_exists_checks = 0; file_opens = 0 }
+  {
+    readdirs = 0;
+    is_directory_checks = 0;
+    file_exists_checks = 0;
+    file_opens = 0;
+  }
 
 let reset_stats () =
   stats_record.readdirs <- 0;
@@ -63,5 +68,4 @@ let with_open_in path f =
   Fun.protect ~finally:(fun () -> close_in ic) (fun () -> f ic)
 
 let read_file path =
-  with_open_in path (fun ic ->
-      really_input_string ic (in_channel_length ic))
+  with_open_in path (fun ic -> really_input_string ic (in_channel_length ic))

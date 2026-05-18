@@ -32,8 +32,8 @@ let has_cram_tests test_dir =
     try
       Fs.readdir test_dir |> Array.to_list
       |> List.exists (fun f ->
-             Filename.check_suffix f ".t"
-             && dir_exists (Filename.concat test_dir f))
+          Filename.check_suffix f ".t"
+          && dir_exists (Filename.concat test_dir f))
     with Sys_error _ -> false
 
 let add_if present feature features =
@@ -47,7 +47,9 @@ let detect_features pkg_dir =
   let interop_dir = Filename.concat test_dir "interop" in
   let has_lib = dir_exists lib_dir && has_files lib_dir ".ml" in
   []
-  |> add_if (has_lib && Fs.file_exists (Filename.concat pkg_dir "dune-project")) "build"
+  |> add_if
+       (has_lib && Fs.file_exists (Filename.concat pkg_dir "dune-project"))
+       "build"
   |> add_if (dir_exists test_dir && has_files test_dir ".ml") "test"
   |> add_if (dir_exists fuzz_dir && has_files fuzz_dir ".ml") "fuzz"
   |> add_if (has_doc_files pkg_dir) "doc"
@@ -64,8 +66,8 @@ let quality_words line =
     let rest = String.sub t plen (String.length t - plen) in
     String.split_on_char '"' rest
     |> List.filter (fun s ->
-           let s = String.trim s in
-           s <> "" && s <> "[" && s <> "]" && s <> " ")
+        let s = String.trim s in
+        s <> "" && s <> "[" && s <> "]" && s <> " ")
 
 let read_policy_file ctx path =
   match
@@ -73,7 +75,8 @@ let read_policy_file ctx path =
     with Sys_error _ | File_view.Analysis_error _ -> None
   with
   | None -> []
-  | Some content -> String.split_on_char '\n' content |> List.concat_map quality_words
+  | Some content ->
+      String.split_on_char '\n' content |> List.concat_map quality_words
 
 (** Read quality policy from [*.opam] files. *)
 let read_policy ctx pkg_dir =
@@ -104,8 +107,8 @@ let package_findings policy detected =
 
 let check_package ctx root pkg =
   let pkg_dir = Filename.concat root pkg in
-  if not (dir_exists pkg_dir) || List.mem pkg [ "_build"; ".git"; "_opam" ] then
-    None
+  if (not (dir_exists pkg_dir)) || List.mem pkg [ "_build"; ".git"; "_opam" ]
+  then None
   else
     match read_policy ctx pkg_dir with
     | [] -> None

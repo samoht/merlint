@@ -13,8 +13,8 @@ type oracle_dir = {
 
 val oracle_dirs : Project_index.t -> oracle_dir list
 (** [oracle_dirs index] returns discovered interop oracle directories under
-    every in-scope package in [index]. Cached per-index for the lifetime of
-    the process. *)
+    every in-scope package in [index]. Cached per-index for the lifetime of the
+    process. *)
 
 val oracle_dirs_for : Context.project -> oracle_dir list
 (** [oracle_dirs_for ctx] returns the in-scope package interop directories. For

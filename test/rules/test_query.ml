@@ -12,5 +12,4 @@ let test_longident_helpers () =
     "ends with" true
     (Merlint.Query.Longident.ends_with lid [ "Fmt"; "str" ])
 
-let suite =
-  ("query", [ ("longident_helpers", `Quick, test_longident_helpers) ])
+let suite = ("query", [ ("longident_helpers", `Quick, test_longident_helpers) ])

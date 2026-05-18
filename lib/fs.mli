@@ -29,8 +29,8 @@ val file_exists : string -> bool
 (** [file_exists p] is [Sys.file_exists p] with the call counted. *)
 
 val with_open_in : string -> (in_channel -> 'a) -> 'a
-(** [with_open_in p f] opens [p] for text reading, runs [f], closes the
-    channel on the way out. The open is counted. *)
+(** [with_open_in p f] opens [p] for text reading, runs [f], closes the channel
+    on the way out. The open is counted. *)
 
 val with_open_in_bin : string -> (in_channel -> 'a) -> 'a
 (** [with_open_in_bin p f] is {!with_open_in} for binary mode. *)

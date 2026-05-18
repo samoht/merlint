@@ -2,15 +2,15 @@
 
 module T = Ocaml_typing.Typedtree
 
-let is_failwith expr =
-  Query.Expr.callee_ends_with expr [ "failwith" ]
+let is_failwith expr = Query.Expr.callee_ends_with expr [ "failwith" ]
 
 let check (ctx : Context.file) =
   let issues = ref [] in
   let filename = ctx.filename in
   Query.iter_expressions (Context.view ctx) (fun expr ->
       let flag () =
-        issues := Issue.v ~loc:(Loc.of_typed ~filename expr.T.exp_loc) () :: !issues
+        issues :=
+          Issue.v ~loc:(Loc.of_typed ~filename expr.T.exp_loc) () :: !issues
       in
       let fn, args = Query.Expr.application expr in
       if is_failwith fn then (

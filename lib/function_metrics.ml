@@ -50,9 +50,7 @@ let decision ?(if_then_else = 0) ?(matches = 0) ?(try_handlers = 0)
 let sum xs = List.fold_left merge empty xs
 
 let max_by_total xs =
-  List.fold_left
-    (fun acc x -> if x.total > acc.total then x else acc)
-    empty xs
+  List.fold_left (fun acc x -> if x.total > acc.total then x else acc) empty xs
 
 let clean_name_part s =
   match String.index_opt s '!' with None -> s | Some i -> String.sub s 0 i
@@ -178,7 +176,8 @@ and analyze_if_chain cond then_expr else_expr =
     | Some expr -> analyze_expr expr :: current :: acc
     | None -> current :: acc
   in
-  merge (decision ~if_then_else:1 1)
+  merge
+    (decision ~if_then_else:1 1)
     (max_by_total (arms [] cond then_expr else_expr))
 
 and analyze_case : type k. k T.case -> complexity =
@@ -265,9 +264,7 @@ let rec count_match_cases_expr expr =
         (fun acc (_, expr) -> acc + count_match_cases_expr expr)
         0 fields
   | Texp_construct (_, _, args) | Texp_array (_, args) ->
-      List.fold_left
-        (fun acc expr -> acc + count_match_cases_expr expr)
-        0 args
+      List.fold_left (fun acc expr -> acc + count_match_cases_expr expr) 0 args
   | Texp_record { fields; extended_expression; _ } ->
       Array.fold_left
         (fun acc field ->
@@ -290,7 +287,8 @@ let rec count_match_cases_expr expr =
   | Texp_while (cond, body) ->
       count_match_cases_expr cond + count_match_cases_expr body
   | Texp_for (_, _, first, last, _, body) ->
-      count_match_cases_expr first + count_match_cases_expr last
+      count_match_cases_expr first
+      + count_match_cases_expr last
       + count_match_cases_expr body
   | Texp_letmodule (_, _, _, module_expr, body) ->
       count_match_cases_module_expr module_expr + count_match_cases_expr body
@@ -390,7 +388,8 @@ and trailing_record_fields_expr expr =
   | Texp_ifthenelse (_, _, Some else_expr) ->
       trailing_record_fields_expr else_expr
   | Texp_try (expr, _, _) -> trailing_record_fields_expr expr
-  | Texp_function ([], T.Tfunction_body body) -> trailing_record_fields_expr body
+  | Texp_function ([], T.Tfunction_body body) ->
+      trailing_record_fields_expr body
   | Texp_open (_, body) -> trailing_record_fields_expr body
   | Texp_construct (_, _, [ expr ]) | Texp_variant (_, Some expr) ->
       trailing_record_fields_expr expr
@@ -414,8 +413,7 @@ let rec is_pure_data_expr expr =
            fields
   | Texp_tuple fields ->
       List.for_all (fun (_, expr) -> is_pure_data_expr expr) fields
-  | Texp_variant (_, arg) ->
-      Option.fold ~none:true ~some:is_pure_data_expr arg
+  | Texp_variant (_, arg) -> Option.fold ~none:true ~some:is_pure_data_expr arg
   | Texp_sequence (lhs, rhs) -> is_pure_data_expr lhs && is_pure_data_expr rhs
   | Texp_field (expr, _, _) -> is_pure_data_expr expr
   | Texp_constant _ | Texp_ident _ -> true
@@ -471,12 +469,11 @@ let rec depth_expr ~in_closure current_depth expr =
           depth_expr ~in_closure current_depth last;
           depth_expr ~in_closure new_depth body;
         ]
-  | Texp_function _ ->
-      current_depth
-  | Texp_let (_, bindings, body) -> depth_let ~in_closure current_depth bindings body
+  | Texp_function _ -> current_depth
+  | Texp_let (_, bindings, body) ->
+      depth_let ~in_closure current_depth bindings body
   | Texp_sequence (lhs, rhs) -> depth_pair ~in_closure current_depth lhs rhs
-  | Texp_apply (fn, args) ->
-      depth_apply ~in_closure current_depth fn args
+  | Texp_apply (fn, args) -> depth_apply ~in_closure current_depth fn args
   | Texp_record { fields; extended_expression; _ } ->
       depth_record ~in_closure current_depth fields extended_expression
   | Texp_tuple fields ->
@@ -636,7 +633,8 @@ let depth_function ~in_closure current_depth params body =
 
 let nesting expr =
   match expr.T.exp_desc with
-  | Texp_function (params, body) -> depth_function ~in_closure:false 0 params body
+  | Texp_function (params, body) ->
+      depth_function ~in_closure:false 0 params body
   | _ -> depth_expr ~in_closure:false 0 expr
 
 let name_of_pattern (pat : T.pattern) =

@@ -19,7 +19,8 @@ let issue_for_file mod_to_libs resolved file =
           Some (Issue.v ~loc { test_module = basename; library_name = lib })
       | _ -> None)
 
-let check_test_info dune_describe mod_to_libs (test_info : Dune_describe.test_info) =
+let check_test_info dune_describe mod_to_libs
+    (test_info : Dune_describe.test_info) =
   if test_info.libraries = [] then []
   else
     let resolved =

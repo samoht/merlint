@@ -6,7 +6,8 @@ let wire_symbols = [ "struct_"; "module_"; "c_stubs"; "ml_stubs" ]
 
 let file_uses_wire ctx path =
   try
-    File_view.references_suffix (Context.file_view ctx path)
+    File_view.references_suffix
+      (Context.file_view ctx path)
       [ "Wire"; "Codec"; "v" ]
   with File_view.Analysis_error _ -> false
 
@@ -54,8 +55,7 @@ let check_package ctx pkg =
 (** Walk <pkg>/lib/*.mli looking for val struct_ / val module_ / val c_stubs /
     val ml_stubs. These belong in c/gen.ml. *)
 let check (ctx : Context.project) =
-  Context.index ctx
-  |> Project_index.source_packages_nodes
+  Context.index ctx |> Project_index.source_packages_nodes
   |> List.concat_map (check_package ctx)
 
 let pp ppf { file; symbol } =

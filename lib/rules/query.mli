@@ -21,7 +21,8 @@ module Expr : sig
   (** [callee_parts expr] returns the resolved callee components when [expr] is
       a call-like expression. *)
 
-  val callee_ends_with : Ocaml_typing.Typedtree.expression -> string list -> bool
+  val callee_ends_with :
+    Ocaml_typing.Typedtree.expression -> string list -> bool
   (** [callee_ends_with expr suffix] checks the resolved callee suffix. *)
 
   val calls : Ocaml_typing.Typedtree.expression -> string list -> bool
@@ -64,8 +65,8 @@ val iter_expressions :
 
 val iter_value_bindings :
   File_view.t -> (Ocaml_typing.Typedtree.value_binding -> unit) -> unit
-(** [iter_value_bindings view f] applies [f] to implementation value
-    bindings. *)
+(** [iter_value_bindings view f] applies [f] to implementation value bindings.
+*)
 
 val iter_structure_items :
   File_view.t -> (Ocaml_typing.Typedtree.structure_item -> unit) -> unit

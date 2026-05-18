@@ -66,8 +66,7 @@ let is_test_library ~package lib =
   match (P.source_dir package, L.source_dir lib) with
   | Some pkg_dir, Some lib_dir ->
       Loc.relative_to ~root:pkg_dir lib_dir
-      |> Fpath.to_string
-      |> String.split_on_char '/'
+      |> Fpath.to_string |> String.split_on_char '/'
       |> List.exists (function "test" | "tests" -> true | _ -> false)
   | _ -> false
 
@@ -102,8 +101,7 @@ let check_package ~root pkg =
         [ Issue.v ~loc { package = name; opam; findings } ]
 
 let check (ctx : Context.project) =
-  Context.index ctx
-  |> Project_index.source_packages_nodes
+  Context.index ctx |> Project_index.source_packages_nodes
   |> List.concat_map (check_package ~root:ctx.project_root)
 
 let pp_finding ppf = function
@@ -116,7 +114,8 @@ let pp ppf { package; opam; findings } =
     if Filename.basename opam = opam then Filename.concat package opam else opam
   in
   Fmt.pf ppf "%s: sans-io policy violated by %a" subject
-    Fmt.(list ~sep:(any "; ") pp_finding) findings
+    Fmt.(list ~sep:(any "; ") pp_finding)
+    findings
 
 let rule =
   Rule.v ~code:"E930" ~title:"Sans-IO policy"

@@ -72,8 +72,10 @@ let issue_for_opam ~topics pkg pkg_dir opam =
 
 let check_package ~topics skip root pkg =
   let pkg_dir = Filename.concat root pkg in
-  if not (dir_exists pkg_dir) || List.mem pkg skip then []
-  else list_opam_files pkg_dir |> List.filter_map (issue_for_opam ~topics pkg pkg_dir)
+  if (not (dir_exists pkg_dir)) || List.mem pkg skip then []
+  else
+    list_opam_files pkg_dir
+    |> List.filter_map (issue_for_opam ~topics pkg pkg_dir)
 
 let check (ctx : Context.project) =
   let root = ctx.project_root in

@@ -33,6 +33,7 @@ type payload = { package : string; kind : kind }
 
 let min_major = 3
 let min_minor = 21
+
 let content ctx path =
   try Some (Context.file_content ctx path)
   with Sys_error _ | File_view.Analysis_error _ -> None
@@ -68,7 +69,9 @@ let lang_issue ctx name dp_path =
           match Some version with
           | Some version when version_too_old version ->
               [
-                Issue.v ~loc:(Fpath.v dp_path |> Loc.current_dir_relative |> Loc.in_file)
+                Issue.v
+                  ~loc:
+                    (Fpath.v dp_path |> Loc.current_dir_relative |> Loc.in_file)
                   { package = name; kind = Lang_too_old { version } };
               ]
           | _ -> []))
@@ -85,8 +88,7 @@ let check_package ctx pkg =
       dune_issue ctx name dune_path @ lang_issue ctx name dp_path
 
 let check (ctx : Context.project) =
-  Context.index ctx
-  |> Project_index.source_packages_nodes
+  Context.index ctx |> Project_index.source_packages_nodes
   |> List.concat_map (check_package ctx)
 
 let pp ppf { package; kind } =

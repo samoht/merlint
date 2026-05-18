@@ -4,7 +4,8 @@ type payload = { package : string }
 
 let file_uses_wire ctx path =
   try
-    File_view.references_suffix (Context.file_view ctx path)
+    File_view.references_suffix
+      (Context.file_view ctx path)
       [ "Wire"; "Codec"; "v" ]
   with File_view.Analysis_error _ -> false
 

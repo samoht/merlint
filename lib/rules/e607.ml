@@ -36,7 +36,8 @@ let check_test_info mod_to_libs (test_info : Dune_describe.test_info) =
 let check (ctx : Context.project) =
   let dune_describe = Context.dune_describe ctx in
   let mod_to_libs = Dune_describe.libraries_of_module dune_describe in
-  Dune_describe.tests dune_describe |> List.concat_map (check_test_info mod_to_libs)
+  Dune_describe.tests dune_describe
+  |> List.concat_map (check_test_info mod_to_libs)
 
 let pp ppf { test_module; library_name } =
   Fmt.pf ppf

@@ -353,8 +353,7 @@ let doc_payload_string (payload : Parsetree.payload) =
             Pstr_eval
               ( {
                   pexp_desc =
-                    Pexp_constant
-                      { pconst_desc = Pconst_string (doc, _, _); _ };
+                    Pexp_constant { pconst_desc = Pconst_string (doc, _, _); _ };
                   _;
                 },
                 _ );

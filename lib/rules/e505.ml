@@ -32,6 +32,36 @@ let should_skip_module ~executable_modules ~test_modules ml_file =
 (* Memoised "is this directory the source of a virtual-implementation
    library?" predicate, scoped to a single rule run. The answer lives in
    the project index; we only memoise the directory-to-library lookup. *)
+let module_name_matches a b =
+  String.equal (String.lowercase_ascii a) (String.lowercase_ascii b)
+
+let library_owns_module module_name lib =
+  match Dune.File.Library.modules lib with
+  | All_standard -> true
+  | Only modules -> List.exists (module_name_matches module_name) modules
+  | Standard_except excluded ->
+      not (List.exists (module_name_matches module_name) excluded)
+
+let dune_file_virtual_impl_check =
+  let cache = Hashtbl.create 32 in
+  fun dir module_name ->
+    let key = (dir, module_name) in
+    match Hashtbl.find_opt cache key with
+    | Some v -> v
+    | None ->
+        let v =
+          let dune_file = Filename.concat dir "dune" in
+          match Dune.File.of_file dune_file with
+          | Error _ -> false
+          | Ok dune ->
+              Dune.File.libraries dune
+              |> List.exists (fun lib ->
+                  Dune.File.Library.implements lib <> None
+                  && library_owns_module module_name lib)
+        in
+        Hashtbl.replace cache key v;
+        v
+
 let dir_is_virtual_impl_check index =
   let cache = Hashtbl.create 32 in
   fun dir ->
@@ -47,7 +77,9 @@ let dir_is_virtual_impl_check index =
         v
 
 let is_virtual_impl_file is_virtual_dir ml_file =
-  is_virtual_dir (Filename.dirname ml_file)
+  let dir = Filename.dirname ml_file in
+  let module_name = Filename.basename (Filename.remove_extension ml_file) in
+  is_virtual_dir dir || dune_file_virtual_impl_check dir module_name
 
 let missing_mli_issue files ml_file =
   let mli_path = Filename.remove_extension ml_file ^ ".mli" in

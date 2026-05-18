@@ -20,13 +20,16 @@ let test_unresolved_skips () =
   Alcotest.(check bool)
     "not compliant without typedtree" false
     (Merlint.Suite.is_compliant_view
-       ~expected:"string * unit Alcotest.test_case list"
-       view);
-  Alcotest.(check bool) "no references" false
+       ~expected:"string * unit Alcotest.test_case list" view);
+  Alcotest.(check bool)
+    "no references" false
     (Merlint.Suite.references view "Test_foo");
-  Alcotest.(check bool) "no prefixed references" false
+  Alcotest.(check bool)
+    "no prefixed references" false
     (Merlint.Suite.references_with_prefix view ~prefix:"Test_");
-  Alcotest.(check bool) "no test cases" false (Merlint.Suite.calls_test_case view)
+  Alcotest.(check bool)
+    "no test cases" false
+    (Merlint.Suite.calls_test_case view)
 
 let suite =
   ( "suite",
