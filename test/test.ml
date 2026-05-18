@@ -33,6 +33,7 @@ let () =
       Test_cl_lock.suite;
       Test_example.suite;
       Test_file.suite;
+      Test_fs.suite;
       Test_guide.suite;
       Test_profiling.suite;
       Test_rule.suite;

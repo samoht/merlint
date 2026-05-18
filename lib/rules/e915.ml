@@ -51,7 +51,10 @@ let opted_in root =
   Fs.file_exists (Filename.concat root "sources.toml")
   || Fs.file_exists (Filename.concat root "categories.toml")
 
-let issue_for_package ~topics pkg =
+let loc_in_project ~root path =
+  Loc.relative_to ~root:(Fpath.v root) path |> Loc.in_file
+
+let issue_for_package ~root ~topics pkg =
   let name = Project_index.Package.name pkg in
   let opam = name ^ ".opam" in
   let tags = Project_index.Package.tags pkg in
@@ -61,7 +64,7 @@ let issue_for_package ~topics pkg =
   | findings ->
       let loc =
         match Project_index.Package.opam_path pkg with
-        | Some path -> Loc.in_file (Loc.current_dir_relative path)
+        | Some path -> loc_in_project ~root path
         | None -> Location.in_file opam
       in
       Some (Issue.v ~loc { package = name; opam; findings })
@@ -74,7 +77,7 @@ let check (ctx : Context.project) =
       match Categories.load root with [] -> ctx.config.topics | slugs -> slugs
     in
     Context.index ctx |> Project_index.source_packages_nodes
-    |> List.filter_map (issue_for_package ~topics)
+    |> List.filter_map (issue_for_package ~root ~topics)
 
 let pp ppf { package; opam; findings } =
   let describe = function

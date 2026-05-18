@@ -7,6 +7,7 @@ type result = { issues : Rule.Run.result list; excluded : exclusion_stats list }
 (** Analysis result. *)
 
 val run :
+  ?domain_mgr:[> Eio.Domain_manager.ty ] Eio.Resource.t ->
   load_file:(string -> string) ->
   filter:Filter.t ->
   dune_describe:Dune_describe.describe ->
@@ -15,9 +16,9 @@ val run :
   ?profiling:Profiling.t ->
   string ->
   result
-(** [run ~load_file ~filter ~dune_describe ?analyze_set ~index ?profiling
-     project_root] runs all checks. Returns detected issues and a record of
-    every suppressed issue.
+(** [run ?domain_mgr ~load_file ~filter ~dune_describe ?analyze_set ~index
+     ?profiling project_root] runs all checks. Returns detected issues and a
+    record of every suppressed issue.
 
     [load_file] reads a file's content. The CLI plumbs an Eio-backed reader so
     file I/O goes through {!Eio.Path.load}; tests pass a stdlib reader.
@@ -32,5 +33,8 @@ val run :
     file in [dune_describe]. The CLI passes the explicit file list here in
     single-file mode so file-scoped rules don't widen to the whole project while
     project-scoped rules still see the full library/test view.
+
+    [domain_mgr] enables package-grouped file-rule parallelism. Omit it for
+    deterministic single-domain execution.
 
     [index] is forced lazily when a rule reads it. *)
