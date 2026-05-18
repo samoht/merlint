@@ -217,11 +217,14 @@ let run_one_project_rule ?profiling ~config_for project_ctx rule =
   split_excluded ~config_for ~code issues
 
 let run_project_rules ?domain_mgr ?profiling enabled_rules project_ctx =
-  ignore domain_mgr;
   let config_for = config_lookup () in
   let rules = List.filter Rule.is_project_scoped enabled_rules in
   let run = run_one_project_rule ?profiling ~config_for project_ctx in
-  let results = List.map run rules in
+  let results =
+    match domain_mgr with
+    | None -> List.map run rules
+    | Some dm -> Fs.parallel_map dm rules run
+  in
   let issues = List.concat_map fst results in
   let excluded = List.concat_map snd results in
   (issues, excluded)
