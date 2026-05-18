@@ -100,7 +100,11 @@ let incomplete_issue path issue dune module_stanzas =
     | missing -> Some (issue (Uncovered missing))
 
 let check_dune path contents =
-  let issue kind = Issue.v ~loc:(Location.in_file path) { dune = path; kind } in
+  let display_path = Fpath.v path |> Loc.relative_to_cwd in
+  let issue kind =
+    Issue.v ~loc:(Loc.in_file display_path)
+      { dune = Fpath.to_string display_path; kind }
+  in
   match Dune.File.of_string contents with
   | Error _ -> None
   | Ok dune when Dune.File.has_nontrivial_include_subdirs dune -> None

@@ -58,7 +58,7 @@ let version_too_old v =
   | _ -> false
 
 let dune_issue ctx name dune_path =
-  let loc = Location.in_file dune_path in
+  let loc = Fpath.v dune_path |> Loc.relative_to_cwd |> Loc.in_file in
   if not (Sys.file_exists dune_path) then
     [ Issue.v ~loc { package = name; kind = Missing_dune } ]
   else
@@ -80,7 +80,7 @@ let lang_issue ctx name dp_path =
           match Some version with
           | Some version when version_too_old version ->
               [
-                Issue.v ~loc:(Location.in_file dp_path)
+                Issue.v ~loc:(Fpath.v dp_path |> Loc.relative_to_cwd |> Loc.in_file)
                   { package = name; kind = Lang_too_old { version } };
               ]
           | _ -> []))

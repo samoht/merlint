@@ -30,11 +30,12 @@ let scan_file ctx path =
       Re.all re content
       |> List.map (fun g ->
           let line = line_of_offset (Re.Group.start g 0) in
+          let display = Fpath.v path |> Loc.relative_to_cwd |> Fpath.to_string in
           let loc =
-            Location.v ~file:path ~start_line:line ~start_col:0 ~end_line:line
-              ~end_col:0
+            Location.v ~file:display ~start_line:line ~start_col:0
+              ~end_line:line ~end_col:0
           in
-          Issue.v ~loc { file = path; line })
+          Issue.v ~loc { file = display; line })
 
 let rec walk ctx dir =
   let entries = try Sys.readdir dir |> Array.to_list with Sys_error _ -> [] in

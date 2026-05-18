@@ -37,7 +37,7 @@ Build bad fixture project:
 
 Test good example with library subdirectories - test files match library modules in subdirs:
 Build good fixture project:
-  $ (cd good && dune build @check)
+  $ (cd good-subdir && dune build @check)
 
   $ merlint -B -r E610 good-subdir/
   Dune root: $TESTCASE_ROOT/good-subdir/
@@ -58,6 +58,9 @@ Build good fixture project:
   ✓ All checks passed!
 
 Test good example - all test files have corresponding library modules:
+Build good fixture project:
+  $ (cd good && dune build @check)
+
   $ merlint -B -r E610 good/
   Dune root: $TESTCASE_ROOT/good/
   Running merlint analysis...

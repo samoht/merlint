@@ -1,3 +1,3 @@
-(test
- (name test_engine)
-)
+(tests
+ (names test_engine test_admin)
+ (libraries core admin))

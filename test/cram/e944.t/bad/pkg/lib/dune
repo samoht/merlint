@@ -1,4 +1,3 @@
 (library
  (name pkg)
- (public_name pkg)
  (libraries fmt.tty))
