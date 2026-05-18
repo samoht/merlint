@@ -12,6 +12,18 @@ let is_in_test_dir file =
   let dir = Fpath.parent file |> Fpath.basename in
   String.equal dir "test"
 
+let is_test_file filename =
+  let path = Fpath.v filename |> Fpath.normalize in
+  let basename = Fpath.basename path in
+  let module_name =
+    Fpath.rem_ext (Fpath.v basename) |> Fpath.to_string |> String.lowercase_ascii
+  in
+  String.equal basename "test.ml"
+  || String.starts_with ~prefix:"test_" module_name
+  || List.exists
+       (fun part -> String.equal part "test" || String.equal part "tests")
+       (Fpath.segs path)
+
 let is_in_private_library dune_describe filename =
   let fp = Fpath.v filename |> Fpath.normalize in
   List.exists

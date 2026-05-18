@@ -48,9 +48,12 @@ let defines_own_tests view =
   | Some (`Interface _) | None -> false
 
 let test_mli_needs_issue view =
-  not
-    (Suite.is_compliant_view
-       ~expected:"string * unit Alcotest.test_case list" view)
+  match File_view.typedtree view with
+  | None -> false
+  | Some _ ->
+      not
+        (Suite.is_compliant_view
+           ~expected:"string * unit Alcotest.test_case list" view)
 
 let test_mli_target dune_describe filename =
   let basename = Filename.basename filename in

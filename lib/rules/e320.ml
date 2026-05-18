@@ -4,18 +4,6 @@ open Examples
 type payload = { name : string; kind : string; length : int; max_length : int }
 (** Payload for long identifier name *)
 
-let is_test_file filename =
-  let module_name =
-    Filename.basename filename |> Filename.remove_extension
-    |> String.lowercase_ascii
-  in
-  String.starts_with ~prefix:"test_" module_name
-  || String.contains filename '/'
-     && String.contains (Filename.dirname filename) '/'
-     && List.exists
-          (fun part -> part = "test")
-          (String.split_on_char '/' filename)
-
 let underscore_count name =
   String.fold_left (fun count c -> if c = '_' then count + 1 else count) 0 name
 
@@ -42,7 +30,7 @@ let dedupe_issue ~seen ~max_underscores ~allowed ref_ =
     issue_of_ref ~max_underscores ~allowed ref_)
 
 let check (ctx : Context.file) =
-  if is_test_file ctx.filename then []
+  if File.is_test_file ctx.filename then []
   else
     let max_underscores = ctx.config.max_underscores_in_name in
     let allowed = ctx.config.allowed_words in

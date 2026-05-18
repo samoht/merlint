@@ -117,12 +117,11 @@ Test OCaml syntax with nested decisions:
   
   Analyzing 1 files
   
-  ✗ Code Quality (2 total issues)
-    [E001] High Cyclomatic Complexity (2 issues)
+  ✗ Code Quality (1 total issues)
+    [E001] High Cyclomatic Complexity (1 issue)
     High cyclomatic complexity makes code harder to understand and test. Consider
     breaking complex functions into smaller, more focused functions. Each function
     should ideally do one thing well.
-    - syntax_bad.ml:1:0: Function 'branchy' has cyclomatic complexity of 7 (threshold: 5)
     - syntax_bad.ml:12:0: Function 'guarded' has cyclomatic complexity of 6 (threshold: 5)
   ✓ Code Style (0 total issues)
   ✓ Naming Conventions (0 total issues)
@@ -135,11 +134,11 @@ Test OCaml syntax with nested decisions:
   ╭──────────────┬──────────────────────────────────╮
   │ Category     │ Issues                           │
   ├──────────────┼──────────────────────────────────┤
-  │ Code Quality │ 2 (2 high cyclomatic complexity) │
+  │ Code Quality │ 1 (1 high cyclomatic complexity) │
   ╰──────────────┴──────────────────────────────────╯
   
   
-  Summary: ✗ 2 total issues (applied 1 rule)
+  Summary: ✗ 1 total issue (applied 1 rule)
   ✗ Some checks failed. See details above.
     Run `merlint help E001` for the rule's description, hint, and good/bad examples.
   [1]

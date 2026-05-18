@@ -62,3 +62,20 @@ let simple_loop xs =
     total := !total + List.nth xs i
   done;
   !total
+
+let flat_classifier n =
+  if n < 0 then "negative"
+  else if n = 0 then "zero"
+  else if n < 10 then "small"
+  else if n < 100 then "medium"
+  else "large"
+
+let match_with_classifier_fallback = function
+  | `Named name -> name
+  | `Code n ->
+      if n >= 100 && n < 200 then "informational"
+      else if n >= 200 && n < 300 then "success"
+      else if n >= 300 && n < 400 then "redirection"
+      else if n >= 400 && n < 500 then "client error"
+      else if n >= 500 && n < 600 then "server error"
+      else "unknown"

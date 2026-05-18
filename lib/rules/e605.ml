@@ -1,31 +1,11 @@
 (** E605: Missing Test File *)
 
 module Issue_location = Location
-
 type payload = { module_name : string; expected_test_file : string }
 
 let log_src = Logs.Src.create "merlint.rules.e605" ~doc:"E605 rule diagnostics"
 
 module Log = (val Logs.src_log log_src : Logs.LOG)
-
-(** Check if a module only contains type definitions, module aliases, and
-    delegations. This detects facade/wrapper modules that just re-export other
-    modules (e.g. the top-level [Irmin] module). *)
-let contains_only_types_and_modules ctx file_path =
-  try
-    let view = Context.file_view ctx file_path in
-    let items = File_view.all_items view in
-    let has_non_facade_item =
-      List.exists
-        (fun item ->
-          match File_view.Item.kind item with
-          | Type | Module | Module_type | Constructor | Exception | Field ->
-              false
-          | Value | Class | Class_type -> true)
-        items
-    in
-    not has_non_facade_item
-  with Context.Analysis_error _ -> false
 
 (** Compute expected test file path from source file. For [lib] and [src] source
     directories, the directory is replaced with [test]. For any other source
@@ -147,13 +127,11 @@ let log_project_summary ~files ~lib_modules ~test_modules =
   Log.debug (fun m -> m "E605: Analyzing %d files" (List.length files));
   log_test_sources files lib_modules
 
-let skipped_module_reason ctx file_path =
+let skipped_module_reason file_path =
   if File.is_in_test_dir (Fpath.v file_path) then
     Some "defined in test directory"
   else if File.is_in_examples file_path then
     Some "defined in examples directory"
-  else if contains_only_types_and_modules ctx file_path then
-    Some "contains only types/modules"
   else None
 
 let expected_test_name lib_mod = "test_" ^ String.lowercase_ascii lib_mod
@@ -178,11 +156,11 @@ let should_skip_module private_modules lib_mod =
     Some "listed in private_modules"
   else None
 
-let source_candidate ctx ~files ~lib_files ~exec_files lib_mod =
+let source_candidate ~files ~lib_files ~exec_files lib_mod =
   match lib_source ~files ~lib_files ~exec_files lib_mod with
   | None -> `Missing_source
   | Some file_path -> (
-      match skipped_module_reason ctx file_path with
+      match skipped_module_reason file_path with
       | Some reason ->
           log_skip lib_mod reason;
           `Skipped_source
@@ -196,13 +174,10 @@ let tests_missing ~files ~test_modules lib_mod =
         in_dune in_files);
   (not in_dune) && not in_files
 
-let missing_test_candidate ctx ~files ~lib_files ~exec_files ~private_modules
+let missing_test_candidate ~files ~lib_files ~exec_files ~private_modules
     ~test_modules lib_mod =
-  (* Short-circuit on the cheap signals first: skip lists, source location,
-     test presence. Only force the typedtree (via
-     {!contains_only_types_and_modules} inside {!source_candidate}) for
-     modules that actually look like missing-test candidates -- the
-     vast majority already have a test and don't need inspecting. *)
+  (* Short-circuit on the cheap signals first: private modules, source
+     location, test presence. *)
   match should_skip_module private_modules lib_mod with
   | Some reason ->
       log_skip lib_mod reason;
@@ -210,7 +185,7 @@ let missing_test_candidate ctx ~files ~lib_files ~exec_files ~private_modules
   | None ->
       if not (tests_missing ~files ~test_modules lib_mod) then None
       else (
-        match source_candidate ctx ~files ~lib_files ~exec_files lib_mod with
+        match source_candidate ~files ~lib_files ~exec_files lib_mod with
         | `Missing_source ->
             log_skip lib_mod "no library source file, only in executables";
             None
@@ -229,8 +204,8 @@ let check (ctx : Context.project) =
   log_project_summary ~files ~lib_modules ~test_modules;
   lib_modules
   |> List.filter_map
-       (missing_test_candidate ctx ~files ~lib_files ~exec_files
-          ~private_modules ~test_modules)
+       (missing_test_candidate ~files ~lib_files ~exec_files ~private_modules
+          ~test_modules)
   |> List.map (fun (m, source_file) -> missing_test_issue m source_file)
 
 let pp ppf { module_name; expected_test_file } =

@@ -8,7 +8,7 @@ let dune_file ctx dir =
   with File_view.Analysis_error _ -> None
 
 let check (ctx : Context.project) =
-  let dirs = Interop.oracle_dirs ctx.project_root in
+  let dirs = Interop.oracle_dirs_for ctx in
   List.filter_map
     (fun (d : Interop.oracle_dir) ->
       if d.has_dune then

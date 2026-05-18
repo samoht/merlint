@@ -9,18 +9,6 @@ module Log = (val Logs.src_log log_src : Logs.LOG)
 
 type config = { max_function_length : int }
 
-let is_test_file filename =
-  let module_name =
-    Filename.basename filename |> Filename.remove_extension
-    |> String.lowercase_ascii
-  in
-  String.starts_with ~prefix:"test_" module_name
-  || String.contains filename '/'
-     && String.contains (Filename.dirname filename) '/'
-     && List.exists
-          (fun part -> part = "test")
-          (String.split_on_char '/' filename)
-
 let function_threshold config value =
   config.max_function_length
   + (value.Function_metrics.match_cases * 2)
@@ -64,8 +52,8 @@ let check (ctx : Context.file) =
   in
   let filename = ctx.filename in
   Log.debug (fun m ->
-      m "E005: Checking %s (is_test=%b)" filename (is_test_file filename));
-  if is_test_file filename then []
+      m "E005: Checking %s (is_test=%b)" filename (File.is_test_file filename));
+  if File.is_test_file filename then []
   else
     List.filter_map
       (issue_of_item ~config ~metrics:(metric_by_name ctx))

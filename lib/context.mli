@@ -96,6 +96,9 @@ val analyze_set : project -> string list
 (** [analyze_set p] is the user's analyze-set: the source files matched by
     the [merlint <args>] invocation. *)
 
+val project_root : project -> string
+(** [project_root p] is the Dune project root used for the analysis. *)
+
 val executable_modules : project -> string list
 (** [executable_modules project] returns executable module names. *)
 

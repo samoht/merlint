@@ -6,7 +6,7 @@ let known_languages =
   [ "python"; "java"; "go"; "rust"; "c"; "cpp"; "javascript"; "typescript" ]
 
 let check (ctx : Context.project) =
-  let dirs = Interop.oracle_dirs ctx.project_root in
+  let dirs = Interop.oracle_dirs_for ctx in
   List.filter_map
     (fun (d : Interop.oracle_dir) ->
       (* Check if tool name is a language instead of a tool *)

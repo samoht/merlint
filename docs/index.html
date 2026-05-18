@@ -445,27 +445,6 @@ pre code {
         <span class="kw">else</span> `<span class="cn">Huge</span>
       <span class="kw">in</span>
       bucket
-
-(* <span class="cn">Closure</span> literal stashed inside a record literal: visually this is just
-   <span class="kw">as</span> nested <span class="kw">as</span> the same logic written <span class="kw">with</span> explicit <span class="kw">if</span>/<span class="kw">match</span> levels, so
-   each layer (record, closure, control flow) bumps the depth. *)
-<span class="kw">type</span> 'a visitor = { visit : 'a visitor -&gt; 'a -&gt; unit }
-
-<span class="kw">let</span> collect xs =
-  <span class="kw">let</span> acc = <span class="kw">ref</span> [] <span class="kw">in</span>
-  <span class="kw">let</span> visitor =
-    {
-      visit =
-        (<span class="kw">fun</span> _this x -&gt;
-          <span class="kw">if</span> x &gt; <span class="nu">0</span> <span class="kw">then</span>
-            <span class="kw">if</span> x &gt; <span class="nu">10</span> <span class="kw">then</span>
-              <span class="kw">if</span> x &gt; <span class="nu">100</span> <span class="kw">then</span> acc := x :: !acc <span class="kw">else</span> ()
-            <span class="kw">else</span> ()
-          <span class="kw">else</span> ());
-    }
-  <span class="kw">in</span>
-  <span class="cn">List</span>.iter (visitor.visit visitor) xs;
-  !acc
 </code></pre>
 </div>
 <div class="example good">
@@ -485,11 +464,31 @@ pre code {
   <span class="kw">else</span> <span class="kw">if</span> x &gt;= <span class="nu">100</span> <span class="kw">then</span> <span class="nu">0</span>
   <span class="kw">else</span> x + y + z
 
-(* <span class="cn">Record</span> literals carrying inert data don't count <span class="kw">as</span> nesting -- only
-   records whose fields contain closures <span class="kw">or</span> control flow <span class="kw">do</span>. *)
+<span class="cm">(* Record literals carrying inert data don't count as nesting. *)</span>
 <span class="kw">type</span> point = { x : int; y : int; z : int }
 
-<span class="kw">let</span> translate p dx dy dz = { x = p.x + dx; y = p.y + dy; z = p.z + dz }</code></pre>
+<span class="kw">let</span> translate p dx dy dz = { x = p.x + dx; y = p.y + dy; z = p.z + dz }
+
+(* <span class="cn">A</span> nested <span class="kw">function</span> literal is a separate control-flow body. <span class="cn">Its</span> body should
+   <span class="kw">not</span> inflate the enclosing <span class="kw">function</span>'s nesting depth. *)
+<span class="kw">type</span> 'a visitor = { visit : 'a visitor -&gt; 'a -&gt; unit }
+
+<span class="kw">let</span> collect xs =
+  <span class="kw">let</span> acc = <span class="kw">ref</span> [] <span class="kw">in</span>
+  <span class="kw">let</span> visitor =
+    {
+      visit =
+        (<span class="kw">fun</span> _this x -&gt;
+          <span class="kw">if</span> x &gt; <span class="nu">0</span> <span class="kw">then</span>
+            <span class="kw">if</span> x &gt; <span class="nu">10</span> <span class="kw">then</span>
+              <span class="kw">if</span> x &gt; <span class="nu">100</span> <span class="kw">then</span> acc := x :: !acc <span class="kw">else</span> ()
+            <span class="kw">else</span> ()
+          <span class="kw">else</span> ());
+    }
+  <span class="kw">in</span>
+  <span class="cn">List</span>.iter (visitor.visit visitor) xs;
+  !acc
+</code></pre>
 </div>
 </div></div>
 </div>
