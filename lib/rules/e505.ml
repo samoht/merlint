@@ -29,17 +29,33 @@ let should_skip_module ~executable_modules ~test_modules ml_file =
     Log.debug (fun m -> m "File %s is interface definition file" ml_file);
   is_exe || is_test || is_intf
 
-let is_virtual_impl ctx ml_file =
-  let dir = Filename.dirname ml_file in
-  let dune_path = Filename.concat dir "dune" in
-  try
-    let content = Context.file_content ctx dune_path in
-    match Dune.File.of_string content with
-    | Error _ -> false
-    | Ok dune ->
-        Dune.File.libraries dune
-        |> List.exists (fun lib -> Dune.File.Library.implements lib <> None)
-  with File_view.Analysis_error _ -> false
+(* Build a memoised "is this directory a virtual-implementation library?"
+   predicate scoped to a single rule run. The original version reparsed
+   the dune file once per .ml in the directory; the typical lib/ holds
+   dozens of modules. *)
+let dir_is_virtual_impl_check ctx =
+  let cache = Hashtbl.create 32 in
+  fun dir ->
+    match Hashtbl.find_opt cache dir with
+    | Some v -> v
+    | None ->
+        let v =
+          let dune_path = Filename.concat dir "dune" in
+          try
+            let content = Context.file_content ctx dune_path in
+            match Dune.File.of_string content with
+            | Error _ -> false
+            | Ok dune ->
+                Dune.File.libraries dune
+                |> List.exists (fun lib ->
+                    Dune.File.Library.implements lib <> None)
+          with File_view.Analysis_error _ -> false
+        in
+        Hashtbl.replace cache dir v;
+        v
+
+let is_virtual_impl_file is_virtual_dir ml_file =
+  is_virtual_dir (Filename.dirname ml_file)
 
 let missing_mli_issue files ml_file =
   let mli_path = Filename.remove_extension ml_file ^ ".mli" in
@@ -50,18 +66,20 @@ let missing_mli_issue files ml_file =
     in
     Some (Issue.v ~loc { ml_file; expected_mli = mli_path })
 
-let check_file ctx ~files ~executable_modules ~test_modules ml_file =
+let check_file ~is_virtual_dir ~files ~executable_modules ~test_modules ml_file
+    =
   if not (File_kind.is_ml ml_file) then None
   else if should_skip_module ~executable_modules ~test_modules ml_file then None
-  else if is_virtual_impl ctx ml_file then None
+  else if is_virtual_impl_file is_virtual_dir ml_file then None
   else missing_mli_issue files ml_file
 
 let check (ctx : Context.project) =
   let files = Context.analyze_set ctx in
   let executable_modules = Context.executable_modules ctx in
   let test_modules = Context.test_modules ctx in
+  let is_virtual_dir = dir_is_virtual_impl_check ctx in
   List.filter_map
-    (check_file ctx ~files ~executable_modules ~test_modules)
+    (check_file ~is_virtual_dir ~files ~executable_modules ~test_modules)
     files
 
 let pp ppf { ml_file; expected_mli } =

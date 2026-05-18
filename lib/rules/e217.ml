@@ -68,6 +68,22 @@ let suggestion_for_construct path =
   | last :: _ -> Fmt.str "Fmt.kstr (fun s -> %s s) \"...\"" last
   | [] -> "Fmt.kstr (fun s -> _ s) \"...\""
 
+let is_unary_fmt_str_arg args =
+  match Query.Expr.positional_args args with
+  | [ arg ] -> Query.Expr.calls arg [ "Fmt"; "str" ]
+  | _ -> false
+
+let is_explicit_output_helper path =
+  let path = match path with "Stdlib" :: rest -> rest | rest -> rest in
+  match path with
+  | [ "Buffer"; "add_string" ]
+  | [ "print_endline" ]
+  | [ "print_string" ]
+  | [ "prerr_endline" ]
+  | [ "prerr_string" ] ->
+      true
+  | _ -> false
+
 let check (ctx : Context.file) =
   let filename = ctx.filename in
   let issues = ref [] in
@@ -84,10 +100,14 @@ let check (ctx : Context.file) =
             when (not (handled_by_specialized_rule path))
                  && (not (is_pipe_operator path))
                  && not (is_operator path) -> (
-              match Query.Expr.last_positional_arg args with
-              | Some arg when Query.Expr.calls arg [ "Fmt"; "str" ] ->
-                  flag (suggestion_for_apply path)
-              | _ -> ())
+              let rewriteable =
+                if is_explicit_output_helper path then
+                  match Query.Expr.last_positional_arg args with
+                  | Some arg -> Query.Expr.calls arg [ "Fmt"; "str" ]
+                  | None -> false
+                else is_unary_fmt_str_arg args
+              in
+              if rewriteable then flag (suggestion_for_apply path))
           | _ -> ())
       | Texp_construct (lid, _, [ arg ])
         when Query.Expr.calls arg [ "Fmt"; "str" ] ->
