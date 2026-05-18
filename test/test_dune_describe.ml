@@ -193,8 +193,8 @@ let with_temp_dune content f =
   close_out oc;
   Fun.protect
     ~finally:(fun () ->
-      (try Sys.remove dune_path with _ -> ());
-      try Unix.rmdir dir with _ -> ())
+      (try Sys.remove dune_path with Sys_error _ -> ());
+      try Unix.rmdir dir with Unix.Unix_error _ -> ())
     (fun () -> f (Fpath.v dir))
 
 let test_excluded_subdirs_missing_dune () =
@@ -202,7 +202,7 @@ let test_excluded_subdirs_missing_dune () =
   Sys.remove dir;
   Unix.mkdir dir 0o755;
   Fun.protect
-    ~finally:(fun () -> try Unix.rmdir dir with _ -> ())
+    ~finally:(fun () -> try Unix.rmdir dir with Unix.Unix_error _ -> ())
     (fun () ->
       Alcotest.(check (list string))
         "no dune file -> no excluded subdirs" []

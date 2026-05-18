@@ -16,6 +16,31 @@ let is_test_file filename =
           (fun part -> part = "test")
           (String.split_on_char '/' filename)
 
+let underscore_count name =
+  String.fold_left (fun count c -> if c = '_' then count + 1 else count) 0 name
+
+let issue_of_ref ~max_underscores ~allowed ref_ =
+  let name = File_view.Reference.base ref_ in
+  let length = underscore_count name in
+  if
+    length > max_underscores
+    && String.length name > 5
+    && not (List.mem name allowed)
+  then
+    Option.map
+      (fun loc ->
+        Issue.v ~loc
+          { name; kind = "identifier"; length; max_length = max_underscores })
+      (File_view.Reference.loc ref_)
+  else None
+
+let dedupe_issue ~seen ~max_underscores ~allowed ref_ =
+  let name = File_view.Reference.base ref_ in
+  if Hashtbl.mem seen name then None
+  else (
+    Hashtbl.add seen name ();
+    issue_of_ref ~max_underscores ~allowed ref_)
+
 let check (ctx : Context.file) =
   if is_test_file ctx.filename then []
   else
@@ -34,34 +59,7 @@ let check (ctx : Context.file) =
        applications doesn't deserve N findings — the user only renames it
        once. Keep the first location seen. *)
     let seen = Hashtbl.create 32 in
-    List.filter_map
-      (fun ref_ ->
-        let name = File_view.Reference.base ref_ in
-        if Hashtbl.mem seen name then None
-        else (
-          Hashtbl.add seen name ();
-          let underscore_count =
-            String.fold_left
-              (fun count c -> if c = '_' then count + 1 else count)
-              0 name
-          in
-          if
-            underscore_count > max_underscores
-            && String.length name > 5
-            && not (List.mem name allowed)
-          then
-            Option.map
-              (fun loc ->
-                Issue.v ~loc
-                  {
-                    name;
-                    kind = "identifier";
-                    length = underscore_count;
-                    max_length = max_underscores;
-                  })
-              (File_view.Reference.loc ref_)
-          else None))
-      refs
+    List.filter_map (dedupe_issue ~seen ~max_underscores ~allowed) refs
 
 let pp ppf { name; kind = _; length; max_length } =
   Fmt.pf ppf "Identifier '%s' has %d underscores (max %d)" name length

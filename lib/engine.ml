@@ -46,9 +46,10 @@ let warn_missing_cmts n =
   if n > 0 then
     Log.warn (fun m ->
         m
-          "%d typedtree-backed quer%s found no fresh .cmt file -- typedtree \
-           rules silently saw nothing for those files. Run [dune build @check] \
-           (or pass [-B]) before merlint so the build artefacts are present."
+          "%d typedtree-backed quer%s found no fresh .cmt/.cmti file. The \
+           affected typedtree-backed rule runs were skipped for those files; \
+           run [dune build @check] (or pass [-B]) before merlint so the build \
+           artefacts are present and up to date."
           n
           (if n = 1 then "y" else "ies"))
 
@@ -145,12 +146,12 @@ let file_view ?profiling ~stats ~load_file ~backend filename =
   in
   File_view.v ~filename ~typedtree ()
 
-let setup_analysis ~filter ~dune_describe ~files_to_analyze ~index ~file_view
+let setup_analysis ~filter ~dune_describe ~analyze_set ~index ~file_view
     project_root =
   let config = Config.load project_root in
-  let files_to_analyze = List.map Fpath.to_string files_to_analyze in
+  let analyze_set = List.map Fpath.to_string analyze_set in
   let project_ctx =
-    Context.project ~config ~project_root ~files_to_analyze ~dune_describe
+    Context.project ~config ~project_root ~analyze_set ~dune_describe
       ~index ~file_view ()
   in
   let enabled_rules =
@@ -247,19 +248,19 @@ let analyze_files ~project_ctx ~project_root ~file_rules ?profiling files =
   let results = List.map analyse files in
   results
 
-let run ~load_file ~filter ~dune_describe ?files_to_analyze ~index ?profiling
+let run ~load_file ~filter ~dune_describe ?analyze_set ~index ?profiling
     project_root =
   Log.info (fun m -> m "Starting analysis of %s" project_root);
   let backend = Merlin.v ~root_dir:project_root () in
   let stats = io_stats () in
-  let files_to_analyze =
-    match files_to_analyze with
+  let analyze_set =
+    match analyze_set with
     | Some files -> files
     | None -> Dune_describe.project_files dune_describe
   in
   let file_view = file_view ?profiling ~stats ~load_file ~backend in
   let _config, project_ctx, enabled_rules =
-    setup_analysis ~filter ~dune_describe ~files_to_analyze ~index ~file_view
+    setup_analysis ~filter ~dune_describe ~analyze_set ~index ~file_view
       project_root
   in
   Fun.protect
@@ -273,7 +274,7 @@ let run ~load_file ~filter ~dune_describe ?files_to_analyze ~index ?profiling
       let file_rules = List.filter Rule.is_file_scoped enabled_rules in
       let file_results =
         analyze_files ~project_ctx ~project_root ~file_rules ?profiling
-          files_to_analyze
+          analyze_set
       in
       let file_issues = List.concat_map fst file_results in
       let file_excluded = List.concat_map snd file_results in

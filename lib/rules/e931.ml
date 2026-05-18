@@ -56,7 +56,7 @@ let suggestion_for = function
 let scan_file ctx ~filename =
   let view = Context.file_view ctx filename in
   let display_filename =
-    Fpath.v filename |> Loc.relative_to_cwd |> Fpath.to_string
+    Fpath.v filename |> Loc.current_dir_relative |> Fpath.to_string
   in
   let findings = ref [] in
   File_view.iter_applications view (fun call ->
@@ -115,7 +115,7 @@ let check (ctx : Context.project) =
         | _ ->
             let opam_path =
               match P.opam_path pkg with
-              | Some path -> Fpath.to_string (Loc.relative_to_cwd path)
+              | Some path -> Fpath.to_string (Loc.current_dir_relative path)
               | None -> P.name pkg ^ ".opam"
             in
             let loc = Issue_location.in_file opam_path in

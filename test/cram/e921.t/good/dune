@@ -1,3 +1,2 @@
-(env
- (dev
-  (flags :standard %{dune-warnings})))
+(library
+ (name foo))

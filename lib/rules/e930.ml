@@ -57,7 +57,7 @@ let opam_path ~root pkg =
 
 let dune_file lib =
   match L.dune_file lib with
-  | Some path -> Fpath.to_string (Loc.relative_to_cwd path)
+  | Some path -> Fpath.to_string (Loc.current_dir_relative path)
   | None -> L.name lib ^ "/dune"
 
 (* Libraries declared under a [test/] or [tests/] subdirectory are private test

@@ -21,7 +21,7 @@ let is_test_file filename =
 let has_test_runner view = File_view.calls_path view [ "Alcotest"; "run" ]
 
 let uses_test_module_suites view =
-  Suite_refs.references_suite_with_prefix view ~prefix:"Test_"
+  Suite.references_with_prefix view ~prefix:"Test_"
 
 let rec is_list_expr (expr : T.expression) =
   match expr.exp_desc with
@@ -30,28 +30,26 @@ let rec is_list_expr (expr : T.expression) =
   | Texp_open (_, expr) -> is_list_expr expr
   | _ -> false
 
+let binding_defines_tests (vb : T.value_binding) =
+  match vb.vb_pat.pat_desc with
+  | Tpat_var (_, name, _) when List.mem name.txt [ "tests"; "suite" ] ->
+      is_list_expr vb.vb_expr
+  | _ -> false
+
+let item_defines_tests (item : T.structure_item) =
+  match item.str_desc with
+  | Tstr_value (_, bindings) -> List.exists binding_defines_tests bindings
+  | _ -> false
+
 let defines_own_tests view =
   match File_view.typedtree view with
   | Some (`Implementation structure) ->
-      List.exists
-        (fun (item : T.structure_item) ->
-          match item.str_desc with
-          | Tstr_value (_, bindings) ->
-              List.exists
-                (fun (vb : T.value_binding) ->
-                  match vb.vb_pat.pat_desc with
-                  | Tpat_var (_, name, _)
-                    when List.mem name.txt [ "tests"; "suite" ] ->
-                      is_list_expr vb.vb_expr
-                  | _ -> false)
-                bindings
-          | _ -> false)
-        structure.str_items
+      List.exists item_defines_tests structure.str_items
   | Some (`Interface _) | None -> false
 
 let test_mli_needs_issue view =
   not
-    (Suite_mli.is_compliant_view
+    (Suite.is_compliant_view
        ~expected:"string * unit Alcotest.test_case list" view)
 
 let test_mli_target dune_describe filename =
@@ -184,7 +182,7 @@ let check_missing_test_mli ctx dune_describe files =
 
 (** Check all files for test convention issues *)
 let check ctx =
-  let files = Context.files_to_analyze ctx in
+  let files = Context.analyze_set ctx in
   let dune_describe = Context.dune_describe ctx in
   (* Debug log to see what files we're analyzing *)
   Log.debug (fun m -> m "E600: Analyzing %d files:" (List.length files));

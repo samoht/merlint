@@ -55,7 +55,10 @@ let re_zero_issues =
     (Re.alt
        [ Re.str "✓ 0 total issues"; Re.str "Summary: ✓ All checks passed" ])
 
+let re_failing_summary = Re.compile (Re.str "Summary: ✗")
+
 let re_merlint_cmd = Re.compile (Re.seq [ Re.bos; Re.str "  $ merlint" ])
+let re_cram_cmd = Re.compile (Re.seq [ Re.bos; Re.str "  $ " ])
 let re_two_spaces = Re.compile (Re.seq [ Re.bos; Re.str "  " ])
 
 (* Extract test name regex *)
@@ -99,50 +102,51 @@ let check_dune_project_exists ~has_subdirs ~bad_dir ~good_dir ~dune_project_file
     (* Regular structure - check at root *)
     Sys.file_exists dune_project_file
 
+let file_exists path = Sys.file_exists path
+
+let dir_exists path = Sys.file_exists path && Sys.is_directory path
+
+let check_dune_exists ~bad_file ~good_file ~dune_file =
+  let needs_root_dune = file_exists bad_file || file_exists good_file in
+  (not needs_root_dune) || file_exists dune_file
+
+let check_incorrect_root_files ~has_subdirs ~dune_project_file ~dune_file =
+  has_subdirs && (file_exists dune_project_file || file_exists dune_file)
+
+let test_paths cram_dir error_code =
+  let test_dir = Filename.concat cram_dir (error_code ^ ".t") in
+  ( test_dir,
+    Filename.concat test_dir "bad.ml",
+    Filename.concat test_dir "good.ml",
+    Filename.concat test_dir "bad",
+    Filename.concat test_dir "good",
+    Filename.concat test_dir "run.t",
+    Filename.concat test_dir "dune-project",
+    Filename.concat test_dir "dune" )
+
 (* Check if required files exist in test directory *)
 let check_test_files cram_dir error_code =
-  let test_dir = Filename.concat cram_dir (error_code ^ ".t") in
-  let bad_file = Filename.concat test_dir "bad.ml" in
-  let good_file = Filename.concat test_dir "good.ml" in
-  (* Also check for subdirectory structure *)
-  let bad_dir = Filename.concat test_dir "bad" in
-  let good_dir = Filename.concat test_dir "good" in
-  let run_file = Filename.concat test_dir "run.t" in
-  let dune_project_file = Filename.concat test_dir "dune-project" in
-  let dune_file = Filename.concat test_dir "dune" in
-
-  (* Either regular files or directory structure is acceptable *)
-  let bad_exists =
-    Sys.file_exists bad_file
-    || (Sys.file_exists bad_dir && Sys.is_directory bad_dir)
+  let ( _test_dir,
+        bad_file,
+        good_file,
+        bad_dir,
+        good_dir,
+        run_file,
+        dune_project_file,
+        dune_file ) =
+    test_paths cram_dir error_code
   in
-  let good_exists =
-    Sys.file_exists good_file
-    || (Sys.file_exists good_dir && Sys.is_directory good_dir)
-  in
-  let run_exists = Sys.file_exists run_file in
-  (* Check if this test uses subdirectory structure *)
-  let has_subdirs =
-    Sys.file_exists bad_dir && Sys.is_directory bad_dir
-    && Sys.file_exists good_dir && Sys.is_directory good_dir
-  in
-
+  let has_subdirs = dir_exists bad_dir && dir_exists good_dir in
+  let bad_exists = file_exists bad_file || dir_exists bad_dir in
+  let good_exists = file_exists good_file || dir_exists good_dir in
+  let run_exists = file_exists run_file in
   let dune_project_exists =
     check_dune_project_exists ~has_subdirs ~bad_dir ~good_dir ~dune_project_file
   in
-
-  (* Check for incorrect root-level files when using subdirs *)
   let has_incorrect_root_files =
-    has_subdirs
-    && (Sys.file_exists dune_project_file || Sys.file_exists dune_file)
+    check_incorrect_root_files ~has_subdirs ~dune_project_file ~dune_file
   in
-
-  (* For dune file:
-     - If bad.ml or good.ml exist at root, we need dune at root
-     - If only bad/ and good/ directories exist, we don't need dune at root
-       (subdirectories should have their own dune files) *)
-  let needs_root_dune = Sys.file_exists bad_file || Sys.file_exists good_file in
-  let dune_exists = (not needs_root_dune) || Sys.file_exists dune_file in
+  let dune_exists = check_dune_exists ~bad_file ~good_file ~dune_file in
   ( bad_exists,
     good_exists,
     run_exists,
@@ -172,6 +176,37 @@ let is_bad_test line bad_test_re = Re.execp bad_test_re line
 (* Check if line is a good test *)
 let is_good_test line good_test_re = Re.execp good_test_re line
 
+let contains_substring ~needle haystack =
+  let needle_len = String.length needle in
+  let haystack_len = String.length haystack in
+  let rec loop i =
+    if i + needle_len > haystack_len then false
+    else if String.sub haystack i needle_len = needle then true
+    else loop (i + 1)
+  in
+  needle_len = 0 || loop 0
+
+let forbidden_command_fragments =
+  [
+    ("grep", "uses grep in a cram command");
+    ("head", "uses head in a cram command");
+    ("tail", "uses tail in a cram command");
+    ("sed", "uses sed in a cram command");
+    ("awk", "uses awk in a cram command");
+    ("|", "uses a shell pipe in a cram command");
+    (">/dev/null", "hides command output with >/dev/null");
+    ("2>/dev/null", "hides command stderr with 2>/dev/null");
+    ("dune promote", "uses dune promote from inside a cram test");
+  ]
+
+let forbidden_command_issues line =
+  if not (Re.execp re_cram_cmd line) then []
+  else
+    forbidden_command_fragments
+    |> List.filter_map (fun (fragment, message) ->
+           if contains_substring ~needle:fragment line then Some message
+           else None)
+
 (* State for tracking test format checking *)
 type format_check_state = {
   has_bad_test : bool;
@@ -189,6 +224,7 @@ let process_format_line line rule_code bad_test_re good_test_re state =
       | None -> state.wrong_formats
     else state.wrong_formats
   in
+  let new_wrong_formats = forbidden_command_issues line @ new_wrong_formats in
   {
     has_bad_test = state.has_bad_test || is_bad_test line bad_test_re;
     has_good_test = state.has_good_test || is_good_test line good_test_re;
@@ -226,7 +262,7 @@ let check_run_t_format cram_dir error_code =
 let extract_test_name line =
   if Re.execp re_bad_test_name line then "bad"
   else if Re.execp re_good_test_name line then "good"
-  else ""
+  else "merlint"
 
 (* Add test result if valid *)
 let add_test_result current_test output_lines acc =
@@ -394,54 +430,61 @@ let check_test_directory_structure cram_dir defined_rules test_dirs errors =
         check_rule_structure cram_dir rule_code errors)
     defined_rules
 
-(* Check a single test output for build errors or incorrect exit behavior *)
-let check_test_output cram_dir rule_code errors (test_name, output_lines) =
+let has_line re lines = List.exists (fun line -> Re.execp re line) lines
+
+type output_kind = { has_exit_1 : bool; shows_zero : bool; shows_failure : bool }
+
+let test_output_kind lines =
+  {
+    has_exit_1 = has_line re_exit_1 lines;
+    shows_zero = has_line re_zero_issues lines;
+    shows_failure = has_line re_failing_summary lines;
+  }
+
+let output_has_build_error lines =
   let re_command_failed = Re.compile (Re.str "Command failed with exit code") in
   let re_build_warning =
     Re.compile (Re.str "Warning: Failed to build project")
   in
-  let has_build_error =
-    List.exists
-      (fun line ->
-        Re.execp re_dune_error line
-        || Re.execp re_command_failed line
-        || Re.execp re_build_warning line)
-      output_lines
-  in
-  if has_build_error then
-    errors :=
-      Fmt.str
-        "Error: %s/%s.t/run.t: %s test shows build errors/warnings - fix the \
-         build (debug with: dune build --root %s/%s.t)"
-        cram_dir rule_code test_name cram_dir rule_code
-      :: !errors
-  else if test_name = "bad" then begin
-    let has_exit_1 =
-      List.exists (fun line -> Re.execp re_exit_1 line) output_lines
-    in
-    if not has_exit_1 then
-      errors :=
-        Fmt.str
-          "Error: %s/%s.t/run.t: bad.ml test doesn't show exit code [1] - \
-           should find issues"
-          cram_dir rule_code
-        :: !errors
-  end
-  else if test_name = "good" then begin
-    let has_exit_1 =
-      List.exists (fun line -> Re.execp re_exit_1 line) output_lines
-    in
-    let shows_zero_issues =
-      List.exists (fun line -> Re.execp re_zero_issues line) output_lines
-    in
-    if has_exit_1 && shows_zero_issues then
-      errors :=
-        Fmt.str
-          "Error: %s/%s.t/run.t: good.ml test shows exit [1] but claims 0 \
-           issues"
-          cram_dir rule_code
-        :: !errors
-  end
+  List.exists
+    (fun line ->
+      Re.execp re_dune_error line
+      || Re.execp re_command_failed line
+      || Re.execp re_build_warning line)
+    lines
+
+let add_error errors msg = errors := msg :: !errors
+
+let check_merlint_edge_output cram_dir rule_code errors kind =
+  if kind.has_exit_1 && not kind.shows_failure then
+    Fmt.kstr (add_error errors) "Error: %s/%s.t/run.t: merlint edge test exits [1] without a failing \
+          summary" cram_dir rule_code
+  else if (not kind.has_exit_1) && not kind.shows_zero then
+    Fmt.kstr (add_error errors) "Error: %s/%s.t/run.t: merlint edge test exits successfully without \
+          showing 0 issues" cram_dir rule_code
+
+let check_bad_output cram_dir rule_code errors kind =
+  if not kind.has_exit_1 then
+    Fmt.kstr (add_error errors) "Error: %s/%s.t/run.t: bad.ml test doesn't show exit code [1] - \
+          should find issues" cram_dir rule_code
+
+let check_good_output cram_dir rule_code errors kind =
+  if kind.has_exit_1 && kind.shows_zero then
+    Fmt.kstr (add_error errors) "Error: %s/%s.t/run.t: good.ml test shows exit [1] but claims 0 \
+          issues" cram_dir rule_code
+
+(* Check a single test output for build errors or incorrect exit behavior *)
+let check_test_output cram_dir rule_code errors (test_name, output_lines) =
+  if output_has_build_error output_lines then
+    Fmt.kstr (add_error errors) "Error: %s/%s.t/run.t: %s test shows build errors/warnings - fix the \
+          build (debug with: dune build --root %s/%s.t)" cram_dir rule_code test_name cram_dir rule_code
+  else
+    let kind = test_output_kind output_lines in
+    match test_name with
+    | "merlint" -> check_merlint_edge_output cram_dir rule_code errors kind
+    | "bad" -> check_bad_output cram_dir rule_code errors kind
+    | "good" -> check_good_output cram_dir rule_code errors kind
+    | _ -> ()
 
 (* Check 6: Parse run.t files to verify expected behavior *)
 let check_expected_outputs cram_dir defined_rules test_dirs errors =

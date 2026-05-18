@@ -19,7 +19,7 @@ type file = {
 type project = {
   config : Config.t;  (** The merlint configuration. *)
   project_root : string;  (** The project root directory. *)
-  files_to_analyze : string list;
+  analyze_set : string list;
       (** The user's request: the source files matched by the [merlint <args>]
           command. Project-scoped rules use this to limit their scan to what was
           actually asked about, rather than walking the whole monorepo. *)
@@ -57,22 +57,23 @@ val file_with_view :
   view:File_view.t ->
   load_content:(unit -> string) ->
   file
-(** [file_with_view ~filename ~config ~project_root ~view] creates a file
-    context backed by an existing shared {!File_view.t}. *)
+(** [file_with_view ~filename ~config ~project_root ~view ~load_content] creates
+    a file context backed by an existing shared {!File_view.t}. *)
 
 val project :
   ?file_view:(string -> File_view.t) ->
   ?file_content:(string -> string) ->
   config:Config.t ->
   project_root:string ->
-  files_to_analyze:string list ->
+  analyze_set:string list ->
   dune_describe:Dune_describe.describe ->
   index:Project_index.t Lazy.t ->
   unit ->
   project
-(** [project ~files_to_analyze ...] creates a project context.
-    [files_to_analyze] is the source set matched by the user's [merlint <args>]
-    invocation; project-scoped rules should restrict their work to it. *)
+(** [project ~config ~project_root ~analyze_set ~dune_describe ~index ()]
+    creates a project context. [analyze_set] is the source set matched by the
+    user's [merlint <args>] invocation; project-scoped rules should restrict
+    their work to it. *)
 
 val index : project -> Project_index.t
 (** [index p] forces and returns the monopam package/library index. *)
@@ -91,8 +92,8 @@ val values : file -> Function_metrics.value list
 
 (** {2 Project context accessors} *)
 
-val files_to_analyze : project -> string list
-(** [files_to_analyze p] is the user's analyze-set: the source files matched by
+val analyze_set : project -> string list
+(** [analyze_set p] is the user's analyze-set: the source files matched by
     the [merlint <args>] invocation. *)
 
 val executable_modules : project -> string list

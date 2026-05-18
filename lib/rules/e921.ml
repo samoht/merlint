@@ -30,32 +30,36 @@ let scan_file ctx path =
       Re.all re content
       |> List.map (fun g ->
           let line = line_of_offset (Re.Group.start g 0) in
-          let display = Fpath.v path |> Loc.relative_to_cwd |> Fpath.to_string in
+          let display = Fpath.v path |> Loc.current_dir_relative |> Fpath.to_string in
           let loc =
             Location.v ~file:display ~start_line:line ~start_col:0
               ~end_line:line ~end_col:0
           in
           Issue.v ~loc { file = display; line })
 
-let rec walk ctx dir =
-  let entries = try Sys.readdir dir |> Array.to_list with Sys_error _ -> [] in
-  List.concat_map
-    (fun entry ->
-      let path = Filename.concat dir entry in
-      let is_dir = try Sys.is_directory path with Sys_error _ -> false in
-      if is_dir then
-        if Dune_describe.skippable_subdir ~parent_dir:(Fpath.v dir) entry then
-          []
-        else walk ctx path
-      else if
-        Filename.check_suffix path ".md"
-        || Filename.check_suffix path ".mli"
-        || Filename.check_suffix path ".mld"
-      then scan_file ctx path
-      else [])
-    entries
+(* In-scope sources to inspect: every [.md] / [.mld] from package + library
+   doc files, plus every [.mli] from each library's [(modules ...)] spec.
+   The index already enumerates these; we don't readdir. *)
+let sources_in_scope ctx =
+  let acc = ref [] in
+  let add path = acc := Fpath.to_string path :: !acc in
+  Context.index ctx |> Project_index.source_packages_nodes
+  |> List.iter (fun pkg ->
+      List.iter (fun (d : Project_index.doc_file) -> add d.path)
+        (Project_index.Package.doc_files pkg);
+      Project_index.package_libraries pkg
+      |> List.iter (fun lib ->
+          List.iter (fun (d : Project_index.doc_file) -> add d.path)
+            (Project_index.Library.doc_files lib);
+          List.iter
+            (fun fp ->
+              if Filename.check_suffix (Fpath.to_string fp) ".mli" then
+                add fp)
+            (Project_index.Library.files lib)));
+  List.sort_uniq String.compare !acc
 
-let check (ctx : Context.project) = walk ctx ctx.project_root
+let check (ctx : Context.project) =
+  sources_in_scope ctx |> List.concat_map (scan_file ctx)
 
 let pp ppf { file; line } =
   Fmt.pf ppf

@@ -100,7 +100,7 @@ let incomplete_issue path issue dune module_stanzas =
     | missing -> Some (issue (Uncovered missing))
 
 let check_dune path contents =
-  let display_path = Fpath.v path |> Loc.relative_to_cwd in
+  let display_path = Fpath.v path |> Loc.current_dir_relative in
   let issue kind =
     Issue.v ~loc:(Loc.in_file display_path)
       { dune = Fpath.to_string display_path; kind }

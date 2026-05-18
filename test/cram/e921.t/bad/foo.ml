@@ -1,0 +1,1 @@
+let compute () = 42

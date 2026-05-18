@@ -11,7 +11,7 @@ type parsed_config = {
   exclusions : Rule_config.t;
 }
 
-let rec scalar_to_string : Toml.Value.t -> string = function
+let rec string_of_scalar : Toml.Value.t -> string = function
   | String (s, _) -> s
   | Int (i, _) -> Int64.to_string i
   | Float (f, _) -> string_of_float f
@@ -22,7 +22,7 @@ let rec scalar_to_string : Toml.Value.t -> string = function
   | Date_local (s, _)
   | Time_local (s, _) ->
       s
-  | Array (items, _) -> String.concat ", " (List.map scalar_to_string items)
+  | Array (items, _) -> String.concat ", " (List.map string_of_scalar items)
   | Table _ -> Fmt.failwith "merlint config: unexpected nested table value"
 
 (* Project a top-level (key, value) pair to either:
@@ -72,7 +72,7 @@ let project_setting ~config_dir (key, (value : Toml.Value.t)) =
   match (key, value) with
   | "rules", Array (entries, _) ->
       `Rules (List.concat_map (extract_patterns ~config_dir) entries)
-  | _ -> `Setting (key, scalar_to_string value)
+  | _ -> `Setting (key, string_of_scalar value)
 
 let parse ?(config_dir = "") content =
   let value =

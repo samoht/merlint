@@ -55,7 +55,7 @@ let test_modules dune_describe (test_info : Dune_describe.test_info) test_file =
       else Some basename)
 
 let suite_included view test_mod =
-  Suite_refs.references_suite view (String.capitalize_ascii test_mod)
+  Suite.references view (String.capitalize_ascii test_mod)
 
 let missing_issue test_file test_mod =
   let loc =

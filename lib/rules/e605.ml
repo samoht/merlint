@@ -214,7 +214,7 @@ let missing_test_candidate ctx ~files ~lib_files ~exec_files ~private_modules
           else None)
 
 let check (ctx : Context.project) =
-  let files = Context.files_to_analyze ctx in
+  let files = Context.analyze_set ctx in
   let lib_modules = Context.lib_modules ctx in
   let test_modules = Context.test_modules ctx in
   let dune_desc = Context.dune_describe ctx in

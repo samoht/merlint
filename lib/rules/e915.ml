@@ -63,6 +63,18 @@ let opted_in root =
   Sys.file_exists (Filename.concat root "sources.toml")
   || Sys.file_exists (Filename.concat root "categories.toml")
 
+let issue_for_opam ~topics pkg pkg_dir opam =
+  match check_opam_file ~topics pkg_dir opam with
+  | [] -> None
+  | findings ->
+      let loc = Location.in_file (Filename.concat pkg opam) in
+      Some (Issue.v ~loc { package = pkg; opam; findings })
+
+let check_package ~topics skip root pkg =
+  let pkg_dir = Filename.concat root pkg in
+  if not (dir_exists pkg_dir) || List.mem pkg skip then []
+  else list_opam_files pkg_dir |> List.filter_map (issue_for_opam ~topics pkg pkg_dir)
+
 let check (ctx : Context.project) =
   let root = ctx.project_root in
   if not (opted_in root) then []
@@ -70,26 +82,11 @@ let check (ctx : Context.project) =
     let topics =
       match Categories.load root with [] -> ctx.config.topics | slugs -> slugs
     in
-    let issues = ref [] in
     let try_readdir d =
       try Sys.readdir d |> Array.to_list with Sys_error _ -> []
     in
     let skip = [ "_build"; ".git"; "_opam"; "node_modules" ] in
-    let packages = try_readdir root in
-    List.iter
-      (fun pkg ->
-        let pkg_dir = Filename.concat root pkg in
-        if dir_exists pkg_dir && not (List.mem pkg skip) then
-          List.iter
-            (fun opam ->
-              let findings = check_opam_file ~topics pkg_dir opam in
-              if findings <> [] then
-                let loc = Location.in_file (Filename.concat pkg opam) in
-                issues :=
-                  Issue.v ~loc { package = pkg; opam; findings } :: !issues)
-            (list_opam_files pkg_dir))
-      packages;
-    !issues
+    try_readdir root |> List.concat_map (check_package ~topics skip root)
 
 let pp ppf { package; opam; findings } =
   let describe = function

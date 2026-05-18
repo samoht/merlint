@@ -26,31 +26,54 @@ let has_doc_files pkg_dir =
   || has_files pkg_dir ".mld"
   || has_files (Filename.concat pkg_dir "doc") ".mld"
 
+let has_cram_tests test_dir =
+  if not (dir_exists test_dir) then false
+  else
+    try
+      Sys.readdir test_dir |> Array.to_list
+      |> List.exists (fun f ->
+             Filename.check_suffix f ".t"
+             && dir_exists (Filename.concat test_dir f))
+    with Sys_error _ -> false
+
+let add_if present feature features =
+  if present then feature :: features else features
+
 (** Detect quality features from directory structure. *)
 let detect_features pkg_dir =
-  let features = ref [] in
-  let add f = features := f :: !features in
   let lib_dir = Filename.concat pkg_dir "lib" in
   let test_dir = Filename.concat pkg_dir "test" in
   let fuzz_dir = Filename.concat pkg_dir "fuzz" in
   let interop_dir = Filename.concat test_dir "interop" in
   let has_lib = dir_exists lib_dir && has_files lib_dir ".ml" in
-  if has_lib && Sys.file_exists (Filename.concat pkg_dir "dune-project") then
-    add "build";
-  if dir_exists test_dir && has_files test_dir ".ml" then add "test";
-  if dir_exists fuzz_dir && has_files fuzz_dir ".ml" then add "fuzz";
-  if has_doc_files pkg_dir then add "doc";
-  if dir_exists interop_dir then add "interop";
-  (if dir_exists test_dir then
-     try
-       Sys.readdir test_dir |> Array.to_list
-       |> List.iter (fun f ->
-           if
-             Filename.check_suffix f ".t"
-             && dir_exists (Filename.concat test_dir f)
-           then add "cram")
-     with Sys_error _ -> ());
-  List.sort_uniq String.compare !features
+  []
+  |> add_if (has_lib && Sys.file_exists (Filename.concat pkg_dir "dune-project")) "build"
+  |> add_if (dir_exists test_dir && has_files test_dir ".ml") "test"
+  |> add_if (dir_exists fuzz_dir && has_files fuzz_dir ".ml") "fuzz"
+  |> add_if (has_doc_files pkg_dir) "doc"
+  |> add_if (dir_exists interop_dir) "interop"
+  |> add_if (has_cram_tests test_dir) "cram"
+  |> List.sort_uniq String.compare
+
+let quality_words line =
+  let t = String.trim line in
+  let prefix = "x-quality:" in
+  let plen = String.length prefix in
+  if String.length t <= plen || String.sub t 0 plen <> prefix then []
+  else
+    let rest = String.sub t plen (String.length t - plen) in
+    String.split_on_char '"' rest
+    |> List.filter (fun s ->
+           let s = String.trim s in
+           s <> "" && s <> "[" && s <> "]" && s <> " ")
+
+let read_policy_file ctx path =
+  match
+    try Some (Context.file_content ctx path)
+    with Sys_error _ | File_view.Analysis_error _ -> None
+  with
+  | None -> []
+  | Some content -> String.split_on_char '\n' content |> List.concat_map quality_words
 
 (** Read quality policy from [*.opam] files. *)
 let read_policy ctx pkg_dir =
@@ -62,64 +85,43 @@ let read_policy ctx pkg_dir =
     List.concat_map
       (fun f ->
         let path = Filename.concat pkg_dir f in
-        match
-          try Some (Context.file_content ctx path)
-          with Sys_error _ | File_view.Analysis_error _ -> None
-        with
-        | None -> []
-        | Some content ->
-            let lines = String.split_on_char '\n' content in
-            List.concat_map
-              (fun line ->
-                let t = String.trim line in
-                let prefix = "x-quality:" in
-                let plen = String.length prefix in
-                if String.length t > plen && String.sub t 0 plen = prefix then
-                  let rest = String.sub t plen (String.length t - plen) in
-                  String.split_on_char '"' rest
-                  |> List.filter (fun s ->
-                      let s = String.trim s in
-                      s <> "" && s <> "[" && s <> "]" && s <> " ")
-                else [])
-              lines)
+        read_policy_file ctx path)
       opam_files
   with Sys_error _ -> []
 
+let package_findings policy detected =
+  let missing =
+    policy
+    |> List.filter (fun feature -> not (List.mem feature detected))
+    |> List.map (fun feature -> Missing feature)
+  in
+  let undeclared =
+    detected
+    |> List.filter (fun feature -> not (List.mem feature policy))
+    |> List.map (fun feature -> Undeclared feature)
+  in
+  missing @ undeclared
+
+let check_package ctx root pkg =
+  let pkg_dir = Filename.concat root pkg in
+  if not (dir_exists pkg_dir) || List.mem pkg [ "_build"; ".git"; "_opam" ] then
+    None
+  else
+    match read_policy ctx pkg_dir with
+    | [] -> None
+    | policy -> (
+        match package_findings policy (detect_features pkg_dir) with
+        | [] -> None
+        | findings ->
+            let loc = Location.in_file (Filename.concat pkg "dune-project") in
+            Some (Issue.v ~loc { package = pkg; findings }))
+
 let check (ctx : Context.project) =
   let root = ctx.project_root in
-  let issues = ref [] in
   let try_readdir d =
     try Sys.readdir d |> Array.to_list with Sys_error _ -> []
   in
-  let packages = try_readdir root in
-  List.iter
-    (fun pkg ->
-      let pkg_dir = Filename.concat root pkg in
-      if
-        dir_exists pkg_dir && pkg <> "_build" && pkg <> ".git" && pkg <> "_opam"
-      then
-        let policy = read_policy ctx pkg_dir in
-        if policy <> [] then (
-          let detected = detect_features pkg_dir in
-          let findings = ref [] in
-          (* Policy violations: declared but missing *)
-          List.iter
-            (fun feature ->
-              if not (List.mem feature detected) then
-                findings := Missing feature :: !findings)
-            policy;
-          (* Suggestions: present but not declared *)
-          List.iter
-            (fun feature ->
-              if not (List.mem feature policy) then
-                findings := Undeclared feature :: !findings)
-            detected;
-          if !findings <> [] then
-            let loc = Location.in_file (Filename.concat pkg "dune-project") in
-            issues :=
-              Issue.v ~loc { package = pkg; findings = !findings } :: !issues))
-    packages;
-  !issues
+  try_readdir root |> List.filter_map (check_package ctx root)
 
 let pp ppf { package; findings } =
   Fmt.pf ppf "%s: %s" package

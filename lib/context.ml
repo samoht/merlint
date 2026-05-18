@@ -19,7 +19,7 @@ type file = {
 type project = {
   config : Config.t;
   project_root : string;
-  files_to_analyze : string list;
+  analyze_set : string list;
   dune_describe : Dune_describe.describe Lazy.t;
   executable_modules : string list Lazy.t;
   lib_modules : string list Lazy.t;
@@ -101,7 +101,7 @@ let discover_test_modules ~index dune_desc_lazy =
         (List.length file_test_modules));
   all_test_modules
 
-let project ?file_view ?file_content ~config ~project_root ~files_to_analyze
+let project ?file_view ?file_content ~config ~project_root ~analyze_set
     ~dune_describe ~index () =
   let dune_desc_lazy = lazy dune_describe in
   let file_view_cache =
@@ -115,7 +115,7 @@ let project ?file_view ?file_content ~config ~project_root ~files_to_analyze
   {
     config;
     project_root;
-    files_to_analyze;
+    analyze_set;
     dune_describe = dune_desc_lazy;
     executable_modules =
       lazy (Dune_describe.executable_modules (Lazy.force dune_desc_lazy));
@@ -134,7 +134,7 @@ let content ctx = Lazy.force ctx.content
 let values ctx = File_view.values ctx.view
 
 (* Project context accessors *)
-let files_to_analyze ctx = ctx.files_to_analyze
+let analyze_set ctx = ctx.analyze_set
 let executable_modules ctx = Lazy.force ctx.executable_modules
 let lib_modules ctx = Lazy.force ctx.lib_modules
 let test_modules ctx = Lazy.force ctx.test_modules

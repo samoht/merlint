@@ -19,7 +19,7 @@ let fuzz_modules runner_file fuzz_files =
     fuzz_files
 
 let module_in_runner view fuzz_mod =
-  Suite_refs.references_suite view (String.capitalize_ascii fuzz_mod)
+  Suite.references view (String.capitalize_ascii fuzz_mod)
 
 let missing_include_issue runner_file fuzz_mod =
   let loc =

@@ -65,7 +65,7 @@ let test_only_libs pkg =
     no source directory for the package. *)
 let opam_loc pkg =
   match Project_index.Package.opam_path pkg with
-  | Some path -> Loc.in_file (Loc.relative_to_cwd path)
+  | Some path -> Loc.in_file (Loc.current_dir_relative path)
   | None -> Location.in_file (Project_index.Package.name pkg ^ ".opam")
 
 (** [run_per_package ~check_package index] applies [check_package] to every

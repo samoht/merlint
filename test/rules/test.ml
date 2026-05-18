@@ -103,6 +103,6 @@ let () =
       Test_dep_deps.suite;
       Test_interop.suite;
       Test_opam_tags.suite;
-      Test_empty_suite.suite;
-      Test_suite_mli.suite;
+      Test_query.suite;
+      Test_suite.suite;
     ]

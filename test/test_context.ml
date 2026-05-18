@@ -5,16 +5,16 @@ let dummy_index = lazy (failwith "Project_index not built in tests")
 let test_create_project () =
   let config = Merlint.Config.default in
   let project_root = "." in
-  let files_to_analyze = [ "foo.ml"; "bar.ml" ] in
+  let analyze_set = [ "foo.ml"; "bar.ml" ] in
   let dune_describe = Merlint.Dune_describe.describe (Fpath.v ".") in
   let ctx =
-    Merlint.Context.project ~config ~project_root ~files_to_analyze
+    Merlint.Context.project ~config ~project_root ~analyze_set
       ~dune_describe ~index:dummy_index ()
   in
   Alcotest.(check string) "project root" "." ctx.project_root;
   Alcotest.(check (list string))
-    "files to analyze" files_to_analyze
-    (Merlint.Context.files_to_analyze ctx)
+    "files to analyze" analyze_set
+    (Merlint.Context.analyze_set ctx)
 
 let test_analysis_error () =
   let result =
@@ -27,7 +27,7 @@ let test_analysis_error () =
 let test_cache_canonicalizes_keys () =
   let config = Merlint.Config.default in
   let project_root = "." in
-  let files_to_analyze = [ "foo.ml" ] in
+  let analyze_set = [ "foo.ml" ] in
   let dune_describe = Merlint.Dune_describe.describe (Fpath.v ".") in
   let created = ref 0 in
   let file_view filename =
@@ -35,7 +35,7 @@ let test_cache_canonicalizes_keys () =
     Merlint.File_view.v ~filename ~typedtree:(fun () -> Ok None) ()
   in
   let ctx =
-    Merlint.Context.project ~config ~project_root ~files_to_analyze
+    Merlint.Context.project ~config ~project_root ~analyze_set
       ~dune_describe ~index:dummy_index ~file_view ()
   in
   let a = Merlint.Context.file_view ctx "./foo.ml" in

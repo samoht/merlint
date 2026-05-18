@@ -27,48 +27,42 @@ let modules_explicitly_claimed ctx dune_path =
     | Error _ -> []
   with File_view.Analysis_error _ -> []
 
+let package_prefix pkg =
+  let p =
+    if String.starts_with ~prefix:"ocaml-" pkg then
+      String.sub pkg 6 (String.length pkg - 6)
+    else pkg
+  in
+  String.map (fun c -> if c = '-' then '_' else c) p ^ "_"
+
+let prefixed_module ~prefix name =
+  Filename.check_suffix name ".ml"
+  && String.length name > String.length prefix + 3
+  && String.starts_with ~prefix name
+
+let issue_for_module pkg claimed prefix name =
+  if prefixed_module ~prefix name then
+    let mod_name = String.lowercase_ascii (Filename.chop_suffix name ".ml") in
+    if List.mem mod_name claimed then None
+    else
+      let path = Filename.concat (Filename.concat pkg "lib") name in
+      let loc = Location.in_file path in
+      Some (Issue.v ~loc { package = pkg; file = path })
+  else None
+
+let package_issues ctx root pkg =
+  let pkg_dir = Filename.concat root pkg in
+  let lib_dir = Filename.concat pkg_dir "lib" in
+  if pkg = "_build" || pkg = "_opam" || pkg = ".git" || not (is_dir lib_dir)
+  then []
+  else
+    let claimed = modules_explicitly_claimed ctx (Filename.concat lib_dir "dune") in
+    let prefix = package_prefix pkg in
+    try_readdir lib_dir |> List.filter_map (issue_for_module pkg claimed prefix)
+
 let check (ctx : Context.project) =
   let root = ctx.project_root in
-  let issues = ref [] in
-  let packages = try_readdir root in
-  List.iter
-    (fun pkg ->
-      let pkg_dir = Filename.concat root pkg in
-      let lib_dir = Filename.concat pkg_dir "lib" in
-      if pkg <> "_build" && pkg <> "_opam" && pkg <> ".git" && is_dir lib_dir
-      then
-        let prefix =
-          (* Accept both [foo] and [ocaml-foo] package dirs; the module
-             prefix is [foo_] in both cases. *)
-          let p =
-            if String.starts_with ~prefix:"ocaml-" pkg then
-              String.sub pkg 6 (String.length pkg - 6)
-            else pkg
-          in
-          (* Dune mangles [-] to [_] in module names. *)
-          String.map (fun c -> if c = '-' then '_' else c) p ^ "_"
-        in
-        let claimed =
-          modules_explicitly_claimed ctx (Filename.concat lib_dir "dune")
-        in
-        let has_ml name = Filename.check_suffix name ".ml" in
-        List.iter
-          (fun name ->
-            if
-              has_ml name
-              && String.length name > String.length prefix + 3
-              && String.sub name 0 (String.length prefix) = prefix
-            then
-              let mod_name =
-                String.lowercase_ascii (Filename.chop_suffix name ".ml")
-              in
-              if not (List.mem mod_name claimed) then
-                let path = Filename.concat (Filename.concat pkg "lib") name in
-                let loc = Location.in_file path in
-                issues := Issue.v ~loc { package = pkg; file = path } :: !issues)
-          (try_readdir lib_dir))
-    packages;
-  !issues
+  try_readdir root |> List.concat_map (package_issues ctx root)
 
 let pp ppf { package = _; file } =
   Fmt.pf ppf

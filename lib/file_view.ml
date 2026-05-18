@@ -336,8 +336,9 @@ type t = {
 let warn_missing_typedtree filename =
   Log.warn (fun m ->
       m
-        "No usable typedtree found for %s; please run dune build @check before \
-         running typedtree-backed merlint rules"
+        "No fresh typedtree found for %s; typedtree-backed rules are skipped \
+         for this file. Run dune build @check before merlint so the .cmt/.cmti \
+         artefact exists and is up to date."
         filename)
 
 let lazy_typedtree ~filename typedtree =
@@ -350,8 +351,9 @@ let lazy_typedtree ~filename typedtree =
     | Error msg ->
         Log.warn (fun m ->
             m
-              "Failed to load typedtree for %s: %s; please run dune build \
-               @check before running typedtree-backed merlint rules"
+              "Failed to load typedtree for %s: %s; typedtree-backed rules are \
+               skipped for this file. Run dune build @check before merlint so \
+               the .cmt/.cmti artefact exists and is up to date."
               filename msg);
         fail "%s" msg)
 
@@ -613,6 +615,25 @@ let typed_expr_callee_name (expr : Typedtree.expression) =
   in
   aux expr
 
+let application_args args =
+  List.filter_map
+    (function
+      | _, Typedtree.Omitted _ -> None
+      | _, Typedtree.Arg (expr : Typedtree.expression) ->
+          Some { arg_callee = typed_expr_callee_name expr; arg_loc = expr.exp_loc })
+    args
+
+let push_application calls expr fn args =
+  Option.iter
+    (fun call_callee ->
+      push calls
+        {
+          call_callee;
+          call_loc = expr.Typedtree.exp_loc;
+          call_args = application_args args;
+        })
+    (typed_expr_callee_name fn)
+
 let lazy_applications typedtree =
   lazy
     (match Lazy.force typedtree with
@@ -625,25 +646,7 @@ let lazy_applications typedtree =
             expr =
               (fun this expr ->
                 (match expr.exp_desc with
-                | Texp_apply (fn, args) ->
-                    Option.iter
-                      (fun call_callee ->
-                        let call_args =
-                          List.filter_map
-                            (function
-                              | _, Typedtree.Omitted _ -> None
-                              | _, Typedtree.Arg (expr : Typedtree.expression)
-                                ->
-                                  Some
-                                    {
-                                      arg_callee = typed_expr_callee_name expr;
-                                      arg_loc = expr.exp_loc;
-                                    })
-                            args
-                        in
-                        push calls
-                          { call_callee; call_loc = expr.exp_loc; call_args })
-                      (typed_expr_callee_name fn)
+                | Texp_apply (fn, args) -> push_application calls expr fn args
                 | _ -> ());
                 Tast_iterator.default_iterator.expr this expr);
           }

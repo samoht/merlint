@@ -100,7 +100,7 @@ parametric alias must all be accepted without flagging:
 
 
 Implementation declarations are checked too.
-  $ merlint -r E333 good.ml 2>/dev/null
+  $ merlint -B -r E333 good.ml
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
@@ -121,7 +121,7 @@ Implementation declarations are checked too.
 
 
 
-  $ merlint -r E333 bad.ml 2>/dev/null
+  $ merlint -B -r E333 bad.ml
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   

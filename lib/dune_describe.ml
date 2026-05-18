@@ -44,7 +44,10 @@ let ensure_project_built ~path mgr =
   in
   (* Use @check to produce .cmt files for all modules (including wrapped
      executables/tests where plain 'dune build' only produces native code). *)
-  let cmd = Fmt.str "dune build @check %s%s" path suppress_stderr in
+  let cmd =
+    Fmt.str "dune build --root %s @check%s" (Filename.quote path)
+      suppress_stderr
+  in
   (* Print command when verbose *)
   (match Logs.level () with
   | Some (Logs.Info | Logs.Debug) ->
@@ -251,55 +254,55 @@ let extract_test_item ~include_subdirs dir fields =
     enclosing dune file's [(include_subdirs unqualified)] stanza, threaded
     through so directory scans recurse correctly for libraries that span nested
     folders (e.g. [merlint/lib/rules/]). *)
+let library_item ~include_subdirs dir fields =
+  let name =
+    List.find_map
+      (function
+        | Sexp.List [ Sexp.Atom "name"; Sexp.Atom n ] -> Some n | _ -> None)
+      fields
+  in
+  let public_name =
+    List.find_map
+      (function
+        | Sexp.List [ Sexp.Atom "public_name"; Sexp.Atom n ] -> Some n
+        | _ -> None)
+      fields
+  in
+  let modules = List.concat_map extract_modules_field fields in
+  let private_modules = List.concat_map extract_private_modules_field fields in
+  Option.map
+    (fun name ->
+      Library
+        { name; public_name; dir; modules; private_modules; include_subdirs })
+    name
+
+let executable_item ~include_subdirs dir kind fields =
+  let names =
+    List.concat_map
+      (function
+        | Sexp.List [ Sexp.Atom "name"; Sexp.Atom n ] -> [ n ]
+        | Sexp.List (Sexp.Atom "names" :: names) ->
+            List.filter_map (function Sexp.Atom n -> Some n | _ -> None) names
+        | _ -> [])
+      fields
+  in
+  let modules = List.concat_map extract_modules_field fields in
+  match names with
+  | [] -> None
+  | _ ->
+      let item =
+        if kind = "test" || kind = "tests" then
+          extract_test_item ~include_subdirs dir fields
+        else Some (Executable { names; dir; modules; include_subdirs })
+      in
+      item
+
 let extract_project_item ~include_subdirs dir = function
-  | Sexp.List (Sexp.Atom "library" :: fields) -> (
-      let name =
-        List.find_map
-          (function
-            | Sexp.List [ Sexp.Atom "name"; Sexp.Atom n ] -> Some n | _ -> None)
-          fields
-      in
-      let public_name =
-        List.find_map
-          (function
-            | Sexp.List [ Sexp.Atom "public_name"; Sexp.Atom n ] -> Some n
-            | _ -> None)
-          fields
-      in
-      let modules = List.concat_map extract_modules_field fields in
-      let private_modules =
-        List.concat_map extract_private_modules_field fields
-      in
-      match name with
-      | Some n ->
-          Some
-            (Library
-               {
-                 name = n;
-                 public_name;
-                 dir;
-                 modules;
-                 private_modules;
-                 include_subdirs;
-               })
-      | None -> None)
+  | Sexp.List (Sexp.Atom "library" :: fields) ->
+      library_item ~include_subdirs dir fields
   | Sexp.List (Sexp.Atom kind :: fields)
     when kind = "executable" || kind = "executables" ->
-      let names =
-        List.concat_map
-          (function
-            | Sexp.List [ Sexp.Atom "name"; Sexp.Atom n ] -> [ n ]
-            | Sexp.List (Sexp.Atom "names" :: names) ->
-                List.filter_map
-                  (function Sexp.Atom n -> Some n | _ -> None)
-                  names
-            | _ -> [])
-          fields
-      in
-      let modules = List.concat_map extract_modules_field fields in
-      if names <> [] then
-        Some (Executable { names; dir; modules; include_subdirs })
-      else None
+      executable_item ~include_subdirs dir kind fields
   | Sexp.List (Sexp.Atom kind :: fields) when kind = "test" || kind = "tests" ->
       extract_test_item ~include_subdirs dir fields
   | Sexp.List (Sexp.Atom "cram" :: _) -> Some (Cram_test { dir })

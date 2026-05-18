@@ -13,7 +13,7 @@ let check_fuzz_mli_file dune_describe filename view =
     && not (File.is_in_examples filename)
   then
     if
-      Suite_mli.is_compliant_view ~expected:"string * Alcobar.test_case list"
+      Suite.is_compliant_view ~expected:"string * Alcobar.test_case list"
         view
     then []
     else
@@ -58,7 +58,7 @@ let check_missing_fuzz_mli dune_describe files =
     files
 
 let check ctx =
-  let files = Context.files_to_analyze ctx in
+  let files = Context.analyze_set ctx in
   let dune_describe = Context.dune_describe ctx in
   let missing_mli_issues = check_missing_fuzz_mli dune_describe files in
   let content_issues =

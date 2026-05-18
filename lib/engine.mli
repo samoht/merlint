@@ -10,12 +10,12 @@ val run :
   load_file:(string -> string) ->
   filter:Filter.t ->
   dune_describe:Dune_describe.describe ->
-  ?files_to_analyze:Fpath.t list ->
+  ?analyze_set:Fpath.t list ->
   index:Project_index.t Lazy.t ->
   ?profiling:Profiling.t ->
   string ->
   result
-(** [run ~load_file ~filter ~dune_describe ?files_to_analyze ~index ?profiling
+(** [run ~load_file ~filter ~dune_describe ?analyze_set ~index ?profiling
      project_root] runs all checks. Returns detected issues and a record of
     every suppressed issue.
 
@@ -28,7 +28,7 @@ val run :
     etc. It must reflect the whole project even when [merlint] is invoked on a
     single file, otherwise project rules fire false positives or fail silently.
 
-    [files_to_analyze] narrows what {b file}-scoped rules iterate. Defaults to
+    [analyze_set] narrows what {b file}-scoped rules iterate. Defaults to
     every file in [dune_describe]. The CLI passes the explicit file list here in
     single-file mode so file-scoped rules don't widen to the whole project while
     project-scoped rules still see the full library/test view.

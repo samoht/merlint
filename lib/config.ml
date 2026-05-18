@@ -134,19 +134,22 @@ let for_file file =
 
 (** Standard functions for type t *)
 let equal a b =
-  a.max_complexity = b.max_complexity
-  && a.max_function_length = b.max_function_length
-  && a.max_nesting = b.max_nesting
-  && a.exempt_data_definitions = b.exempt_data_definitions
-  && a.max_underscores_in_name = b.max_underscores_in_name
-  && a.min_name_length_underscore = b.min_name_length_underscore
-  && a.allowed_words = b.allowed_words
-  && a.topics = b.topics
-  && a.allow_obj_magic = b.allow_obj_magic
-  && a.allow_str_module = b.allow_str_module
-  && a.allow_catch_all_exceptions = b.allow_catch_all_exceptions
-  && a.require_ocamlformat_file = b.require_ocamlformat_file
-  && a.require_mli_files = b.require_mli_files
+  List.for_all Fun.id
+    [
+      a.max_complexity = b.max_complexity;
+      a.max_function_length = b.max_function_length;
+      a.max_nesting = b.max_nesting;
+      a.exempt_data_definitions = b.exempt_data_definitions;
+      a.max_underscores_in_name = b.max_underscores_in_name;
+      a.min_name_length_underscore = b.min_name_length_underscore;
+      a.allowed_words = b.allowed_words;
+      a.topics = b.topics;
+      a.allow_obj_magic = b.allow_obj_magic;
+      a.allow_str_module = b.allow_str_module;
+      a.allow_catch_all_exceptions = b.allow_catch_all_exceptions;
+      a.require_ocamlformat_file = b.require_ocamlformat_file;
+      a.require_mli_files = b.require_mli_files;
+    ]
 
 let compare = compare
 
