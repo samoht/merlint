@@ -25,6 +25,7 @@ let test_analysis_error () =
   Alcotest.(check string) "error message" "test error" result
 
 let test_cache_canonicalizes_keys () =
+  Eio_main.run @@ fun _env ->
   let config = Merlint.Config.default in
   let project_root = "." in
   let analyze_set = [ "foo.ml" ] in
