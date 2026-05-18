@@ -29,27 +29,19 @@ let should_skip_module ~executable_modules ~test_modules ml_file =
     Log.debug (fun m -> m "File %s is interface definition file" ml_file);
   is_exe || is_test || is_intf
 
-(* Build a memoised "is this directory a virtual-implementation library?"
-   predicate scoped to a single rule run. The original version reparsed
-   the dune file once per .ml in the directory; the typical lib/ holds
-   dozens of modules. *)
-let dir_is_virtual_impl_check ctx =
+(* Memoised "is this directory the source of a virtual-implementation
+   library?" predicate, scoped to a single rule run. The answer lives in
+   the project index; we only memoise the directory-to-library lookup. *)
+let dir_is_virtual_impl_check index =
   let cache = Hashtbl.create 32 in
   fun dir ->
     match Hashtbl.find_opt cache dir with
     | Some v -> v
     | None ->
         let v =
-          let dune_path = Filename.concat dir "dune" in
-          try
-            let content = Context.file_content ctx dune_path in
-            match Dune.File.of_string content with
-            | Error _ -> false
-            | Ok dune ->
-                Dune.File.libraries dune
-                |> List.exists (fun lib ->
-                    Dune.File.Library.implements lib <> None)
-          with File_view.Analysis_error _ -> false
+          match Project_index.library_in_dir index (Fpath.v dir) with
+          | None -> false
+          | Some lib -> Project_index.Library.is_virtual_implementation lib
         in
         Hashtbl.replace cache dir v;
         v
@@ -77,7 +69,7 @@ let check (ctx : Context.project) =
   let files = Context.analyze_set ctx in
   let executable_modules = Context.executable_modules ctx in
   let test_modules = Context.test_modules ctx in
-  let is_virtual_dir = dir_is_virtual_impl_check ctx in
+  let is_virtual_dir = dir_is_virtual_impl_check (Context.index ctx) in
   List.filter_map
     (check_file ~is_virtual_dir ~files ~executable_modules ~test_modules)
     files

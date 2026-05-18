@@ -2,31 +2,53 @@
 
 type payload = { is_alcotest : bool }
 
+module T = Ocaml_typing.Typedtree
+
+let path_ends_with path suffix =
+  let rec drop n xs =
+    if n <= 0 then xs else match xs with [] -> [] | _ :: xs -> drop (n - 1) xs
+  in
+  let len = List.length path in
+  let suffix_len = List.length suffix in
+  len >= suffix_len && drop (len - suffix_len) path = suffix
+
+let is_fail_path path =
+  path_ends_with path [ "Alcotest"; "fail" ]
+  || path_ends_with path [ "Alcobar"; "fail" ]
+
+let is_fail_expr expr =
+  match Query.Expr.callee_parts expr with
+  | Some path -> is_fail_path path
+  | None -> false
+
+let is_test_or_fuzz_file filename =
+  let basename = Filename.basename filename in
+  File_kind.is_ml basename
+  && (String.starts_with ~prefix:"test_" basename
+     || String.starts_with ~prefix:"fuzz_" basename)
+
 let check (ctx : Context.file) =
   let filename = ctx.filename in
-  let basename = Filename.basename filename in
-  if
-    not (String.starts_with ~prefix:"test_" basename && File_kind.is_ml basename)
-  then []
+  if not (is_test_or_fuzz_file filename) then []
   else
     let issues = ref [] in
-    File_view.iter_applications (Context.view ctx) (fun call ->
-        let callee = File_view.Call.callee call in
-        let is_alcotest_fail =
-          File_view.Name.equals_path callee [ "Alcotest"; "fail" ]
-        in
-        let is_bare_fail = File_view.Name.base callee = "fail" in
-        if
-          (is_alcotest_fail || is_bare_fail)
-          && List.exists
-               (fun arg ->
-                 File_view.Call.Arg.is_call arg ~path:[ "Fmt"; "str" ])
-               (File_view.Call.args call)
-        then
-          issues :=
-            Issue.v ~loc:(File_view.Call.loc call)
-              { is_alcotest = is_alcotest_fail }
-            :: !issues);
+    let add expr is_alcotest =
+      issues :=
+        Issue.v ~loc:(Loc.of_typed ~filename expr.T.exp_loc) { is_alcotest }
+        :: !issues
+    in
+    Query.iter_expressions (Context.view ctx) (fun expr ->
+        match expr.exp_desc with
+        | Texp_apply (fn, args) when is_fail_expr fn ->
+            if List.exists (fun arg -> Query.Expr.calls arg [ "Fmt"; "str" ])
+                 (Query.Expr.positional_args args)
+            then add expr true
+        | Texp_apply (fn, args) when Query.Expr.callee_ends_with fn [ "Fmt"; "kstr" ]
+          -> (
+            match Query.Expr.positional_args args with
+            | continuation :: _ when is_fail_expr continuation -> add expr true
+            | _ -> ())
+        | _ -> ());
     List.rev !issues
 
 let pp ppf { is_alcotest } =
