@@ -1,7 +1,6 @@
 module T = Ocaml_typing.Typedtree
 
 type binding = { loc : Location.t; name : string option; empty : bool }
-
 type expected = Alcotest | Alcobar
 
 let rec is_empty_list (expr : T.expression) =
@@ -45,7 +44,7 @@ let bindings ~filename view =
 let empty ~filename view =
   bindings ~filename view
   |> List.find_map (fun binding ->
-         if binding.empty then Some binding.loc else None)
+      if binding.empty then Some binding.loc else None)
 
 let check_empty ~prefix ~mk_payload (ctx : Context.file) =
   let filename = ctx.filename in
@@ -59,9 +58,7 @@ let check_empty ~prefix ~mk_payload (ctx : Context.file) =
     match empty ~filename (Context.view ctx) with
     | None -> []
     | Some loc ->
-        let suite_name =
-          Fpath.basename (Fpath.rem_ext (Fpath.v filename))
-        in
+        let suite_name = Fpath.basename (Fpath.rem_ext (Fpath.v filename)) in
         let suite_name =
           if String.starts_with ~prefix:prefix_us suite_name then
             String.sub suite_name (String.length prefix_us)
@@ -70,36 +67,62 @@ let check_empty ~prefix ~mk_payload (ctx : Context.file) =
         in
         [ Issue.v ~loc (mk_payload suite_name) ]
 
-let module_name_matches ~expected actual =
-  actual = expected || String.ends_with ~suffix:("__" ^ expected) actual
+(* Names that immediately precede a [.suite] reference in [view]'s resolved
+   identifiers. [references] / [references_with_prefix] used to rebuild this
+   set per query while walking the full identifier list; precomputing it
+   once per view makes the per-module check a pair of cheap lookups. *)
+type callers = {
+  exact : (string, unit) Hashtbl.t;
+      (** Caller names that match a candidate module exactly. *)
+  wrapped : string list;
+      (** Caller names that need the [__<module>] suffix check (dune-wrapped
+          library modules). Typically a small fraction of [exact]. *)
+}
+
+let callers view =
+  match File_view.resolved_identifiers view with
+  | None -> None
+  | Some refs ->
+      let exact = Hashtbl.create 64 in
+      let wrapped = ref [] in
+      List.iter
+        (fun ref_ ->
+          let name = File_view.Reference.name ref_ in
+          if File_view.Name.base name = "suite" then
+            match List.rev (File_view.Name.prefix name) with
+            | actual :: _ ->
+                Hashtbl.replace exact actual ();
+                if
+                  let len = String.length actual in
+                  let rec has_dunder i =
+                    if i + 1 >= len then false
+                    else if actual.[i] = '_' && actual.[i + 1] = '_' then true
+                    else has_dunder (i + 1)
+                  in
+                  has_dunder 0
+                then wrapped := actual :: !wrapped
+            | [] -> ())
+        refs;
+      Some { exact; wrapped = !wrapped }
+
+let references_in callers module_name =
+  Hashtbl.mem callers.exact module_name
+  || List.exists
+       (fun actual -> String.ends_with ~suffix:("__" ^ module_name) actual)
+       callers.wrapped
 
 let references view module_name =
-  match File_view.resolved_identifiers view with
+  match callers view with
   | None -> false
-  | Some refs ->
-      List.exists
-        (fun ref_ ->
-          let name = File_view.Reference.name ref_ in
-          File_view.Name.base name = "suite"
-          &&
-          match List.rev (File_view.Name.prefix name) with
-          | actual :: _ -> module_name_matches ~expected:module_name actual
-          | [] -> false)
-        refs
+  | Some c -> references_in c module_name
 
 let references_with_prefix view ~prefix =
-  match File_view.resolved_identifiers view with
+  match callers view with
   | None -> false
-  | Some refs ->
-      List.exists
-        (fun ref_ ->
-          let name = File_view.Reference.name ref_ in
-          File_view.Name.base name = "suite"
-          &&
-          match List.rev (File_view.Name.prefix name) with
-          | module_name :: _ -> String.starts_with ~prefix module_name
-          | [] -> false)
-        refs
+  | Some c ->
+      Hashtbl.fold
+        (fun name () acc -> acc || String.starts_with ~prefix name)
+        c.exact false
 
 let calls_test_case view =
   File_view.calls_path view [ "Alcobar"; "test_case" ]

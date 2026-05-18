@@ -54,8 +54,10 @@ let test_modules dune_describe (test_info : Dune_describe.test_info) test_file =
         None)
       else Some basename)
 
-let suite_included view test_mod =
-  Suite.references view (String.capitalize_ascii test_mod)
+let suite_included callers test_mod =
+  match callers with
+  | None -> false
+  | Some c -> Suite.references_in c (String.capitalize_ascii test_mod)
 
 let missing_issue test_file test_mod =
   let loc =
@@ -85,8 +87,9 @@ let check_test_info ctx dune_describe (test_info : Dune_describe.test_info) =
                 (List.length modules) test_info.name
                 Fmt.(list ~sep:comma string)
                 modules);
+          let callers = Suite.callers view in
           modules
-          |> List.filter (fun test_mod -> not (suite_included view test_mod))
+          |> List.filter (fun test_mod -> not (suite_included callers test_mod))
           |> List.map (missing_issue test_file)
       with File_view.Analysis_error _ -> [])
 
