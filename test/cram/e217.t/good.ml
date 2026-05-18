@@ -33,3 +33,6 @@ let check_rendered n =
 
 let fail name msg = failwith (name ^ ": " ^ msg)
 let fail_named name n = fail name (Fmt.str "n=%d" n)
+
+let finish ?message () = ignore message
+let finish_progress n = finish ~message:(Fmt.str "n=%d" n) ()

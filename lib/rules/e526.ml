@@ -25,8 +25,8 @@
 type kind = Missing | Set_to_true
 type payload = { package : string; kind : kind }
 
-let try_readdir d = try Sys.readdir d |> Array.to_list with Sys_error _ -> []
-let is_dir p = try Sys.is_directory p with Sys_error _ -> false
+let try_readdir d = try Fs.readdir d |> Array.to_list with Sys_error _ -> []
+let is_dir p = try Fs.is_directory p with Sys_error _ -> false
 
 let skip_entry name =
   name = "_build" || name = "_opam" || name = ".git"

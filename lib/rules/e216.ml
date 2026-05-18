@@ -1,15 +1,25 @@
 (** E216: Use Fmt.invalid_arg instead of invalid_arg (Fmt.str ...) *)
 
+module T = Ocaml_typing.Typedtree
+
+let is_invalid_arg expr =
+  Query.Expr.callee_ends_with expr [ "invalid_arg" ]
+
 let check (ctx : Context.file) =
   let issues = ref [] in
-  File_view.iter_applications (Context.view ctx) (fun call ->
-      let callee = File_view.Call.callee call in
-      if
-        File_view.Name.base callee = "invalid_arg"
-        && List.exists
-             (fun arg -> File_view.Call.Arg.is_call arg ~path:[ "Fmt"; "str" ])
-             (File_view.Call.args call)
-      then issues := Issue.v ~loc:(File_view.Call.loc call) () :: !issues);
+  let filename = ctx.filename in
+  Query.iter_expressions (Context.view ctx) (fun expr ->
+      let flag () =
+        issues := Issue.v ~loc:(Loc.of_typed ~filename expr.T.exp_loc) () :: !issues
+      in
+      let fn, args = Query.Expr.application expr in
+      if is_invalid_arg fn then (
+        if List.exists (fun arg -> Query.Expr.calls arg [ "Fmt"; "str" ]) args
+        then flag ())
+      else if Query.Expr.callee_ends_with fn [ "Fmt"; "kstr" ] then
+        match args with
+        | continuation :: _ when is_invalid_arg continuation -> flag ()
+        | _ -> ());
   List.rev !issues
 
 let pp ppf () =

@@ -9,12 +9,12 @@ let check (ctx : Context.project) =
       let scripts = Filename.concat d.path "scripts" in
       let has_go =
         try
-          Sys.readdir scripts |> Array.to_list
+          Fs.readdir scripts |> Array.to_list
           |> List.exists (fun f -> Filename.check_suffix f ".go")
         with Sys_error _ -> false
       in
       let go_mod = Filename.concat scripts "go.mod" in
-      let has_go_mod = Sys.file_exists go_mod in
+      let has_go_mod = Fs.file_exists go_mod in
       if has_go && not has_go_mod then
         Some (Issue.v ~loc:(Location.in_file go_mod) { dir = d.path })
       else None)

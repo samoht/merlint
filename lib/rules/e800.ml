@@ -8,7 +8,7 @@ let check (ctx : Context.project) =
     (fun (d : Interop.oracle_dir) ->
       if d.has_scripts then
         let generate_sh = Filename.concat d.path "scripts/generate.sh" in
-        if not (Sys.file_exists generate_sh) then
+        if not (Fs.file_exists generate_sh) then
           Some (Issue.v ~loc:(Location.in_file generate_sh) { dir = d.path })
         else None
       else None)

@@ -3,7 +3,7 @@
 let check (ctx : Context.project) =
   let project_root = ctx.project_root in
   let ocamlformat_path = Filename.concat project_root ".ocamlformat" in
-  if not (Sys.file_exists ocamlformat_path) then [ Issue.v () ] else []
+  if not (Fs.file_exists ocamlformat_path) then [ Issue.v () ] else []
 
 let pp ppf () =
   Fmt.pf ppf "Project is missing .ocamlformat file for consistent formatting"

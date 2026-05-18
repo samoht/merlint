@@ -13,16 +13,16 @@
 type finding = Missing of string | Undeclared of string
 type payload = { package : string; findings : finding list }
 
-let dir_exists path = try Sys.is_directory path with Sys_error _ -> false
+let dir_exists path = try Fs.is_directory path with Sys_error _ -> false
 
 let has_files dir suffix =
   try
-    Sys.readdir dir |> Array.to_list
+    Fs.readdir dir |> Array.to_list
     |> List.exists (fun f -> Filename.check_suffix f suffix)
   with Sys_error _ -> false
 
 let has_doc_files pkg_dir =
-  Sys.file_exists (Filename.concat pkg_dir "README.md")
+  Fs.file_exists (Filename.concat pkg_dir "README.md")
   || has_files pkg_dir ".mld"
   || has_files (Filename.concat pkg_dir "doc") ".mld"
 
@@ -30,7 +30,7 @@ let has_cram_tests test_dir =
   if not (dir_exists test_dir) then false
   else
     try
-      Sys.readdir test_dir |> Array.to_list
+      Fs.readdir test_dir |> Array.to_list
       |> List.exists (fun f ->
              Filename.check_suffix f ".t"
              && dir_exists (Filename.concat test_dir f))
@@ -47,7 +47,7 @@ let detect_features pkg_dir =
   let interop_dir = Filename.concat test_dir "interop" in
   let has_lib = dir_exists lib_dir && has_files lib_dir ".ml" in
   []
-  |> add_if (has_lib && Sys.file_exists (Filename.concat pkg_dir "dune-project")) "build"
+  |> add_if (has_lib && Fs.file_exists (Filename.concat pkg_dir "dune-project")) "build"
   |> add_if (dir_exists test_dir && has_files test_dir ".ml") "test"
   |> add_if (dir_exists fuzz_dir && has_files fuzz_dir ".ml") "fuzz"
   |> add_if (has_doc_files pkg_dir) "doc"
@@ -78,7 +78,7 @@ let read_policy_file ctx path =
 (** Read quality policy from [*.opam] files. *)
 let read_policy ctx pkg_dir =
   try
-    let files = Sys.readdir pkg_dir |> Array.to_list in
+    let files = Fs.readdir pkg_dir |> Array.to_list in
     let opam_files =
       List.filter (fun f -> Filename.check_suffix f ".opam") files
     in
@@ -119,7 +119,7 @@ let check_package ctx root pkg =
 let check (ctx : Context.project) =
   let root = ctx.project_root in
   let try_readdir d =
-    try Sys.readdir d |> Array.to_list with Sys_error _ -> []
+    try Fs.readdir d |> Array.to_list with Sys_error _ -> []
   in
   try_readdir root |> List.filter_map (check_package ctx root)
 

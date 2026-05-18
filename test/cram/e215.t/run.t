@@ -9,13 +9,14 @@ Test bad example - should find failwith (Fmt.str) patterns:
   Analyzing 1 files
   
   ✓ Code Quality (0 total issues)
-  ✗ Code Style (3 total issues)
-    [E215] Use Fmt.failwith Instead of failwith (Fmt.str) (3 issues)
+  ✗ Code Style (4 total issues)
+    [E215] Use Fmt.failwith Instead of failwith (Fmt.str) (4 issues)
     Use Fmt.failwith instead of failwith (Fmt.str ...). Fmt.failwith provides
     printf-style formatting directly, making the code more concise and readable.
     - bad.ml:3:4: Use Fmt.failwith instead of failwith (Fmt.str ...) - Fmt.failwith provides printf-style formatting directly
     - bad.ml:10:4: Use Fmt.failwith instead of failwith (Fmt.str ...) - Fmt.failwith provides printf-style formatting directly
     - bad.ml:17:16: Use Fmt.failwith instead of failwith (Fmt.str ...) - Fmt.failwith provides printf-style formatting directly
+    - bad.ml:20:16: Use Fmt.failwith instead of failwith (Fmt.str ...) - Fmt.failwith provides printf-style formatting directly
   ✓ Naming Conventions (0 total issues)
   ✓ Documentation (0 total issues)
   ✓ Project Structure (0 total issues)
@@ -26,11 +27,11 @@ Test bad example - should find failwith (Fmt.str) patterns:
   ╭────────────┬──────────────────────────────────────────────────────╮
   │ Category   │ Issues                                               │
   ├────────────┼──────────────────────────────────────────────────────┤
-  │ Code Style │ 3 (3 use fmt.failwith instead of failwith (fmt.str)) │
+  │ Code Style │ 4 (4 use fmt.failwith instead of failwith (fmt.str)) │
   ╰────────────┴──────────────────────────────────────────────────────╯
   
   
-  Summary: ✗ 3 total issues (applied 1 rule)
+  Summary: ✗ 4 total issues (applied 1 rule)
   ✗ Some checks failed. See details above.
     Run `merlint help E215` for the rule's description, hint, and good/bad examples.
   [1]

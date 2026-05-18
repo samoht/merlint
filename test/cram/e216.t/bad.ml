@@ -19,3 +19,6 @@ let validate_id id =
 let validate_size n =
   if n < 0 then invalid_arg (Fmt.str "Size must be non-negative: %d" n)
   else n
+
+let validate_kstr n =
+  if n < 0 then Fmt.kstr invalid_arg "n must not be negative: %d" n else n

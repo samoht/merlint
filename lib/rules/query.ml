@@ -56,6 +56,13 @@ module Expr = struct
         | Ocaml_parsing.Asttypes.Nolabel, T.Arg expr -> Some expr | _ -> None)
       args
 
+  let rec application expr =
+    match expr.T.exp_desc with
+    | Texp_apply (fn, args) ->
+        let head, previous_args = application fn in
+        (head, previous_args @ positional_args args)
+    | _ -> (expr, [])
+
   let last_positional_arg args =
     match List.rev (positional_args args) with
     | last :: _ -> Some last

@@ -28,6 +28,12 @@ module Expr : sig
   (** [calls expr suffix] checks whether [expr] calls a callee ending in
       [suffix]. *)
 
+  val application :
+    Ocaml_typing.Typedtree.expression ->
+    Ocaml_typing.Typedtree.expression * Ocaml_typing.Typedtree.expression list
+  (** [application expr] flattens a curried application into its head expression
+      and supplied unlabelled arguments, preserving source order. *)
+
   val positional_args :
     (Ocaml_parsing.Asttypes.arg_label * Ocaml_typing.Typedtree.apply_arg) list ->
     Ocaml_typing.Typedtree.expression list

@@ -12,9 +12,9 @@ type oracle_dir = {
 
 let oracle_dirs_uncached project_root =
   let try_readdir d =
-    try Sys.readdir d |> Array.to_list with Sys_error _ -> []
+    try Fs.readdir d |> Array.to_list with Sys_error _ -> []
   in
-  let is_dir path = try Sys.is_directory path with Sys_error _ -> false in
+  let is_dir path = try Fs.is_directory path with Sys_error _ -> false in
   let oracle_of_tool pkg interop tool =
     let path = Filename.concat interop tool in
     if not (is_dir path) then None
@@ -27,10 +27,10 @@ let oracle_dirs_uncached project_root =
           path = display_path;
           package = pkg;
           tool;
-          has_scripts = Sys.file_exists (Filename.concat path "scripts");
-          has_traces = Sys.file_exists (Filename.concat path "traces");
-          has_test_ml = Sys.file_exists (Filename.concat path "test.ml");
-          has_dune = Sys.file_exists (Filename.concat path "dune");
+          has_scripts = Fs.file_exists (Filename.concat path "scripts");
+          has_traces = Fs.file_exists (Filename.concat path "traces");
+          has_test_ml = Fs.file_exists (Filename.concat path "test.ml");
+          has_dune = Fs.file_exists (Filename.concat path "dune");
         }
   in
   let package_oracles pkg =
@@ -53,15 +53,7 @@ let oracle_dirs project_root =
       Hashtbl.replace oracle_dirs_cache project_root xs;
       xs
 
-let read_file path =
-  try
-    let ic = open_in path in
-    Fun.protect
-      ~finally:(fun () -> close_in ic)
-      (fun () ->
-        let n = in_channel_length ic in
-        really_input_string ic n)
-  with Sys_error _ -> ""
+let read_file path = try Fs.read_file path with Sys_error _ -> ""
 
 let dune_content dir = read_file (Filename.concat dir "dune")
 let test_content dir = read_file (Filename.concat dir "test.ml")

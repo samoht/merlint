@@ -30,7 +30,7 @@ let dune_warning_status ctx dune_path =
   | Some file ->
       if Dune.File.has_dune_warnings file then None else Some Missing_flags
 
-let is_dir path = try Sys.is_directory path with Sys_error _ -> false
+let is_dir path = try Fs.is_directory path with Sys_error _ -> false
 
 let is_skipped name =
   name = "_build" || name = "_opam" || name = ".git" || name = "node_modules"
@@ -41,17 +41,17 @@ let is_skipped name =
    for monopam-managed monorepos. *)
 let build_roots project_root =
   let roots = ref [] in
-  if Sys.file_exists (Filename.concat project_root "dune-project") then
+  if Fs.file_exists (Filename.concat project_root "dune-project") then
     roots := project_root :: !roots;
   (try
-     Sys.readdir project_root |> Array.to_list
+     Fs.readdir project_root |> Array.to_list
      |> List.iter (fun name ->
          if is_skipped name then ()
          else
            let path = Filename.concat project_root name in
            if
              is_dir path
-             && Sys.file_exists (Filename.concat path "dune-project")
+             && Fs.file_exists (Filename.concat path "dune-project")
            then roots := path :: !roots)
    with Sys_error _ -> ());
   List.rev !roots

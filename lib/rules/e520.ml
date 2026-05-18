@@ -8,7 +8,7 @@ type payload = { package : string }
 let check (ctx : Context.project) =
   let root = ctx.project_root in
   let try_readdir d =
-    try Sys.readdir d |> Array.to_list with Sys_error _ -> []
+    try Fs.readdir d |> Array.to_list with Sys_error _ -> []
   in
   let issues = ref [] in
   let packages = try_readdir root in
@@ -16,12 +16,12 @@ let check (ctx : Context.project) =
     (fun pkg ->
       let pkg_dir = Filename.concat root pkg in
       if
-        Sys.file_exists pkg_dir && Sys.is_directory pkg_dir && pkg <> "_build"
+        Fs.file_exists pkg_dir && Fs.is_directory pkg_dir && pkg <> "_build"
         && pkg <> ".git" && pkg <> "_opam"
       then
         let src_dir = Filename.concat pkg_dir "src" in
         let has_ml f = Filename.check_suffix f ".ml" in
-        if Sys.file_exists src_dir && Sys.is_directory src_dir then
+        if Fs.file_exists src_dir && Fs.is_directory src_dir then
           let src_has_ml = List.exists has_ml (try_readdir src_dir) in
           if src_has_ml then
             let loc = Location.in_file (Filename.concat pkg "dune-project") in
