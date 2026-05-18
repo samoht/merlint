@@ -1,4 +1,8 @@
 (* This function has many match cases but should be allowed due to pattern matching allowance *)
+module Opened = struct
+  let label = string_of_int
+end
+
 let convert_token = function
   | `Plus -> "+"
   | `Minus -> "-"
@@ -61,9 +65,9 @@ let convert_token = function
 
 (* Match allowance should still apply when the match sits under [let open]. *)
 let convert_opened_token token =
-  let open Stdlib in
+  let open Opened in
   match token with
-  | `K00 -> "k00"
+  | `K00 -> label 0
   | `K01 -> "k01"
   | `K02 -> "k02"
   | `K03 -> "k03"
