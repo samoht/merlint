@@ -387,8 +387,11 @@ let collect_signature_doc_item ~regular_comments ~last_floating_doc doc_comments
 (** Extract documentation comments using compiler-libs *)
 let extract_doc_comments content =
   try
-    let lexbuf = Lexing.from_string content in
-    let signature = Parse.interface lexbuf in
+    let signature =
+      Cl_lock.with_lock @@ fun () ->
+      let lexbuf = Lexing.from_string content in
+      Parse.interface lexbuf
+    in
     let lines = String.split_on_char '\n' content in
     let regular_comments = regular_comments lines in
     let doc_comments = ref [] in
