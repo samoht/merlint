@@ -12,6 +12,7 @@ type io_stats = {
   mutable merlin_calls : int;
   reads_by_ext : (string, int) Hashtbl.t;
   merlin_by_ext : (string, int) Hashtbl.t;
+  lock : Eio.Mutex.t;
 }
 
 let io_stats () =
@@ -20,7 +21,12 @@ let io_stats () =
     merlin_calls = 0;
     reads_by_ext = Hashtbl.create 8;
     merlin_by_ext = Hashtbl.create 8;
+    lock = Eio.Mutex.create ();
   }
+
+let with_stats_lock stats f =
+  Eio.Mutex.lock stats.lock;
+  Fun.protect ~finally:(fun () -> Eio.Mutex.unlock stats.lock) f
 
 let ext filename =
   match Filename.extension filename with "" -> "<none>" | ext -> ext
@@ -31,10 +37,12 @@ let incr_ext tbl filename =
     (Option.value ~default:0 (Hashtbl.find_opt tbl ext) + 1)
 
 let record_file_read stats filename =
+  with_stats_lock stats @@ fun () ->
   stats.files_read <- stats.files_read + 1;
   incr_ext stats.reads_by_ext filename
 
 let record_merlin_call stats filename =
+  with_stats_lock stats @@ fun () ->
   stats.merlin_calls <- stats.merlin_calls + 1;
   incr_ext stats.merlin_by_ext filename
 
@@ -209,14 +217,11 @@ let run_one_project_rule ?profiling ~config_for project_ctx rule =
   split_excluded ~config_for ~code issues
 
 let run_project_rules ?domain_mgr ?profiling enabled_rules project_ctx =
+  ignore domain_mgr;
   let config_for = config_lookup () in
   let rules = List.filter Rule.is_project_scoped enabled_rules in
   let run = run_one_project_rule ?profiling ~config_for project_ctx in
-  let results =
-    match domain_mgr with
-    | None -> List.map run rules
-    | Some dm -> Fs.parallel_map dm rules run
-  in
+  let results = List.map run rules in
   let issues = List.concat_map fst results in
   let excluded = List.concat_map snd results in
   (issues, excluded)

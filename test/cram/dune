@@ -1,5 +1,6 @@
 (cram
- (deps %{bin:merlint}))
+ (deps %{bin:merlint})
+ (locks merlint-cram-dune))
 
 (rule
  (alias runtest)

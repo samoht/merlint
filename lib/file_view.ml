@@ -277,12 +277,69 @@ let iter_typed_value_binding ~filename acc this (vb : Typedtree.value_binding) =
   List.iter (push acc.values) (pattern_value_names ~filename vb.vb_pat);
   Tast_iterator.default_iterator.value_binding this vb
 
-let collect_resolved ~filename (tree : Merlin.typedtree) =
+type application_arg = {
+  arg_callee : Merlin.Refs.name option;
+  arg_loc : Location.t;
+}
+
+type application_site = {
+  call_callee : Merlin.Refs.name;
+  call_loc : Location.t;
+  call_args : application_arg list;
+}
+
+let typed_expr_callee_name (expr : Typedtree.expression) =
+  let rec aux (expr : Typedtree.expression) =
+    match expr.exp_desc with
+    | Texp_ident (path, _, _) -> Some (name_of_path path)
+    | Texp_apply (fn, _) -> aux fn
+    | Texp_construct (lid, _, _) -> Some (name_of_longident lid.txt)
+    | Texp_open (_, body) -> aux body
+    | _ -> None
+  in
+  aux expr
+
+let application_args args =
+  List.filter_map
+    (function
+      | _, Typedtree.Omitted _ -> None
+      | _, Typedtree.Arg (expr : Typedtree.expression) ->
+          Some
+            { arg_callee = typed_expr_callee_name expr; arg_loc = expr.exp_loc })
+    args
+
+let push_application calls expr fn args =
+  Option.iter
+    (fun call_callee ->
+      push calls
+        {
+          call_callee;
+          call_loc = expr.Typedtree.exp_loc;
+          call_args = application_args args;
+        })
+    (typed_expr_callee_name fn)
+
+type walk_result = {
+  walk_refs : collected_refs;
+  walk_applications : application_site list;
+}
+
+(* Single Tast_iterator pass that populates the resolved-references
+   accumulator AND the application-site list. Replaces what used to be
+   two separate iterator passes ([collect_resolved] + [lazy_applications])
+   over the same typedtree. *)
+let collect_walk ~filename (tree : Merlin.typedtree) =
   let acc = refs_acc () in
+  let calls = ref [] in
   let iterator =
     {
       Tast_iterator.default_iterator with
-      expr = iter_typed_expr ~filename acc;
+      expr =
+        (fun this (expr : Typedtree.expression) ->
+          (match expr.exp_desc with
+          | Texp_apply (fn, args) -> push_application calls expr fn args
+          | _ -> ());
+          iter_typed_expr ~filename acc this expr);
       pat =
         (fun (type k) this (pat : k Typedtree.general_pattern) ->
           iter_typed_pat ~filename acc this pat);
@@ -309,7 +366,10 @@ let collect_resolved ~filename (tree : Merlin.typedtree) =
   (match tree with
   | `Implementation structure -> iterator.structure iterator structure
   | `Interface signature -> iterator.signature iterator signature);
-  collected_refs_of_acc acc
+  {
+    walk_refs = collected_refs_of_acc acc;
+    walk_applications = List.rev !calls;
+  }
 
 type item_kind =
   | Item_value
@@ -329,17 +389,6 @@ type file_item = {
   item_deprecated : bool;
   item_type : Typed_types.type_expr option;
   item_children : file_item list;
-}
-
-type application_arg = {
-  arg_callee : Merlin.Refs.name option;
-  arg_loc : Location.t;
-}
-
-type application_site = {
-  call_callee : Merlin.Refs.name;
-  call_loc : Location.t;
-  call_args : application_arg list;
 }
 
 type t = {
@@ -380,17 +429,29 @@ let lazy_typedtree ~filename typedtree =
               filename msg);
         fail "%s" msg)
 
-let lazy_reference_outline ~filename ~typedtree =
+let lazy_walk ~filename ~typedtree =
   lazy
     (match Lazy.force typedtree with
-    | Some tree -> collect_resolved ~filename tree
+    | Some tree -> Some (collect_walk ~filename tree)
+    | None -> None)
+
+let lazy_reference_outline walk =
+  lazy
+    (match Lazy.force walk with
+    | Some (walk : walk_result) -> walk.walk_refs
     | None -> empty_refs)
 
-let lazy_resolved ~filename ~typedtree =
+let lazy_resolved walk =
   lazy
-    (match Lazy.force typedtree with
-    | None -> None
-    | Some tree -> Some (collect_resolved ~filename tree))
+    (match Lazy.force walk with
+    | Some (walk : walk_result) -> Some walk.walk_refs
+    | None -> None)
+
+let lazy_applications walk =
+  lazy
+    (match Lazy.force walk with
+    | Some (walk : walk_result) -> walk.walk_applications
+    | None -> [])
 
 let typed_has_deprecated attrs =
   List.exists
@@ -627,57 +688,6 @@ let lazy_values typedtree =
         Function_metrics.of_structure structure
     | Some (`Interface _) | None -> [])
 
-let typed_expr_callee_name (expr : Typedtree.expression) =
-  let rec aux (expr : Typedtree.expression) =
-    match expr.exp_desc with
-    | Texp_ident (path, _, _) -> Some (name_of_path path)
-    | Texp_apply (fn, _) -> aux fn
-    | Texp_construct (lid, _, _) -> Some (name_of_longident lid.txt)
-    | Texp_open (_, body) -> aux body
-    | _ -> None
-  in
-  aux expr
-
-let application_args args =
-  List.filter_map
-    (function
-      | _, Typedtree.Omitted _ -> None
-      | _, Typedtree.Arg (expr : Typedtree.expression) ->
-          Some
-            { arg_callee = typed_expr_callee_name expr; arg_loc = expr.exp_loc })
-    args
-
-let push_application calls expr fn args =
-  Option.iter
-    (fun call_callee ->
-      push calls
-        {
-          call_callee;
-          call_loc = expr.Typedtree.exp_loc;
-          call_args = application_args args;
-        })
-    (typed_expr_callee_name fn)
-
-let lazy_applications typedtree =
-  lazy
-    (match Lazy.force typedtree with
-    | None | Some (`Interface _) -> []
-    | Some (`Implementation structure) ->
-        let calls = ref [] in
-        let iterator =
-          {
-            Tast_iterator.default_iterator with
-            expr =
-              (fun this expr ->
-                (match expr.exp_desc with
-                | Texp_apply (fn, args) -> push_application calls expr fn args
-                | _ -> ());
-                Tast_iterator.default_iterator.expr this expr);
-          }
-        in
-        iterator.structure iterator structure;
-        List.rev !calls)
-
 let is_module_name name =
   String.length name > 0
   && Char.uppercase_ascii name.[0] = name.[0]
@@ -691,9 +701,10 @@ let module_names_of_name (name : Merlin.Refs.name) acc =
 let module_names_of_ref acc (elt : Merlin.Refs.elt) =
   module_names_of_name elt.name acc
 
-let lazy_module_names refs =
+let lazy_module_names reference_outline =
   lazy
-    (let refs = (Lazy.force refs).refs in
+    (let outline : collected_refs = Lazy.force reference_outline in
+     let refs : Merlin.Refs.t = outline.refs in
      let names = [] in
      let names = List.fold_left module_names_of_ref names refs.modules in
      let names = List.fold_left module_names_of_ref names refs.types in
@@ -707,11 +718,12 @@ let lazy_module_names refs =
 let v ~filename ~typedtree () =
   let typedtree = lazy_typedtree ~filename typedtree in
   let values = lazy_values typedtree in
-  let reference_outline = lazy_reference_outline ~filename ~typedtree in
+  let walk = lazy_walk ~filename ~typedtree in
+  let reference_outline = lazy_reference_outline walk in
   let items = lazy_items typedtree in
-  let resolved = lazy_resolved ~filename ~typedtree in
+  let resolved = lazy_resolved walk in
   let module_names = lazy_module_names reference_outline in
-  let applications = lazy_applications typedtree in
+  let applications = lazy_applications walk in
   {
     filename;
     typedtree;

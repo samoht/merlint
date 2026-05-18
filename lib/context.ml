@@ -52,8 +52,11 @@ let default_file_view filename =
 
 let memoize_content make =
   let cache = Hashtbl.create 128 in
+  let lock = Eio.Mutex.create () in
   fun filename ->
     let filename = Fpath.to_string (Fpath.normalize (Fpath.v filename)) in
+    Eio.Mutex.lock lock;
+    Fun.protect ~finally:(fun () -> Eio.Mutex.unlock lock) @@ fun () ->
     match Hashtbl.find_opt cache filename with
     | Some content -> content
     | None ->
@@ -63,8 +66,11 @@ let memoize_content make =
 
 let memoize_file_view make =
   let cache = Hashtbl.create 128 in
+  let lock = Eio.Mutex.create () in
   fun filename ->
     let filename = Fpath.to_string (Fpath.normalize (Fpath.v filename)) in
+    Eio.Mutex.lock lock;
+    Fun.protect ~finally:(fun () -> Eio.Mutex.unlock lock) @@ fun () ->
     match Hashtbl.find_opt cache filename with
     | Some view -> view
     | None ->
