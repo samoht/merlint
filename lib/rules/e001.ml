@@ -32,12 +32,18 @@ let check (ctx : Context.file) =
   if is_test_file ctx.filename then []
   else
     List.filter_map
-      (fun ({ name; loc; complexity; _ } : Function_metrics.value) ->
+      (fun ({ name; loc; complexity; complexity_breakdown; _ } :
+             Function_metrics.value) ->
+        let pure_boolean_predicate =
+          complexity_breakdown.total = complexity_breakdown.boolean_operators
+        in
         if complexity > config.max_complexity then
-          let loc = Loc.of_typed ~filename:ctx.filename loc in
-          Some
-            (Issue.v ~loc
-               { name; complexity; threshold = config.max_complexity })
+          if pure_boolean_predicate then None
+          else
+            let loc = Loc.of_typed ~filename:ctx.filename loc in
+            Some
+              (Issue.v ~loc
+                 { name; complexity; threshold = config.max_complexity })
         else None)
       functions
 

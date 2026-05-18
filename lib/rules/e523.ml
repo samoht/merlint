@@ -18,24 +18,9 @@
 type kind = Redundant | Uncovered of string list
 type payload = { dune : string; kind : kind }
 
-let dune_files root =
-  let try_readdir d =
-    try Sys.readdir d |> Array.to_list with Sys_error _ -> []
-  in
-  let is_dir p = try Sys.is_directory p with Sys_error _ -> false in
-  let rec walk dir acc =
-    List.fold_left
-      (fun acc name ->
-        let p = Filename.concat dir name in
-        if is_dir p then
-          if Dune_describe.skippable_subdir ~parent_dir:(Fpath.v dir) name then
-            acc
-          else walk p acc
-        else if name = "dune" then p :: acc
-        else acc)
-      acc (try_readdir dir)
-  in
-  walk root []
+let dune_files index =
+  Project_index.dune_dirs index
+  |> List.map (fun dir -> Filename.concat (Fpath.to_string dir) "dune")
 
 let content ctx path =
   try Some (Context.file_content ctx path)
@@ -115,7 +100,7 @@ let check_dune path contents =
       | stanzas -> incomplete_issue path issue dune stanzas)
 
 let check (ctx : Context.project) =
-  let dunes = dune_files ctx.project_root in
+  let dunes = dune_files (Context.index ctx) in
   List.filter_map
     (fun path ->
       match content ctx path with

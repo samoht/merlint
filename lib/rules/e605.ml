@@ -198,20 +198,24 @@ let tests_missing ~files ~test_modules lib_mod =
 
 let missing_test_candidate ctx ~files ~lib_files ~exec_files ~private_modules
     ~test_modules lib_mod =
+  (* Short-circuit on the cheap signals first: skip lists, source location,
+     test presence. Only force the typedtree (via
+     {!contains_only_types_and_modules} inside {!source_candidate}) for
+     modules that actually look like missing-test candidates -- the
+     vast majority already have a test and don't need inspecting. *)
   match should_skip_module private_modules lib_mod with
   | Some reason ->
       log_skip lib_mod reason;
       None
-  | None -> (
-      match source_candidate ctx ~files ~lib_files ~exec_files lib_mod with
-      | `Missing_source ->
-          log_skip lib_mod "no library source file, only in executables";
-          None
-      | `Skipped_source -> None
-      | `Source file_path ->
-          if tests_missing ~files ~test_modules lib_mod then
-            Some (lib_mod, file_path)
-          else None)
+  | None ->
+      if not (tests_missing ~files ~test_modules lib_mod) then None
+      else (
+        match source_candidate ctx ~files ~lib_files ~exec_files lib_mod with
+        | `Missing_source ->
+            log_skip lib_mod "no library source file, only in executables";
+            None
+        | `Skipped_source -> None
+        | `Source file_path -> Some (lib_mod, file_path))
 
 let check (ctx : Context.project) =
   let files = Context.analyze_set ctx in
