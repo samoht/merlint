@@ -10,7 +10,7 @@ type oracle_dir = {
   has_dune : bool;
 }
 
-let oracle_dirs project_root =
+let oracle_dirs_uncached project_root =
   let try_readdir d =
     try Sys.readdir d |> Array.to_list with Sys_error _ -> []
   in
@@ -40,6 +40,18 @@ let oracle_dirs project_root =
     else try_readdir interop |> List.filter_map (oracle_of_tool pkg interop)
   in
   try_readdir project_root |> List.concat_map package_oracles
+
+(* Cache the walk by [project_root] -- 10+ E8xx rules call this per run and
+   the FS layout doesn't change between rule invocations. *)
+let oracle_dirs_cache : (string, oracle_dir list) Hashtbl.t = Hashtbl.create 4
+
+let oracle_dirs project_root =
+  match Hashtbl.find_opt oracle_dirs_cache project_root with
+  | Some xs -> xs
+  | None ->
+      let xs = oracle_dirs_uncached project_root in
+      Hashtbl.replace oracle_dirs_cache project_root xs;
+      xs
 
 let read_file path =
   try
