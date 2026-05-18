@@ -18,36 +18,24 @@
 type finding = Missing_tags | Missing_org | Unknown_topic of string
 type payload = { package : string; opam : string; findings : finding list }
 
-let dir_exists path = try Fs.is_directory path with Sys_error _ -> false
-
-let check_opam_file ~topics pkg_dir opam_name =
-  let path = Filename.concat pkg_dir opam_name in
+let check_tags ~topics ~has_tags tags =
   let findings = ref [] in
-  (match Opam_tags.read_opt path with
-  | None -> findings := [ Missing_tags ]
-  | Some tags ->
-      let has_org =
-        List.exists
-          (fun t -> String.length t >= 4 && String.sub t 0 4 = "org:")
-          tags
-      in
-      if not has_org then findings := Missing_org :: !findings;
-      if topics <> [] then
-        List.iter
-          (fun tag ->
-            let is_org =
-              String.length tag >= 4 && String.sub tag 0 4 = "org:"
-            in
-            if (not is_org) && not (List.mem tag topics) then
-              findings := Unknown_topic tag :: !findings)
-          tags);
+  (if not has_tags then findings := [ Missing_tags ]
+   else
+     let has_org =
+       List.exists
+         (fun t -> String.length t >= 4 && String.sub t 0 4 = "org:")
+         tags
+     in
+     if not has_org then findings := Missing_org :: !findings;
+     if topics <> [] then
+       List.iter
+         (fun tag ->
+           let is_org = String.length tag >= 4 && String.sub tag 0 4 = "org:" in
+           if (not is_org) && not (List.mem tag topics) then
+             findings := Unknown_topic tag :: !findings)
+         tags);
   List.rev !findings
-
-let list_opam_files pkg_dir =
-  try
-    Fs.readdir pkg_dir |> Array.to_list
-    |> List.filter (fun f -> Filename.check_suffix f ".opam")
-  with Sys_error _ -> []
 
 (* Two signals enable this rule:
 
@@ -63,19 +51,20 @@ let opted_in root =
   Fs.file_exists (Filename.concat root "sources.toml")
   || Fs.file_exists (Filename.concat root "categories.toml")
 
-let issue_for_opam ~topics pkg pkg_dir opam =
-  match check_opam_file ~topics pkg_dir opam with
+let issue_for_package ~topics pkg =
+  let name = Project_index.Package.name pkg in
+  let opam = name ^ ".opam" in
+  let tags = Project_index.Package.tags pkg in
+  let has_tags = Project_index.Package.has_tags pkg in
+  match check_tags ~topics ~has_tags tags with
   | [] -> None
   | findings ->
-      let loc = Location.in_file (Filename.concat pkg opam) in
-      Some (Issue.v ~loc { package = pkg; opam; findings })
-
-let check_package ~topics skip root pkg =
-  let pkg_dir = Filename.concat root pkg in
-  if (not (dir_exists pkg_dir)) || List.mem pkg skip then []
-  else
-    list_opam_files pkg_dir
-    |> List.filter_map (issue_for_opam ~topics pkg pkg_dir)
+      let loc =
+        match Project_index.Package.opam_path pkg with
+        | Some path -> Loc.in_file (Loc.current_dir_relative path)
+        | None -> Location.in_file opam
+      in
+      Some (Issue.v ~loc { package = name; opam; findings })
 
 let check (ctx : Context.project) =
   let root = ctx.project_root in
@@ -84,11 +73,8 @@ let check (ctx : Context.project) =
     let topics =
       match Categories.load root with [] -> ctx.config.topics | slugs -> slugs
     in
-    let try_readdir d =
-      try Fs.readdir d |> Array.to_list with Sys_error _ -> []
-    in
-    let skip = [ "_build"; ".git"; "_opam"; "node_modules" ] in
-    try_readdir root |> List.concat_map (check_package ~topics skip root)
+    Context.index ctx |> Project_index.source_packages_nodes
+    |> List.filter_map (issue_for_package ~topics)
 
 let pp ppf { package; opam; findings } =
   let describe = function

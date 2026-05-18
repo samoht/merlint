@@ -30,37 +30,23 @@ let dune_warning_status ctx dune_path =
   | Some file ->
       if Dune.File.has_dune_warnings file then None else Some Missing_flags
 
-let is_dir path = try Fs.is_directory path with Sys_error _ -> false
-
-let is_skipped name =
-  name = "_build" || name = "_opam" || name = ".git" || name = "node_modules"
-  || (String.length name > 0 && name.[0] = '.')
-
 (* Every directory that ships its own [dune-project] is treated as a build
    root: the actual project root for single-project repos, every subtree
    for monopam-managed monorepos. *)
-let build_roots project_root =
-  let roots = ref [] in
-  if Fs.file_exists (Filename.concat project_root "dune-project") then
-    roots := project_root :: !roots;
-  (try
-     Fs.readdir project_root |> Array.to_list
-     |> List.iter (fun name ->
-         if is_skipped name then ()
-         else
-           let path = Filename.concat project_root name in
-           if
-             is_dir path && Fs.file_exists (Filename.concat path "dune-project")
-           then roots := path :: !roots)
-   with Sys_error _ -> ());
-  List.rev !roots
+let build_roots ctx =
+  let project_root = Fpath.v ctx.Context.project_root in
+  let roots =
+    Context.index ctx |> Project_index.source_packages_nodes
+    |> List.filter_map Project_index.Package.source_dir
+  in
+  project_root :: roots |> List.sort_uniq Fpath.compare
 
 let check (ctx : Context.project) =
-  let roots = build_roots ctx.project_root in
+  let roots = build_roots ctx in
   Log.debug (fun m -> m "E940: %d build root(s)" (List.length roots));
   List.filter_map
     (fun root ->
-      let dune_path = Filename.concat root "dune" in
+      let dune_path = Fpath.(root / "dune") |> Fpath.to_string in
       Option.map
         (fun kind ->
           let display = Fpath.v dune_path |> Loc.current_dir_relative in
