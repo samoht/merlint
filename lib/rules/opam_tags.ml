@@ -2,6 +2,11 @@
 
 let string_of = function Opam.Value.String s -> Some s | _ -> None
 
+let tags_of_value = function
+  | Opam.Value.String s -> Some [ s ]
+  | Opam.Value.List xs -> Some (List.filter_map string_of xs)
+  | _ -> Some []
+
 (** Read the [tags:] field from [opam_path]. Handles both the list form
     ([tags: ["a" "b"]]) and the single-string form ([tags: "a"]). Returns [None]
     when the field is absent or the file can't be opened; callers that don't
@@ -9,9 +14,7 @@ let string_of = function Opam.Value.String s -> Some s | _ -> None
 let read_opt opam_path =
   match Opam.field_of_path opam_path "tags" with
   | None -> None
-  | Some (Opam.Value.String s) -> Some [ s ]
-  | Some (Opam.Value.List xs) -> Some (List.filter_map string_of xs)
-  | Some _ -> Some []
+  | Some v -> tags_of_value v
 
 (** Like {!read_opt} but folds an absent field into the empty list. *)
 let read opam_path = Option.value (read_opt opam_path) ~default:[]

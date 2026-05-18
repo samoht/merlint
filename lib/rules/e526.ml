@@ -25,47 +25,32 @@
 type kind = Missing | Set_to_true
 type payload = { package : string; kind : kind }
 
-let try_readdir d = try Fs.readdir d |> Array.to_list with Sys_error _ -> []
-let is_dir p = try Fs.is_directory p with Sys_error _ -> false
-
-let skip_entry name =
-  name = "_build" || name = "_opam" || name = ".git"
-  || String.starts_with ~prefix:"." name
-
-let has_opam_file pkg_dir =
-  List.exists
-    (fun name -> Filename.check_suffix name ".opam")
-    (try_readdir pkg_dir)
-
-let content ctx path =
-  try Some (Context.file_content ctx path)
-  with Sys_error _ | File_view.Analysis_error _ -> None
-
 let issue_of_setting name loc = function
   | Some "false" | Some "false-if-hidden-includes-supported" -> []
   | Some "true" -> [ Issue.v ~loc { package = name; kind = Set_to_true } ]
   | Some _ | None -> [ Issue.v ~loc { package = name; kind = Missing } ]
 
-let check_package ctx root name =
-  if skip_entry name then []
-  else
-    let pkg_dir = Filename.concat root name in
-    if (not (is_dir pkg_dir)) || not (has_opam_file pkg_dir) then []
-    else
-      let dp_path = Filename.concat pkg_dir "dune-project" in
-      match content ctx dp_path with
-      | None -> []
-      | Some c -> (
-          match Dune.Project.of_string c with
-          | Error _ -> []
-          | Ok project ->
-              issue_of_setting name
-                (Fpath.v dp_path |> Loc.current_dir_relative |> Loc.in_file)
-                (Dune.Project.implicit_transitive_deps project))
+let check_package pkg =
+  match Project_index.Package.raw_dune_project pkg with
+  | None -> []
+  | Some c -> (
+      match Dune.Project.of_string c with
+      | Error _ -> []
+      | Ok project ->
+          let name = Project_index.Package.name pkg in
+          let loc =
+            match Project_index.Package.source_dir pkg with
+            | None -> Location.in_file (Filename.concat name "dune-project")
+            | Some dir ->
+                Fpath.(dir / "dune-project")
+                |> Loc.current_dir_relative |> Loc.in_file
+          in
+          issue_of_setting name loc
+            (Dune.Project.implicit_transitive_deps project))
 
 let check (ctx : Context.project) =
-  let root = ctx.project_root in
-  List.concat_map (check_package ctx root) (try_readdir root)
+  Context.index ctx |> Project_index.source_packages_nodes
+  |> List.concat_map check_package
 
 let pp ppf { package; kind } =
   match kind with
