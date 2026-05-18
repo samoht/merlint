@@ -342,7 +342,7 @@ let build_dune_describe ~project_root files =
 
 let load_file_via_eio fs filename = Eio.Path.load Eio.Path.(fs / filename)
 
-let analyze_files mgr fs ?(exclude_patterns = []) ?rule_filter
+let analyze_files mgr fs domain_mgr ?(exclude_patterns = []) ?rule_filter
     ?(show_profile = false) ?(no_build = false) files =
   let load_file = load_file_via_eio fs in
   (* Find project root *)
@@ -382,7 +382,17 @@ let analyze_files mgr fs ?(exclude_patterns = []) ?rule_filter
   let index_roots =
     match files with [] -> None | xs -> Some (List.map resolve_root xs)
   in
-  let index = lazy (Project_index.build ?roots:index_roots ~fs ~monorepo ()) in
+  let index =
+    lazy
+      (let t0 = Unix.gettimeofday () in
+       let idx =
+         Project_index.build ~domain_mgr ?roots:index_roots ~fs ~monorepo ()
+       in
+       Log.info (fun m ->
+           m "Project_index.build: %.0f ms"
+             ((Unix.gettimeofday () -. t0) *. 1000.0));
+       idx)
+  in
   run_analysis ~load_file project_root filtered_describe analyze_set index
     rule_filter show_profile
 
@@ -475,7 +485,9 @@ let main exclude_patterns rules_spec ~show_profile ~show_config ~no_build files
     Eio_main.run @@ fun env ->
     let mgr = Eio.Stdenv.process_mgr env in
     let fs = Eio.Stdenv.fs env in
-    analyze_files mgr fs ~exclude_patterns ?rule_filter ~show_profile ~no_build
+    let domain_mgr = Eio.Stdenv.domain_mgr env in
+    analyze_files mgr fs domain_mgr ~exclude_patterns ?rule_filter ~show_profile
+      ~no_build
       files
 
 let analyze_term =

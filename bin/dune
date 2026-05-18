@@ -7,6 +7,7 @@
   cmdliner
   eio
   eio_main
+  unix
   fpath
   fmt
   logs
