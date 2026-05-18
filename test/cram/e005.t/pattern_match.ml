@@ -59,6 +59,41 @@ let convert_token = function
   | `FatArrow -> "=>"
   | `ThinArrow -> "->"
 
+(* Match allowance should still apply when the match sits under [let open]. *)
+let convert_opened_token token =
+  let open Stdlib in
+  match token with
+  | `K00 -> "k00"
+  | `K01 -> "k01"
+  | `K02 -> "k02"
+  | `K03 -> "k03"
+  | `K04 -> "k04"
+  | `K05 -> "k05"
+  | `K06 -> "k06"
+  | `K07 -> "k07"
+  | `K08 -> "k08"
+  | `K09 -> "k09"
+  | `K10 -> "k10"
+  | `K11 -> "k11"
+  | `K12 -> "k12"
+  | `K13 -> "k13"
+  | `K14 -> "k14"
+  | `K15 -> "k15"
+  | `K16 -> "k16"
+  | `K17 -> "k17"
+  | `K18 -> "k18"
+  | `K19 -> "k19"
+  | `K20 -> "k20"
+  | `K21 -> "k21"
+  | `K22 -> "k22"
+  | `K23 -> "k23"
+  | `K24 -> "k24"
+  | `K25 -> "k25"
+  | `K26 -> "k26"
+  | `K27 -> "k27"
+  | `K28 -> "k28"
+  | `K29 -> "k29"
+
 (* This function should be reported as too long even with pattern matching *)
 let process_with_pattern x =
   match x with

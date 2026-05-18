@@ -232,24 +232,16 @@ let rec count_match_cases_expr expr =
       List.length computation_cases
       + List.length value_cases
       + count_match_cases_expr scrutinee
-      + List.fold_left
-          (fun acc case -> acc + count_match_cases_case case)
-          0 computation_cases
-      + List.fold_left
-          (fun acc case -> acc + count_match_cases_case case)
-          0 value_cases
+      + count_match_cases_cases computation_cases
+      + count_match_cases_cases value_cases
   | Texp_ifthenelse (cond, then_expr, else_expr) ->
       count_match_cases_expr cond
       + count_match_cases_expr then_expr
       + Option.fold ~none:0 ~some:count_match_cases_expr else_expr
   | Texp_try (expr, value_cases, effect_cases) ->
       count_match_cases_expr expr
-      + List.fold_left
-          (fun acc case -> acc + count_match_cases_case case)
-          0 value_cases
-      + List.fold_left
-          (fun acc case -> acc + count_match_cases_case case)
-          0 effect_cases
+      + count_match_cases_cases value_cases
+      + count_match_cases_cases effect_cases
   | Texp_let (_, bindings, body) ->
       List.fold_left
         (fun acc (vb : T.value_binding) ->
@@ -268,12 +260,98 @@ let rec count_match_cases_expr expr =
             | _, T.Arg expr -> acc + count_match_cases_expr expr
             | _, T.Omitted () -> acc)
           0 args
+  | Texp_tuple fields ->
+      List.fold_left
+        (fun acc (_, expr) -> acc + count_match_cases_expr expr)
+        0 fields
+  | Texp_construct (_, _, args) | Texp_array (_, args) ->
+      List.fold_left
+        (fun acc expr -> acc + count_match_cases_expr expr)
+        0 args
+  | Texp_record { fields; extended_expression; _ } ->
+      Array.fold_left
+        (fun acc field ->
+          acc
+          +
+          match field with
+          | _, T.Kept _ -> 0
+          | _, T.Overridden (_, expr) -> count_match_cases_expr expr)
+        (Option.fold ~none:0 ~some:count_match_cases_expr extended_expression)
+        fields
+  | Texp_atomic_loc (expr, _, _)
+  | Texp_field (expr, _, _)
+  | Texp_lazy expr
+  | Texp_assert (expr, _)
+  | Texp_open (_, expr)
+  | Texp_letexception (_, expr) ->
+      count_match_cases_expr expr
+  | Texp_setfield (record, _, _, value) ->
+      count_match_cases_expr record + count_match_cases_expr value
+  | Texp_while (cond, body) ->
+      count_match_cases_expr cond + count_match_cases_expr body
+  | Texp_for (_, _, first, last, _, body) ->
+      count_match_cases_expr first + count_match_cases_expr last
+      + count_match_cases_expr body
+  | Texp_letmodule (_, _, _, module_expr, body) ->
+      count_match_cases_module_expr module_expr + count_match_cases_expr body
+  | Texp_letop { let_; ands; body; _ } ->
+      count_match_cases_expr let_.bop_exp
+      + List.fold_left
+          (fun acc (op : T.binding_op) ->
+            acc + count_match_cases_expr op.bop_exp)
+          0 ands
+      + count_match_cases_case body
+  | Texp_variant (_, arg) ->
+      Option.fold ~none:0 ~some:count_match_cases_expr arg
+  | Texp_override (_, fields) ->
+      List.fold_left
+        (fun acc (_, _, expr) -> acc + count_match_cases_expr expr)
+        0 fields
+  | Texp_send (expr, _) | Texp_pack { mod_desc = Tmod_unpack (expr, _); _ } ->
+      count_match_cases_expr expr
   | _ -> 0
 
 and count_match_cases_case : type k. k T.case -> int =
  fun case ->
   Option.fold ~none:0 ~some:count_match_cases_expr case.c_guard
   + count_match_cases_expr case.c_rhs
+
+and count_match_cases_cases : type k. k T.case list -> int =
+ fun cases ->
+  List.fold_left (fun acc case -> acc + count_match_cases_case case) 0 cases
+
+and count_match_cases_module_expr module_expr =
+  match module_expr.T.mod_desc with
+  | Tmod_structure structure ->
+      List.fold_left
+        (fun acc item -> acc + count_match_cases_structure_item item)
+        0 structure.str_items
+  | Tmod_functor (_, body)
+  | Tmod_constraint (body, _, _, _)
+  | Tmod_apply (body, _, _)
+  | Tmod_apply_unit body ->
+      count_match_cases_module_expr body
+  | Tmod_unpack (expr, _) -> count_match_cases_expr expr
+  | Tmod_ident _ | Tmod_typed_hole -> 0
+
+and count_match_cases_structure_item item =
+  match item.T.str_desc with
+  | Tstr_eval (expr, _) -> count_match_cases_expr expr
+  | Tstr_value (_, bindings) ->
+      List.fold_left
+        (fun acc (vb : T.value_binding) ->
+          acc
+          +
+          if is_function_expr vb.vb_expr then 0
+          else count_match_cases_expr vb.vb_expr)
+        0 bindings
+  | Tstr_module mb -> count_match_cases_module_expr mb.mb_expr
+  | Tstr_recmodule modules ->
+      List.fold_left
+        (fun acc (mb : T.module_binding) ->
+          acc + count_match_cases_module_expr mb.mb_expr)
+        0 modules
+  | _ -> 0
 
 let rec count_match_cases expr =
   match expr.T.exp_desc with
@@ -298,10 +376,14 @@ let rec count_match_cases expr =
               0 cases)
   | _ -> count_match_cases_expr expr
 
-let rec trailing_record_fields_expr expr =
+let rec trailing_record_fields_case : type k. k T.case -> int =
+ fun case -> trailing_record_fields_expr case.c_rhs
+
+and trailing_record_fields_expr expr =
   match expr.T.exp_desc with
   | Texp_record { fields; _ } -> Array.length fields
   | Texp_let (_, _, body) -> trailing_record_fields_expr body
+  | Texp_letop { body; _ } -> trailing_record_fields_case body
   | Texp_sequence (_, rhs) -> trailing_record_fields_expr rhs
   | Texp_ifthenelse (_, then_expr, None) ->
       trailing_record_fields_expr then_expr
@@ -310,6 +392,8 @@ let rec trailing_record_fields_expr expr =
   | Texp_try (expr, _, _) -> trailing_record_fields_expr expr
   | Texp_function ([], T.Tfunction_body body) -> trailing_record_fields_expr body
   | Texp_open (_, body) -> trailing_record_fields_expr body
+  | Texp_construct (_, _, [ expr ]) | Texp_variant (_, Some expr) ->
+      trailing_record_fields_expr expr
   | _ -> 0
 
 let rec trailing_record_fields expr =

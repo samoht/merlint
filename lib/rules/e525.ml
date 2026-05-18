@@ -33,18 +33,6 @@ type payload = { package : string; kind : kind }
 
 let min_major = 3
 let min_minor = 21
-let try_readdir d = try Fs.readdir d |> Array.to_list with Sys_error _ -> []
-let is_dir p = try Fs.is_directory p with Sys_error _ -> false
-
-let skip_entry name =
-  name = "_build" || name = "_opam" || name = ".git"
-  || String.starts_with ~prefix:"." name
-
-let has_opam_file pkg_dir =
-  List.exists
-    (fun name -> Filename.check_suffix name ".opam")
-    (try_readdir pkg_dir)
-
 let content ctx path =
   try Some (Context.file_content ctx path)
   with Sys_error _ | File_view.Analysis_error _ -> None
@@ -86,19 +74,20 @@ let lang_issue ctx name dp_path =
           | _ -> []))
   | None -> []
 
-let check_package ctx root name =
-  if skip_entry name then []
-  else
-    let pkg_dir = Filename.concat root name in
-    if (not (is_dir pkg_dir)) || not (has_opam_file pkg_dir) then []
-    else
+let check_package ctx pkg =
+  match Project_index.Package.source_dir pkg with
+  | None -> []
+  | Some dir ->
+      let name = Project_index.Package.name pkg in
+      let pkg_dir = Fpath.to_string dir in
       let dune_path = Filename.concat pkg_dir "dune" in
       let dp_path = Filename.concat pkg_dir "dune-project" in
       dune_issue ctx name dune_path @ lang_issue ctx name dp_path
 
 let check (ctx : Context.project) =
-  let root = ctx.project_root in
-  List.concat_map (check_package ctx root) (try_readdir root)
+  Context.index ctx
+  |> Project_index.source_packages_nodes
+  |> List.concat_map (check_package ctx)
 
 let pp ppf { package; kind } =
   match kind with
