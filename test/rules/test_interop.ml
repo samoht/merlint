@@ -50,7 +50,14 @@ let test_oracle_dirs () =
   mkdir (Filename.concat tool "traces");
   write_file (Filename.concat tool "dune") "(test (name test))\n";
   write_file (Filename.concat tool "test.ml") "let () = ()\n";
-  match Merlint.Interop.oracle_dirs root with
+  write_file (Filename.concat pkg "pkg.opam") "opam-version: \"2.0\"\n";
+  write_file (Filename.concat root "dune-project") "(lang dune 3.0)\n";
+  let index =
+    Eio_main.run @@ fun env ->
+    let fs = Eio.Stdenv.fs env in
+    Project_index.build ~fs ~monorepo:(Fpath.v root) ()
+  in
+  match Merlint.Interop.oracle_dirs index with
   | [ dir ] ->
       Alcotest.(check string) "package" "pkg" dir.package;
       Alcotest.(check string) "tool" "opa" dir.tool;

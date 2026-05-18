@@ -3,18 +3,6 @@
 type config = { max_nesting : int }
 type payload = { name : string; depth : int; threshold : int }
 
-let is_test_file filename =
-  let module_name =
-    Filename.basename filename |> Filename.remove_extension
-    |> String.lowercase_ascii
-  in
-  String.starts_with ~prefix:"test_" module_name
-  || String.contains filename '/'
-     && String.contains (Filename.dirname filename) '/'
-     && List.exists
-          (fun part -> part = "test")
-          (String.split_on_char '/' filename)
-
 let check (ctx : Context.file) =
   let config = { max_nesting = ctx.config.max_nesting } in
   let item_loc name =
@@ -31,7 +19,7 @@ let check (ctx : Context.file) =
               ~end_col:0)
   in
 
-  if is_test_file ctx.filename then []
+  if File.is_test_file ctx.filename then []
   else
     List.filter_map
       (fun ({ name; nesting = depth; is_function; _ } : Function_metrics.value)

@@ -40,7 +40,7 @@ let shell_call view =
   !found
 
 let check (ctx : Context.project) =
-  let dirs = Interop.oracle_dirs ctx.project_root in
+  let dirs = Interop.oracle_dirs_for ctx in
   List.filter_map
     (fun (d : Interop.oracle_dir) ->
       if d.has_test_ml then

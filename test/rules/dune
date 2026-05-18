@@ -3,6 +3,9 @@
  (libraries
   test_helpers
   merlint
+  ocaml-project-index
+  eio
+  eio_main
   alcotest
   compiler-libs.common
   fpath

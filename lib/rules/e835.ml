@@ -25,7 +25,7 @@ let issue_for_oracle (d : Interop.oracle_dir) =
         Some (Issue.v ~loc { dir = d.path; file })
 
 let check (ctx : Context.project) =
-  let dirs = Interop.oracle_dirs ctx.project_root in
+  let dirs = Interop.oracle_dirs_for ctx in
   List.filter_map issue_for_oracle dirs
 
 let pp ppf { dir; file } =

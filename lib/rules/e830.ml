@@ -65,7 +65,7 @@ let scan_file ctx path =
           List.exists (fun check -> check line) suspicious_defs)
 
 let check (ctx : Context.project) =
-  let dirs = Interop.oracle_dirs ctx.project_root in
+  let dirs = Interop.oracle_dirs_for ctx in
   List.filter_map
     (fun (d : Interop.oracle_dir) ->
       let scripts = Filename.concat d.path "scripts" in

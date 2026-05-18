@@ -49,6 +49,11 @@ let decision ?(if_then_else = 0) ?(matches = 0) ?(try_handlers = 0)
 
 let sum xs = List.fold_left merge empty xs
 
+let max_by_total xs =
+  List.fold_left
+    (fun acc x -> if x.total > acc.total then x else acc)
+    empty xs
+
 let clean_name_part s =
   match String.index_opt s '!' with None -> s | Some i -> String.sub s 0 i
 
@@ -86,16 +91,7 @@ let rec is_function_expr expr =
 let rec analyze_expr expr =
   match expr.T.exp_desc with
   | Texp_ifthenelse (cond, then_expr, else_expr) ->
-      let branches =
-        [
-          analyze_expr cond;
-          analyze_expr then_expr;
-          (match else_expr with
-          | Some expr -> analyze_expr expr
-          | None -> empty);
-        ]
-      in
-      merge (decision ~if_then_else:1 1) (sum branches)
+      analyze_if_chain cond then_expr else_expr
   | Texp_match (expr, computation_cases, value_cases, _) ->
       let cases =
         List.map analyze_case computation_cases
@@ -104,14 +100,16 @@ let rec analyze_expr expr =
       let match_decision =
         if cases = [] then empty else decision ~matches:1 1
       in
-      merge match_decision (merge (analyze_expr expr) (sum cases))
+      merge match_decision (merge (analyze_expr expr) (max_by_total cases))
   | Texp_try (expr, value_cases, effect_cases) ->
       let handlers = List.length value_cases + List.length effect_cases in
-      let handler_decisions = decision ~try_handlers:handlers handlers in
+      let handler_decisions =
+        if handlers = 0 then empty else decision ~try_handlers:1 1
+      in
       let cases =
         List.map analyze_case value_cases @ List.map analyze_case effect_cases
       in
-      merge handler_decisions (merge (analyze_expr expr) (sum cases))
+      merge handler_decisions (merge (analyze_expr expr) (max_by_total cases))
   | Texp_function _ -> empty
   | Texp_let (_, bindings, body) ->
       merge (sum (List.map analyze_let_binding bindings)) (analyze_expr body)
@@ -171,6 +169,18 @@ and analyze_arg = function
   | _, T.Arg expr -> analyze_expr expr
   | _, T.Omitted () -> empty
 
+and analyze_if_chain cond then_expr else_expr =
+  let rec arms acc cond then_expr else_expr =
+    let current = merge (analyze_expr cond) (analyze_expr then_expr) in
+    match else_expr with
+    | Some { T.exp_desc = Texp_ifthenelse (cond, then_expr, else_expr); _ } ->
+        arms (current :: acc) cond then_expr else_expr
+    | Some expr -> analyze_expr expr :: current :: acc
+    | None -> current :: acc
+  in
+  merge (decision ~if_then_else:1 1)
+    (max_by_total (arms [] cond then_expr else_expr))
+
 and analyze_case : type k. k T.case -> complexity =
  fun case ->
   let guard =
@@ -187,7 +197,7 @@ and analyze_record_field = function
 
 let analyze_function_cases cases =
   let match_decision = if cases = [] then empty else decision ~matches:1 1 in
-  merge match_decision (sum (List.map analyze_case cases))
+  merge match_decision (max_by_total (List.map analyze_case cases))
 
 let analyze_function_params params =
   sum
@@ -280,8 +290,8 @@ let rec count_match_cases expr =
       param_cases
       +
       match body with
-      | Tfunction_body expr -> count_match_cases expr
-      | Tfunction_cases { cases; _ } ->
+      | T.Tfunction_body expr -> count_match_cases expr
+      | T.Tfunction_cases { cases; _ } ->
           List.length cases
           + List.fold_left
               (fun acc case -> acc + count_match_cases_case case)
@@ -298,13 +308,13 @@ let rec trailing_record_fields_expr expr =
   | Texp_ifthenelse (_, _, Some else_expr) ->
       trailing_record_fields_expr else_expr
   | Texp_try (expr, _, _) -> trailing_record_fields_expr expr
-  | Texp_function ([], Tfunction_body body) -> trailing_record_fields_expr body
+  | Texp_function ([], T.Tfunction_body body) -> trailing_record_fields_expr body
   | Texp_open (_, body) -> trailing_record_fields_expr body
   | _ -> 0
 
 let rec trailing_record_fields expr =
   match expr.T.exp_desc with
-  | Texp_function (_, Tfunction_body body) -> trailing_record_fields body
+  | Texp_function (_, T.Tfunction_body body) -> trailing_record_fields body
   | _ -> trailing_record_fields_expr expr
 
 let rec is_pure_data_expr expr =
@@ -332,13 +342,6 @@ let record_field_exprs fields =
   |> List.filter_map (function
     | _, T.Kept _ -> None
     | _, T.Overridden (_, expr) -> Some expr)
-
-let nested_record_field expr =
-  match expr.T.exp_desc with
-  | Texp_function _ | Texp_record _ | Texp_ifthenelse _ | Texp_match _
-  | Texp_try _ | Texp_while _ | Texp_for _ ->
-      true
-  | _ -> false
 
 let max_depth current_depth depths = List.fold_left max current_depth depths
 
@@ -384,8 +387,8 @@ let rec depth_expr ~in_closure current_depth expr =
           depth_expr ~in_closure current_depth last;
           depth_expr ~in_closure new_depth body;
         ]
-  | Texp_function (params, body) ->
-      depth_function ~in_closure current_depth params body
+  | Texp_function _ ->
+      current_depth
   | Texp_let (_, bindings, body) -> depth_let ~in_closure current_depth bindings body
   | Texp_sequence (lhs, rhs) -> depth_pair ~in_closure current_depth lhs rhs
   | Texp_apply (fn, args) ->
@@ -465,29 +468,6 @@ and depth_letop ~in_closure current_depth let_ ands body =
   in
   max_depth (depth_case ~in_closure current_depth body) binding_depths
 
-and depth_function ~in_closure current_depth params body =
-  let default_depths =
-    List.map
-      (fun (param : T.function_param) ->
-        match param.fp_kind with
-        | Tparam_optional_default (_, expr) ->
-            depth_expr ~in_closure current_depth expr
-        | Tparam_pat _ -> current_depth)
-      params
-  in
-  let new_depth =
-    if in_closure || current_depth > 0 then current_depth + 1 else current_depth
-  in
-  let body_depth =
-    match body with
-    | Tfunction_body body -> depth_expr ~in_closure:true new_depth body
-    | Tfunction_cases { cases; _ } ->
-        let match_depth = new_depth + 1 in
-        List.fold_left max match_depth
-          (List.map (depth_case ~in_closure:true match_depth) cases)
-  in
-  List.fold_left max body_depth default_depths
-
 and depth_let ~in_closure current_depth bindings body =
   let binding_depth =
     List.fold_left
@@ -503,19 +483,15 @@ and depth_let ~in_closure current_depth bindings body =
 
 and depth_record ~in_closure current_depth fields extended_expression =
   let field_exprs = record_field_exprs fields in
-  let field_depth =
-    if List.exists nested_record_field field_exprs then current_depth + 1
-    else current_depth
-  in
   let depths =
-    List.map (fun expr -> depth_expr ~in_closure field_depth expr) field_exprs
+    List.map (fun expr -> depth_expr ~in_closure current_depth expr) field_exprs
   in
   let depths =
     match extended_expression with
-    | Some expr -> depth_expr ~in_closure field_depth expr :: depths
+    | Some expr -> depth_expr ~in_closure current_depth expr :: depths
     | None -> depths
   in
-  List.fold_left max field_depth depths
+  List.fold_left max current_depth depths
 
 and depth_module_expr ~in_closure current_depth module_expr =
   match module_expr.T.mod_desc with
@@ -551,7 +527,33 @@ and depth_structure_item ~in_closure current_depth item =
            modules)
   | _ -> current_depth
 
-let nesting expr = depth_expr ~in_closure:false 0 expr
+let depth_function ~in_closure current_depth params body =
+  let default_depths =
+    List.map
+      (fun (param : T.function_param) ->
+        match param.fp_kind with
+        | Tparam_optional_default (_, expr) ->
+            depth_expr ~in_closure current_depth expr
+        | Tparam_pat _ -> current_depth)
+      params
+  in
+  let new_depth =
+    if in_closure || current_depth > 0 then current_depth + 1 else current_depth
+  in
+  let body_depth =
+    match body with
+    | T.Tfunction_body body -> depth_expr ~in_closure:true new_depth body
+    | T.Tfunction_cases { cases; _ } ->
+        let match_depth = new_depth + 1 in
+        List.fold_left max match_depth
+          (List.map (depth_case ~in_closure:true match_depth) cases)
+  in
+  List.fold_left max body_depth default_depths
+
+let nesting expr =
+  match expr.T.exp_desc with
+  | Texp_function (params, body) -> depth_function ~in_closure:false 0 params body
+  | _ -> depth_expr ~in_closure:false 0 expr
 
 let name_of_pattern (pat : T.pattern) =
   match pat.pat_desc with

@@ -135,6 +135,7 @@ let values ctx = File_view.values ctx.view
 
 (* Project context accessors *)
 let analyze_set ctx = ctx.analyze_set
+let project_root ctx = ctx.project_root
 let executable_modules ctx = Lazy.force ctx.executable_modules
 let lib_modules ctx = Lazy.force ctx.lib_modules
 let test_modules ctx = Lazy.force ctx.test_modules

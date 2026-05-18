@@ -9,18 +9,6 @@ let src = Logs.Src.create "merlint.e001" ~doc:"E001 rule"
 
 module Log = (val Logs.src_log src : Logs.LOG)
 
-let is_test_file filename =
-  let module_name =
-    Filename.basename filename |> Filename.remove_extension
-    |> String.lowercase_ascii
-  in
-  String.starts_with ~prefix:"test_" module_name
-  || String.contains filename '/'
-     && String.contains (Filename.dirname filename) '/'
-     && List.exists
-          (fun part -> part = "test")
-          (String.split_on_char '/' filename)
-
 let check (ctx : Context.file) =
   let config = { max_complexity = ctx.Context.config.max_complexity } in
   let functions =
@@ -29,7 +17,7 @@ let check (ctx : Context.file) =
 
   Log.debug (fun m -> m "E001: Found %d functions" (List.length functions));
 
-  if is_test_file ctx.filename then []
+  if File.is_test_file ctx.filename then []
   else
     List.filter_map
       (fun ({ name; loc; complexity; complexity_breakdown; _ } :
