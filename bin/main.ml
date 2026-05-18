@@ -256,7 +256,8 @@ let run_analysis ~load_file project_root dune_describe files_to_analyze index
     run_engine ~load_file ?profiling:profiling_state rule_filter dune_describe
       files_to_analyze index project_root
   in
-  Fmt.pr "Running merlint analysis...@.@.Analyzing %d files@.@." files_count;
+  if files_count = 0 then Fmt.pr "Running merlint analysis...@.@."
+  else Fmt.pr "Running merlint analysis...@.@.Analyzing %d files@.@." files_count;
   print_exclusion_stats all_excluded;
 
   (* Group issues by category for reporting *)

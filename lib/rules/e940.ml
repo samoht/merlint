@@ -64,8 +64,9 @@ let check (ctx : Context.project) =
       let dune_path = Filename.concat root "dune" in
       Option.map
         (fun kind ->
-          let loc = Location.in_file dune_path in
-          Issue.v ~loc { dune_path; kind })
+          let display = Fpath.v dune_path |> Loc.relative_to_cwd in
+          let loc = Loc.in_file display in
+          Issue.v ~loc { dune_path = Fpath.to_string display; kind })
         (dune_warning_status ctx dune_path))
     roots
 

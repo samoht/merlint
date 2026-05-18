@@ -17,9 +17,7 @@ Build bad fixture project:
     Any package tagged codec.* or protocol must follow the sans-IO contract. The
     org standardises on Eio: no package may depend on lwt, miou, or mirage
     runtimes. Pure sans-IO packages (codec.* / protocol without an eio tag) must
-    additionally not depend on eio*, unix, or ambient clocks. They expose Bytesrw
-    Reader/Writer in the main library rather than shipping a separate
-    <pkg>_bytesrw sub-library.
+    additionally not depend on eio*, unix, or ambient clocks.
     - pkg/pkg.opam:1:0: pkg/pkg.opam: sans-io policy violated by depends: unix; bad/pkg/lib/dune libraries: unix
   ✓ Test Quality (0 total issues)
   ✓ Interop Testing (0 total issues)

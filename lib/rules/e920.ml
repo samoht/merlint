@@ -47,6 +47,9 @@ let scan_dir ctx dir =
   if not (Sys.file_exists dune_path) then []
   else
     let covered = mdx_covered_files ctx dune_path in
+    let display_dune =
+      Fpath.v dune_path |> Loc.relative_to_cwd |> Fpath.to_string
+    in
     let dir_str = Fpath.to_string dir in
     let entries =
       try Sys.readdir dir_str |> Array.to_list with Sys_error _ -> []
@@ -61,9 +64,12 @@ let scan_dir ctx dir =
         in
         if (not is_doc) || List.mem name covered then None
         else if has_ocaml_code ctx path then
+          let display_doc =
+            Fpath.v path |> Loc.relative_to_cwd |> Fpath.to_string
+          in
           Some
-            (Issue.v ~loc:(Location.in_file path)
-               { dune_file = dune_path; doc_file = name })
+            (Issue.v ~loc:(Location.in_file display_doc)
+               { dune_file = display_dune; doc_file = name })
         else None)
       entries
 

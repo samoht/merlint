@@ -2,23 +2,10 @@
 
 type payload = { package : string }
 
-let ends_with path suffix =
-  let rec drop n xs =
-    if n <= 0 then xs else match xs with [] -> [] | _ :: xs -> drop (n - 1) xs
-  in
-  let len = List.length path in
-  let suffix_len = List.length suffix in
-  len >= suffix_len && drop (len - suffix_len) path = suffix
-
 let file_uses_wire ctx path =
   try
-    let uses = ref false in
-    File_view.iter_applications (Context.file_view ctx path) (fun call ->
-        let name = File_view.Call.callee call in
-        match File_view.Name.prefix name @ [ File_view.Name.base name ] with
-        | path when ends_with path [ "Wire"; "Codec"; "v" ] -> uses := true
-        | _ -> ());
-    !uses
+    File_view.references_suffix (Context.file_view ctx path)
+      [ "Wire"; "Codec"; "v" ]
   with File_view.Analysis_error _ -> false
 
 let library_uses_wire ctx lib =

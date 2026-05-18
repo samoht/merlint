@@ -19,7 +19,6 @@ type kind = Non_codec | Pure_codec | Eio_codec
 type finding =
   | Banned_in_depends of { dep : string }
   | Banned_in_libraries of { dune_file : string; lib : string }
-  | Bytesrw_sublib of { dune_file : string; lib : string }
 
 type payload = { package : string; opam : string; findings : finding list }
 
@@ -43,11 +42,6 @@ let lib_matches ~banned name =
   in
   List.exists (fun b -> b = name || b = top) banned
 
-let is_bytesrw_sublib name =
-  name = "bytesrw"
-  || String.length name > 8
-     && String.sub name (String.length name - 8) 8 = "_bytesrw"
-
 let kind_of_tags tags =
   if not (Opam_tags.has_sans_io tags) then Non_codec
   else if List.mem "eio" tags then Eio_codec
@@ -56,43 +50,26 @@ let kind_of_tags tags =
 module P = Project_index.Package
 module L = Project_index.Library
 
-let normalize_string path = Fpath.(v path |> normalize |> to_string)
-
-let relative_to ~root path =
-  let root = normalize_string root in
-  let path = Fpath.to_string (Fpath.normalize path) in
-  let root_slash = root ^ "/" in
-  if path = root then "."
-  else if
-    String.length path >= String.length root_slash
-    && String.sub path 0 (String.length root_slash) = root_slash
-  then
-    String.sub path (String.length root_slash)
-      (String.length path - String.length root_slash)
-  else path
-
-let relative_to_cwd path = relative_to ~root:(Sys.getcwd ()) path
-let relative_to_project ~root path = relative_to ~root path
-
 let opam_path ~root pkg =
   match P.opam_path pkg with
-  | Some path -> relative_to_project ~root path
+  | Some path -> Fpath.to_string (Loc.relative_to ~root:(Fpath.v root) path)
   | None -> P.name pkg ^ ".opam"
 
 let dune_file lib =
   match L.dune_file lib with
-  | Some path -> relative_to_cwd path
+  | Some path -> Fpath.to_string (Loc.relative_to_cwd path)
   | None -> L.name lib ^ "/dune"
 
 (* Libraries declared under a [test/] or [tests/] subdirectory are private test
    utilities. They live at the IO edge and may pull in eio/unix freely. *)
-let is_test_library lib =
-  match L.source_dir lib with
-  | None -> false
-  | Some dir ->
-      Fpath.to_string (Fpath.normalize dir)
+let is_test_library ~package lib =
+  match (P.source_dir package, L.source_dir lib) with
+  | Some pkg_dir, Some lib_dir ->
+      Loc.relative_to ~root:pkg_dir lib_dir
+      |> Fpath.to_string
       |> String.split_on_char '/'
       |> List.exists (function "test" | "tests" -> true | _ -> false)
+  | _ -> false
 
 let check_package ~root pkg =
   let name = P.name pkg in
@@ -114,13 +91,9 @@ let check_package ~root pkg =
             if lib_matches ~banned dep then
               findings :=
                 Banned_in_libraries { dune_file; lib = dep } :: !findings)
-          (L.deps lib);
-        let local_name = L.local_name lib in
-        if is_bytesrw_sublib local_name then
-          findings :=
-            Bytesrw_sublib { dune_file; lib = local_name } :: !findings)
-      (Project_index.package_libraries pkg |> List.filter (fun lib ->
-           not (is_test_library lib)));
+          (L.deps lib))
+      (Project_index.package_libraries pkg
+      |> List.filter (fun lib -> not (is_test_library ~package:pkg lib)));
     match List.rev !findings with
     | [] -> []
     | findings ->
@@ -137,9 +110,6 @@ let pp_finding ppf = function
   | Banned_in_depends { dep } -> Fmt.pf ppf "depends: %s" dep
   | Banned_in_libraries { dune_file; lib } ->
       Fmt.pf ppf "%s libraries: %s" dune_file lib
-  | Bytesrw_sublib { dune_file; lib } ->
-      Fmt.pf ppf "%s library: %s (bytesrw integration belongs in the main lib)"
-        dune_file lib
 
 let pp ppf { package; opam; findings } =
   let subject =
@@ -155,6 +125,5 @@ let rule =
        contract. The org standardises on Eio: no package may depend on lwt, \
        miou, or mirage runtimes. Pure sans-IO packages (codec.* / protocol \
        without an eio tag) must additionally not depend on eio*, unix, or \
-       ambient clocks. They expose Bytesrw Reader/Writer in the main library \
-       rather than shipping a separate <pkg>_bytesrw sub-library."
+       ambient clocks."
     ~category:Rule.Project_structure ~examples:[] ~pp (Project check)

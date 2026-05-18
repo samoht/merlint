@@ -6,13 +6,8 @@ let wire_symbols = [ "struct_"; "module_"; "c_stubs"; "ml_stubs" ]
 
 let file_uses_wire ctx path =
   try
-    let uses = ref false in
-    File_view.iter_applications (Context.file_view ctx path) (fun call ->
-        let name = File_view.Call.callee call in
-        match File_view.Name.prefix name @ [ File_view.Name.base name ] with
-        | [ "Wire"; "Codec"; "v" ] -> uses := true
-        | _ -> ());
-    !uses
+    File_view.references_suffix (Context.file_view ctx path)
+      [ "Wire"; "Codec"; "v" ]
   with File_view.Analysis_error _ -> false
 
 let library_uses_wire ctx lib =

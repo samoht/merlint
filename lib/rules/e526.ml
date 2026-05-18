@@ -59,7 +59,8 @@ let check_package ctx root name =
           match Dune.Project.of_string c with
           | Error _ -> []
           | Ok project ->
-              issue_of_setting name (Location.in_file dp_path)
+              issue_of_setting name
+                (Fpath.v dp_path |> Loc.relative_to_cwd |> Loc.in_file)
                 (Dune.Project.implicit_transitive_deps project))
 
 let check (ctx : Context.project) =

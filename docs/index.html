@@ -2074,7 +2074,7 @@ and replace each call site with [err_x &quot;...&quot; args] / [fail_x &quot;...
         <span class="error-code">E930</span>
         <span class="error-title">Sans-IO policy</span>
     </div>
-    <div class="error-hint"><p>Any package tagged codec.* or protocol must follow the sans-IO contract. The org standardises on Eio: no package may depend on lwt, miou, or mirage runtimes. Pure sans-IO packages (codec.* / protocol without an eio tag) must additionally not depend on eio*, unix, or ambient clocks. They expose Bytesrw Reader/Writer in the main library rather than shipping a separate &lt;pkg&gt;_bytesrw sub-library.</p></div>
+    <div class="error-hint"><p>Any package tagged codec.* or protocol must follow the sans-IO contract. The org standardises on Eio: no package may depend on lwt, miou, or mirage runtimes. Pure sans-IO packages (codec.* / protocol without an eio tag) must additionally not depend on eio*, unix, or ambient clocks.</p></div>
 </div>
 <div class="error-card" id="E931">
     <div>

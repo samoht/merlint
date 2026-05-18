@@ -30,9 +30,12 @@ let oracle_dirs project_root =
             (fun tool ->
               let path = Filename.concat interop tool in
               if Sys.is_directory path then
+                let display_path =
+                  Fpath.v path |> Loc.relative_to_cwd |> Fpath.to_string
+                in
                 results :=
                   {
-                    path;
+                    path = display_path;
                     package = pkg;
                     tool;
                     has_scripts =
