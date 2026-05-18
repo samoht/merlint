@@ -18,6 +18,16 @@ val check_empty :
 (** [check_empty ~prefix ~mk_payload ctx] implements the shared E621/E726 empty
     suite check for [test_*] or [fuzz_*] modules. *)
 
+type callers
+(** Precomputed names that reference a [.suite] value. *)
+
+val callers : File_view.t -> callers option
+(** [callers view] extracts [.suite] callers once for repeated lookups. *)
+
+val references_in : callers -> string -> bool
+(** [references_in callers module_name] checks whether precomputed [callers]
+    contains [module_name].suite. *)
+
 val references : File_view.t -> string -> bool
 (** [references view module_name] checks whether [view] references
     [module_name].suite. *)
