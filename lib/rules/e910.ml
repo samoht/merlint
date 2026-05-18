@@ -78,28 +78,30 @@ let package_findings policy detected =
   in
   missing @ undeclared
 
-let check_package pkg =
-  match (Project_index.Package.source_dir pkg, Project_index.Package.raw_opam pkg) with
+let loc_in_project ~root path =
+  Loc.relative_to ~root:(Fpath.v root) path |> Loc.in_file
+
+let check_package ~root pkg =
+  match
+    (Project_index.Package.source_dir pkg, Project_index.Package.raw_opam pkg)
+  with
   | _, None -> None
   | None, _ -> None
   | Some dir, Some raw_opam -> (
       let policy = quality_from_raw_opam raw_opam in
       if policy = [] then None
       else
-      let name = Project_index.Package.name pkg in
-      let detected = detect_features (Fpath.to_string dir) in
-      match package_findings policy detected with
-      | [] -> None
-      | findings ->
-          let loc =
-            Fpath.(dir / "dune-project")
-            |> Loc.current_dir_relative |> Loc.in_file
-          in
-          Some (Issue.v ~loc { package = name; findings }))
+        let name = Project_index.Package.name pkg in
+        let detected = detect_features (Fpath.to_string dir) in
+        match package_findings policy detected with
+        | [] -> None
+        | findings ->
+            let loc = loc_in_project ~root Fpath.(dir / "dune-project") in
+            Some (Issue.v ~loc { package = name; findings }))
 
 let check (ctx : Context.project) =
   Context.index ctx |> Project_index.source_packages_nodes
-  |> List.filter_map check_package
+  |> List.filter_map (check_package ~root:ctx.project_root)
 
 let pp ppf { package; findings } =
   Fmt.pf ppf "%s: %s" package

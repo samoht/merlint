@@ -28,10 +28,33 @@ let name_of_string_path path =
   |> List.filter (fun s -> s <> "")
   |> name_of_parts
 
+let predef_path_name path =
+  [
+    (Typed_predef.path_int, "int");
+    (Typed_predef.path_char, "char");
+    (Typed_predef.path_string, "string");
+    (Typed_predef.path_bytes, "bytes");
+    (Typed_predef.path_float, "float");
+    (Typed_predef.path_bool, "bool");
+    (Typed_predef.path_unit, "unit");
+    (Typed_predef.path_list, "list");
+    (Typed_predef.path_int32, "int32");
+    (Typed_predef.path_int64, "int64");
+  ]
+  |> List.find_map (fun (predef, name) ->
+         if Typed_path.same path predef then Some name else None)
+
 let name_of_path path =
-  match Typed_path.flatten path with
-  | `Ok (base, suffix) -> name_of_parts (Typed_ident.name base :: suffix)
-  | `Contains_apply -> name_of_string_path (Typed_path.name path)
+  match predef_path_name path with
+  | Some name -> name_of_parts [ name ]
+  | None -> (
+      match Typed_path.flatten path with
+      | `Ok (base, suffix) ->
+          let name = name_of_parts (Typed_ident.name base :: suffix) in
+          if name.Merlin.Refs.base = "" then
+            name_of_string_path (Typed_path.name path)
+          else name
+      | `Contains_apply -> name_of_string_path (Typed_path.name path))
 
 let name_of_ident ident = name_of_parts [ Typed_ident.name ident ]
 
@@ -831,7 +854,12 @@ module Type_view = struct
 
   let pp ppf (ct : t) =
     Ocaml_typing.Printtyp.type_expr Format.str_formatter ct;
-    Fmt.string ppf (Format.flush_str_formatter ())
+    match Format.flush_str_formatter () with
+    | "" -> (
+        match constr ct with
+        | Some (name, []) -> Name.pp ppf name
+        | _ -> ())
+    | s -> Fmt.string ppf s
 end
 
 (* {2 Item} *)

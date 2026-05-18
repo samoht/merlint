@@ -210,17 +210,17 @@ let print_summary all_issues enabled_rule_count =
       sample
   end
 
-let run_engine ~load_file ?profiling rule_filter dune_describe analyze_set index
-    project_root =
+let run_engine ?domain_mgr ~load_file ?profiling rule_filter dune_describe
+    analyze_set index project_root =
   match rule_filter with
   | Some filter ->
-      Merlint.Engine.run ~load_file ~filter ~dune_describe ?analyze_set ~index
-        ?profiling project_root
+      Merlint.Engine.run ?domain_mgr ~load_file ~filter ~dune_describe
+        ?analyze_set ~index ?profiling project_root
   | None -> (
       match Merlint.Filter.parse "all" with
       | Ok filter ->
-          Merlint.Engine.run ~load_file ~filter ~dune_describe ?analyze_set
-            ~index ?profiling project_root
+          Merlint.Engine.run ?domain_mgr ~load_file ~filter ~dune_describe
+            ?analyze_set ~index ?profiling project_root
       | Error _ -> { Merlint.Engine.issues = []; excluded = [] })
 
 let print_exclusion_stats all_excluded =
@@ -241,8 +241,8 @@ let print_exclusion_stats all_excluded =
     Fmt.pr "@]@."
   end
 
-let run_analysis ~load_file project_root dune_describe analyze_set index
-    rule_filter show_profile =
+let run_analysis ?domain_mgr ~load_file project_root dune_describe analyze_set
+    index rule_filter show_profile =
   let profiling_state =
     if show_profile then Some (Merlint.Profiling.v ()) else None
   in
@@ -253,8 +253,8 @@ let run_analysis ~load_file project_root dune_describe analyze_set index
   in
   Log.info (fun m -> m "Starting visual analysis on %d files" files_count);
   let { Merlint.Engine.issues = all_issues; excluded = all_excluded } =
-    run_engine ~load_file ?profiling:profiling_state rule_filter dune_describe
-      analyze_set index project_root
+    run_engine ?domain_mgr ~load_file ?profiling:profiling_state rule_filter
+      dune_describe analyze_set index project_root
   in
   if files_count = 0 then Fmt.pr "Running merlint analysis...@.@."
   else
@@ -392,8 +392,8 @@ let analyze_files mgr fs domain_mgr ?(exclude_patterns = []) ?rule_filter
              ((Unix.gettimeofday () -. t0) *. 1000.0));
        idx)
   in
-  run_analysis ~load_file project_root filtered_describe analyze_set index
-    rule_filter show_profile
+  run_analysis ~domain_mgr ~load_file project_root filtered_describe analyze_set
+    index rule_filter show_profile
 
 let files =
   let doc =

@@ -181,33 +181,45 @@ let config_lookup () =
         Hashtbl.add cache dir c;
         c
 
-let is_result_excluded ~config_for ~code ~excluded_acc r =
-  match Rule.Run.location r with
-  | None -> false
-  | Some loc ->
-      let file = loc.Location.file in
-      let cfg : Config.t = config_for file in
-      let skip = Rule_config.should_exclude cfg.exclusions ~rule:code ~file in
-      if skip then excluded_acc := { rule = code; file } :: !excluded_acc;
-      skip
+(* Per-rule excluded-accumulator pattern: each rule produces its own
+   excluded list, and the caller flattens at the end. Avoids a shared ref
+   when project rules run in parallel domains. *)
+let split_excluded ~config_for ~code issues =
+  let excluded = ref [] in
+  let kept =
+    List.filter
+      (fun r ->
+        match Rule.Run.location r with
+        | None -> true
+        | Some loc ->
+            let file = loc.Location.file in
+            let cfg : Config.t = config_for file in
+            let skip =
+              Rule_config.should_exclude cfg.exclusions ~rule:code ~file
+            in
+            if skip then excluded := { rule = code; file } :: !excluded;
+            not skip)
+      issues
+  in
+  (kept, List.rev !excluded)
 
-let run_one_project_rule ?profiling ~config_for ~excluded_acc project_ctx rule =
+let run_one_project_rule ?profiling ~config_for project_ctx rule =
   let code = Rule.code rule in
   let issues = run_project_rule ?profiling project_ctx rule in
-  List.filter
-    (fun r -> not (is_result_excluded ~config_for ~code ~excluded_acc r))
-    issues
+  split_excluded ~config_for ~code issues
 
-let run_project_rules ?profiling enabled_rules project_ctx =
+let run_project_rules ?domain_mgr ?profiling enabled_rules project_ctx =
   let config_for = config_lookup () in
-  let excluded_acc = ref [] in
-  let issues =
-    enabled_rules
-    |> List.filter Rule.is_project_scoped
-    |> List.concat_map
-         (run_one_project_rule ?profiling ~config_for ~excluded_acc project_ctx)
+  let rules = List.filter Rule.is_project_scoped enabled_rules in
+  let run = run_one_project_rule ?profiling ~config_for project_ctx in
+  let results =
+    match domain_mgr with
+    | None -> List.map run rules
+    | Some dm -> Fs.parallel_map dm rules run
   in
-  (issues, List.rev !excluded_acc)
+  let issues = List.concat_map fst results in
+  let excluded = List.concat_map snd results in
+  (issues, excluded)
 
 let analyze_single_file ?profiling ~project_ctx ~config_for ~project_root
     ~file_rules filepath =
@@ -243,22 +255,58 @@ let analyze_single_file ?profiling ~project_ctx ~config_for ~project_root
   in
   (issues, List.rev !excluded_acc)
 
-(** Walk [files] sequentially with a single shared Merlin backend and per-run
-    [config_for] cache. Sequential because [Ocaml_parsing] / [Ocaml_typing] and
-    Merlin's Library backend share process-global state that domains race on;
-    parallelism here is best handled by running multiple [merlint] processes
-    against disjoint file sets. *)
-let analyze_files ~project_ctx ~project_root ~file_rules ?profiling files =
+(** Group [files] by the opam package they live under (as known to
+    {!Project_index}). Files not under any indexed package land in a single
+    [None] bucket. *)
+let group_files_by_package index files =
+  let pkg_dirs =
+    Project_index.source_packages_nodes index
+    |> List.filter_map (fun pkg ->
+        Option.map
+          (fun dir ->
+            (Project_index.Package.name pkg, Fpath.to_string dir))
+          (Project_index.Package.source_dir pkg))
+  in
+  let pkg_of file =
+    let file = Fpath.to_string file in
+    let dir = Filename.dirname file in
+    List.find_map
+      (fun (pkg, pkg_dir) ->
+        let prefix = pkg_dir ^ "/" in
+        if String.starts_with ~prefix dir || dir = pkg_dir then Some pkg
+        else None)
+      pkg_dirs
+  in
+  let tbl = Hashtbl.create 16 in
+  List.iter
+    (fun file ->
+      let key = pkg_of file in
+      let prev = try Hashtbl.find tbl key with Not_found -> [] in
+      Hashtbl.replace tbl key (file :: prev))
+    files;
+  Hashtbl.fold (fun k v acc -> (k, List.rev v) :: acc) tbl []
+
+(** Walk [files] grouped by package, processing different packages in
+    parallel via [domain_mgr] when supplied. Files within a single package
+    are processed sequentially -- typedtree-walking rules share a Merlin
+    backend whose compiler-libs state is process-global, so keeping one
+    package per domain at a time avoids state mixing. *)
+let analyze_files ?domain_mgr ~project_ctx ~project_root ~file_rules ?profiling
+    files =
   let config_for = config_lookup () in
   let analyse filepath =
     analyze_single_file ?profiling ~project_ctx ~config_for ~project_root
       ~file_rules filepath
   in
-  let results = List.map analyse files in
-  results
+  let analyse_pkg (_pkg, pkg_files) = List.map analyse pkg_files in
+  match domain_mgr with
+  | None -> List.map analyse files
+  | Some dm ->
+      let groups = group_files_by_package (Context.index project_ctx) files in
+      Fs.parallel_map dm groups analyse_pkg |> List.concat
 
-let run ~load_file ~filter ~dune_describe ?analyze_set ~index ?profiling
-    project_root =
+let run ?domain_mgr ~load_file ~filter ~dune_describe ?analyze_set ~index
+    ?profiling project_root =
   Log.info (fun m -> m "Starting analysis of %s" project_root);
   let backend = Merlin.v ~root_dir:project_root () in
   let stats = io_stats () in
@@ -280,12 +328,12 @@ let run ~load_file ~filter ~dune_describe ?analyze_set ~index ?profiling
       Merlin.close backend)
     (fun () ->
       let project_issues, project_excluded =
-        run_project_rules ?profiling enabled_rules project_ctx
+        run_project_rules ?domain_mgr ?profiling enabled_rules project_ctx
       in
       let file_rules = List.filter Rule.is_file_scoped enabled_rules in
       let file_results =
-        analyze_files ~project_ctx ~project_root ~file_rules ?profiling
-          analyze_set
+        analyze_files ?domain_mgr ~project_ctx ~project_root ~file_rules
+          ?profiling analyze_set
       in
       let file_issues = List.concat_map fst file_results in
       let file_excluded = List.concat_map snd file_results in
