@@ -29,57 +29,25 @@ let should_skip_module ~executable_modules ~test_modules ml_file =
     Log.debug (fun m -> m "File %s is interface definition file" ml_file);
   is_exe || is_test || is_intf
 
-(* Memoised "is this directory the source of a virtual-implementation
-   library?" predicate, scoped to a single rule run. The answer lives in
-   the project index; we only memoise the directory-to-library lookup. *)
-let module_name_matches a b =
-  String.equal (String.lowercase_ascii a) (String.lowercase_ascii b)
+let source_path ~root file =
+  let file = Fpath.v file in
+  if Fpath.is_abs file then Fpath.normalize file
+  else Fpath.normalize Fpath.(v root // file)
 
-let library_owns_module module_name lib =
-  match Dune.File.Library.modules lib with
-  | All_standard -> true
-  | Only modules -> List.exists (module_name_matches module_name) modules
-  | Standard_except excluded ->
-      not (List.exists (module_name_matches module_name) excluded)
-
-let dune_file_virtual_impl_check =
-  let cache = Hashtbl.create 32 in
-  fun dir module_name ->
-    let key = (dir, module_name) in
+let virtual_impl_file_check ~root index =
+  let cache = Hashtbl.create 64 in
+  fun file ->
+    let file = source_path ~root file in
+    let key = Fpath.to_string file in
     match Hashtbl.find_opt cache key with
     | Some v -> v
     | None ->
         let v =
-          let dune_file = Filename.concat dir "dune" in
-          match Dune.File.of_file dune_file with
-          | Error _ -> false
-          | Ok dune ->
-              Dune.File.libraries dune
-              |> List.exists (fun lib ->
-                  Dune.File.Library.implements lib <> None
-                  && library_owns_module module_name lib)
+          Project_index.libraries_of_file index file
+          |> List.exists Project_index.Library.is_virtual_implementation
         in
         Hashtbl.replace cache key v;
         v
-
-let dir_is_virtual_impl_check index =
-  let cache = Hashtbl.create 32 in
-  fun dir ->
-    match Hashtbl.find_opt cache dir with
-    | Some v -> v
-    | None ->
-        let v =
-          match Project_index.library_in_dir index (Fpath.v dir) with
-          | None -> false
-          | Some lib -> Project_index.Library.is_virtual_implementation lib
-        in
-        Hashtbl.replace cache dir v;
-        v
-
-let is_virtual_impl_file is_virtual_dir ml_file =
-  let dir = Filename.dirname ml_file in
-  let module_name = Filename.basename (Filename.remove_extension ml_file) in
-  is_virtual_dir dir || dune_file_virtual_impl_check dir module_name
 
 let missing_mli_issue files ml_file =
   let mli_path = Filename.remove_extension ml_file ^ ".mli" in
@@ -90,20 +58,22 @@ let missing_mli_issue files ml_file =
     in
     Some (Issue.v ~loc { ml_file; expected_mli = mli_path })
 
-let check_file ~is_virtual_dir ~files ~executable_modules ~test_modules ml_file
-    =
+let check_file ~is_virtual_impl_file ~files ~executable_modules ~test_modules
+    ml_file =
   if not (File_kind.is_ml ml_file) then None
   else if should_skip_module ~executable_modules ~test_modules ml_file then None
-  else if is_virtual_impl_file is_virtual_dir ml_file then None
+  else if is_virtual_impl_file ml_file then None
   else missing_mli_issue files ml_file
 
 let check (ctx : Context.project) =
   let files = Context.analyze_set ctx in
   let executable_modules = Context.executable_modules ctx in
   let test_modules = Context.test_modules ctx in
-  let is_virtual_dir = dir_is_virtual_impl_check (Context.index ctx) in
+  let is_virtual_impl_file =
+    virtual_impl_file_check ~root:(Context.project_root ctx) (Context.index ctx)
+  in
   List.filter_map
-    (check_file ~is_virtual_dir ~files ~executable_modules ~test_modules)
+    (check_file ~is_virtual_impl_file ~files ~executable_modules ~test_modules)
     files
 
 let pp ppf { ml_file; expected_mli } =
