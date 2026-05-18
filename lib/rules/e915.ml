@@ -18,7 +18,7 @@
 type finding = Missing_tags | Missing_org | Unknown_topic of string
 type payload = { package : string; opam : string; findings : finding list }
 
-let dir_exists path = try Sys.is_directory path with Sys_error _ -> false
+let dir_exists path = try Fs.is_directory path with Sys_error _ -> false
 
 let check_opam_file ~topics pkg_dir opam_name =
   let path = Filename.concat pkg_dir opam_name in
@@ -45,7 +45,7 @@ let check_opam_file ~topics pkg_dir opam_name =
 
 let list_opam_files pkg_dir =
   try
-    Sys.readdir pkg_dir |> Array.to_list
+    Fs.readdir pkg_dir |> Array.to_list
     |> List.filter (fun f -> Filename.check_suffix f ".opam")
   with Sys_error _ -> []
 
@@ -60,8 +60,8 @@ let list_opam_files pkg_dir =
 
    Either one is enough; absent both, the rule stays silent. *)
 let opted_in root =
-  Sys.file_exists (Filename.concat root "sources.toml")
-  || Sys.file_exists (Filename.concat root "categories.toml")
+  Fs.file_exists (Filename.concat root "sources.toml")
+  || Fs.file_exists (Filename.concat root "categories.toml")
 
 let issue_for_opam ~topics pkg pkg_dir opam =
   match check_opam_file ~topics pkg_dir opam with
@@ -83,7 +83,7 @@ let check (ctx : Context.project) =
       match Categories.load root with [] -> ctx.config.topics | slugs -> slugs
     in
     let try_readdir d =
-      try Sys.readdir d |> Array.to_list with Sys_error _ -> []
+      try Fs.readdir d |> Array.to_list with Sys_error _ -> []
     in
     let skip = [ "_build"; ".git"; "_opam"; "node_modules" ] in
     try_readdir root |> List.concat_map (check_package ~topics skip root)

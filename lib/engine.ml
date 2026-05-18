@@ -53,6 +53,15 @@ let warn_missing_cmts n =
           n
           (if n = 1 then "y" else "ies"))
 
+let log_fs_stats () =
+  let s = Fs.stats () in
+  if
+    s.readdirs + s.is_directory_checks + s.file_exists_checks + s.file_opens > 0
+  then
+    Log.info (fun m ->
+        m "FS stats: readdirs=%d is_directory=%d file_exists=%d file_opens=%d"
+          s.readdirs s.is_directory_checks s.file_exists_checks s.file_opens)
+
 let log_io_stats stats backend =
   let backend_stats = Merlin.stats backend in
   let reads = sorted_ext_counts stats.reads_by_ext in
@@ -263,9 +272,11 @@ let run ~load_file ~filter ~dune_describe ?analyze_set ~index ?profiling
     setup_analysis ~filter ~dune_describe ~analyze_set ~index ~file_view
       project_root
   in
+  Fs.reset_stats ();
   Fun.protect
     ~finally:(fun () ->
       log_io_stats stats backend;
+      log_fs_stats ();
       Merlin.close backend)
     (fun () ->
       let project_issues, project_excluded =

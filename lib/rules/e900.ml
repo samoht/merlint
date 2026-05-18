@@ -18,7 +18,7 @@ let library_uses_wire ctx lib =
 
 let has_c_dir pkg_dir =
   let c = Fpath.to_string (Fpath.add_seg pkg_dir "c") in
-  try Sys.is_directory c with Sys_error _ -> false
+  try Fs.is_directory c with Sys_error _ -> false
 
 let check_package ctx pkg =
   let name = Project_index.Package.name pkg in

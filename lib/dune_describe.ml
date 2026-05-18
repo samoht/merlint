@@ -81,8 +81,8 @@ let excluded_subdirs_of_dune dir =
   let dune_path = Fpath.to_string Fpath.(dir / "dune") in
   if
     not
-      (Sys.file_exists dune_path
-      && not (try Sys.is_directory dune_path with Sys_error _ -> true))
+      (Fs.file_exists dune_path
+      && not (try Fs.is_directory dune_path with Sys_error _ -> true))
   then []
   else
     let content =
@@ -119,18 +119,18 @@ let skippable_subdir ~parent_dir entry =
 let rec files dir =
   let dir_path = dir in
   let entries =
-    try Sys.readdir (Fpath.to_string dir) with Sys_error _ -> [||]
+    try Fs.readdir (Fpath.to_string dir) with Sys_error _ -> [||]
   in
   Array.to_list entries
   |> List.concat_map (fun entry ->
       let path = Fpath.(dir_path / entry) in
       let path_str = Fpath.to_string path in
       if
-        entry = "dune" && Sys.file_exists path_str
-        && not (try Sys.is_directory path_str with Sys_error _ -> true)
+        entry = "dune" && Fs.file_exists path_str
+        && not (try Fs.is_directory path_str with Sys_error _ -> true)
       then [ path ]
       else if
-        (try Sys.is_directory path_str with Sys_error _ -> false)
+        (try Fs.is_directory path_str with Sys_error _ -> false)
         && not (skippable_subdir ~parent_dir:dir entry)
       then files path
       else [])
@@ -325,7 +325,7 @@ let data_or_nested_stanza_dir dir =
   else if name.[0] = '.' || name.[0] = '_' then true
   else
     let nested_dune = Fpath.(dir / "dune") |> Fpath.normalize in
-    Sys.file_exists (Fpath.to_string nested_dune)
+    Fs.file_exists (Fpath.to_string nested_dune)
 
 let scan_directory_for_ml_files ?(recurse = false) item_type dir =
   Log.debug (fun m ->
@@ -333,7 +333,7 @@ let scan_directory_for_ml_files ?(recurse = false) item_type dir =
         item_type Fpath.pp dir recurse);
   let files = ref [] in
   let rec walk dir =
-    match Sys.readdir (Fpath.to_string dir) with
+    match Fs.readdir (Fpath.to_string dir) with
     | exception Sys_error _ -> ()
     | entries ->
         Array.iter
@@ -345,7 +345,7 @@ let scan_directory_for_ml_files ?(recurse = false) item_type dir =
               files := child :: !files)
             else if
               recurse
-              && (try Sys.is_directory (Fpath.to_string child)
+              && (try Fs.is_directory (Fpath.to_string child)
                   with Sys_error _ -> false)
               && not (data_or_nested_stanza_dir child)
             then walk child)
@@ -361,7 +361,7 @@ let files_of_modules dir modules =
     (fun m ->
       let ml = Fpath.(dir / (m ^ ".ml")) |> Fpath.normalize in
       let mli = Fpath.(dir / (m ^ ".mli")) |> Fpath.normalize in
-      List.filter (fun p -> Sys.file_exists (Fpath.to_string p)) [ ml; mli ])
+      List.filter (fun p -> Fs.file_exists (Fpath.to_string p)) [ ml; mli ])
     modules
 
 let item_files = function

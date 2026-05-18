@@ -32,7 +32,7 @@ let content ctx path =
     [(select target from (cond -> branch.ml) ...)]. Skip them here so they don't
     trip the uncovered check. *)
 let ml_modules_in_dir dir =
-  let entries = try Sys.readdir dir |> Array.to_list with Sys_error _ -> [] in
+  let entries = try Fs.readdir dir |> Array.to_list with Sys_error _ -> [] in
   List.filter_map
     (fun name ->
       if Filename.check_suffix name ".ml" then

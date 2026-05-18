@@ -33,8 +33,8 @@ type payload = { package : string; kind : kind }
 
 let min_major = 3
 let min_minor = 21
-let try_readdir d = try Sys.readdir d |> Array.to_list with Sys_error _ -> []
-let is_dir p = try Sys.is_directory p with Sys_error _ -> false
+let try_readdir d = try Fs.readdir d |> Array.to_list with Sys_error _ -> []
+let is_dir p = try Fs.is_directory p with Sys_error _ -> false
 
 let skip_entry name =
   name = "_build" || name = "_opam" || name = ".git"
@@ -59,7 +59,7 @@ let version_too_old v =
 
 let dune_issue ctx name dune_path =
   let loc = Fpath.v dune_path |> Loc.current_dir_relative |> Loc.in_file in
-  if not (Sys.file_exists dune_path) then
+  if not (Fs.file_exists dune_path) then
     [ Issue.v ~loc { package = name; kind = Missing_dune } ]
   else
     match content ctx dune_path with

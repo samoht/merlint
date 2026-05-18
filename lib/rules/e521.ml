@@ -22,7 +22,7 @@ type payload = { package : string; path : string }
 let check (ctx : Context.project) =
   let root = ctx.project_root in
   let try_readdir d =
-    try Sys.readdir d |> Array.to_list with Sys_error _ -> []
+    try Fs.readdir d |> Array.to_list with Sys_error _ -> []
   in
   let issues = ref [] in
   let packages = try_readdir root in
@@ -31,10 +31,10 @@ let check (ctx : Context.project) =
       let test_dir = Filename.concat (Filename.concat root pkg) "test" in
       let is_cram name full =
         Filename.check_suffix name ".t"
-        && ((not (Sys.is_directory full && Sys.file_exists full))
-           || Sys.file_exists (Filename.concat full "run.t"))
+        && ((not (Fs.is_directory full && Fs.file_exists full))
+           || Fs.file_exists (Filename.concat full "run.t"))
       in
-      if pkg <> "_build" && pkg <> "_opam" && Sys.file_exists test_dir then
+      if pkg <> "_build" && pkg <> "_opam" && Fs.file_exists test_dir then
         let entries = try_readdir test_dir in
         List.iter
           (fun name ->

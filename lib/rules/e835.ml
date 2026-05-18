@@ -10,13 +10,13 @@ let script_has_break_system_packages scripts file =
 
 let first_bad_script scripts =
   let entries =
-    try Sys.readdir scripts |> Array.to_list with Sys_error _ -> []
+    try Fs.readdir scripts |> Array.to_list with Sys_error _ -> []
   in
   List.find_opt (script_has_break_system_packages scripts) entries
 
 let issue_for_oracle (d : Interop.oracle_dir) =
   let scripts = Filename.concat d.path "scripts" in
-  if not (Sys.file_exists scripts) then None
+  if not (Fs.file_exists scripts) then None
   else
     match first_bad_script scripts with
     | None -> None

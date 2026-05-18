@@ -9,20 +9,20 @@ let check (ctx : Context.project) =
       let scripts = Filename.concat d.path "scripts" in
       let has_rust =
         try
-          let files = Sys.readdir scripts |> Array.to_list in
+          let files = Fs.readdir scripts |> Array.to_list in
           List.exists (fun f -> Filename.check_suffix f ".rs") files
           ||
           let src = Filename.concat scripts "src" in
-          Sys.file_exists src && Sys.is_directory src
+          Fs.file_exists src && Fs.is_directory src
           &&
             try
-              Sys.readdir src |> Array.to_list
+              Fs.readdir src |> Array.to_list
               |> List.exists (fun f -> Filename.check_suffix f ".rs")
             with Sys_error _ -> false
         with Sys_error _ -> false
       in
       let cargo = Filename.concat scripts "Cargo.toml" in
-      let has_cargo = Sys.file_exists cargo in
+      let has_cargo = Fs.file_exists cargo in
       if has_rust && not has_cargo then
         Some (Issue.v ~loc:(Location.in_file cargo) { dir = d.path })
       else None)

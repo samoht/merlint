@@ -1,5 +1,10 @@
 (* Bad examples - using fail (Fmt.str ...) instead of failf *)
 
+module Alcobar = struct
+  let fail msg = Alcotest.fail msg
+  let failf fmt = Fmt.kstr fail fmt
+end
+
 let test_parse () =
   let _input = "invalid" in
   let _ = Alcotest.fail (Fmt.str "Parse error: %s" "error") in
@@ -29,4 +34,8 @@ let test_multi_line () =
     Alcotest.fail
       (Fmt.str "Multi-line %s call" "fail")
   in
+  ()
+
+let test_kstr () =
+  let _ = Fmt.kstr Alcobar.fail "Formatted %s failure" "test" in
   ()

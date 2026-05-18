@@ -26,7 +26,7 @@ let check (ctx : Context.project) =
         let traces = Filename.concat d.path "traces" in
         let has_csv =
           try
-            Sys.readdir traces |> Array.to_list
+            Fs.readdir traces |> Array.to_list
             |> List.exists (fun f -> Filename.check_suffix f ".csv")
           with Sys_error _ -> false
         in

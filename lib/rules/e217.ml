@@ -69,7 +69,7 @@ let suggestion_for_construct path =
   | [] -> "Fmt.kstr (fun s -> _ s) \"...\""
 
 let is_unary_fmt_str_arg args =
-  match Query.Expr.positional_args args with
+  match args with
   | [ arg ] -> Query.Expr.calls arg [ "Fmt"; "str" ]
   | _ -> false
 
@@ -94,7 +94,8 @@ let check (ctx : Context.file) =
           :: !issues
       in
       match expr.exp_desc with
-      | Texp_apply (fn, args) -> (
+      | Texp_apply _ -> (
+          let fn, args = Query.Expr.application expr in
           match Query.Expr.callee_parts fn with
           | Some path
             when (not (handled_by_specialized_rule path))
@@ -102,15 +103,15 @@ let check (ctx : Context.file) =
                  && not (is_operator path) -> (
               let rewriteable =
                 if is_explicit_output_helper path then
-                  match Query.Expr.last_positional_arg args with
-                  | Some arg -> Query.Expr.calls arg [ "Fmt"; "str" ]
-                  | None -> false
+                  match List.rev args with
+                  | arg :: _ -> Query.Expr.calls arg [ "Fmt"; "str" ]
+                  | [] -> false
                 else is_unary_fmt_str_arg args
               in
               if rewriteable then flag (suggestion_for_apply path))
           | _ -> ())
       | Texp_construct (lid, _, [ arg ])
-        when Query.Expr.calls arg [ "Fmt"; "str" ] ->
+        when (not lid.loc.loc_ghost) && Query.Expr.calls arg [ "Fmt"; "str" ] ->
           flag (suggestion_for_construct (Query.Longident.parts lid.txt))
       | _ -> ());
   List.rev !issues

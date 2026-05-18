@@ -9,12 +9,12 @@ let check (ctx : Context.project) =
       let scripts = Filename.concat d.path "scripts" in
       let has_python =
         try
-          Sys.readdir scripts |> Array.to_list
+          Fs.readdir scripts |> Array.to_list
           |> List.exists (fun f -> Filename.check_suffix f ".py")
         with Sys_error _ -> false
       in
       let has_requirements =
-        Sys.file_exists (Filename.concat scripts "requirements.txt")
+        Fs.file_exists (Filename.concat scripts "requirements.txt")
       in
       if has_python && not has_requirements then
         let loc =
