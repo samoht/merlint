@@ -16,6 +16,7 @@ type value = {
   loc : Ocaml_parsing.Location.t;
   is_function : bool;
   complexity : int;
+  complexity_breakdown : complexity;
   nesting : int;
   match_cases : int;
   trailing_record_fields : int;
@@ -212,6 +213,7 @@ and analyze_named_body expr =
   | _ -> analyze_expr expr
 
 let complexity expr = 1 + (analyze_named_body expr).total
+let complexity_breakdown expr = analyze_named_body expr
 
 let rec count_match_cases_expr expr =
   match expr.T.exp_desc with
@@ -318,6 +320,8 @@ let rec is_pure_data_expr expr =
            fields
   | Texp_tuple fields ->
       List.for_all (fun (_, expr) -> is_pure_data_expr expr) fields
+  | Texp_variant (_, arg) ->
+      Option.fold ~none:true ~some:is_pure_data_expr arg
   | Texp_sequence (lhs, rhs) -> is_pure_data_expr lhs && is_pure_data_expr rhs
   | Texp_field (expr, _, _) -> is_pure_data_expr expr
   | Texp_constant _ | Texp_ident _ -> true
@@ -563,6 +567,7 @@ let of_binding (vb : T.value_binding) =
         loc = vb.vb_loc;
         is_function = is_function_expr vb.vb_expr;
         complexity = complexity vb.vb_expr;
+        complexity_breakdown = complexity_breakdown vb.vb_expr;
         nesting = nesting vb.vb_expr;
         match_cases = count_match_cases vb.vb_expr;
         trailing_record_fields = trailing_record_fields vb.vb_expr;

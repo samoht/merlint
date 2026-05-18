@@ -15,6 +15,7 @@ type value = {
   loc : Ocaml_parsing.Location.t;
   is_function : bool;
   complexity : int;
+  complexity_breakdown : complexity;
   nesting : int;
   match_cases : int;
   trailing_record_fields : int;
