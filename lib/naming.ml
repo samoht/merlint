@@ -17,6 +17,25 @@ let trailing_upper_count name =
   count (String.length name - 1) 0
 
 (* Helper to detect word boundaries and split into words *)
+let entering_trailing_acronym ~len ~trailing i =
+  i >= len - trailing && trailing <= 2
+
+let leaving_acronym ~len ~trailing i =
+  i <> 1 && i < len - trailing
+
+let at_word_boundary ~len ~trailing i c prev next =
+  match (prev, next) with
+  | Some p, _ when is_lower p && is_upper c ->
+      (* Don't split when entering a short trailing acronym (<= 2 chars).
+         These form compound terms in English: MacOS, WebGL, OpenAI.
+         Longer acronyms (XML, API, SDK) are separate words. *)
+      not (entering_trailing_acronym ~len ~trailing i)
+  | Some p, Some n when is_upper p && is_upper c && is_lower n ->
+      (* Preserve two-letter uppercase prefixes like OCaml and trailing
+         acronyms; otherwise split: XMLParser -> XML, Parser. *)
+      leaving_acronym ~len ~trailing i
+  | _ -> false
+
 let split_words name =
   let len = String.length name in
   let words = ref [] in
@@ -28,22 +47,8 @@ let split_words name =
     let prev = if i > 0 then Some name.[i - 1] else None in
     let next = if i < len - 1 then Some name.[i + 1] else None in
 
-    (* Check for word boundary *)
     let at_boundary =
-      match (prev, next) with
-      | Some p, _ when is_lower p && is_upper c ->
-          (* Don't split when entering a short trailing acronym (≤ 2 chars).
-             These form compound terms in English: MacOS, WebGL, OpenAI.
-             Longer acronyms (XML, API, SDK) are separate words. *)
-          not (i >= len - trailing && trailing <= 2)
-      | Some p, Some n when is_upper p && is_upper c && is_lower n ->
-          (* Don't split if:
-             1. We're at position 1 (preserves 2-letter uppercase prefix like OCaml)
-             2. We're in the trailing uppercase section *)
-          if i = 1 then false
-          else if i >= len - trailing then false
-          else true (* Otherwise split: XMLParser -> XML, Parser *)
-      | _ -> false
+      at_word_boundary ~len ~trailing i c prev next
     in
 
     if at_boundary && Buffer.length current_word > 0 then (

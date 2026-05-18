@@ -177,11 +177,18 @@ and analyze_case : type k. k T.case -> complexity =
   in
   merge guard (analyze_expr case.c_rhs)
 
-and analyze_function_cases cases =
+and analyze_let_binding (vb : T.value_binding) =
+  if is_function_expr vb.vb_expr then empty else analyze_expr vb.vb_expr
+
+and analyze_record_field = function
+  | _, T.Kept _ -> empty
+  | _, T.Overridden (_, expr) -> analyze_expr expr
+
+let analyze_function_cases cases =
   let match_decision = if cases = [] then empty else decision ~matches:1 1 in
   merge match_decision (sum (List.map analyze_case cases))
 
-and analyze_function_params params =
+let analyze_function_params params =
   sum
     (List.map
        (fun (param : T.function_param) ->
@@ -190,7 +197,7 @@ and analyze_function_params params =
          | Tparam_pat _ -> empty)
        params)
 
-and analyze_function_body params body =
+let rec analyze_function_body params body =
   let params = analyze_function_params params in
   let body =
     match body with
@@ -203,13 +210,6 @@ and analyze_named_body expr =
   match expr.T.exp_desc with
   | Texp_function (params, body) -> analyze_function_body params body
   | _ -> analyze_expr expr
-
-and analyze_let_binding (vb : T.value_binding) =
-  if is_function_expr vb.vb_expr then empty else analyze_expr vb.vb_expr
-
-and analyze_record_field = function
-  | _, T.Kept _ -> empty
-  | _, T.Overridden (_, expr) -> analyze_expr expr
 
 let complexity expr = 1 + (analyze_named_body expr).total
 
@@ -307,11 +307,7 @@ let rec trailing_record_fields expr =
 
 let rec is_pure_data_expr expr =
   match expr.T.exp_desc with
-  | Texp_construct (lid, _, args) -> (
-      match Ocaml_parsing.Longident.flatten lid.txt with
-      | [ "[]" ] -> true
-      | [ "::" ] -> List.for_all is_pure_data_expr args
-      | _ -> false)
+  | Texp_construct (_, _, args) -> List.for_all is_pure_data_expr args
   | Texp_array (_, exprs) -> List.for_all is_pure_data_expr exprs
   | Texp_record { fields; extended_expression = None; _ } ->
       Array.length fields >= 3
@@ -323,8 +319,24 @@ let rec is_pure_data_expr expr =
   | Texp_tuple fields ->
       List.for_all (fun (_, expr) -> is_pure_data_expr expr) fields
   | Texp_sequence (lhs, rhs) -> is_pure_data_expr lhs && is_pure_data_expr rhs
-  | Texp_constant _ -> true
+  | Texp_field (expr, _, _) -> is_pure_data_expr expr
+  | Texp_constant _ | Texp_ident _ -> true
   | _ -> false
+
+let record_field_exprs fields =
+  Array.to_list fields
+  |> List.filter_map (function
+    | _, T.Kept _ -> None
+    | _, T.Overridden (_, expr) -> Some expr)
+
+let nested_record_field expr =
+  match expr.T.exp_desc with
+  | Texp_function _ | Texp_record _ | Texp_ifthenelse _ | Texp_match _
+  | Texp_try _ | Texp_while _ | Texp_for _ ->
+      true
+  | _ -> false
+
+let max_depth current_depth depths = List.fold_left max current_depth depths
 
 let rec depth_expr ~in_closure current_depth expr =
   match expr.T.exp_desc with
@@ -369,80 +381,13 @@ let rec depth_expr ~in_closure current_depth expr =
           depth_expr ~in_closure new_depth body;
         ]
   | Texp_function (params, body) ->
-      let default_depths =
-        List.map
-          (fun (param : T.function_param) ->
-            match param.fp_kind with
-            | Tparam_optional_default (_, expr) ->
-                depth_expr ~in_closure current_depth expr
-            | Tparam_pat _ -> current_depth)
-          params
-      in
-      let new_depth =
-        if in_closure || current_depth > 0 then current_depth + 1
-        else current_depth
-      in
-      let body_depth =
-        match body with
-        | Tfunction_body body -> depth_expr ~in_closure:true new_depth body
-        | Tfunction_cases { cases; _ } ->
-            let match_depth = new_depth + 1 in
-            List.fold_left max match_depth
-              (List.map (depth_case ~in_closure:true match_depth) cases)
-      in
-      List.fold_left max body_depth default_depths
-  | Texp_let (_, bindings, body) ->
-      let binding_depth =
-        List.fold_left
-          (fun acc (vb : T.value_binding) ->
-            let depth =
-              if is_function_expr vb.vb_expr then current_depth
-              else depth_expr ~in_closure current_depth vb.vb_expr
-            in
-            max acc depth)
-          current_depth bindings
-      in
-      max binding_depth (depth_expr ~in_closure current_depth body)
-  | Texp_sequence (lhs, rhs) ->
-      max
-        (depth_expr ~in_closure current_depth lhs)
-        (depth_expr ~in_closure current_depth rhs)
+      depth_function ~in_closure current_depth params body
+  | Texp_let (_, bindings, body) -> depth_let ~in_closure current_depth bindings body
+  | Texp_sequence (lhs, rhs) -> depth_pair ~in_closure current_depth lhs rhs
   | Texp_apply (fn, args) ->
-      List.fold_left max
-        (depth_expr ~in_closure current_depth fn)
-        (List.map
-           (function
-             | _, T.Arg expr -> depth_expr ~in_closure current_depth expr
-             | _, T.Omitted () -> current_depth)
-           args)
+      depth_apply ~in_closure current_depth fn args
   | Texp_record { fields; extended_expression; _ } ->
-      let field_exprs =
-        Array.to_list fields
-        |> List.filter_map (function
-          | _, T.Kept _ -> None
-          | _, T.Overridden (_, expr) -> Some expr)
-      in
-      let nested_field expr =
-        match expr.T.exp_desc with
-        | Texp_function _ | Texp_record _ | Texp_ifthenelse _ | Texp_match _
-        | Texp_try _ | Texp_while _ | Texp_for _ ->
-            true
-        | _ -> false
-      in
-      let field_depth =
-        if List.exists nested_field field_exprs then current_depth + 1
-        else current_depth
-      in
-      let fields =
-        field_exprs
-        |> List.map (fun expr -> depth_expr ~in_closure field_depth expr)
-      in
-      let fields =
-        match extended_expression with
-        | Some expr -> depth_expr ~in_closure field_depth expr :: fields
-        | None -> fields
-      in
-      List.fold_left max field_depth fields
+      depth_record ~in_closure current_depth fields extended_expression
   | Texp_tuple fields ->
       List.fold_left max current_depth
         (List.map
@@ -461,24 +406,13 @@ let rec depth_expr ~in_closure current_depth expr =
   | Texp_pack { mod_desc = Tmod_unpack (expr, _); _ } ->
       depth_expr ~in_closure current_depth expr
   | Texp_setfield (record, _, _, value) ->
-      max
-        (depth_expr ~in_closure current_depth record)
-        (depth_expr ~in_closure current_depth value)
+      depth_pair ~in_closure current_depth record value
   | Texp_letmodule (_, _, _, module_expr, body) ->
       max
         (depth_module_expr ~in_closure current_depth module_expr)
         (depth_expr ~in_closure current_depth body)
   | Texp_letop { let_; ands; body; _ } ->
-      let binding_depths =
-        depth_expr ~in_closure current_depth let_.bop_exp
-        :: List.map
-             (fun (op : T.binding_op) ->
-               depth_expr ~in_closure current_depth op.bop_exp)
-             ands
-      in
-      List.fold_left max
-        (depth_case ~in_closure current_depth body)
-        binding_depths
+      depth_letop ~in_closure current_depth let_ ands body
   | Texp_variant (_, arg) -> (
       match arg with
       | Some expr -> depth_expr ~in_closure current_depth expr
@@ -501,6 +435,83 @@ and depth_case : type k. in_closure:bool -> int -> k T.case -> int =
       case.c_guard
   in
   max guard (depth_expr ~in_closure current_depth case.c_rhs)
+
+and depth_pair ~in_closure current_depth lhs rhs =
+  max
+    (depth_expr ~in_closure current_depth lhs)
+    (depth_expr ~in_closure current_depth rhs)
+
+and depth_apply ~in_closure current_depth fn args =
+  let arg_depths =
+    List.map
+      (function
+        | _, T.Arg expr -> depth_expr ~in_closure current_depth expr
+        | _, T.Omitted () -> current_depth)
+      args
+  in
+  max_depth (depth_expr ~in_closure current_depth fn) arg_depths
+
+and depth_letop ~in_closure current_depth let_ ands body =
+  let binding_depths =
+    depth_expr ~in_closure current_depth let_.T.bop_exp
+    :: List.map
+         (fun (op : T.binding_op) ->
+           depth_expr ~in_closure current_depth op.bop_exp)
+         ands
+  in
+  max_depth (depth_case ~in_closure current_depth body) binding_depths
+
+and depth_function ~in_closure current_depth params body =
+  let default_depths =
+    List.map
+      (fun (param : T.function_param) ->
+        match param.fp_kind with
+        | Tparam_optional_default (_, expr) ->
+            depth_expr ~in_closure current_depth expr
+        | Tparam_pat _ -> current_depth)
+      params
+  in
+  let new_depth =
+    if in_closure || current_depth > 0 then current_depth + 1 else current_depth
+  in
+  let body_depth =
+    match body with
+    | Tfunction_body body -> depth_expr ~in_closure:true new_depth body
+    | Tfunction_cases { cases; _ } ->
+        let match_depth = new_depth + 1 in
+        List.fold_left max match_depth
+          (List.map (depth_case ~in_closure:true match_depth) cases)
+  in
+  List.fold_left max body_depth default_depths
+
+and depth_let ~in_closure current_depth bindings body =
+  let binding_depth =
+    List.fold_left
+      (fun acc (vb : T.value_binding) ->
+        let depth =
+          if is_function_expr vb.vb_expr then current_depth
+          else depth_expr ~in_closure current_depth vb.vb_expr
+        in
+        max acc depth)
+      current_depth bindings
+  in
+  max binding_depth (depth_expr ~in_closure current_depth body)
+
+and depth_record ~in_closure current_depth fields extended_expression =
+  let field_exprs = record_field_exprs fields in
+  let field_depth =
+    if List.exists nested_record_field field_exprs then current_depth + 1
+    else current_depth
+  in
+  let depths =
+    List.map (fun expr -> depth_expr ~in_closure field_depth expr) field_exprs
+  in
+  let depths =
+    match extended_expression with
+    | Some expr -> depth_expr ~in_closure field_depth expr :: depths
+    | None -> depths
+  in
+  List.fold_left max field_depth depths
 
 and depth_module_expr ~in_closure current_depth module_expr =
   match module_expr.T.mod_desc with

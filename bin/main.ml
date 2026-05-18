@@ -210,16 +210,16 @@ let print_summary all_issues enabled_rule_count =
       sample
   end
 
-let run_engine ~load_file ?profiling rule_filter dune_describe files_to_analyze
+let run_engine ~load_file ?profiling rule_filter dune_describe analyze_set
     index project_root =
   match rule_filter with
   | Some filter ->
-      Merlint.Engine.run ~load_file ~filter ~dune_describe ?files_to_analyze
+      Merlint.Engine.run ~load_file ~filter ~dune_describe ?analyze_set
         ~index ?profiling project_root
   | None -> (
       match Merlint.Filter.parse "all" with
       | Ok filter ->
-          Merlint.Engine.run ~load_file ~filter ~dune_describe ?files_to_analyze
+          Merlint.Engine.run ~load_file ~filter ~dune_describe ?analyze_set
             ~index ?profiling project_root
       | Error _ -> { Merlint.Engine.issues = []; excluded = [] })
 
@@ -241,20 +241,20 @@ let print_exclusion_stats all_excluded =
     Fmt.pr "@]@."
   end
 
-let run_analysis ~load_file project_root dune_describe files_to_analyze index
+let run_analysis ~load_file project_root dune_describe analyze_set index
     rule_filter show_profile =
   let profiling_state =
     if show_profile then Some (Merlint.Profiling.v ()) else None
   in
   let files_count =
-    match files_to_analyze with
+    match analyze_set with
     | Some files -> List.length files
     | None -> List.length (Merlint.Dune_describe.project_files dune_describe)
   in
   Log.info (fun m -> m "Starting visual analysis on %d files" files_count);
   let { Merlint.Engine.issues = all_issues; excluded = all_excluded } =
     run_engine ~load_file ?profiling:profiling_state rule_filter dune_describe
-      files_to_analyze index project_root
+      analyze_set index project_root
   in
   if files_count = 0 then Fmt.pr "Running merlint analysis...@.@."
   else Fmt.pr "Running merlint analysis...@.@.Analyzing %d files@.@." files_count;
@@ -320,7 +320,7 @@ let process_path ~describes ~explicit_files path =
     on the command line. File-scoped rules iterate the explicit list when one is
     given, the whole project otherwise.
 
-    Returns [(project_describe, files_to_analyze)] where [files_to_analyze] is
+    Returns [(project_describe, analyze_set)] where [analyze_set] is
     [Some explicit] in single-file mode and [None] in directory / no-arg mode
     (engine then defaults to [Dune_describe.project_files project_describe]). *)
 let build_dune_describe ~project_root files =
@@ -333,7 +333,7 @@ let build_dune_describe ~project_root files =
       if !describes = [] && !explicit_files <> [] then
         (* Single-file mode: synthetic carries only the explicit files; the
            project rules need the full library/test view, so we run
-           [Dune_describe.describe project_root] and narrow [files_to_analyze] to the
+           [Dune_describe.describe project_root] and narrow [analyze_set] to the
            explicit set. *)
         let project = Merlint.Dune_describe.describe (Fpath.v project_root) in
         let explicit = List.rev_map Fpath.v !explicit_files in
@@ -363,7 +363,7 @@ let analyze_files mgr fs ?(exclude_patterns = []) ?rule_filter
 
   (* Build dune describes from directories/files *)
   Log.info (fun m -> m "Scanning project structure...");
-  let dune_describe, files_to_analyze =
+  let dune_describe, analyze_set =
     build_dune_describe ~project_root files
   in
 
@@ -383,7 +383,7 @@ let analyze_files mgr fs ?(exclude_patterns = []) ?rule_filter
     match files with [] -> None | xs -> Some (List.map resolve_root xs)
   in
   let index = lazy (Project_index.build ?roots:index_roots ~fs ~monorepo ()) in
-  run_analysis ~load_file project_root filtered_describe files_to_analyze index
+  run_analysis ~load_file project_root filtered_describe analyze_set index
     rule_filter show_profile
 
 let files =

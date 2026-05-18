@@ -55,3 +55,25 @@ Build good fixture project:
   
   Summary: ✓ 0 total issues (applied 1 rule)
   ✓ All checks passed!
+
+Test no-Wire edge case - plain Codec.v is not Wire.Codec.v and needs no c/ directory:
+Build nowire fixture project:
+  $ (cd nowire && dune build @check)
+
+  $ merlint -B -r E900 nowire/
+  Dune root: $TESTCASE_ROOT/nowire/
+  Running merlint analysis...
+  
+  Analyzing 2 files
+  
+  ✓ Code Quality (0 total issues)
+  ✓ Code Style (0 total issues)
+  ✓ Naming Conventions (0 total issues)
+  ✓ Documentation (0 total issues)
+  ✓ Project Structure (0 total issues)
+  ✓ Test Quality (0 total issues)
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
+  
+  Summary: ✓ 0 total issues (applied 1 rule)
+  ✓ All checks passed!

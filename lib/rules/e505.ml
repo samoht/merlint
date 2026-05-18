@@ -57,7 +57,7 @@ let check_file ctx ~files ~executable_modules ~test_modules ml_file =
   else missing_mli_issue files ml_file
 
 let check (ctx : Context.project) =
-  let files = Context.files_to_analyze ctx in
+  let files = Context.analyze_set ctx in
   let executable_modules = Context.executable_modules ctx in
   let test_modules = Context.test_modules ctx in
   List.filter_map

@@ -21,7 +21,7 @@ let is_in_private_library dune_describe filename =
     (Dune_describe.libraries dune_describe)
 
 let process_ocaml_files ctx f =
-  Context.files_to_analyze ctx
+  Context.analyze_set ctx
   |> List.concat_map (fun filename ->
       if File_kind.is_ml_or_mli filename then
         try

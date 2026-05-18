@@ -28,6 +28,8 @@ let () =
       Test_context.suite;
       Test_data.suite;
       Test_file_view.suite;
+      Test_function_metrics.suite;
+      Test_loc.suite;
       Test_cl_lock.suite;
       Test_example.suite;
       Test_file.suite;

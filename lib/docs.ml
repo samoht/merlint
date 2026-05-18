@@ -159,34 +159,14 @@ let check_function_doc ~name ~signature ~doc =
 let check_type_doc ~doc =
   (* Type docs should be brief and end with period *)
   let issues = ref [] in
-
-  (* Check ends with period (but not if it ends with a code block ]} or if it's a list ending with ) *)
-  let trimmed = String.trim doc in
-  let has_list_markers =
-    Re.execp (Re.compile (Re.str "- ")) doc
-    || Re.execp (Re.compile (Re.str "* ")) doc
-    || Re.execp (Re.compile (Re.str "+ ")) doc
-  in
-  if
-    String.length trimmed > 0
-    && (not (String.ends_with ~suffix:"." trimmed))
-    && (not (String.ends_with ~suffix:"]}" trimmed))
-    && not (has_list_markers && String.ends_with ~suffix:")" trimmed)
-  then issues := Missing_period :: !issues;
-
-  (* Check for redundant phrases *)
+  check_ends_with_period ~doc issues;
   let lower = String.lowercase_ascii doc in
   if String.starts_with ~prefix:"this type" lower then
     issues := Redundant_phrase "This type" :: !issues;
 
   !issues
 
-let check_value_doc ~name ~doc =
-  (* If doc uses [x] format, verify x matches the value name.
-     Otherwise, accept any doc format. *)
-  let issues = ref [] in
-
-  (* Extract the name used in [name] format if present *)
+let check_value_bracket ~name ~doc issues =
   let bracket_pattern =
     Re.compile
       (Re.seq
@@ -196,30 +176,18 @@ let check_value_doc ~name ~doc =
            Re.str "]";
          ])
   in
-  (match Re.exec_opt bracket_pattern doc with
+  match Re.exec_opt bracket_pattern doc with
   | Some groups ->
       let doc_name = Re.Group.get groups 1 in
-      (* If using bracket format, the name should match *)
       if doc_name <> name then issues := Bad_value_format :: !issues
-  | None -> ());
+  | None -> ()
 
-  (* No bracket format - that's fine, accept as valid *)
-
-  (* Check ends with period (but not if it ends with a code block ]} or if it's a list ending with ) *)
-  let trimmed = String.trim doc in
-  let has_list_markers =
-    Re.execp (Re.compile (Re.str "- ")) doc
-    || Re.execp (Re.compile (Re.str "* ")) doc
-    || Re.execp (Re.compile (Re.str "+ ")) doc
-  in
-  if
-    String.length trimmed > 0
-    && (not (String.ends_with ~suffix:"." trimmed))
-    && (not (String.ends_with ~suffix:"]}" trimmed))
-    && not (has_list_markers && String.ends_with ~suffix:")" trimmed)
-  then issues := Missing_period :: !issues;
-
-  (* Check for redundant phrases *)
+let check_value_doc ~name ~doc =
+  (* If doc uses [x] format, verify x matches the value name.
+     Otherwise, accept any doc format. *)
+  let issues = ref [] in
+  check_value_bracket ~name ~doc issues;
+  check_ends_with_period ~doc issues;
   let lower = String.lowercase_ascii doc in
   if
     String.starts_with ~prefix:"this value" lower
@@ -376,60 +344,59 @@ let process_value_declaration (vd : Parsetree.value_description)
 
     { value_name; signature; doc; doc_line; val_line }
 
+let doc_payload_string (payload : Parsetree.payload) =
+  match payload with
+  | PStr
+      [
+        {
+          pstr_desc =
+            Pstr_eval
+              ( {
+                  pexp_desc =
+                    Pexp_constant
+                      { pconst_desc = Pconst_string (doc, _, _); _ };
+                  _;
+                },
+                _ );
+          _;
+        };
+      ] ->
+      Some doc
+  | _ -> None
+
+let remember_floating_doc (attr : Parsetree.attribute) last_floating_doc =
+  match doc_payload_string attr.attr_payload with
+  | Some doc ->
+      let doc_line, _ =
+        extract_location_info attr.attr_loc.loc_start attr.attr_loc.loc_end
+      in
+      last_floating_doc := Some (doc, doc_line)
+  | None -> ()
+
+let collect_signature_doc_item ~regular_comments ~last_floating_doc doc_comments
+    (sig_item : Parsetree.signature_item) =
+  match sig_item.psig_desc with
+  | Psig_attribute attr when attr.attr_name.txt = "ocaml.doc" ->
+      remember_floating_doc attr last_floating_doc
+  | Psig_value vd ->
+      let comment =
+        process_value_declaration vd ~regular_comments ~last_floating_doc
+      in
+      doc_comments := comment :: !doc_comments
+  | _ -> last_floating_doc := None
+
 (** Extract documentation comments using compiler-libs *)
 let extract_doc_comments content =
   try
-    (* Parse as a signature (interface file) *)
     let lexbuf = Lexing.from_string content in
     let signature = Parse.interface lexbuf in
-
-    (* We need to also check for regular comments in the original content
-       since the parser doesn't preserve them in the AST *)
     let lines = String.split_on_char '\n' content in
     let regular_comments = regular_comments lines in
-
-    (* Extract doc comments from signature items *)
     let doc_comments = ref [] in
     let last_floating_doc = ref None in
-
     List.iter
-      (fun (sig_item : Parsetree.signature_item) ->
-        match sig_item.psig_desc with
-        | Psig_attribute attr when attr.attr_name.txt = "ocaml.doc" -> (
-            (* Floating doc comment *)
-            match attr.attr_payload with
-            | PStr
-                [
-                  {
-                    pstr_desc =
-                      Pstr_eval
-                        ( {
-                            pexp_desc =
-                              Pexp_constant
-                                { pconst_desc = Pconst_string (doc, _, _); _ };
-                            _;
-                          },
-                          _ );
-                    _;
-                  };
-                ] ->
-                let doc_line, _ =
-                  extract_location_info attr.attr_loc.loc_start
-                    attr.attr_loc.loc_end
-                in
-                last_floating_doc := Some (doc, doc_line)
-            | _ -> ())
-        | Psig_value vd ->
-            let comment =
-              process_value_declaration vd ~regular_comments ~last_floating_doc
-            in
-            doc_comments := comment :: !doc_comments
-        | _ ->
-            (* Any other item clears the floating doc *)
-            last_floating_doc := None)
+      (collect_signature_doc_item ~regular_comments ~last_floating_doc
+         doc_comments)
       signature;
-
     List.rev !doc_comments
-  with Parsing.Parse_error | Failure _ ->
-    (* If parsing fails, return empty list *)
-    []
+  with Parsing.Parse_error | Failure _ -> []

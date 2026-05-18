@@ -3,7 +3,7 @@
 type payload = { suite_name : string }
 
 let check =
-  Empty_suite.check ~prefix:"fuzz" ~mk_payload:(fun suite_name ->
+  Suite.check_empty ~prefix:"fuzz" ~mk_payload:(fun suite_name ->
       { suite_name })
 
 let pp ppf { suite_name } =

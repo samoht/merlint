@@ -11,44 +11,35 @@ type oracle_dir = {
 }
 
 let oracle_dirs project_root =
-  (* Walk <pkg>/test/interop/<tool>/ directories *)
-  let results = ref [] in
   let try_readdir d =
     try Sys.readdir d |> Array.to_list with Sys_error _ -> []
   in
-  let packages = try_readdir project_root in
-  List.iter
-    (fun pkg ->
-      let pkg_dir = Filename.concat project_root pkg in
-      if Sys.is_directory pkg_dir && pkg <> "_build" && pkg <> ".git" then
-        let interop =
-          Filename.concat (Filename.concat pkg_dir "test") "interop"
-        in
-        if Sys.file_exists interop && Sys.is_directory interop then
-          let tools = try_readdir interop in
-          List.iter
-            (fun tool ->
-              let path = Filename.concat interop tool in
-              if Sys.is_directory path then
-                let display_path =
-                  Fpath.v path |> Loc.relative_to_cwd |> Fpath.to_string
-                in
-                results :=
-                  {
-                    path = display_path;
-                    package = pkg;
-                    tool;
-                    has_scripts =
-                      Sys.file_exists (Filename.concat path "scripts");
-                    has_traces = Sys.file_exists (Filename.concat path "traces");
-                    has_test_ml =
-                      Sys.file_exists (Filename.concat path "test.ml");
-                    has_dune = Sys.file_exists (Filename.concat path "dune");
-                  }
-                  :: !results)
-            tools)
-    packages;
-  !results
+  let is_dir path = try Sys.is_directory path with Sys_error _ -> false in
+  let oracle_of_tool pkg interop tool =
+    let path = Filename.concat interop tool in
+    if not (is_dir path) then None
+    else
+      let display_path =
+        Fpath.v path |> Loc.current_dir_relative |> Fpath.to_string
+      in
+      Some
+        {
+          path = display_path;
+          package = pkg;
+          tool;
+          has_scripts = Sys.file_exists (Filename.concat path "scripts");
+          has_traces = Sys.file_exists (Filename.concat path "traces");
+          has_test_ml = Sys.file_exists (Filename.concat path "test.ml");
+          has_dune = Sys.file_exists (Filename.concat path "dune");
+        }
+  in
+  let package_oracles pkg =
+    let pkg_dir = Filename.concat project_root pkg in
+    let interop = Filename.concat (Filename.concat pkg_dir "test") "interop" in
+    if List.mem pkg [ "_build"; ".git" ] || not (is_dir interop) then []
+    else try_readdir interop |> List.filter_map (oracle_of_tool pkg interop)
+  in
+  try_readdir project_root |> List.concat_map package_oracles
 
 let read_file path =
   try

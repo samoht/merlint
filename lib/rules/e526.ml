@@ -60,7 +60,7 @@ let check_package ctx root name =
           | Error _ -> []
           | Ok project ->
               issue_of_setting name
-                (Fpath.v dp_path |> Loc.relative_to_cwd |> Loc.in_file)
+                (Fpath.v dp_path |> Loc.current_dir_relative |> Loc.in_file)
                 (Dune.Project.implicit_transitive_deps project))
 
 let check (ctx : Context.project) =

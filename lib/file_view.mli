@@ -2,8 +2,9 @@
 
     File_view is typedtree-backed. The engine supplies a lazy [.cmt]/[.cmti]
     load, and all rule-facing derived data is memoized from that typedtree. If
-    no typedtree is available, typedtree-derived accessors return [None] or an
-    empty collection rather than parsing source. *)
+    no fresh typedtree is available, typedtree-derived accessors return [None]
+    or an empty collection so the corresponding rule run is skipped for that
+    file rather than falling back to source parsing. *)
 
 exception Analysis_error of string
 (** Raised by the lazy accessors when the underlying source cannot be read (file
@@ -23,9 +24,9 @@ val filename : t -> string
 (** [filename t] is the source file this view describes. *)
 
 val is_resolved : t -> bool
-(** [is_resolved t] is [true] iff the AST dump came back at typedtree level.
-    Rules use this if they want to know whether the resolved accessors below
-    will yield [Some] or [None] for this file. *)
+(** [is_resolved t] is [true] iff a fresh typedtree was loaded from [.cmt] or
+    [.cmti]. Rules use this if they want to know whether typedtree-backed
+    accessors below will run or be skipped for this file. *)
 
 (** {2 Names — qualified identifiers}
 
@@ -80,9 +81,17 @@ module Type_view : sig
   (** [is_constr t ~path] checks whether [t] is exactly constructor [path]. *)
 
   val is_unit : t -> bool
+  (** [is_unit t] checks whether [t] is [unit]. *)
+
   val is_bool : t -> bool
+  (** [is_bool t] checks whether [t] is [bool]. *)
+
   val is_string : t -> bool
+  (** [is_string t] checks whether [t] is [string]. *)
+
   val is_list : t -> elem:(t -> bool) -> bool
+  (** [is_list t ~elem] checks whether [t] is a list whose element type matches
+      [elem]. *)
 
   val returns_option : t -> bool
   (** [returns_option t] is [true] when [t]'s final return position is

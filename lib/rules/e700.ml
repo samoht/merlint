@@ -5,14 +5,14 @@ module Issue_location = Location
 type payload = { filename : string; module_name : string }
 
 let uses_fuzz_module_suites view =
-  Suite_refs.references_suite_with_prefix view ~prefix:"Fuzz_"
+  Suite.references_with_prefix view ~prefix:"Fuzz_"
 
-let defines_own_tests = Suite_refs.calls_test_case
+let defines_own_tests = Suite.calls_test_case
 
 (** Check if fuzz.ml properly delegates to fuzz modules via Fuzz_*.suite instead
     of defining its own tests inline. *)
 let check ctx =
-  let files = Context.files_to_analyze ctx in
+  let files = Context.analyze_set ctx in
   List.concat_map
     (fun filename ->
       let fp = Fpath.v filename in
