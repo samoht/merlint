@@ -620,7 +620,8 @@ let application_args args =
     (function
       | _, Typedtree.Omitted _ -> None
       | _, Typedtree.Arg (expr : Typedtree.expression) ->
-          Some { arg_callee = typed_expr_callee_name expr; arg_loc = expr.exp_loc })
+          Some
+            { arg_callee = typed_expr_callee_name expr; arg_loc = expr.exp_loc })
     args
 
 let push_application calls expr fn args =

@@ -210,12 +210,12 @@ let print_summary all_issues enabled_rule_count =
       sample
   end
 
-let run_engine ~load_file ?profiling rule_filter dune_describe analyze_set
-    index project_root =
+let run_engine ~load_file ?profiling rule_filter dune_describe analyze_set index
+    project_root =
   match rule_filter with
   | Some filter ->
-      Merlint.Engine.run ~load_file ~filter ~dune_describe ?analyze_set
-        ~index ?profiling project_root
+      Merlint.Engine.run ~load_file ~filter ~dune_describe ?analyze_set ~index
+        ?profiling project_root
   | None -> (
       match Merlint.Filter.parse "all" with
       | Ok filter ->
@@ -257,7 +257,8 @@ let run_analysis ~load_file project_root dune_describe analyze_set index
       analyze_set index project_root
   in
   if files_count = 0 then Fmt.pr "Running merlint analysis...@.@."
-  else Fmt.pr "Running merlint analysis...@.@.Analyzing %d files@.@." files_count;
+  else
+    Fmt.pr "Running merlint analysis...@.@.Analyzing %d files@.@." files_count;
   print_exclusion_stats all_excluded;
 
   (* Group issues by category for reporting *)
@@ -363,9 +364,7 @@ let analyze_files mgr fs domain_mgr ?(exclude_patterns = []) ?rule_filter
 
   (* Build dune describes from directories/files *)
   Log.info (fun m -> m "Scanning project structure...");
-  let dune_describe, analyze_set =
-    build_dune_describe ~project_root files
-  in
+  let dune_describe, analyze_set = build_dune_describe ~project_root files in
 
   (* Apply exclusions (including cram directories which are already filtered) *)
   let filtered_describe =
@@ -487,8 +486,7 @@ let main exclude_patterns rules_spec ~show_profile ~show_config ~no_build files
     let fs = Eio.Stdenv.fs env in
     let domain_mgr = Eio.Stdenv.domain_mgr env in
     analyze_files mgr fs domain_mgr ~exclude_patterns ?rule_filter ~show_profile
-      ~no_build
-      files
+      ~no_build files
 
 let analyze_term =
   Term.(

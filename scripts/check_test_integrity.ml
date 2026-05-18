@@ -56,7 +56,6 @@ let re_zero_issues =
        [ Re.str "✓ 0 total issues"; Re.str "Summary: ✓ All checks passed" ])
 
 let re_failing_summary = Re.compile (Re.str "Summary: ✗")
-
 let re_merlint_cmd = Re.compile (Re.seq [ Re.bos; Re.str "  $ merlint" ])
 let re_cram_cmd = Re.compile (Re.seq [ Re.bos; Re.str "  $ " ])
 let re_two_spaces = Re.compile (Re.seq [ Re.bos; Re.str "  " ])
@@ -103,7 +102,6 @@ let check_dune_project_exists ~has_subdirs ~bad_dir ~good_dir ~dune_project_file
     Sys.file_exists dune_project_file
 
 let file_exists path = Sys.file_exists path
-
 let dir_exists path = Sys.file_exists path && Sys.is_directory path
 
 let check_dune_exists ~bad_file ~good_file ~dune_file =
@@ -204,8 +202,7 @@ let forbidden_command_issues line =
   else
     forbidden_command_fragments
     |> List.filter_map (fun (fragment, message) ->
-           if contains_substring ~needle:fragment line then Some message
-           else None)
+        if contains_substring ~needle:fragment line then Some message else None)
 
 (* State for tracking test format checking *)
 type format_check_state = {
@@ -432,7 +429,11 @@ let check_test_directory_structure cram_dir defined_rules test_dirs errors =
 
 let has_line re lines = List.exists (fun line -> Re.execp re line) lines
 
-type output_kind = { has_exit_1 : bool; shows_zero : bool; shows_failure : bool }
+type output_kind = {
+  has_exit_1 : bool;
+  shows_zero : bool;
+  shows_failure : bool;
+}
 
 let test_output_kind lines =
   {
@@ -457,27 +458,36 @@ let add_error errors msg = errors := msg :: !errors
 
 let check_merlint_edge_output cram_dir rule_code errors kind =
   if kind.has_exit_1 && not kind.shows_failure then
-    Fmt.kstr (add_error errors) "Error: %s/%s.t/run.t: merlint edge test exits [1] without a failing \
-          summary" cram_dir rule_code
+    Fmt.kstr (add_error errors)
+      "Error: %s/%s.t/run.t: merlint edge test exits [1] without a failing \
+       summary"
+      cram_dir rule_code
   else if (not kind.has_exit_1) && not kind.shows_zero then
-    Fmt.kstr (add_error errors) "Error: %s/%s.t/run.t: merlint edge test exits successfully without \
-          showing 0 issues" cram_dir rule_code
+    Fmt.kstr (add_error errors)
+      "Error: %s/%s.t/run.t: merlint edge test exits successfully without \
+       showing 0 issues"
+      cram_dir rule_code
 
 let check_bad_output cram_dir rule_code errors kind =
   if not kind.has_exit_1 then
-    Fmt.kstr (add_error errors) "Error: %s/%s.t/run.t: bad.ml test doesn't show exit code [1] - \
-          should find issues" cram_dir rule_code
+    Fmt.kstr (add_error errors)
+      "Error: %s/%s.t/run.t: bad.ml test doesn't show exit code [1] - should \
+       find issues"
+      cram_dir rule_code
 
 let check_good_output cram_dir rule_code errors kind =
   if kind.has_exit_1 && kind.shows_zero then
-    Fmt.kstr (add_error errors) "Error: %s/%s.t/run.t: good.ml test shows exit [1] but claims 0 \
-          issues" cram_dir rule_code
+    Fmt.kstr (add_error errors)
+      "Error: %s/%s.t/run.t: good.ml test shows exit [1] but claims 0 issues"
+      cram_dir rule_code
 
 (* Check a single test output for build errors or incorrect exit behavior *)
 let check_test_output cram_dir rule_code errors (test_name, output_lines) =
   if output_has_build_error output_lines then
-    Fmt.kstr (add_error errors) "Error: %s/%s.t/run.t: %s test shows build errors/warnings - fix the \
-          build (debug with: dune build --root %s/%s.t)" cram_dir rule_code test_name cram_dir rule_code
+    Fmt.kstr (add_error errors)
+      "Error: %s/%s.t/run.t: %s test shows build errors/warnings - fix the \
+       build (debug with: dune build --root %s/%s.t)"
+      cram_dir rule_code test_name cram_dir rule_code
   else
     let kind = test_output_kind output_lines in
     match test_name with

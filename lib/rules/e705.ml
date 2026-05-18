@@ -12,9 +12,7 @@ let check_fuzz_mli_file dune_describe filename view =
     && (not (File.is_in_private_library dune_describe filename))
     && not (File.is_in_examples filename)
   then
-    if
-      Suite.is_compliant_view ~expected:"string * Alcobar.test_case list"
-        view
+    if Suite.is_compliant_view ~expected:"string * Alcobar.test_case list" view
     then []
     else
       [

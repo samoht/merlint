@@ -40,8 +40,8 @@ let issue_for ctx (doc : Project_index.doc_file) =
         Fpath.v path_s |> Loc.current_dir_relative |> Fpath.to_string
       in
       let dune_file =
-        Fpath.(parent doc.path / "dune") |> Loc.current_dir_relative
-        |> Fpath.to_string
+        Fpath.(parent doc.path / "dune")
+        |> Loc.current_dir_relative |> Fpath.to_string
       in
       Some
         (Issue.v ~loc:(Location.in_file display)
@@ -51,7 +51,8 @@ let docs_in_scope ctx =
   let docs = ref [] in
   Context.index ctx |> Project_index.source_packages_nodes
   |> List.iter (fun pkg ->
-      List.iter (fun d -> docs := d :: !docs)
+      List.iter
+        (fun d -> docs := d :: !docs)
         (Project_index.Package.doc_files pkg);
       Project_index.package_libraries pkg
       |> List.iter (fun lib ->

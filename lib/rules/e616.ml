@@ -40,11 +40,13 @@ let check (ctx : Context.file) =
     Query.iter_expressions (Context.view ctx) (fun expr ->
         match expr.exp_desc with
         | Texp_apply (fn, args) when is_fail_expr fn ->
-            if List.exists (fun arg -> Query.Expr.calls arg [ "Fmt"; "str" ])
-                 (Query.Expr.positional_args args)
+            if
+              List.exists
+                (fun arg -> Query.Expr.calls arg [ "Fmt"; "str" ])
+                (Query.Expr.positional_args args)
             then add expr true
-        | Texp_apply (fn, args) when Query.Expr.callee_ends_with fn [ "Fmt"; "kstr" ]
-          -> (
+        | Texp_apply (fn, args)
+          when Query.Expr.callee_ends_with fn [ "Fmt"; "kstr" ] -> (
             match Query.Expr.positional_args args with
             | continuation :: _ when is_fail_expr continuation -> add expr true
             | _ -> ())

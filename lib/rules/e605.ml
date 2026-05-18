@@ -1,6 +1,7 @@
 (** E605: Missing Test File *)
 
 module Issue_location = Location
+
 type payload = { module_name : string; expected_test_file : string }
 
 let log_src = Logs.Src.create "merlint.rules.e605" ~doc:"E605 rule diagnostics"
@@ -182,9 +183,9 @@ let missing_test_candidate ~files ~lib_files ~exec_files ~private_modules
   | Some reason ->
       log_skip lib_mod reason;
       None
-  | None ->
+  | None -> (
       if not (tests_missing ~files ~test_modules lib_mod) then None
-      else (
+      else
         match source_candidate ~files ~lib_files ~exec_files lib_mod with
         | `Missing_source ->
             log_skip lib_mod "no library source file, only in executables";

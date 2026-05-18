@@ -8,8 +8,8 @@ let test_create_project () =
   let analyze_set = [ "foo.ml"; "bar.ml" ] in
   let dune_describe = Merlint.Dune_describe.describe (Fpath.v ".") in
   let ctx =
-    Merlint.Context.project ~config ~project_root ~analyze_set
-      ~dune_describe ~index:dummy_index ()
+    Merlint.Context.project ~config ~project_root ~analyze_set ~dune_describe
+      ~index:dummy_index ()
   in
   Alcotest.(check string) "project root" "." ctx.project_root;
   Alcotest.(check (list string))
@@ -35,8 +35,8 @@ let test_cache_canonicalizes_keys () =
     Merlint.File_view.v ~filename ~typedtree:(fun () -> Ok None) ()
   in
   let ctx =
-    Merlint.Context.project ~config ~project_root ~analyze_set
-      ~dune_describe ~index:dummy_index ~file_view ()
+    Merlint.Context.project ~config ~project_root ~analyze_set ~dune_describe
+      ~index:dummy_index ~file_view ()
   in
   let a = Merlint.Context.file_view ctx "./foo.ml" in
   let b = Merlint.Context.file_view ctx "foo.ml" in

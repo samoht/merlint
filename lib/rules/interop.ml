@@ -31,7 +31,8 @@ let oracle_of_tool pkg interop tool =
 let package_oracles pkg pkg_dir =
   let interop = Filename.concat pkg_dir "test/interop" in
   if not (Fs.is_directory interop) then []
-  else Fs.readdir_or_empty interop |> List.filter_map (oracle_of_tool pkg interop)
+  else
+    Fs.readdir_or_empty interop |> List.filter_map (oracle_of_tool pkg interop)
 
 let path_has_interop path =
   let parts = Fpath.segs (Fpath.normalize path) in
@@ -90,8 +91,6 @@ let oracle_dirs index =
       xs
 
 let oracle_dirs_for ctx = oracle_dirs (Context.index ctx)
-
 let read_file path = try Fs.read_file path with Sys_error _ -> ""
-
 let dune_content dir = read_file (Filename.concat dir "dune")
 let test_content dir = read_file (Filename.concat dir "test.ml")

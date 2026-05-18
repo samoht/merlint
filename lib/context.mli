@@ -93,8 +93,8 @@ val values : file -> Function_metrics.value list
 (** {2 Project context accessors} *)
 
 val analyze_set : project -> string list
-(** [analyze_set p] is the user's analyze-set: the source files matched by
-    the [merlint <args>] invocation. *)
+(** [analyze_set p] is the user's analyze-set: the source files matched by the
+    [merlint <args>] invocation. *)
 
 val project_root : project -> string
 (** [project_root p] is the Dune project root used for the analysis. *)

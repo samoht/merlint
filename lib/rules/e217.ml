@@ -100,7 +100,7 @@ let check (ctx : Context.file) =
           | Some path
             when (not (handled_by_specialized_rule path))
                  && (not (is_pipe_operator path))
-                 && not (is_operator path) -> (
+                 && not (is_operator path) ->
               let rewriteable =
                 if is_explicit_output_helper path then
                   match List.rev args with
@@ -108,7 +108,7 @@ let check (ctx : Context.file) =
                   | [] -> false
                 else is_unary_fmt_str_arg args
               in
-              if rewriteable then flag (suggestion_for_apply path))
+              if rewriteable then flag (suggestion_for_apply path)
           | _ -> ())
       | Texp_construct (lid, _, [ arg ])
         when (not lid.loc.loc_ghost) && Query.Expr.calls arg [ "Fmt"; "str" ] ->

@@ -56,7 +56,9 @@ let package_issues ctx root pkg =
   if pkg = "_build" || pkg = "_opam" || pkg = ".git" || not (is_dir lib_dir)
   then []
   else
-    let claimed = modules_explicitly_claimed ctx (Filename.concat lib_dir "dune") in
+    let claimed =
+      modules_explicitly_claimed ctx (Filename.concat lib_dir "dune")
+    in
     let prefix = package_prefix pkg in
     try_readdir lib_dir |> List.filter_map (issue_for_module pkg claimed prefix)
 

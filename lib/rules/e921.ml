@@ -30,7 +30,9 @@ let scan_file ctx path =
       Re.all re content
       |> List.map (fun g ->
           let line = line_of_offset (Re.Group.start g 0) in
-          let display = Fpath.v path |> Loc.current_dir_relative |> Fpath.to_string in
+          let display =
+            Fpath.v path |> Loc.current_dir_relative |> Fpath.to_string
+          in
           let loc =
             Location.v ~file:display ~start_line:line ~start_col:0
               ~end_line:line ~end_col:0
@@ -45,16 +47,17 @@ let sources_in_scope ctx =
   let add path = acc := Fpath.to_string path :: !acc in
   Context.index ctx |> Project_index.source_packages_nodes
   |> List.iter (fun pkg ->
-      List.iter (fun (d : Project_index.doc_file) -> add d.path)
+      List.iter
+        (fun (d : Project_index.doc_file) -> add d.path)
         (Project_index.Package.doc_files pkg);
       Project_index.package_libraries pkg
       |> List.iter (fun lib ->
-          List.iter (fun (d : Project_index.doc_file) -> add d.path)
+          List.iter
+            (fun (d : Project_index.doc_file) -> add d.path)
             (Project_index.Library.doc_files lib);
           List.iter
             (fun fp ->
-              if Filename.check_suffix (Fpath.to_string fp) ".mli" then
-                add fp)
+              if Filename.check_suffix (Fpath.to_string fp) ".mli" then add fp)
             (Project_index.Library.files lib)));
   List.sort_uniq String.compare !acc
 

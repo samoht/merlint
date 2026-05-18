@@ -20,8 +20,7 @@ let trailing_upper_count name =
 let entering_trailing_acronym ~len ~trailing i =
   i >= len - trailing && trailing <= 2
 
-let leaving_acronym ~len ~trailing i =
-  i <> 1 && i < len - trailing
+let leaving_acronym ~len ~trailing i = i <> 1 && i < len - trailing
 
 let at_word_boundary ~len ~trailing i c prev next =
   match (prev, next) with
@@ -47,9 +46,7 @@ let split_words name =
     let prev = if i > 0 then Some name.[i - 1] else None in
     let next = if i < len - 1 then Some name.[i + 1] else None in
 
-    let at_boundary =
-      at_word_boundary ~len ~trailing i c prev next
-    in
+    let at_boundary = at_word_boundary ~len ~trailing i c prev next in
 
     if at_boundary && Buffer.length current_word > 0 then (
       words := Buffer.contents current_word :: !words;

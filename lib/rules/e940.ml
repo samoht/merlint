@@ -50,8 +50,7 @@ let build_roots project_root =
          else
            let path = Filename.concat project_root name in
            if
-             is_dir path
-             && Fs.file_exists (Filename.concat path "dune-project")
+             is_dir path && Fs.file_exists (Filename.concat path "dune-project")
            then roots := path :: !roots)
    with Sys_error _ -> ());
   List.rev !roots

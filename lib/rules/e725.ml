@@ -31,7 +31,11 @@ let issue_for_suite filename expected suite =
     in
     Some
       (Issue.v ~loc
-         { fuzz_file = filename; expected_suite = expected; actual_suite = suite })
+         {
+           fuzz_file = filename;
+           expected_suite = expected;
+           actual_suite = suite;
+         })
 
 let check_file ctx filename =
   let fp = Fpath.v filename in

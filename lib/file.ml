@@ -16,7 +16,8 @@ let is_test_file filename =
   let path = Fpath.v filename |> Fpath.normalize in
   let basename = Fpath.basename path in
   let module_name =
-    Fpath.rem_ext (Fpath.v basename) |> Fpath.to_string |> String.lowercase_ascii
+    Fpath.rem_ext (Fpath.v basename)
+    |> Fpath.to_string |> String.lowercase_ascii
   in
   String.equal basename "test.ml"
   || String.starts_with ~prefix:"test_" module_name

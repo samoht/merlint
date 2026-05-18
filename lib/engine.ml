@@ -160,8 +160,8 @@ let setup_analysis ~filter ~dune_describe ~analyze_set ~index ~file_view
   let config = Config.load project_root in
   let analyze_set = List.map Fpath.to_string analyze_set in
   let project_ctx =
-    Context.project ~config ~project_root ~analyze_set ~dune_describe
-      ~index ~file_view ()
+    Context.project ~config ~project_root ~analyze_set ~dune_describe ~index
+      ~file_view ()
   in
   let enabled_rules =
     Data.all_rules
