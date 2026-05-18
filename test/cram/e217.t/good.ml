@@ -24,3 +24,12 @@ let ( % ) cmd s = cmd ^ " " ^ s
 let ( ++ ) cmd s = cmd ^ " " ^ s
 let cmd1 base name = base % Fmt.str "name=%s" name
 let cmd2 base region = base ++ Fmt.str "region=%s" region
+
+(* These calls do contain [Fmt.str], but it is not the sole string argument to
+   a continuation. Rewriting them as [Fmt.kstr Alcotest.check "..."] or
+   [Fmt.kstr fail "..."] would not typecheck and should not be suggested. *)
+let check_rendered n =
+  Alcotest.(check string) "rendered" "n=1" (Fmt.str "n=%d" n)
+
+let fail name msg = failwith (name ^ ": " ^ msg)
+let fail_named name n = fail name (Fmt.str "n=%d" n)
