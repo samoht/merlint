@@ -46,21 +46,20 @@ let check_mli_documentation_content ~module_name ~filename content =
   in
   check_first_non_empty lines
 
-let check (ctx : Context.project) =
-  File.process_ocaml_files ctx (fun filename content ->
-      if Filename.check_suffix filename ".mli" then
-        let module_name =
-          Filename.basename filename |> Filename.remove_extension
-        in
-        (* Skip test modules - they don't need comprehensive documentation *)
-        if String.starts_with ~prefix:"test_" module_name then []
-        else
-          match
-            check_mli_documentation_content ~module_name ~filename content
-          with
-          | Some issue -> [ issue ]
-          | None -> []
-      else [])
+let check (ctx : Context.file) =
+  let filename = ctx.filename in
+  if not (File_kind.is_mli filename) then []
+  else
+    let module_name = Filename.basename filename |> Filename.remove_extension in
+    (* Skip test modules - they don't need comprehensive documentation *)
+    if String.starts_with ~prefix:"test_" module_name then []
+    else
+      match
+        check_mli_documentation_content ~module_name ~filename
+          (Context.content ctx)
+      with
+      | Some issue -> [ issue ]
+      | None -> []
 
 let pp ppf { module_name; file } =
   Fmt.pf ppf "Module %s (%s) is missing documentation comment" module_name file
@@ -73,4 +72,4 @@ let rule =
        to use the module. Test modules (test_*) are excluded from this check."
     ~examples:
       [ Example.bad Examples.E400.bad_mli; Example.good Examples.E400.good_mli ]
-    ~pp (Project check)
+    ~pp (File check)

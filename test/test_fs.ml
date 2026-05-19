@@ -1,6 +1,5 @@
 let with_pool f =
-  Eio_main.run @@ fun env ->
-  Merlint.Fs.with_pool (Eio.Stdenv.domain_mgr env) f
+  Eio_main.run @@ fun env -> Merlint.Fs.with_pool (Eio.Stdenv.domain_mgr env) f
 
 let test_parallel_map_preserves_order () =
   with_pool @@ fun pool ->

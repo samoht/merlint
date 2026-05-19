@@ -96,7 +96,7 @@ let enumerate ctx =
   let project_files =
     Project_index.source_files index
     |> List.map (fun file ->
-           Loc.relative_to ~root:root_path file |> Fpath.to_string)
+        Loc.relative_to ~root:root_path file |> Fpath.to_string)
   in
   let library_files =
     List.filter (is_library_file ~root index) ml_files |> string_set
@@ -123,6 +123,8 @@ let check_unit { env; file } =
   | None -> []
   | Some issue -> [ issue ]
 
+let check ctx = enumerate ctx |> List.concat_map check_unit
+
 let pp ppf { ml_file; expected_mli } =
   Fmt.pf ppf "Library module %s is missing interface file %s" ml_file
     expected_mli
@@ -135,5 +137,4 @@ let rule =
        implementation details and provide a clean API."
     ~examples:
       [ Example.bad Examples.E505.bad_ml; Example.good Examples.E505.good_mli ]
-    ~pp
-    (Project_units { enumerate; check = Fun.const check_unit })
+    ~pp (Project check)

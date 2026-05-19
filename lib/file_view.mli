@@ -110,6 +110,16 @@ module Type_view : sig
 end
 
 (** {2 Items — top-level outline structure, always available} *)
+module Doc : sig
+  type t
+
+  val text : t -> string
+  (** [text d] is the trimmed documentation payload. *)
+
+  val loc : t -> Merlin.Location.t
+  (** [loc d] is the source location of the documentation comment. *)
+end
+
 module Item : sig
   type kind =
     | Value
@@ -136,6 +146,14 @@ module Item : sig
   val deprecated : t -> bool
   (** [deprecated i] is [true] when the declaration carries a [[@deprecated]]
       attribute. *)
+
+  val doc : t -> Doc.t option
+  (** [doc i] is the documentation comment attached to [i], when present. Both
+      preceding and following OCaml doc comments are represented here by the
+      compiler. *)
+
+  val derives : t -> string -> bool
+  (** [derives i name] is [true] when [i] carries [[@@deriving name]]. *)
 
   val children : t -> t list
   (** [children i] is the list of nested items declared inside [i] (members of a

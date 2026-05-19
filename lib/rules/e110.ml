@@ -1,52 +1,64 @@
 open Examples
 (** E110: Silenced Warning *)
 
+module P = Ocaml_parsing.Parsetree
+
 type payload = { warning_number : string }
 (** Payload for silenced warning issues *)
 
-(** Create regex for warning attributes with given prefix *)
-let warning_regex prefix =
-  Re.compile
-    (Re.seq
-       [
-         Re.str prefix;
-         Re.rep Re.space;
-         Re.opt (Re.seq [ Re.str "ocaml"; Re.str "." ]);
-         Re.str "warning";
-         Re.rep Re.space;
-         Re.str "\"-";
-         Re.group (Re.rep1 Re.digit);
-         Re.str "\"";
-       ])
+type state = { filename : string; issues : payload Issue.t list ref }
 
-let warning_attr_regex = warning_regex "[@"
-let warning_attr2_regex = warning_regex "[@@"
-let warning_attr3_regex = warning_regex "[@@@"
+let is_warning_attr attr =
+  match attr.P.attr_name.txt with
+  | "warning" | "ocaml.warning" -> true
+  | _ -> false
 
-(** Check if a regex matches and extract warning number *)
-let check_regex regex line =
-  match Re.exec_opt regex line with
-  | Some m -> Some (Re.Group.get m 1)
-  | None -> None
+let warning_number s =
+  let len = String.length s in
+  if len < 2 || s.[0] <> '-' then None
+  else
+    let rec scan i =
+      if
+        i >= len
+        || not
+             (Char.code s.[i] >= Char.code '0'
+             && Char.code s.[i] <= Char.code '9')
+      then i
+      else scan (i + 1)
+    in
+    let stop = scan 1 in
+    if stop = 1 then None else Some (String.sub s 1 (stop - 1))
 
-(** Check all files for silenced warnings *)
-let check (ctx : Context.project) =
-  File.process_ocaml_files ctx (fun filename content ->
-      let warning_regexes =
-        [ warning_attr_regex; warning_attr2_regex; warning_attr3_regex ]
-      in
+let payload_string attr =
+  match attr.P.attr_payload with
+  | P.PStr
+      [
+        {
+          pstr_desc =
+            P.Pstr_eval
+              ( {
+                  pexp_desc =
+                    P.Pexp_constant
+                      { pconst_desc = P.Pconst_string (warning_spec, _, _); _ };
+                  _;
+                },
+                _ );
+          _;
+        };
+      ] ->
+      Some warning_spec
+  | _ -> None
 
-      (* Check each regex separately and collect all matches *)
-      List.concat_map
-        (fun regex ->
-          File.process_lines_with_location filename content
-            (fun line_idx line loc ->
-              ignore line_idx;
-              match check_regex regex line with
-              | Some warning_num ->
-                  Some (Issue.v ~loc { warning_number = warning_num })
-              | None -> None))
-        warning_regexes)
+let visit_attribute state attr =
+  if is_warning_attr attr then
+    match Option.bind (payload_string attr) warning_number with
+    | None -> ()
+    | Some warning_number ->
+        let loc = Loc.of_typed ~filename:state.filename attr.P.attr_loc in
+        state.issues := Issue.v ~loc { warning_number } :: !(state.issues)
+
+let init ctx = { filename = ctx.Context.filename; issues = ref [] }
+let finish _ctx state = List.rev !(state.issues)
 
 let pp ppf { warning_number } =
   Fmt.pf ppf "Warning %s is silenced instead of being fixed" warning_number
@@ -59,4 +71,5 @@ let rule =
        issue instead of using warning suppression attributes. If you must \
        suppress a warning, document why it's necessary."
     ~examples:[ Example.bad E110.suppressed_ml; Example.good E110.fixed_ml ]
-    ~pp (Project check)
+    ~pp
+    (Rule.pass ~init ~attribute:visit_attribute ~finish ())

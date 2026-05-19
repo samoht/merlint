@@ -388,10 +388,7 @@ let index_roots_of_files = function
 
 let build_project_index ~fs ~monorepo ?roots ?pool () =
   let t0 = Unix.gettimeofday () in
-  let idx =
-
-    Project_index.build ?pool ?roots ~fs ~monorepo ()
-  in
+  let idx = Project_index.build ?pool ?roots ~fs ~monorepo () in
   Log.info (fun m ->
       m "Project_index.build: %.0f ms" ((Unix.gettimeofday () -. t0) *. 1000.0));
   idx
@@ -403,10 +400,7 @@ let analyze_files mgr fs domain_mgr ?(exclude_patterns = []) ?rule_filter
   Log.info (fun m -> m "Dune root: %s (cwd: %s)" project_root (Sys.getcwd ()));
   Fmt.pr "Dune root: %s@." project_root;
   Log.info (fun m -> m "Scanning project structure...");
-  let dune_describe, analyze_set =
-
-    build_dune_describe ~project_root files
-  in
+  let dune_describe, analyze_set = build_dune_describe ~project_root files in
 
   (* Apply exclusions (including cram directories which are already filtered) *)
   let filtered_describe =

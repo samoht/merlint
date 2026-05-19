@@ -2,52 +2,46 @@
 
 type payload = { value_name : string; location : Location.t; issue : string }
 
-let check (ctx : Context.file) =
-  (* Only check .mli files *)
-  if not (File_kind.is_mli ctx.filename) then []
-  else
-    let content = Context.content ctx in
-    let doc_comments = Docs.extract_doc_comments content in
+let doc_signature typ =
+  let rec labels acc typ =
+    match File_view.Type_view.arrow typ with
+    | Some (label, _arg, rest) -> labels (label :: acc) rest
+    | None -> List.rev acc
+  in
+  let arg = function
+    | Ocaml_parsing.Asttypes.Optional _ -> "?arg"
+    | Labelled _ | Nolabel -> "arg"
+  in
+  labels [] typ |> List.map arg |> fun args ->
+  String.concat " -> " (args @ [ "ret" ])
 
-    List.filter_map
-      (fun Docs.{ value_name; signature; doc; doc_line; val_line = _ } ->
-        if doc = "BAD_COMMENT" then
-          (* Using regular comment instead of doc comment *)
-          let loc =
-            Location.v ~file:ctx.filename ~start_line:doc_line ~start_col:0
-              ~end_line:doc_line ~end_col:0
-          in
-          Some
-            (Issue.v ~loc
-               {
-                 value_name;
-                 location = loc;
-                 issue =
-                   "use doc comment (** ... *) instead of regular comment (* \
-                    ... *)";
-               })
-        else
-          (* Check doc comment style using the docs module *)
-          let style_issues =
-            if Docs.is_function_signature signature then
-              Docs.check_function_doc ~name:value_name ~signature ~doc
-            else Docs.check_value_doc ~name:value_name ~doc
-          in
-          match style_issues with
-          | [] -> None
-          | issues ->
-              let loc =
-                Location.v ~file:ctx.filename ~start_line:doc_line ~start_col:0
-                  ~end_line:doc_line ~end_col:0
-              in
-              let issue_texts =
-                List.map (Fmt.str "%a" Docs.pp_style_issue) issues
-              in
-              let issue_text = String.concat ", " issue_texts in
-              Some
-                (Issue.v ~loc
-                   { value_name; location = loc; issue = issue_text }))
-      doc_comments
+let style_issues item doc =
+  let name = File_view.Item.name item in
+  match File_view.Item.type_sig item with
+  | Some typ when File_view.Type_view.is_function typ ->
+      Docs.check_function_doc ~name ~signature:(doc_signature typ) ~doc
+  | _ -> Docs.check_value_doc ~name ~doc
+
+let doc_style_issue item doc =
+  match style_issues item (File_view.Doc.text doc) with
+  | [] -> None
+  | issues ->
+      let loc = File_view.Doc.loc doc in
+      let issue =
+        issues |> List.map Docs.style_issue_message |> String.concat ", "
+      in
+      Some
+        (Issue.v ~loc
+           { value_name = File_view.Item.name item; location = loc; issue })
+
+let check_doc item =
+  match File_view.Item.doc item with
+  | Some doc -> doc_style_issue item doc
+  | None -> None
+
+let check (ctx : Context.file) =
+  if not (File_kind.is_mli ctx.filename) then []
+  else Context.view ctx |> File_view.value_items |> List.filter_map check_doc
 
 let pp ppf { value_name; location = _; issue } =
   Fmt.pf ppf "Documentation for '%s' %s" value_name issue

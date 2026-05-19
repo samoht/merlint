@@ -47,14 +47,14 @@ let missing_test_issue module_name source_file =
     Issue_location.v ~file:source_file ~start_line:1 ~start_col:0 ~end_line:1
       ~end_col:0
   in
-  Issue.v ~loc { module_name; expected_test_file = expected_test_path source_file }
+  Issue.v ~loc
+    { module_name; expected_test_file = expected_test_path source_file }
 
 let module_name_of_path file =
   Fpath.basename file |> Filename.remove_extension |> String.lowercase_ascii
 
 let skipped_by_dir file_path =
-  File.is_in_test_dir (Fpath.v file_path)
-  || File.is_in_examples file_path
+  File.is_in_test_dir (Fpath.v file_path) || File.is_in_examples file_path
 
 let check (ctx : Context.project) =
   let idx = Context.index ctx in
@@ -84,8 +84,7 @@ let check (ctx : Context.project) =
       else if Sys.file_exists (expected_test_path path) then None
       else Some (missing_test_issue m path)
   in
-  Project_index.public_library_source_files idx
-  |> List.filter_map needs_test
+  Project_index.public_library_source_files idx |> List.filter_map needs_test
 
 let pp ppf { module_name; expected_test_file } =
   Fmt.pf ppf
