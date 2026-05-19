@@ -12,7 +12,7 @@ val run :
   filter:Filter.t ->
   dune_describe:Dune_describe.describe ->
   ?analyze_set:Fpath.t list ->
-  index:Project_index.t Lazy.t ->
+  index:(?pool:Eio.Executor_pool.t -> unit -> Project_index.t) ->
   ?profiling:Profiling.t ->
   string ->
   result
@@ -34,7 +34,10 @@ val run :
     single-file mode so file-scoped rules don't widen to the whole project while
     project-scoped rules still see the full library/test view.
 
-    [domain_mgr] enables package-grouped file-rule parallelism. Omit it for
-    deterministic single-domain execution.
+    [domain_mgr] enables parallelism. When given, [run] opens one
+    [Eio.Executor_pool] and shares it across every phase that takes parallel
+    work, including the [build_index] call.
 
-    [index] is forced lazily when a rule reads it. *)
+    [index ?pool ()] constructs the {!Project_index.t}. [run] forces it
+    exactly once inside the shared pool's switch, so the project-index scan
+    reuses the same domains as the rule phases. *)

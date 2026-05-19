@@ -376,48 +376,46 @@ let run ?domain_mgr ~load_file ~filter ~dune_describe ?analyze_set ~index
   Log.info (fun m -> m "Starting analysis of %s" project_root);
   let backend = Merlin.v ~root_dir:project_root () in
   let stats = io_stats () in
-  let analyze_set =
+  let raw_analyze_set =
     match analyze_set with
     | Some files -> files
     | None -> Dune_describe.project_files dune_describe
   in
-  let analyze_set =
-    let idx = Lazy.force index in
-    drop_vendored_files idx analyze_set
+  let run_with_pool ?pool () =
+    let idx = lazy (index ?pool ()) in
+    let analyze_set = drop_vendored_files (Lazy.force idx) raw_analyze_set in
+    let file_view = file_view ?profiling ~stats ~load_file ~backend in
+    let _config, project_ctx, enabled_rules =
+      setup_analysis ~filter ~dune_describe ~analyze_set ~index:idx ~file_view
+        project_root
+    in
+    Fs.reset_stats ();
+    let file_rules = List.filter Rule.is_direct_file_scoped enabled_rules in
+    let pass_rules = List.filter Rule.uses_pass enabled_rules in
+    Eio.Switch.run @@ fun sw ->
+    let project_promise, project_resolver = Eio.Promise.create () in
+    let file_promise, file_resolver = Eio.Promise.create () in
+    Eio.Fiber.fork ~sw (fun () ->
+        Trace.span "merlint.phase.project_rules" @@ fun () ->
+        run_project_rules ?pool ?profiling enabled_rules project_ctx
+        |> Eio.Promise.resolve project_resolver);
+    Eio.Fiber.fork ~sw (fun () ->
+        Trace.span "merlint.phase.file_rules" @@ fun () ->
+        analyze_files ?pool ~project_ctx ~project_root ~file_rules ~pass_rules
+          ?profiling analyze_set
+        |> Eio.Promise.resolve file_resolver);
+    (Eio.Promise.await project_promise, Eio.Promise.await file_promise)
   in
-  let file_view = file_view ?profiling ~stats ~load_file ~backend in
-  let _config, project_ctx, enabled_rules =
-    setup_analysis ~filter ~dune_describe ~analyze_set ~index ~file_view
-      project_root
-  in
-  Fs.reset_stats ();
   Fun.protect
     ~finally:(fun () ->
       log_io_stats stats backend;
       log_fs_stats ();
       Merlin.close backend)
     (fun () ->
-      let file_rules = List.filter Rule.is_direct_file_scoped enabled_rules in
-      let pass_rules = List.filter Rule.uses_pass enabled_rules in
-      let run_phases ?pool () =
-        Eio.Switch.run @@ fun sw ->
-        let project_promise, project_resolver = Eio.Promise.create () in
-        let file_promise, file_resolver = Eio.Promise.create () in
-        Eio.Fiber.fork ~sw (fun () ->
-            Trace.span "merlint.phase.project_rules" @@ fun () ->
-            run_project_rules ?pool ?profiling enabled_rules project_ctx
-            |> Eio.Promise.resolve project_resolver);
-        Eio.Fiber.fork ~sw (fun () ->
-            Trace.span "merlint.phase.file_rules" @@ fun () ->
-            analyze_files ?pool ~project_ctx ~project_root ~file_rules
-              ~pass_rules ?profiling analyze_set
-            |> Eio.Promise.resolve file_resolver);
-        (Eio.Promise.await project_promise, Eio.Promise.await file_promise)
-      in
       let (project_issues, project_excluded), file_results =
         match domain_mgr with
-        | None -> run_phases ()
-        | Some dm -> Fs.with_pool dm (fun pool -> run_phases ~pool ())
+        | None -> run_with_pool ()
+        | Some dm -> Fs.with_pool dm (fun pool -> run_with_pool ~pool ())
       in
       let file_issues = List.concat_map fst file_results in
       let file_excluded = List.concat_map snd file_results in
