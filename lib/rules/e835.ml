@@ -3,10 +3,7 @@
 type payload = { dir : string; file : string }
 
 let script_has_break_system_packages scripts file =
-  if Filename.check_suffix file ".sh" || Filename.check_suffix file ".py" then
-    let content = Interop.read_file (Filename.concat scripts file) in
-    Astring.String.is_infix ~affix:"--break-system-packages" content
-  else false
+  Interop.script_contains ~dir:scripts ~file ~affix:"--break-system-packages"
 
 let first_bad_script scripts =
   let entries =

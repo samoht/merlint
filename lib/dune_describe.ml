@@ -57,6 +57,40 @@ let ensure_project_built ~path mgr =
   | Ok _ -> Ok ()
   | Error msg -> err_build_failed msg
 
+let dune_target_of_cmt ~root cmt =
+  let build_root = Fpath.(v root / "_build" / "default" |> normalize) in
+  let cmt = Fpath.(v cmt |> normalize) in
+  Fpath.rem_prefix build_root cmt
+
+let maybe_cmt_target ~root file =
+  match Merlin.Project.cmt ~root_dir:root (Fpath.to_string file) with
+  | None -> None
+  | Some cmt when not (Sys.file_exists cmt) -> None
+  | Some cmt -> (
+      try
+        let source_mtime = (Unix.stat (Fpath.to_string file)).st_mtime in
+        let cmt_mtime = (Unix.stat cmt).st_mtime in
+        if cmt_mtime >= source_mtime then None else dune_target_of_cmt ~root cmt
+      with Unix.Unix_error _ -> None)
+
+let refresh_stale_cmt_targets ~path ~files mgr =
+  let targets = List.filter_map (maybe_cmt_target ~root:path) files in
+  match targets with
+  | [] -> Ok ()
+  | targets -> (
+      let cmd =
+        "dune build --root " ^ Filename.quote path ^ " "
+        ^ String.concat " "
+            (List.map (fun p -> Filename.quote (Fpath.to_string p)) targets)
+      in
+      (match Logs.level () with
+      | Some (Logs.Info | Logs.Debug) ->
+          Fmt.epr "Running: %s@.    cwd: %s@." cmd (Sys.getcwd ())
+      | _ -> ());
+      match Command.run mgr cmd with
+      | Ok _ -> Ok ()
+      | Error msg -> err_build_failed msg)
+
 (** Check if a file belongs to an executable stanza *)
 let is_executable dune_describe ml_file =
   let module_name = Fpath.(ml_file |> rem_ext |> basename) in
@@ -85,20 +119,9 @@ let excluded_subdirs_of_dune dir =
       && not (try Fs.is_directory dune_path with Sys_error _ -> true))
   then []
   else
-    let content =
-      try
-        let ic = open_in dune_path in
-        let s = really_input_string ic (in_channel_length ic) in
-        close_in ic;
-        Some s
-      with Sys_error _ | End_of_file -> None
-    in
-    match content with
-    | None -> []
-    | Some content -> (
-        match Dune.File.of_string content with
-        | Error _ -> []
-        | Ok f -> Dune.File.data_only_dirs f @ Dune.File.vendored_dirs f)
+    match Dune.File.of_file dune_path with
+    | Error _ -> []
+    | Ok f -> Dune.File.data_only_dirs f @ Dune.File.vendored_dirs f
 
 (* [skippable_subdir ~parent_dir entry] is the single source of truth for
    "should we descend into [parent_dir/entry]?". Mirrors what dune itself does:
@@ -111,6 +134,31 @@ let skippable_subdir ~parent_dir entry =
   else
     let excluded = excluded_subdirs_of_dune parent_dir in
     List.mem entry excluded
+
+let dirs_of_dune dir =
+  let dune_path = Fpath.(dir / "dune") |> Fpath.to_string in
+  if not (Fs.file_exists dune_path) then []
+  else
+    match Dune.File.of_file dune_path with
+    | Error _ -> []
+    | Ok dune -> Dune.File.dirs dune
+
+let allowed_by_dirs ~parent_dir entry =
+  let rec after_backslash = function
+    | [] -> []
+    | "\\" :: rest -> rest
+    | _ :: rest -> after_backslash rest
+  in
+  match dirs_of_dune parent_dir with
+  | [] -> true
+  | dirs ->
+      if List.mem entry dirs then true
+      else if List.mem ":standard" dirs then
+        not
+          (List.exists
+             (fun excluded -> excluded = entry)
+             (after_backslash dirs))
+      else false
 
 (** Find all dune files in a directory tree. Skips dotfile dirs, [_*] dirs
     (build outputs, switch prefixes, ad-hoc scratch), and any subdir listed in
@@ -131,6 +179,7 @@ let rec files dir =
       then [ path ]
       else if
         (try Fs.is_directory path_str with Sys_error _ -> false)
+        && allowed_by_dirs ~parent_dir:dir entry
         && not (skippable_subdir ~parent_dir:dir entry)
       then files path
       else [])
@@ -138,9 +187,7 @@ let rec files dir =
 (** Parse a dune file and extract module information *)
 let parse_dune_file filename =
   try
-    let ic = open_in (Fpath.to_string filename) in
-    let content = really_input_string ic (in_channel_length ic) in
-    close_in ic;
+    let content = Fs.read_file (Fpath.to_string filename) in
 
     (* Parse all S-expressions in the file *)
     let stanzas =
@@ -297,7 +344,15 @@ let executable_item ~include_subdirs dir kind fields =
       in
       item
 
+let has_enabled_if_false fields =
+  List.exists
+    (function
+      | Sexp.List [ Sexp.Atom "enabled_if"; Sexp.Atom "false" ] -> true
+      | _ -> false)
+    fields
+
 let extract_project_item ~include_subdirs dir = function
+  | Sexp.List (Sexp.Atom _ :: fields) when has_enabled_if_false fields -> None
   | Sexp.List (Sexp.Atom "library" :: fields) ->
       library_item ~include_subdirs dir fields
   | Sexp.List (Sexp.Atom kind :: fields)

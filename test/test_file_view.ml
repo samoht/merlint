@@ -17,6 +17,7 @@ let empty_interface =
     }
 
 let view filename typedtree = Merlint.File_view.v ~filename ~typedtree ()
+let with_eio f = Eio_main.run @@ fun _env -> f ()
 
 let test_lazy_without_access () =
   let typedtree_calls = ref 0 in
@@ -28,6 +29,7 @@ let test_lazy_without_access () =
   Alcotest.(check int) "typedtree not loaded" 0 !typedtree_calls
 
 let test_typedtree_loaded_once () =
+  with_eio @@ fun () ->
   let typedtree_calls = ref 0 in
   let v =
     view "once.ml" (fun () ->
@@ -41,6 +43,7 @@ let test_typedtree_loaded_once () =
   Alcotest.(check int) "loaded once" 1 !typedtree_calls
 
 let test_missing_typedtree_is_empty () =
+  with_eio @@ fun () ->
   let typedtree_calls = ref 0 in
   let v =
     view "missing.ml" (fun () ->
@@ -52,16 +55,35 @@ let test_missing_typedtree_is_empty () =
   Alcotest.(check int) "loaded once" 1 !typedtree_calls
 
 let test_interface_has_no_values () =
+  with_eio @@ fun () ->
   let v = view "iface.mli" (fun () -> Ok (Some empty_interface)) in
   Alcotest.(check int)
     "no implementation values" 0
     (List.length (Merlint.File_view.values v))
 
 let test_application_cache_is_empty_without_implementation () =
+  with_eio @@ fun () ->
   let v = view "iface.mli" (fun () -> Ok (Some empty_interface)) in
   let calls = ref 0 in
   Merlint.File_view.iter_applications v (fun _ -> incr calls);
   Alcotest.(check int) "no calls" 0 !calls
+
+let test_typedtree_loaded_once_across_domains () =
+  Eio_main.run @@ fun env ->
+  let typedtree_calls = Atomic.make 0 in
+  let v =
+    view "parallel.ml" (fun () ->
+        ignore (Atomic.fetch_and_add typedtree_calls 1);
+        Unix.sleepf 0.05;
+        Ok (Some empty_implementation))
+  in
+  let dm = Eio.Stdenv.domain_mgr env in
+  let results =
+    Merlint.Fs.parallel_map dm [ 1; 2; 3; 4 ] (fun _ ->
+        Merlint.File_view.is_resolved v)
+  in
+  Alcotest.(check (list bool)) "all resolved" [ true; true; true; true ] results;
+  Alcotest.(check int) "typedtree loaded once" 1 (Atomic.get typedtree_calls)
 
 let tests =
   [
@@ -72,6 +94,9 @@ let tests =
     ( "application_cache_empty_without_implementation",
       `Quick,
       test_application_cache_is_empty_without_implementation );
+    ( "typedtree_loaded_once_across_domains",
+      `Quick,
+      test_typedtree_loaded_once_across_domains );
   ]
 
 let suite = ("file_view", tests)

@@ -40,10 +40,14 @@ val read_file : string -> string
     [Sys_error] if the file can't be opened. *)
 
 val parallel_map :
-  _ Eio.Domain_manager.t -> ?domain_count:int -> 'a list -> ('a -> 'b) -> 'b list
-(** [parallel_map dm ?domain_count xs f] applies [f] to every [xs] element on
-    an [Eio.Executor_pool] backed by [dm]. Results are returned in [xs]
-    order. Caller must guarantee that [f] is safe to run concurrently across
-    domains -- merlint's project rules walk typedtree records with no global
-    mutable state, which qualifies; rules that mutate shared accumulators
-    must serialise on their own. [domain_count] defaults to 4. *)
+  _ Eio.Domain_manager.t ->
+  ?domain_count:int ->
+  'a list ->
+  ('a -> 'b) ->
+  'b list
+(** [parallel_map dm ?domain_count xs f] applies [f] to every [xs] element on an
+    [Eio.Executor_pool] backed by [dm]. Results are returned in [xs] order.
+    Caller must guarantee that [f] is safe to run concurrently across domains --
+    merlint's project rules walk typedtree records with no global mutable state,
+    which qualifies; rules that mutate shared accumulators must serialise on
+    their own. [domain_count] defaults to 4. *)

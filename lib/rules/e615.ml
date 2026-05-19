@@ -93,11 +93,13 @@ let check_test_info ctx dune_describe (test_info : Dune_describe.test_info) =
           |> List.map (missing_issue test_file)
       with File_view.Analysis_error _ -> [])
 
-(** Check if test.ml includes all test suites *)
-let check (ctx : Context.project) =
+let enumerate ctx =
   let dune_describe = Context.dune_describe ctx in
   Dune_describe.tests dune_describe
-  |> List.concat_map (check_test_info ctx dune_describe)
+  |> List.map (fun test_info -> (dune_describe, test_info))
+
+let check_unit ctx (dune_describe, test_info) =
+  check_test_info ctx dune_describe test_info
 
 let pp ppf { test_module; test_runner_file } =
   Fmt.pf ppf "Test module %s is not included in %s" test_module test_runner_file
@@ -107,4 +109,5 @@ let rule =
     ~hint:
       "All test modules should be included in the main test runner (test.ml). \
        Add the missing test suite to ensure all tests are run."
-    ~examples:[] ~pp (Project check)
+    ~examples:[] ~pp
+    (Project_units { enumerate; check = check_unit })

@@ -9,18 +9,13 @@ let parse_header line =
   String.sub line 1 (len - 2) |> String.trim
 
 let read_lines path =
-  let ic = open_in path in
+  Fs.with_open_in path @@ fun ic ->
   let rec loop acc =
     match input_line ic with
     | line -> loop (line :: acc)
-    | exception End_of_file ->
-        close_in ic;
-        List.rev acc
+    | exception End_of_file -> List.rev acc
   in
-  try loop []
-  with exn ->
-    close_in_noerr ic;
-    raise exn
+  loop []
 
 let load project_root =
   let path = Filename.concat project_root filename in

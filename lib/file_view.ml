@@ -42,7 +42,7 @@ let predef_path_name path =
     (Typed_predef.path_int64, "int64");
   ]
   |> List.find_map (fun (predef, name) ->
-         if Typed_path.same path predef then Some name else None)
+      if Typed_path.same path predef then Some name else None)
 
 let name_of_path path =
   match predef_path_name path with
@@ -366,10 +366,7 @@ let collect_walk ~filename (tree : Merlin.typedtree) =
   (match tree with
   | `Implementation structure -> iterator.structure iterator structure
   | `Interface signature -> iterator.signature iterator signature);
-  {
-    walk_refs = collected_refs_of_acc acc;
-    walk_applications = List.rev !calls;
-  }
+  { walk_refs = collected_refs_of_acc acc; walk_applications = List.rev !calls }
 
 type item_kind =
   | Item_value
@@ -393,6 +390,7 @@ type file_item = {
 
 type t = {
   filename : string;
+  lock : Eio.Mutex.t;
   typedtree : Merlin.typedtree option Lazy.t;
   values : Function_metrics.value list Lazy.t;
   reference_outline : collected_refs Lazy.t;
@@ -404,6 +402,12 @@ type t = {
           One typedtree walk per file regardless of how many rules call
           {!iter_applications}. *)
 }
+
+let force t lazy_value =
+  Eio.Mutex.lock t.lock;
+  Fun.protect
+    ~finally:(fun () -> Eio.Mutex.unlock t.lock)
+    (fun () -> Lazy.force lazy_value)
 
 let warn_missing_typedtree filename =
   Log.warn (fun m ->
@@ -726,6 +730,7 @@ let v ~filename ~typedtree () =
   let applications = lazy_applications walk in
   {
     filename;
+    lock = Eio.Mutex.create ();
     typedtree;
     values;
     reference_outline;
@@ -736,9 +741,9 @@ let v ~filename ~typedtree () =
   }
 
 let filename t = t.filename
-let typedtree t = Lazy.force t.typedtree
-let values t = Lazy.force t.values
-let is_resolved t = Option.is_some (Lazy.force t.typedtree)
+let typedtree t = force t t.typedtree
+let values t = force t t.values
+let is_resolved t = Option.is_some (force t t.typedtree)
 
 (* {2 Name} *)
 
@@ -868,9 +873,7 @@ module Type_view = struct
     Ocaml_typing.Printtyp.type_expr Format.str_formatter ct;
     match Format.flush_str_formatter () with
     | "" -> (
-        match constr ct with
-        | Some (name, []) -> Name.pp ppf name
-        | _ -> ())
+        match constr ct with Some (name, []) -> Name.pp ppf name | _ -> ())
     | s -> Fmt.string ppf s
 end
 
@@ -965,9 +968,7 @@ end
 (* {2 Top-level accessors} *)
 
 let items t =
-  List.map
-    (fun item -> { Item.item; filename = t.filename })
-    (Lazy.force t.items)
+  List.map (fun item -> { Item.item; filename = t.filename }) (force t t.items)
 
 let rec flatten_items items =
   List.concat_map (fun item -> item :: flatten_items (Item.children item)) items
@@ -977,55 +978,52 @@ let all_items t = flatten_items (items t)
 let value_items t =
   List.filter (fun item -> Item.kind item = Item.Value) (all_items t)
 
-let outline_refs t = (Lazy.force t.reference_outline).refs
+let outline_refs t = (force t t.reference_outline).refs
 let outline_identifiers t = (outline_refs t).identifiers
 let outline_patterns t = (outline_refs t).patterns
 let outline_variants t = (outline_refs t).variants
 
 let outline_variant_definitions t =
-  (Lazy.force t.reference_outline).variant_definitions
+  (force t t.reference_outline).variant_definitions
 
 let outline_modules t = (outline_refs t).modules
 
 let outline_module_definitions t =
-  (Lazy.force t.reference_outline).module_definitions
+  (force t t.reference_outline).module_definitions
 
 let outline_types t = (outline_refs t).types
-
-let outline_type_definitions t =
-  (Lazy.force t.reference_outline).type_definitions
-
+let outline_type_definitions t = (force t t.reference_outline).type_definitions
 let outline_exceptions t = (outline_refs t).exceptions
 let outline_values t = (outline_refs t).values
 
 let resolved_identifiers t =
-  Option.map (fun d -> d.refs.Merlin.Refs.identifiers) (Lazy.force t.resolved)
+  Option.map (fun d -> d.refs.Merlin.Refs.identifiers) (force t t.resolved)
 
 let resolved_patterns t =
-  Option.map (fun d -> d.refs.Merlin.Refs.patterns) (Lazy.force t.resolved)
+  Option.map (fun d -> d.refs.Merlin.Refs.patterns) (force t t.resolved)
 
 let resolved_variants t =
-  Option.map (fun d -> d.refs.Merlin.Refs.variants) (Lazy.force t.resolved)
+  Option.map (fun d -> d.refs.Merlin.Refs.variants) (force t t.resolved)
 
 let resolved_modules t =
-  Option.map (fun d -> d.refs.Merlin.Refs.modules) (Lazy.force t.resolved)
+  Option.map (fun d -> d.refs.Merlin.Refs.modules) (force t t.resolved)
 
 let resolved_types t =
-  Option.map (fun d -> d.refs.Merlin.Refs.types) (Lazy.force t.resolved)
+  Option.map (fun d -> d.refs.Merlin.Refs.types) (force t t.resolved)
 
 let resolved_exceptions t =
-  Option.map (fun d -> d.refs.Merlin.Refs.exceptions) (Lazy.force t.resolved)
+  Option.map (fun d -> d.refs.Merlin.Refs.exceptions) (force t t.resolved)
 
 let resolved_values t =
-  Option.map (fun d -> d.refs.Merlin.Refs.values) (Lazy.force t.resolved)
+  Option.map (fun d -> d.refs.Merlin.Refs.values) (force t t.resolved)
 
 let resolved_signatures t =
-  Option.map (fun d -> d.refs.Merlin.Refs.value_sigs) (Lazy.force t.resolved)
+  Option.map (fun d -> d.refs.Merlin.Refs.value_sigs) (force t t.resolved)
 
-let referenced_module_names t = Lazy.force t.module_names
+let referenced_module_names t = force t t.module_names
 
 let iter_applications t f =
-  Lazy.force t.applications
+  force t t.applications
   |> List.iter (fun { call_callee; call_loc; call_args } ->
       let loc = Loc.of_typed ~filename:t.filename call_loc in
       let args =

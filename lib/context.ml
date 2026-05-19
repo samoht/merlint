@@ -8,6 +8,17 @@ exception Analysis_error = File_view.Analysis_error
 
 let fail_analysis_error fmt = Fmt.kstr (fun s -> raise (Analysis_error s)) fmt
 
+type 'a memo = { lock : Eio.Mutex.t; value : 'a Lazy.t }
+
+let memo f = { lock = Eio.Mutex.create (); value = lazy (f ()) }
+let memo_value value = memo (fun () -> value)
+
+let force_memo memo =
+  Eio.Mutex.lock memo.lock;
+  Fun.protect
+    ~finally:(fun () -> Eio.Mutex.unlock memo.lock)
+    (fun () -> Lazy.force memo.value)
+
 type file = {
   filename : string;
   config : Config.t;
@@ -20,11 +31,11 @@ type project = {
   config : Config.t;
   project_root : string;
   analyze_set : string list;
-  dune_describe : Dune_describe.describe Lazy.t;
-  executable_modules : string list Lazy.t;
-  lib_modules : string list Lazy.t;
-  test_modules : string list Lazy.t;
-  index : Project_index.t Lazy.t;
+  dune_describe : Dune_describe.describe memo;
+  executable_modules : string list memo;
+  lib_modules : string list memo;
+  test_modules : string list memo;
+  index : Project_index.t memo;
   file_view_cache : string -> File_view.t;
   file_content_cache : string -> string;
 }
@@ -89,12 +100,10 @@ let test_module_of_file f =
     else None
   else None
 
-let discover_test_modules ~index dune_desc_lazy =
-  let dune_test_modules =
-    Dune_describe.test_modules (Lazy.force dune_desc_lazy)
-  in
+let discover_test_modules ~index dune_desc =
+  let dune_test_modules = Dune_describe.test_modules dune_desc in
   let file_test_modules =
-    Project_index.source_files (Lazy.force index)
+    Project_index.source_files index
     |> List.filter_map (fun fp -> test_module_of_file (Fpath.to_string fp))
   in
   let all_test_modules =
@@ -109,7 +118,8 @@ let discover_test_modules ~index dune_desc_lazy =
 
 let project ?file_view ?file_content ~config ~project_root ~analyze_set
     ~dune_describe ~index () =
-  let dune_desc_lazy = lazy dune_describe in
+  let dune_desc_memo = memo_value dune_describe in
+  let index_memo = memo (fun () -> Lazy.force index) in
   let file_view_cache =
     memoize_file_view (Option.value file_view ~default:default_file_view)
   in
@@ -122,17 +132,22 @@ let project ?file_view ?file_content ~config ~project_root ~analyze_set
     config;
     project_root;
     analyze_set;
-    dune_describe = dune_desc_lazy;
+    dune_describe = dune_desc_memo;
     executable_modules =
-      lazy (Dune_describe.executable_modules (Lazy.force dune_desc_lazy));
-    lib_modules = lazy (Dune_describe.lib_modules (Lazy.force dune_desc_lazy));
-    test_modules = lazy (discover_test_modules ~index dune_desc_lazy);
-    index;
+      memo (fun () ->
+          Dune_describe.executable_modules (force_memo dune_desc_memo));
+    lib_modules =
+      memo (fun () -> Dune_describe.lib_modules (force_memo dune_desc_memo));
+    test_modules =
+      memo (fun () ->
+          discover_test_modules ~index:(force_memo index_memo)
+            (force_memo dune_desc_memo));
+    index = index_memo;
     file_view_cache;
     file_content_cache;
   }
 
-let index ctx = Lazy.force ctx.index
+let index ctx = force_memo ctx.index
 
 (* File context accessors *)
 let view ctx = ctx.view
@@ -142,9 +157,9 @@ let values ctx = File_view.values ctx.view
 (* Project context accessors *)
 let analyze_set ctx = ctx.analyze_set
 let project_root ctx = ctx.project_root
-let executable_modules ctx = Lazy.force ctx.executable_modules
-let lib_modules ctx = Lazy.force ctx.lib_modules
-let test_modules ctx = Lazy.force ctx.test_modules
-let dune_describe ctx = Lazy.force ctx.dune_describe
+let executable_modules ctx = force_memo ctx.executable_modules
+let lib_modules ctx = force_memo ctx.lib_modules
+let test_modules ctx = force_memo ctx.test_modules
+let dune_describe ctx = force_memo ctx.dune_describe
 let file_view ctx filename = ctx.file_view_cache filename
 let file_content ctx filename = ctx.file_content_cache filename

@@ -5,6 +5,10 @@ exception Analysis_error of string
 (** Raised when analysis fails (e.g., Merlint_backend error, file read error).
 *)
 
+type 'a memo
+(** Opaque project memo. Values are forced only through Context accessors, so
+    project rules cannot accidentally bypass the shared cache lock. *)
+
 type file = {
   filename : string;  (** The current file being analyzed. *)
   config : Config.t;  (** The merlint configuration. *)
@@ -23,16 +27,17 @@ type project = {
       (** The user's request: the source files matched by the [merlint <args>]
           command. Project-scoped rules use this to limit their scan to what was
           actually asked about, rather than walking the whole monorepo. *)
-  dune_describe : Dune_describe.describe Lazy.t;
-      (** Dune project description (lazy). *)
-  executable_modules : string list Lazy.t;
-      (** List of executable module names (lazy). *)
-  lib_modules : string list Lazy.t;  (** List of library module names (lazy). *)
-  test_modules : string list Lazy.t;  (** List of test module names (lazy). *)
-  index : Project_index.t Lazy.t;
+  dune_describe : Dune_describe.describe memo;
+      (** Dune project description (memoized). *)
+  executable_modules : string list memo;
+      (** List of executable module names (memoized). *)
+  lib_modules : string list memo;
+      (** List of library module names (memoized). *)
+  test_modules : string list memo;  (** List of test module names (memoized). *)
+  index : Project_index.t memo;
       (** Monopam package/library index: opam pkg -> dune library -> modules,
           tags, depends, source directories. Walks the monorepo source tree and
-          the [_opam/lib/] install tree. Built lazily on first access. *)
+          the [_opam/lib/] install tree. Built on first access. *)
   file_view_cache : string -> File_view.t;
       (** Project-wide memoized file views, shared by project-scoped and
           file-scoped rules. *)

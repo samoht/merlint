@@ -21,13 +21,6 @@ val oracle_dirs_for : Context.project -> oracle_dir list
     focused projects that have interop scaffolding but no indexed package, it
     also inspects [test/interop/*] under the project root. *)
 
-val read_file : string -> string
-(** [read_file path] returns the contents of [path], or an empty string. *)
-
-val dune_content : string -> string
-(** [dune_content dir] returns the contents of [dir/dune], or an empty string.
-*)
-
-val test_content : string -> string
-(** [test_content dir] returns the contents of [dir/test.ml], or an empty
-    string. *)
+val script_contains : dir:string -> file:string -> affix:string -> bool
+(** [script_contains ~dir ~file ~affix] is [true] when [dir/file] is a script
+    file whose text contains [affix]. Missing files count as [false]. *)

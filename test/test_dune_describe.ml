@@ -197,6 +197,37 @@ let with_temp_dune content f =
       try Unix.rmdir dir with Unix.Unix_error _ -> ())
     (fun () -> f (Fpath.v dir))
 
+let write_file path content =
+  let oc = open_out path in
+  Fun.protect
+    ~finally:(fun () -> close_out oc)
+    (fun () -> output_string oc content)
+
+let rec remove_tree path =
+  if Sys.is_directory path then begin
+    Sys.readdir path
+    |> Array.iter (fun entry -> remove_tree (Filename.concat path entry));
+    Unix.rmdir path
+  end
+  else Sys.remove path
+
+let with_temp_project f =
+  let dir = Filename.temp_file "merlint_dune_project" "" in
+  Sys.remove dir;
+  Unix.mkdir dir 0o755;
+  Fun.protect
+    ~finally:(fun () ->
+      try remove_tree dir with Sys_error _ | Unix.Unix_error _ -> ())
+    (fun () -> f dir)
+
+let contains ~sub s =
+  let sub_len = String.length sub in
+  let s_len = String.length s in
+  let rec loop i =
+    i + sub_len <= s_len && (String.sub s i sub_len = sub || loop (i + 1))
+  in
+  loop 0
+
 let test_excluded_subdirs_missing_dune () =
   let dir = Filename.temp_file "merlint_dune_describe_empty" "" in
   Sys.remove dir;
@@ -240,6 +271,46 @@ let test_excluded_subdirs_malformed () =
         "malformed dune file -> no crash, empty result" []
         (Merlint.Dune_describe.excluded_subdirs_of_dune dir))
 
+let test_dirs_limits_walk () =
+  with_temp_project @@ fun root ->
+  write_file (Filename.concat root "dune") "(dirs lib test)\n";
+  List.iter
+    (fun dir ->
+      let path = Filename.concat root dir in
+      Unix.mkdir path 0o755;
+      write_file (Filename.concat path "dune") "(executable (name main))\n";
+      write_file (Filename.concat path "main.ml") "let () = ()\n")
+    [ "lib"; "test"; "bin" ];
+  let files =
+    Merlint.Dune_describe.describe (Fpath.v root)
+    |> Merlint.Dune_describe.project_files |> List.map Fpath.to_string
+  in
+  Alcotest.(check bool)
+    "keeps allowed dir" true
+    (List.exists (contains ~sub:"lib/main.ml") files);
+  Alcotest.(check bool)
+    "drops dir excluded by dirs stanza" false
+    (List.exists (contains ~sub:"bin/main.ml") files)
+
+let test_enabled_if_false_stanza_ignored () =
+  with_temp_project @@ fun root ->
+  write_file
+    (Filename.concat root "dune")
+    "(executable (name disabled) (enabled_if false) (modules disabled))\n\
+     (executable (name enabled) (modules enabled))\n";
+  write_file (Filename.concat root "disabled.ml") "let () = ()\n";
+  write_file (Filename.concat root "enabled.ml") "let () = ()\n";
+  let files =
+    Merlint.Dune_describe.describe (Fpath.v root)
+    |> Merlint.Dune_describe.project_files |> List.map Fpath.to_string
+  in
+  Alcotest.(check bool)
+    "keeps enabled stanza" true
+    (List.exists (contains ~sub:"enabled.ml") files);
+  Alcotest.(check bool)
+    "drops enabled_if false stanza" false
+    (List.exists (contains ~sub:"disabled.ml") files)
+
 let suite =
   ( "dune_describe",
     [
@@ -265,4 +336,8 @@ let suite =
         test_excluded_subdirs_both;
       Alcotest.test_case "excluded_subdirs: malformed dune file" `Quick
         test_excluded_subdirs_malformed;
+      Alcotest.test_case "dirs stanza limits discovery" `Quick
+        test_dirs_limits_walk;
+      Alcotest.test_case "enabled_if false stanza ignored" `Quick
+        test_enabled_if_false_stanza_ignored;
     ] )

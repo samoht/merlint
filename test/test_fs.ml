@@ -1,5 +1,4 @@
-let with_domain_mgr f =
-  Eio_main.run @@ fun env -> f (Eio.Stdenv.domain_mgr env)
+let with_domain_mgr f = Eio_main.run @@ fun env -> f (Eio.Stdenv.domain_mgr env)
 
 let test_parallel_map_preserves_order () =
   with_domain_mgr @@ fun dm ->

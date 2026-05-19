@@ -21,6 +21,14 @@ type example = {
 type 'a scope =
   | File of (Context.file -> 'a Issue.t list)
   | Project of (Context.project -> 'a Issue.t list)
+  | Project_units : {
+      enumerate : Context.project -> 'unit list;
+      check : Context.project -> 'unit -> 'a Issue.t list;
+    }
+      -> 'a scope
+      (** Rule scope. [Project_units] is for the small set of project rules
+          whose work naturally splits into independent units; the engine
+          schedules those units directly. *)
 
 type t
 (** Type for rules. *)
@@ -71,11 +79,25 @@ module Run : sig
   type result
   (** Result of running a rule, containing the issue and metadata. *)
 
+  type project_job
+  (** One schedulable project-rule job. A normal project rule produces one job;
+      a [Project_units] rule produces one job per enumerated unit. *)
+
   val file : t -> Context.file -> result list
   (** [file rule context] runs file rule. *)
 
   val project : t -> Context.project -> result list
   (** [project rule context] runs project rule. *)
+
+  val project_jobs : t -> Context.project -> project_job list
+  (** [project_jobs rule context] exposes project work units for engine
+      scheduling. *)
+
+  val project_job : project_job -> result list
+  (** [project_job job] runs one project job. *)
+
+  val project_job_code : project_job -> string
+  (** [project_job_code job] is the owning rule code. *)
 
   val code : result -> string
   (** [code result] returns rule code. *)
