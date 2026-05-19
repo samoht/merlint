@@ -9,49 +9,6 @@ module Tast_iterator = Ocaml_typing.Tast_iterator
 type exclusion_stats = { rule : string; file : string }
 type result = { issues : Rule.Run.result list; excluded : exclusion_stats list }
 
-type io_stats = {
-  mutable files_read : int;
-  mutable merlin_calls : int;
-  reads_by_ext : (string, int) Hashtbl.t;
-  merlin_by_ext : (string, int) Hashtbl.t;
-  lock : Eio.Mutex.t;
-}
-
-let io_stats () =
-  {
-    files_read = 0;
-    merlin_calls = 0;
-    reads_by_ext = Hashtbl.create 8;
-    merlin_by_ext = Hashtbl.create 8;
-    lock = Eio.Mutex.create ();
-  }
-
-let with_stats_lock stats f =
-  Eio.Mutex.lock stats.lock;
-  Fun.protect ~finally:(fun () -> Eio.Mutex.unlock stats.lock) f
-
-let ext filename =
-  match Filename.extension filename with "" -> "<none>" | ext -> ext
-
-let incr_ext tbl filename =
-  let ext = ext filename in
-  Hashtbl.replace tbl ext
-    (Option.value ~default:0 (Hashtbl.find_opt tbl ext) + 1)
-
-let record_file_read stats filename =
-  with_stats_lock stats @@ fun () ->
-  stats.files_read <- stats.files_read + 1;
-  incr_ext stats.reads_by_ext filename
-
-let record_merlin_call stats filename =
-  with_stats_lock stats @@ fun () ->
-  stats.merlin_calls <- stats.merlin_calls + 1;
-  incr_ext stats.merlin_by_ext filename
-
-let sorted_ext_counts tbl =
-  Hashtbl.fold (fun ext count acc -> (ext, count) :: acc) tbl []
-  |> List.sort (fun (a, _) (b, _) -> String.compare a b)
-
 let warn_missing_cmts n =
   if n > 0 then
     Log.warn (fun m ->
@@ -72,29 +29,12 @@ let log_fs_stats () =
         m "FS stats: readdirs=%d is_directory=%d file_exists=%d file_opens=%d"
           s.readdirs s.is_directory_checks s.file_exists_checks s.file_opens)
 
-let log_io_stats stats backend =
-  let backend_stats = Merlin.stats backend in
-  let reads = sorted_ext_counts stats.reads_by_ext in
-  let merlin = sorted_ext_counts stats.merlin_by_ext in
-  let all_exts =
-    List.map fst reads @ List.map fst merlin |> List.sort_uniq String.compare
-  in
-  let lookup tbl ext = Option.value ~default:0 (Hashtbl.find_opt tbl ext) in
+let log_backend_stats backend =
+  let s = Merlin.stats backend in
   Log.info (fun m ->
-      m
-        "IO stats: files_read=%d merlin_calls=%d cmt_hits=%d cmt_misses=%d \
-         source_parses=%d cmt_reads=%d cmt_cache_hits=%d"
-        stats.files_read stats.merlin_calls backend_stats.cmt_hits
-        backend_stats.cmt_misses backend_stats.source_parses
-        backend_stats.cmt_reads backend_stats.cmt_cache_hits);
-  List.iter
-    (fun ext ->
-      Log.info (fun m ->
-          m "IO stats[%s]: files_read=%d merlin_calls=%d" ext
-            (lookup stats.reads_by_ext ext)
-            (lookup stats.merlin_by_ext ext)))
-    all_exts;
-  warn_missing_cmts backend_stats.cmt_misses
+      m "Merlin stats: cmt_hits=%d cmt_misses=%d cmt_reads=%d source_parses=%d"
+        s.cmt_hits s.cmt_misses s.cmt_reads s.source_parses);
+  warn_missing_cmts s.cmt_misses
 
 let run_file_rule ?profiling ctx rule =
   let code = Rule.code rule in
@@ -142,8 +82,7 @@ let run_project_job ?profiling job =
   | None -> ());
   res
 
-let merlin_op ?profiling ?stats filename f =
-  Option.iter (fun stats -> record_merlin_call stats filename) stats;
+let merlin_op ?profiling filename f =
   let start = Unix.gettimeofday () in
   let r = f () in
   let duration = Unix.gettimeofday () -. start in
@@ -159,17 +98,12 @@ let source_filename filename =
   if Fpath.is_abs file then Fpath.to_string (Fpath.normalize file)
   else Fpath.(v (Sys.getcwd ()) // file |> normalize |> to_string)
 
-let file_view ?profiling ~stats ~load_file ~backend filename =
+let file_view ?profiling ~load_file ~backend filename =
   let source_filename = source_filename filename in
-  let content =
-    lazy
-      (record_file_read stats filename;
-       load_file source_filename)
-  in
+  let content = lazy (load_file source_filename) in
   let source = Merlin.Source.v ~file:source_filename ~content in
   let typedtree () =
-    merlin_op ?profiling ?stats:(Some stats) filename (fun () ->
-        Merlin.typedtree backend ~source)
+    merlin_op ?profiling filename (fun () -> Merlin.typedtree backend ~source)
   in
   File_view.v ~filename ~typedtree ()
 
@@ -375,7 +309,6 @@ let run ?domain_mgr ~load_file ~filter ~dune_describe ?analyze_set ~index
     ?profiling project_root =
   Log.info (fun m -> m "Starting analysis of %s" project_root);
   let backend = Merlin.v ~root_dir:project_root () in
-  let stats = io_stats () in
   let raw_analyze_set =
     match analyze_set with
     | Some files -> files
@@ -384,7 +317,7 @@ let run ?domain_mgr ~load_file ~filter ~dune_describe ?analyze_set ~index
   let run_with_pool ?pool () =
     let idx = lazy (index ?pool ()) in
     let analyze_set = drop_vendored_files (Lazy.force idx) raw_analyze_set in
-    let file_view = file_view ?profiling ~stats ~load_file ~backend in
+    let file_view = file_view ?profiling ~load_file ~backend in
     let _config, project_ctx, enabled_rules =
       setup_analysis ~filter ~dune_describe ~analyze_set ~index:idx ~file_view
         project_root
@@ -396,11 +329,9 @@ let run ?domain_mgr ~load_file ~filter ~dune_describe ?analyze_set ~index
     let project_promise, project_resolver = Eio.Promise.create () in
     let file_promise, file_resolver = Eio.Promise.create () in
     Eio.Fiber.fork ~sw (fun () ->
-
         run_project_rules ?pool ?profiling enabled_rules project_ctx
         |> Eio.Promise.resolve project_resolver);
     Eio.Fiber.fork ~sw (fun () ->
-
         analyze_files ?pool ~project_ctx ~project_root ~file_rules ~pass_rules
           ?profiling analyze_set
         |> Eio.Promise.resolve file_resolver);
@@ -408,7 +339,7 @@ let run ?domain_mgr ~load_file ~filter ~dune_describe ?analyze_set ~index
   in
   Fun.protect
     ~finally:(fun () ->
-      log_io_stats stats backend;
+      log_backend_stats backend;
       log_fs_stats ();
       Merlin.close backend)
     (fun () ->
