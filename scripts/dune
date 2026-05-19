@@ -8,6 +8,11 @@
  (modules check_test_integrity)
  (libraries merlint unix re fmt))
 
+(executable
+ (name trace)
+ (modules trace)
+ (libraries runtime_events fmt))
+
 (mdx
  (libraries merlint)
  (files README.md))
