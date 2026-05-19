@@ -72,11 +72,22 @@ let all_error_codes () =
   Merlint.Data.all_rules |> List.map Merlint.Rule.code
   |> List.map String.lowercase_ascii
 
+(* Is [s] of the form [e<digits>] -- i.e. a rule code like [e605]? Non-matching
+   names (e.g. [vendored]) belong to integration-style cram tests that aren't
+   bound to a single rule; the integrity check leaves them alone. *)
+let is_rule_code s =
+  String.length s > 1
+  && (s.[0] = 'e' || s.[0] = 'E')
+  &&
+  let rest = String.sub s 1 (String.length s - 1) in
+  String.length rest > 0
+  && String.for_all (fun c -> c >= '0' && c <= '9') rest
+
 (* Extract error code from directory name *)
 let extract_error_code dir_name =
   if String.length dir_name > 2 && String.ends_with ~suffix:".t" dir_name then
     let code = String.sub dir_name 0 (String.length dir_name - 2) in
-    Some (String.lowercase_ascii code)
+    if is_rule_code code then Some (String.lowercase_ascii code) else None
   else None
 
 (* Get all test directories *)
