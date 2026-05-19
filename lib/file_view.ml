@@ -808,6 +808,7 @@ let v ~filename ~typedtree () =
   }
 
 let filename t = t.filename
+let pp ppf t = Fmt.string ppf t.filename
 let typedtree t = force t t.typedtree
 let values t = force t t.values
 let is_resolved t = Option.is_some (force t t.typedtree)

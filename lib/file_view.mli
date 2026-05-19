@@ -12,6 +12,10 @@ exception Analysis_error of string
 
 type t
 
+val pp : t Fmt.t
+(** [pp] prints a {!t} as its filename — enough to identify the view in
+    debug output. *)
+
 val v :
   filename:string ->
   typedtree:(unit -> (Merlin.typedtree option, string) result) ->
@@ -50,7 +54,7 @@ module Name : sig
   (** [equals_path n path] is [true] iff [path = prefix n @ [base n]]. *)
 
   val pp : t Fmt.t
-  (** [pp ppf n] prints [n] via {!to_string}. *)
+  (** [pp] prints a {!t} via {!to_string}. *)
 end
 
 (** {2 Types — structured shape queries on declared types} *)
@@ -195,9 +199,9 @@ module Value_sig : sig
   *)
 
   val type_path : t -> Name.t option
-  (** Outermost type constructor path of the declared type, when the type is a
-      [Ttyp_constr] / [Ptyp_constr]; [None] for arrows, tuples, variables, etc.
-  *)
+  (** [type_path v] is the outermost type-constructor path of the declared
+      type, when the type is a [Ttyp_constr] / [Ptyp_constr]; [None] for
+      arrows, tuples, variables, etc. *)
 end
 
 (** {2 Function-application sites — typedtree walk} *)
