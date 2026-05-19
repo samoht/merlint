@@ -413,21 +413,11 @@ let force t lazy_value =
     ~finally:(fun () -> Eio.Mutex.unlock t.lock)
     (fun () -> Lazy.force lazy_value)
 
-let warn_missing_typedtree filename =
-  Log.warn (fun m ->
-      m
-        "No fresh typedtree found for %s; typedtree-backed rules are skipped \
-         for this file. Run dune build @check before merlint so the .cmt/.cmti \
-         artefact exists and is up to date."
-        filename)
-
 let lazy_typedtree ~filename typedtree =
   lazy
     (match typedtree () with
     | Ok (Some _ as tree) -> tree
-    | Ok None ->
-        warn_missing_typedtree filename;
-        None
+    | Ok None -> None
     | Error msg ->
         Log.warn (fun m ->
             m

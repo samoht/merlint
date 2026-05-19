@@ -242,23 +242,22 @@ let print_exclusion_stats all_excluded =
   end
 
 let run_analysis ?domain_mgr ~load_file project_root dune_describe analyze_set
-    build_index rule_filter show_profile =
+    (build_index : ?pool:Eio.Executor_pool.t -> unit -> Project_index.t)
+    rule_filter show_profile =
   let profiling_state =
     if show_profile then Some (Merlint.Profiling.v ()) else None
   in
-  let files_count =
-    match analyze_set with
-    | Some files -> List.length files
-    | None -> List.length (Merlint.Dune_describe.project_files dune_describe)
-  in
-  Log.info (fun m -> m "Starting visual analysis on %d files" files_count);
+  let files_count = Option.map List.length analyze_set in
+  Log.info (fun m ->
+      m "Analysing %s files"
+        (match files_count with None -> "all" | Some n -> string_of_int n));
   let { Merlint.Engine.issues = all_issues; excluded = all_excluded } =
     run_engine ?domain_mgr ~load_file ?profiling:profiling_state rule_filter
       dune_describe analyze_set build_index project_root
   in
-  if files_count = 0 then Fmt.pr "Running merlint analysis...@.@."
-  else
-    Fmt.pr "Running merlint analysis...@.@.Analyzing %d files@.@." files_count;
+  (match files_count with
+  | None | Some 0 -> Fmt.pr "Running merlint analysis...@.@."
+  | Some n -> Fmt.pr "Running merlint analysis...@.@.Analyzing %d files@.@." n);
   print_exclusion_stats all_excluded;
 
   (* Group issues by category for reporting *)
