@@ -202,10 +202,9 @@ let style_issue_message = function
   | Bad_operator_format ->
       "should use '[x op y] description.' format for operators"
   | Wrong_arg_count { expected; found } ->
-      Printf.sprintf "has %d args in doc but function takes %d required args"
-        found expected
-  | Redundant_phrase phrase ->
-      Printf.sprintf "avoid redundant phrase '%s'" phrase
+      Fmt.str "has %d args in doc but function takes %d required args" found
+        expected
+  | Redundant_phrase phrase -> Fmt.str "avoid redundant phrase '%s'" phrase
 
 let pp_style_issue ppf issue = Fmt.string ppf (style_issue_message issue)
 let equal_style_issue = ( = )
