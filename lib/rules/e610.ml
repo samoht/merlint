@@ -76,22 +76,12 @@ let library_source_files libraries =
         (Project_index.Library.files lib))
     libraries
 
-module String_set = Set.Make (String)
+type env = {
+  library_module_paths : string list;
+  library_source_files : string list;
+}
 
-(** Project-wide set of module names referenced anywhere in [files]. The
-    per-file view owns the typedtree/parsetree traversal cache; E610 only merges
-    its module-name projection across library files. *)
-let collect_referenced_modules ctx files =
-  List.fold_left
-    (fun acc path ->
-      if Filename.check_suffix path ".ml" || Filename.check_suffix path ".mli"
-      then
-        try
-          File_view.referenced_module_names (Context.file_view ctx path)
-          |> List.fold_left (fun acc name -> String_set.add name acc) acc
-        with Context.Analysis_error _ -> acc
-      else acc)
-    String_set.empty files
+type work = { env : env; file : Fpath.t }
 
 let module_path_matches ~expected_path lib_path =
   let expected_lc = String.lowercase_ascii expected_path in
@@ -118,7 +108,20 @@ let missing_library_issue file expected_path =
   Issue.v ~loc
     { test_file = Fpath.to_string file; expected_module = expected_path }
 
-let check_test_file ~library_module_paths ~referenced_modules file =
+let file_references_module ctx path name =
+  try
+    File_view.referenced_module_names (Context.file_view ctx path)
+    |> List.mem name
+  with Context.Analysis_error _ -> false
+
+let module_referenced_by_library ctx library_source_files name =
+  List.exists
+    (fun path ->
+      (Filename.check_suffix path ".ml" || Filename.check_suffix path ".mli")
+      && file_references_module ctx path name)
+    library_source_files
+
+let check_test_file ctx ~library_module_paths ~library_source_files file =
   let test_module = Fpath.(file |> rem_ext |> basename) in
   if
     (not (Fpath.has_ext ".ml" file))
@@ -139,24 +142,34 @@ let check_test_file ~library_module_paths ~referenced_modules file =
           Filename.remove_extension (Filename.basename expected_path)
         in
         let cap_name = String.capitalize_ascii module_name in
-        let referenced = String_set.mem cap_name referenced_modules in
+        let referenced =
+          (not found)
+          && module_referenced_by_library ctx library_source_files cap_name
+        in
         Log.debug (fun m -> m "E610: found=%b referenced=%b" found referenced);
         if found || referenced then None
         else Some (missing_library_issue file expected_path)
 
-let check ctx =
+let enumerate ctx =
   let libraries = Project.Query.source_libraries (Context.index ctx) in
   let library_module_paths = library_module_paths libraries in
-  let referenced_modules =
-    collect_referenced_modules ctx (library_source_files libraries)
-  in
+  let library_source_files = library_source_files libraries in
+  let env = { library_module_paths; library_source_files } in
   Log.debug (fun m ->
       m "E610: library_module_paths = %a"
         Fmt.(list ~sep:comma string)
         library_module_paths);
   Context.test_stanzas ctx
   |> List.concat_map Project_index.source_stanza_files
-  |> List.filter_map (check_test_file ~library_module_paths ~referenced_modules)
+  |> List.map (fun file -> { env; file })
+
+let check_unit ctx { env; file } =
+  match
+    check_test_file ctx ~library_module_paths:env.library_module_paths
+      ~library_source_files:env.library_source_files file
+  with
+  | None -> []
+  | Some issue -> [ issue ]
 
 let pp ppf { test_file = _; expected_module } =
   Fmt.pf ppf "Test file exists but corresponding library module '%s' not found"
@@ -168,4 +181,5 @@ let rule =
       "Every test module should have a corresponding library module. This \
        ensures that tests are testing actual library functionality rather than \
        testing code that doesn't exist in the library."
-    ~examples:[] ~pp (Project check)
+    ~examples:[] ~pp
+    (Project_units { enumerate; check = check_unit })
