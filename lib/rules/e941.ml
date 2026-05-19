@@ -77,13 +77,22 @@ let check_package package =
   let depends = P.depends package |> Dep_deps.String_set.of_list in
   let build_depends = P.build_depends package |> Dep_deps.String_set.of_list in
   let own = Dep_deps.own_libs package in
-  (* Skip libraries that are only referenced by test stanzas: their
-     [(libraries ...)] deps are test-scope, not runtime. E943 covers those. *)
+  (* A library with a [(public_name ...)] is meant to be consumed externally:
+     it is runtime by definition, regardless of which internal stanzas
+     happen to reference it. Filter out only the truly-private libraries
+     (no public name) whose internal callers are all test-scope; those are
+     test helpers and E943 covers their (libraries ...) field. *)
   let test_only = Dep_deps.test_only_libs package in
   let runtime_libs =
     Project_index.package_libraries package
     |> List.filter (fun lib ->
-        not (Dep_deps.String_set.mem (Project_index.Library.name lib) test_only))
+        match Project_index.Library.public_name lib with
+        | Some _ -> true
+        | None ->
+            not
+              (Dep_deps.String_set.mem
+                 (Project_index.Library.name lib)
+                 test_only))
   in
   let lib_findings =
     List.concat_map (check_lib ~package ~depends_set:depends ~own) runtime_libs
