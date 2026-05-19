@@ -4,7 +4,7 @@ Good tests in correct test stanza:
 Build good fixture project:
   $ (cd good && dune build @check)
 
-  $ merlint -B -r E606 good/
+  $ merlint --build -r E606 good/
   Dune root: $TESTCASE_ROOT/good/
   Running merlint analysis...
   
@@ -26,7 +26,7 @@ Bad test files in wrong test stanza:
 Build bad fixture project:
   $ (cd bad && dune build @check)
 
-  $ merlint -B -r E606 bad/
+  $ merlint --build -r E606 bad/
   Dune root: $TESTCASE_ROOT/bad/
   Running merlint analysis...
   
@@ -62,7 +62,7 @@ Test files with declared libraries (should pass):
 Build bad2 fixture project:
   $ (cd bad2 && dune build @check)
 
-  $ merlint -B -r E606 bad2/
+  $ merlint --build -r E606 bad2/
   Dune root: $TESTCASE_ROOT/bad2/
   Running merlint analysis...
   
@@ -84,7 +84,7 @@ Test files with incomplete library declarations:
 Build bad3 fixture project:
   $ (cd bad3 && dune build @check)
 
-  $ merlint -B -r E606 bad3/
+  $ merlint --build -r E606 bad3/
   Dune root: $TESTCASE_ROOT/bad3/
   Running merlint analysis...
   

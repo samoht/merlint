@@ -2,7 +2,7 @@ Test bad example - fuzz suite name mismatch:
 Build bad fixture project:
   $ (cd bad && dune build @check)
 
-  $ merlint -B -r E725 bad/
+  $ merlint --build -r E725 bad/
   Dune root: $TESTCASE_ROOT/bad/
   Running merlint analysis...
   
@@ -42,7 +42,7 @@ Test good example - fuzz suite name matches filename:
 Build good fixture project:
   $ (cd good && dune build @check)
 
-  $ merlint -B -r E725 good/
+  $ merlint --build -r E725 good/
   Dune root: $TESTCASE_ROOT/good/
   Running merlint analysis...
   

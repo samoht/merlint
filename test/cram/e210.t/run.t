@@ -2,7 +2,7 @@ Build fixture project:
   $ dune build @check
 
 Test bad example - should find double underscore patterns:
-  $ merlint -B -r E210 bad.ml
+  $ merlint --build -r E210 bad.ml
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
@@ -36,7 +36,7 @@ Test bad example - should find double underscore patterns:
   [1]
 
 Test good example - should find no issues:
-  $ merlint -B -r E210 good.ml
+  $ merlint --build -r E210 good.ml
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   

@@ -2,7 +2,7 @@ Test bad example - package uses src/ instead of lib/:
 Build bad fixture project:
   $ (cd bad && dune build @check)
 
-  $ merlint -B -r E520 bad/
+  $ merlint --build -r E520 bad/
   Dune root: $TESTCASE_ROOT/bad/
   Running merlint analysis...
   
@@ -41,7 +41,7 @@ Test good example - package uses lib/:
 Build good fixture project:
   $ (cd good && dune build @check)
 
-  $ merlint -B -r E520 good/
+  $ merlint --build -r E520 good/
   Dune root: $TESTCASE_ROOT/good/
   Running merlint analysis...
   

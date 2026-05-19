@@ -2,7 +2,7 @@ Build fixture project:
   $ dune build @check
 
 Test bad example - should find silenced warning:
-  $ merlint -B -r E110 bad.ml
+  $ merlint --build -r E110 bad.ml
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
@@ -35,7 +35,7 @@ Test bad example - should find silenced warning:
   [1]
 
 Test good example - should find no issues:
-  $ merlint -B -r E110 good.ml
+  $ merlint --build -r E110 good.ml
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   

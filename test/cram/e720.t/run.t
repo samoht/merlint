@@ -3,7 +3,7 @@ Test bad example - multiple fuzz stanzas in same directory:
 Build bad fixture project:
   $ (cd bad && dune build @check)
 
-  $ merlint -B -r E720 bad/
+  $ merlint --build -r E720 bad/
   Dune root: $TESTCASE_ROOT/bad/
   Running merlint analysis...
   
@@ -39,7 +39,7 @@ Test good example - single fuzz stanza:
 Build good fixture project:
   $ (cd good && dune build @check)
 
-  $ merlint -B -r E720 good/
+  $ merlint --build -r E720 good/
   Dune root: $TESTCASE_ROOT/good/
   Running merlint analysis...
   

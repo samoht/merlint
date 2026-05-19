@@ -2,7 +2,7 @@ Test bad example - python script without requirements.txt:
 Build bad fixture project:
   $ (cd bad && dune build @check)
 
-  $ merlint -B -r E805 bad/
+  $ merlint --build -r E805 bad/
   Dune root: $TESTCASE_ROOT/bad/
   Running merlint analysis...
   
@@ -36,7 +36,7 @@ Test good example - python script with requirements.txt:
 Build good fixture project:
   $ (cd good && dune build @check)
 
-  $ merlint -B -r E805 good/
+  $ merlint --build -r E805 good/
   Dune root: $TESTCASE_ROOT/good/
   Running merlint analysis...
   

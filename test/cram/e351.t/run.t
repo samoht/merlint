@@ -1,6 +1,6 @@
 Test bad example - should find exposed global mutable state in interface:
   $ dune build @check
-  $ merlint -B -r E351 bad.mli
+  $ merlint --build -r E351 bad.mli
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
@@ -36,7 +36,7 @@ Test bad example - should find exposed global mutable state in interface:
   [1]
 
 Test good example - should find no issues (properly encapsulated state):
-  $ merlint -B -r E351 good.mli
+  $ merlint --build -r E351 good.mli
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
@@ -55,7 +55,7 @@ Test good example - should find no issues (properly encapsulated state):
   ✓ All checks passed!
 
 Test shadow example - local ref/array aliases are not Stdlib types:
-  $ merlint -B -r E351 shadow.mli
+  $ merlint --build -r E351 shadow.mli
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   

@@ -361,8 +361,8 @@ let files_for_cmt_refresh analyze_set filtered_describe =
   | None -> Merlint.Dune_describe.project_files filtered_describe
 
 let maybe_build_project mgr ~project_root ~analyze_set ~filtered_describe ~build
-    ~no_build =
-  if build || not no_build then (
+    =
+  if build then (
     Log.info (fun m -> m "Building project...");
     ensure_project_built ~path:project_root mgr;
     let files = files_for_cmt_refresh analyze_set filtered_describe in
@@ -397,7 +397,7 @@ let build_project_index ~domain_mgr ~fs ~monorepo ?roots () =
   idx
 
 let analyze_files mgr fs domain_mgr ?(exclude_patterns = []) ?rule_filter
-    ?(show_profile = false) ?(build = false) ?(no_build = false) files =
+    ?(show_profile = false) ?(build = false) files =
   let load_file = load_file_via_eio fs in
   let project_root = project_root_of_files files in
   Log.info (fun m -> m "Dune root: %s (cwd: %s)" project_root (Sys.getcwd ()));
@@ -413,8 +413,7 @@ let analyze_files mgr fs domain_mgr ?(exclude_patterns = []) ?rule_filter
     if exclude_patterns = [] then dune_describe
     else Merlint.Dune_describe.exclude exclude_patterns dune_describe
   in
-  maybe_build_project mgr ~project_root ~analyze_set ~filtered_describe ~build
-    ~no_build;
+  maybe_build_project mgr ~project_root ~analyze_set ~filtered_describe ~build;
   let monorepo = monorepo_for_index project_root in
   let index_roots = index_roots_of_files files in
   let index =
@@ -458,8 +457,8 @@ let show_config_flag =
 
 let no_build_flag =
   let doc =
-    "Skip the automatic 'dune build' step. Use when the project is already \
-     built or for faster repeated runs."
+    "Deprecated no-op. Merlint does not build by default; pass --build to run \
+     'dune build @check' before analysis."
   in
   Arg.(value & flag & info [ "no-build" ] ~doc)
 
@@ -468,7 +467,7 @@ let build_flag =
     "Run 'dune build @check' and refresh stale .cmt/.cmti artifacts before \
      analysis."
   in
-  Arg.(value & flag & info [ "build"; "B" ] ~doc)
+  Arg.(value & flag & info [ "build" ] ~doc)
 
 let show_configuration files =
   let path = match files with [] -> Sys.getcwd () | path :: _ -> path in
@@ -511,8 +510,8 @@ let parse_rule_filter rules_spec =
           Log.err (fun m -> m "Invalid rules specification: %s" msg);
           Stdlib.exit 1)
 
-let main exclude_patterns rules_spec ~show_profile ~show_config ~build ~no_build
-    files () =
+let main exclude_patterns rules_spec ~show_profile ~show_config ~build
+    ~no_build:_no_build files () =
   if show_config then show_configuration files
   else
     let rule_filter = parse_rule_filter rules_spec in
@@ -521,7 +520,7 @@ let main exclude_patterns rules_spec ~show_profile ~show_config ~build ~no_build
     let fs = Eio.Stdenv.fs env in
     let domain_mgr = Eio.Stdenv.domain_mgr env in
     analyze_files mgr fs domain_mgr ~exclude_patterns ?rule_filter ~show_profile
-      ~build ~no_build files
+      ~build files
 
 let analyze_term =
   Term.(

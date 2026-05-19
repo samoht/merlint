@@ -3,7 +3,7 @@ Bad fixture: dune file present but missing the %{dune-warnings} stanza.
 Build bad fixture project:
   $ (cd bad && dune build @check)
 
-  $ merlint -B -r E940 bad/
+  $ merlint --build -r E940 bad/
   Dune root: $TESTCASE_ROOT/bad/
   Running merlint analysis...
   
@@ -40,7 +40,7 @@ Good fixture: dune file enables %{dune-warnings} on dev.
 Build good fixture project:
   $ (cd good && dune build @check)
 
-  $ merlint -B -r E940 good/
+  $ merlint --build -r E940 good/
   Dune root: $TESTCASE_ROOT/good/
   Running merlint analysis...
   

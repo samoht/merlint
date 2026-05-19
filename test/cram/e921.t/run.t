@@ -3,7 +3,7 @@ Bad: README.md and foo.mli contain dune-promoted mdx-error blocks.
 Build bad fixture project:
   $ (cd bad && dune build @check)
 
-  $ merlint -B -r E921 bad/
+  $ merlint --build -r E921 bad/
   Dune root: $TESTCASE_ROOT/bad/
   Running merlint analysis...
   
@@ -42,7 +42,7 @@ Good: no mdx-error blocks anywhere.
 Build good fixture project:
   $ (cd good && dune build @check)
 
-  $ merlint -B -r E921 good/
+  $ merlint --build -r E921 good/
   Dune root: $TESTCASE_ROOT/good/
   Running merlint analysis...
   

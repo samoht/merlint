@@ -2,7 +2,7 @@ Build fixture project:
   $ dune build @check
 
 Test bad example - flags useless and-bindings while sparing genuine mutual recursion:
-  $ merlint -B -r E219 bad.ml
+  $ merlint --build -r E219 bad.ml
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
@@ -41,7 +41,7 @@ Test bad example - flags useless and-bindings while sparing genuine mutual recur
   [1]
 
 Test good example - no flags after linearisation:
-  $ merlint -B -r E219 good.ml
+  $ merlint --build -r E219 good.ml
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   

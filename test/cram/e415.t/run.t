@@ -2,7 +2,7 @@ Build fixture project:
   $ dune build @check
 
 Test bad example - should find missing standard functions:
-  $ merlint -B -r E415 bad.mli
+  $ merlint --build -r E415 bad.mli
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
@@ -36,7 +36,7 @@ Test bad example - should find missing standard functions:
   [1]
 
 Test good example - should find no issues:
-  $ merlint -B -r E415 good.mli
+  $ merlint --build -r E415 good.mli
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
@@ -55,7 +55,7 @@ Test good example - should find no issues:
   ✓ All checks passed!
 
 Test function type - should not require pp:
-  $ merlint -B -r E415 function_good.mli
+  $ merlint --build -r E415 function_good.mli
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   

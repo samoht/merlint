@@ -2,7 +2,7 @@ Test bad example - generate.py defines its own encode function:
 Build bad fixture project:
   $ (cd bad && dune build @check)
 
-  $ merlint -B -r E830 bad/
+  $ merlint --build -r E830 bad/
   Dune root: $TESTCASE_ROOT/bad/
   Running merlint analysis...
   
@@ -37,7 +37,7 @@ Test good example - generate.py only calls the upstream library:
 Build good fixture project:
   $ (cd good && dune build @check)
 
-  $ merlint -B -r E830 good/
+  $ merlint --build -r E830 good/
   Dune root: $TESTCASE_ROOT/good/
   Running merlint analysis...
   

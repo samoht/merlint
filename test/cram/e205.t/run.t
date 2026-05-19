@@ -1,6 +1,6 @@
 Test bad example - should find usage of Printf instead of Fmt:
   $ dune build @check
-  $ merlint -B -r E205 bad.ml
+  $ merlint --build -r E205 bad.ml
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
@@ -35,7 +35,7 @@ Test bad example - should find usage of Printf instead of Fmt:
   [1]
 
 Test good example - should find no issues:
-  $ merlint -B -r E205 good.ml
+  $ merlint --build -r E205 good.ml
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
@@ -54,7 +54,7 @@ Test good example - should find no issues:
   ✓ All checks passed!
 
 Test shadow example - local Printf/Format are not Stdlib modules:
-  $ merlint -B -r E205 shadow.ml
+  $ merlint --build -r E205 shadow.ml
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   

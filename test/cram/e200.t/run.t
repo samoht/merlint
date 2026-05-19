@@ -1,6 +1,6 @@
 Test bad example - should find usage of outdated Str module:
   $ dune build @check
-  $ merlint -B -r E200 bad.ml
+  $ merlint --build -r E200 bad.ml
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
@@ -34,7 +34,7 @@ Test bad example - should find usage of outdated Str module:
   [1]
 
 Test good example - should find no issues:
-  $ merlint -B -r E200 good.ml
+  $ merlint --build -r E200 good.ml
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
@@ -53,7 +53,7 @@ Test good example - should find no issues:
   ✓ All checks passed!
 
 Test shadow example - local Str is not the Str library:
-  $ merlint -B -r E200 shadow.ml
+  $ merlint --build -r E200 shadow.ml
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   

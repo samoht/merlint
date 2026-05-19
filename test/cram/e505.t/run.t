@@ -2,7 +2,7 @@ Build fixture project:
   $ dune build @check
 
 Test bad example - should find missing interface file:
-  $ merlint -B -r E505 bad.ml
+  $ merlint --build -r E505 bad.ml
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
@@ -35,7 +35,7 @@ Test bad example - should find missing interface file:
   [1]
 
 Test good example - should find no issues:
-  $ merlint -B -r E505 good.ml good.mli
+  $ merlint --build -r E505 good.ml good.mli
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
@@ -54,7 +54,7 @@ Test good example - should find no issues:
   ✓ All checks passed!
 
 Test interface definition file - should not require .mli:
-  $ merlint -B -r E505 test_intf.ml
+  $ merlint --build -r E505 test_intf.ml
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   

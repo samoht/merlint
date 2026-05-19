@@ -4,7 +4,7 @@ stanza, but lists pkg-a in its runtime [depends:]. E943 flags it.
 Build bad fixture project:
   $ (cd bad && dune build @check)
 
-  $ merlint -B -r E943 bad/
+  $ merlint --build -r E943 bad/
   Dune root: $TESTCASE_ROOT/bad/
   Running merlint analysis...
   
@@ -47,7 +47,7 @@ Same setup, but pkg-b.opam now declares pkg-a with {with-test}. No findings.
 Build good fixture project:
   $ (cd good && dune build @check)
 
-  $ merlint -B -r E943 good/
+  $ merlint --build -r E943 good/
   Dune root: $TESTCASE_ROOT/good/
   Running merlint analysis...
   

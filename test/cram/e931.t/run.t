@@ -2,7 +2,7 @@ Test bad example - sans-IO library reads the wall clock:
 Build bad fixture project:
   $ (cd bad && dune build @check)
 
-  $ merlint -B -r E931 bad/
+  $ merlint --build -r E931 bad/
   Dune root: $TESTCASE_ROOT/bad/
   Running merlint analysis...
   
@@ -42,7 +42,7 @@ Test good example - sans-IO library takes time as input:
 Build good fixture project:
   $ (cd good && dune build @check)
 
-  $ merlint -B -r E931 good/
+  $ merlint --build -r E931 good/
   Dune root: $TESTCASE_ROOT/good/
   Running merlint analysis...
   

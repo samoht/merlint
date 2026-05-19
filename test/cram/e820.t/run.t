@@ -1,6 +1,6 @@
 Test bad example - test.ml hand-rolls CSV parsing:
   $ (cd bad && dune build @check)
-  $ merlint -B -r E820 bad/
+  $ merlint --build -r E820 bad/
   Dune root: $TESTCASE_ROOT/bad/
   Running merlint analysis...
   
@@ -33,7 +33,7 @@ Test bad example - test.ml hand-rolls CSV parsing:
 
 Test good example - test.ml uses csv library:
   $ (cd good && dune build @check)
-  $ merlint -B -r E820 good/
+  $ merlint --build -r E820 good/
   Dune root: $TESTCASE_ROOT/good/
   Running merlint analysis...
   
@@ -53,7 +53,7 @@ Test good example - test.ml uses csv library:
 
 Test shadow example - local CSV-like helpers are not Stdlib functions:
   $ (cd shadow && dune build @check)
-  $ merlint -B -r E820 shadow/
+  $ merlint --build -r E820 shadow/
   Dune root: $TESTCASE_ROOT/shadow/
   Running merlint analysis...
   

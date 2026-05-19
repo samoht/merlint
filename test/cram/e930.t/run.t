@@ -2,7 +2,7 @@ Test bad example - pure sans-IO package depends on Unix:
 Build bad fixture project:
   $ (cd bad && dune build @check)
 
-  $ merlint -B -r E930 bad/
+  $ merlint --build -r E930 bad/
   Dune root: $TESTCASE_ROOT/bad/
   Running merlint analysis...
   
@@ -39,7 +39,7 @@ Test good example - pure sans-IO package avoids runtime IO dependencies:
 Build good fixture project:
   $ (cd good && dune build @check)
 
-  $ merlint -B -r E930 good/
+  $ merlint --build -r E930 good/
   Dune root: $TESTCASE_ROOT/good/
   Running merlint analysis...
   

@@ -2,7 +2,7 @@ Build fixture project:
   $ dune build @check
 
 Test bad example - should find error pattern usage:
-  $ merlint -B -r E340 bad.ml
+  $ merlint --build -r E340 bad.ml
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
@@ -40,7 +40,7 @@ Test bad example - should find error pattern usage:
   [1]
 
 Test good example - should find no issues:
-  $ merlint -B -r E340 good.ml
+  $ merlint --build -r E340 good.ml
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   

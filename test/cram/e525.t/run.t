@@ -2,7 +2,7 @@ Test bad example - foo/ has .opam but no foo/dune with %{dune-warnings}:
 Build bad fixture project:
   $ (cd bad && dune build @check)
 
-  $ merlint -B -r E525 bad/
+  $ merlint --build -r E525 bad/
   Dune root: $TESTCASE_ROOT/bad/
   Running merlint analysis...
   
@@ -38,7 +38,7 @@ Test good example - foo/ has dune enabling %{dune-warnings} and modern dune-proj
 Build good fixture project:
   $ (cd good && dune build @check)
 
-  $ merlint -B -r E525 good/
+  $ merlint --build -r E525 good/
   Dune root: $TESTCASE_ROOT/good/
   Running merlint analysis...
   

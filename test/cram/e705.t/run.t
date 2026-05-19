@@ -2,7 +2,7 @@ Test bad example - missing fuzz .mli file:
 Build bad fixture project:
   $ (cd bad && dune build @check)
 
-  $ merlint -B -r E705 bad/
+  $ merlint --build -r E705 bad/
   Dune root: $TESTCASE_ROOT/bad/
   Running merlint analysis...
   
@@ -38,7 +38,7 @@ Test good example - fuzz .mli file present with correct type:
 Build good fixture project:
   $ (cd good && dune build @check)
 
-  $ merlint -B -r E705 good/
+  $ merlint --build -r E705 good/
   Dune root: $TESTCASE_ROOT/good/
   Running merlint analysis...
   

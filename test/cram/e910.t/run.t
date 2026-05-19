@@ -2,7 +2,7 @@ Test bad example - declared test quality is missing:
 Build bad fixture project:
   $ (cd bad && dune build @check)
 
-  $ merlint -B -r E910 bad/
+  $ merlint --build -r E910 bad/
   Dune root: $TESTCASE_ROOT/bad/
   Running merlint analysis...
   
@@ -37,7 +37,7 @@ Test good example - declared quality exists:
 Build good fixture project:
   $ (cd good && dune build @check)
 
-  $ merlint -B -r E910 good/
+  $ merlint --build -r E910 good/
   Dune root: $TESTCASE_ROOT/good/
   Running merlint analysis...
   

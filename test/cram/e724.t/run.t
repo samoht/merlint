@@ -3,7 +3,7 @@ Test bad example - fuzz directory missing build rules:
 Build bad fixture project:
   $ (cd bad && dune build @check)
 
-  $ merlint -B -r E724 bad/
+  $ merlint --build -r E724 bad/
   Dune root: $TESTCASE_ROOT/bad/
   Running merlint analysis...
   
@@ -44,7 +44,7 @@ Test good example - fuzz directory with all required build rules:
 Build good fixture project:
   $ (cd good && dune build @check)
 
-  $ merlint -B -r E724 good/
+  $ merlint --build -r E724 good/
   Dune root: $TESTCASE_ROOT/good/
   Running merlint analysis...
   

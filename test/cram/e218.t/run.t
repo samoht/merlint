@@ -2,7 +2,7 @@ Build fixture project:
   $ dune build @check
 
 Test bad example - should flag two inline Fmt.kstr Error wrappers:
-  $ merlint -B -r E218 bad.ml
+  $ merlint --build -r E218 bad.ml
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
@@ -47,7 +47,7 @@ Test bad example - should flag two inline Fmt.kstr Error wrappers:
   [1]
 
 Test good example - top-of-file [err_wire] helper, no flags:
-  $ merlint -B -r E218 good.ml
+  $ merlint --build -r E218 good.ml
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   

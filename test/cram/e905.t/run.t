@@ -2,7 +2,7 @@ Test bad example - foo.mli exposes Wire.struct_ symbol:
 Build bad fixture project:
   $ (cd bad && dune build @check)
 
-  $ merlint -B -r E905 bad/
+  $ merlint --build -r E905 bad/
   Dune root: $TESTCASE_ROOT/bad/
   Running merlint analysis...
   
@@ -38,7 +38,7 @@ Test good example - foo.mli keeps Wire EverParse symbols out of the public API:
 Build good fixture project:
   $ (cd good && dune build @check)
 
-  $ merlint -B -r E905 good/
+  $ merlint --build -r E905 good/
   Dune root: $TESTCASE_ROOT/good/
   Running merlint analysis...
   
@@ -60,7 +60,7 @@ Test no-Wire edge case - a non-Wire package may expose an unrelated struct_ valu
 Build nowire fixture project:
   $ (cd nowire && dune build @check)
 
-  $ merlint -B -r E905 nowire/
+  $ merlint --build -r E905 nowire/
   Dune root: $TESTCASE_ROOT/nowire/
   Running merlint analysis...
   

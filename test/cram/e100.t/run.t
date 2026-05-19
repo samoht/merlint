@@ -1,6 +1,6 @@
 Test bad example - should find Obj.magic usage:
   $ dune build @check
-  $ merlint -B -r E100 bad.ml
+  $ merlint --build -r E100 bad.ml
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
@@ -35,7 +35,7 @@ Test bad example - should find Obj.magic usage:
   [1]
 
 Test good example - should find no issues:
-  $ merlint -B -r E100 good.ml
+  $ merlint --build -r E100 good.ml
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
@@ -54,7 +54,7 @@ Test good example - should find no issues:
   ✓ All checks passed!
 
 Test shadow example - local Obj.magic is not Stdlib.Obj.magic:
-  $ merlint -B -r E100 shadow.ml
+  $ merlint --build -r E100 shadow.ml
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   

@@ -4,7 +4,7 @@ Test stanza with no deps mixing test files from multiple libraries:
 Build bad fixture project:
   $ (cd bad && dune build @check)
 
-  $ merlint -B -r E607 bad/
+  $ merlint --build -r E607 bad/
   Dune root: $TESTCASE_ROOT/bad/
   Running merlint analysis...
   
@@ -40,7 +40,7 @@ Test stanza with files from only one library (no issue):
 Build good fixture project:
   $ (cd good && dune build @check)
 
-  $ merlint -B -r E607 good/
+  $ merlint --build -r E607 good/
   Dune root: $TESTCASE_ROOT/good/
   Running merlint analysis...
   

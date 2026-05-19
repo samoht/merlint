@@ -2,7 +2,7 @@ Test bad example - should find test without library:
 Build bad fixture project:
   $ (cd bad && dune build @check)
 
-  $ merlint -B -r E610 bad/
+  $ merlint --build -r E610 bad/
   Dune root: $TESTCASE_ROOT/bad/
   Running merlint analysis...
   
@@ -39,7 +39,7 @@ Test good example with library subdirectories - test files match library modules
 Build good fixture project:
   $ (cd good-subdir && dune build @check)
 
-  $ merlint -B -r E610 good-subdir/
+  $ merlint --build -r E610 good-subdir/
   Dune root: $TESTCASE_ROOT/good-subdir/
   Running merlint analysis...
   
@@ -61,7 +61,7 @@ Test good example - all test files have corresponding library modules:
 Build good fixture project:
   $ (cd good && dune build @check)
 
-  $ merlint -B -r E610 good/
+  $ merlint --build -r E610 good/
   Dune root: $TESTCASE_ROOT/good/
   Running merlint analysis...
   

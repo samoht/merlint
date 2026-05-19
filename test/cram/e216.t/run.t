@@ -2,7 +2,7 @@ Build fixture project:
   $ dune build @check
 
 Test bad example - should find invalid_arg with Fmt.str:
-  $ merlint -B -r E216 bad.ml
+  $ merlint --build -r E216 bad.ml
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
@@ -40,7 +40,7 @@ Test bad example - should find invalid_arg with Fmt.str:
   [1]
 
 Test good example - should find no issues:
-  $ merlint -B -r E216 good.ml
+  $ merlint --build -r E216 good.ml
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   

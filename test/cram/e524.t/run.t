@@ -2,7 +2,7 @@ Test bad example - main.ml defines two Cmd.v subcommands:
 Build bad fixture project:
   $ (cd bad && dune build @check)
 
-  $ merlint -B -r E524 bad/
+  $ merlint --build -r E524 bad/
   Dune root: $TESTCASE_ROOT/bad/
   Running merlint analysis...
   
@@ -39,7 +39,7 @@ Test good example - main.ml defines a single Cmd.v subcommand:
 Build good fixture project:
   $ (cd good && dune build @check)
 
-  $ merlint -B -r E524 good/
+  $ merlint --build -r E524 good/
   Dune root: $TESTCASE_ROOT/good/
   Running merlint analysis...
   

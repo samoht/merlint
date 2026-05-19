@@ -2,7 +2,7 @@ Build fixture project:
   $ dune build @check
 
 Test bad example - should find bad function naming convention:
-  $ merlint -B -r E325 bad.ml
+  $ merlint --build -r E325 bad.ml
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
@@ -36,7 +36,7 @@ Test bad example - should find bad function naming convention:
   [1]
 
 Test good example - should find no issues:
-  $ merlint -B -r E325 good.ml
+  $ merlint --build -r E325 good.ml
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   

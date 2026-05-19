@@ -2,7 +2,7 @@ Test bad example - foo/test/interop/python/ named after language:
 Build bad fixture project:
   $ (cd bad && dune build @check)
 
-  $ merlint -B -r E801 bad/
+  $ merlint --build -r E801 bad/
   Dune root: $TESTCASE_ROOT/bad/
   Running merlint analysis...
   
@@ -36,7 +36,7 @@ Test good example - foo/test/interop/spacepackets/ named after oracle tool:
 Build good fixture project:
   $ (cd good && dune build @check)
 
-  $ merlint -B -r E801 good/
+  $ merlint --build -r E801 good/
   Dune root: $TESTCASE_ROOT/good/
   Running merlint analysis...
   

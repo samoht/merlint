@@ -2,7 +2,7 @@ Test bad example - foo/dune-project lacks (implicit_transitive_deps false):
 Build bad fixture project:
   $ (cd bad && dune build @check)
 
-  $ merlint -B -r E526 bad/
+  $ merlint --build -r E526 bad/
   Dune root: $TESTCASE_ROOT/bad/
   Running merlint analysis...
   
@@ -40,7 +40,7 @@ Test good example - foo/dune-project sets (implicit_transitive_deps false):
 Build good fixture project:
   $ (cd good && dune build @check)
 
-  $ merlint -B -r E526 good/
+  $ merlint --build -r E526 good/
   Dune root: $TESTCASE_ROOT/good/
   Running merlint analysis...
   

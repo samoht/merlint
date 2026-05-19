@@ -2,7 +2,7 @@ Build fixture project:
   $ dune build @check
 
 Test bad example - should find used underscore-prefixed binding:
-  $ merlint -B -r E335 bad.ml
+  $ merlint --build -r E335 bad.ml
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
@@ -37,7 +37,7 @@ Test bad example - should find used underscore-prefixed binding:
   [1]
 
 Test PPX-generated code - should only flag regular underscore bindings:
-  $ merlint -B -r E335 ppx_generated.ml
+  $ merlint --build -r E335 ppx_generated.ml
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
@@ -72,7 +72,7 @@ Test PPX-generated code - should only flag regular underscore bindings:
   [1]
 
 Test good example - should find no issues:
-  $ merlint -B -r E335 good.ml
+  $ merlint --build -r E335 good.ml
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
