@@ -1,6 +1,7 @@
 (** E605: Missing Test File *)
 
 module Issue_location = Location
+module String_set = Set.Make (String)
 
 type payload = { module_name : string; expected_test_file : string }
 
@@ -20,14 +21,6 @@ module Log = (val Logs.src_log log_src : Logs.LOG)
     - [proj/foo/sub/bar.ml] -> [proj/test/foo/sub/test_bar.ml] *)
 let expected_test_path source_file =
   let parts = String.split_on_char '/' source_file in
-  (* Find the first [lib] or [src] component and split the path there.
-     Everything before it is the project prefix; everything after is the
-     module path within the library. The test file mirrors that structure
-     under [test/].
-
-     - [proj/lib/foo.ml] → [proj/test/test_foo.ml]
-     - [proj/atp/lib/atp_mst.ml] → [proj/atp/test/test_atp_mst.ml]
-     - [proj/lib/sub/bar.ml] → [proj/test/sub/test_bar.ml] *)
   let rec find_lib_dir prefix = function
     | [] -> None
     | dir :: rest when dir = "lib" || dir = "src" ->
@@ -49,167 +42,50 @@ let expected_test_path source_file =
       let base = Filename.basename source_file in
       Filename.concat (Filename.concat dir "test") ("test_" ^ base)
 
-(** Creates a missing test file issue for a library module without corresponding
-    test *)
 let missing_test_issue module_name source_file =
   let loc =
     Issue_location.v ~file:source_file ~start_line:1 ~start_col:0 ~end_line:1
       ~end_col:0
   in
-  let expected_path = expected_test_path source_file in
-  Issue.v ~loc { module_name; expected_test_file = expected_path }
+  Issue.v ~loc { module_name; expected_test_file = expected_test_path source_file }
 
-(** Build a set of file paths that belong to libraries. *)
-let source_libraries index =
-  Project_index.source_packages_nodes index
-  |> List.concat_map Project_index.package_libraries
+let module_name_of_path file =
+  Fpath.basename file |> Filename.remove_extension |> String.lowercase_ascii
 
-(** Collect the union of module names listed in [(private_modules ...)] across
-    all libraries. Private modules are not exposed outside their library, so
-    they cannot be referenced from a [test_<module>.ml] in a sibling test
-    stanza, and should not be required to have a test file. *)
-let private_module_set index =
-  source_libraries index
-  |> List.concat_map Project_index.Library.private_modules
-  |> List.map String.lowercase_ascii
-  |> List.sort_uniq String.compare
-
-let module_source_name file = Filename.basename (Filename.remove_extension file)
-
-let source_matches_module lib_mod file =
-  File_kind.is_ml file && module_source_name file = lib_mod
-
-let is_public_library_source index file =
-  Project_index.libraries_of_file index (Fpath.v file)
-  |> List.exists (fun lib ->
-      Option.is_some (Project_index.Library.public_name lib))
-
-let lib_source ~index ~files lib_mod =
-  let matches = List.filter (source_matches_module lib_mod) files in
-  match List.find_opt (is_public_library_source index) matches with
-  | Some _ as found -> found
-  | None -> None
-
-let is_test_source file =
-  File_kind.is_ml file
-  &&
-  let basename = module_source_name file in
-  String.starts_with ~prefix:"test_" basename || basename = "test"
-
-let log_test_sources files lib_modules =
-  let test_files = List.filter is_test_source files in
-  Log.debug (fun m ->
-      m "E605: Test .ml files in analyzed files: %d" (List.length test_files));
-  List.iter (fun f -> Log.debug (fun m -> m "E605:   - %s" f)) test_files;
-  if List.length test_files = 0 && List.length lib_modules > 0 then
-    Log.debug (fun m ->
-        m
-          "E605: No test files found in analyzed files. Make sure to include \
-           test directories in the analysis (e.g., 'merlint lib test' instead \
-           of just 'merlint lib')")
-
-let log_project_summary ~files ~lib_modules ~test_modules =
-  Log.debug (fun m ->
-      m "E605: Checking %d library modules" (List.length lib_modules));
-  Log.debug (fun m ->
-      m "E605: Found %d test modules in dune" (List.length test_modules));
-  Log.debug (fun m ->
-      m "E605: Test modules: %a" Fmt.(list ~sep:comma string) test_modules);
-  Log.debug (fun m -> m "E605: Analyzing %d files" (List.length files));
-  log_test_sources files lib_modules
-
-let skipped_module_reason file_path =
-  if File.is_in_test_dir (Fpath.v file_path) then
-    Some "defined in test directory"
-  else if File.is_in_examples file_path then
-    Some "defined in examples directory"
-  else None
-
-let expected_test_name lib_mod = "test_" ^ String.lowercase_ascii lib_mod
-
-let test_presence ~files ~test_modules expected =
-  let in_dune = List.mem expected test_modules in
-  let in_files =
-    List.exists
-      (fun file ->
-        File_kind.is_ml file
-        && String.lowercase_ascii (module_source_name file) = expected)
-      files
-  in
-  (in_dune, in_files)
-
-let log_skip lib_mod reason =
-  Log.debug (fun m -> m "E605: Skipping module '%s' (%s)" lib_mod reason)
-
-let should_skip_module private_modules lib_mod =
-  if String.starts_with ~prefix:"test_" lib_mod then None
-  else if File.is_unit_companion_module (String.lowercase_ascii lib_mod) then
-    Some "companion interface module"
-  else if List.mem (String.lowercase_ascii lib_mod) private_modules then
-    Some "listed in private_modules"
-  else None
-
-let source_candidate ~index ~files lib_mod =
-  match lib_source ~index ~files lib_mod with
-  | None -> `Missing_source
-  | Some file_path -> (
-      match skipped_module_reason file_path with
-      | Some reason ->
-          log_skip lib_mod reason;
-          `Skipped_source
-      | None -> `Source file_path)
-
-let tests_missing ~files ~test_modules lib_mod =
-  let expected = expected_test_name lib_mod in
-  let in_dune, in_files = test_presence ~files ~test_modules expected in
-  Log.debug (fun m ->
-      m "E605: Checking %s -> %s (in_dune=%b, in_files=%b)" lib_mod expected
-        in_dune in_files);
-  (not in_dune) && not in_files
-
-let missing_test_candidate ~index ~source_files ~test_files ~private_modules
-    ~test_modules lib_mod =
-  (* Short-circuit on the cheap signals first: private modules, source
-     location, test presence. *)
-  match should_skip_module private_modules lib_mod with
-  | Some reason ->
-      log_skip lib_mod reason;
-      None
-  | None -> (
-      match source_candidate ~index ~files:source_files lib_mod with
-      | `Missing_source ->
-          log_skip lib_mod "no library source file, only in executables";
-          None
-      | `Skipped_source -> None
-      | `Source file_path ->
-          if
-            tests_missing ~files:test_files ~test_modules lib_mod
-            && not (Sys.file_exists (expected_test_path file_path))
-          then Some (lib_mod, file_path)
-          else None)
+let skipped_by_dir file_path =
+  File.is_in_test_dir (Fpath.v file_path)
+  || File.is_in_examples file_path
 
 let check (ctx : Context.project) =
-  let index = Context.index ctx in
-  let selected_files = Context.analyze_set ctx in
-  let root = Fpath.v (Context.project_root ctx) in
-  let project_files =
-    Project_index.source_files index
-    |> List.map (fun file -> Loc.relative_to ~root file |> Fpath.to_string)
+  let idx = Context.index ctx in
+  let private_modules =
+    Project_index.private_module_names idx |> String_set.of_list
   in
-  let lib_modules =
-    selected_files
-    |> List.filter (is_public_library_source index)
-    |> List.map module_source_name |> List.sort_uniq String.compare
+  let test_modules =
+    Project_index.test_module_names idx |> String_set.of_list
   in
-  let test_modules = Context.test_modules ctx in
-  let private_modules = private_module_set index in
-  let test_modules = List.map String.lowercase_ascii test_modules in
-  log_project_summary ~files:project_files ~lib_modules ~test_modules;
-  lib_modules
-  |> List.filter_map
-       (missing_test_candidate ~index ~source_files:selected_files
-          ~test_files:project_files ~private_modules ~test_modules)
-  |> List.map (fun (m, source_file) -> missing_test_issue m source_file)
+  let selected = ctx.Context.in_analyze_set in
+  let project_root = Fpath.v (Context.project_root ctx) in
+  let abs file =
+    if Fpath.is_abs file then Fpath.to_string file
+    else Fpath.to_string Fpath.(project_root // file |> normalize)
+  in
+  let needs_test file =
+    let path = Fpath.to_string file in
+    if not (File_kind.is_ml path) then None
+    else if not (selected (abs file) || selected path) then None
+    else
+      let m = module_name_of_path file in
+      if String.starts_with ~prefix:"test_" m then None
+      else if File.is_unit_companion_module m then None
+      else if String_set.mem m private_modules then None
+      else if skipped_by_dir path then None
+      else if String_set.mem ("test_" ^ m) test_modules then None
+      else if Sys.file_exists (expected_test_path path) then None
+      else Some (missing_test_issue m path)
+  in
+  Project_index.public_library_source_files idx
+  |> List.filter_map needs_test
 
 let pp ppf { module_name; expected_test_file } =
   Fmt.pf ppf
