@@ -52,7 +52,7 @@ Build good fixture project:
   Dune root: $TESTCASE_ROOT/good/
   Running merlint analysis...
   
-  Analyzing 10 files
+  Analyzing 11 files
   
   ✓ Code Quality (0 total issues)
   ✓ Code Style (0 total issues)
@@ -74,7 +74,7 @@ Test multidir - analyzing lib and test together should not report missing tests 
   Dune root: $TESTCASE_ROOT/good
   Running merlint analysis...
   
-  Analyzing 8 files
+  Analyzing 9 files
   
   ✓ Code Quality (0 total issues)
   ✓ Code Style (0 total issues)
