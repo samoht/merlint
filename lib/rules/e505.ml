@@ -67,10 +67,10 @@ let missing_mli_issue files ml_file =
     in
     Some (Issue.v ~loc { ml_file; expected_mli = mli_path })
 
-let check_file ~is_library_file ~is_virtual_impl_file ~files ~executable_modules
+let check_file ~library_files ~virtual_impl_files ~files ~executable_modules
     ~test_modules ml_file =
   if not (File_kind.is_ml ml_file) then None
-  else if not (String_set.mem ml_file is_library_file) then None
+  else if not (String_set.mem ml_file library_files) then None
   else
     let module_name = Filename.basename (Filename.remove_extension ml_file) in
     let is_companion = File.is_unit_companion_module module_name in
@@ -82,20 +82,21 @@ let check_file ~is_library_file ~is_virtual_impl_file ~files ~executable_modules
       let module_name_capitalized = String.capitalize_ascii module_name in
       if String_set.mem module_name_capitalized executable_modules then None
       else missing_mli_issue files ml_file
-    else if String_set.mem ml_file is_virtual_impl_file then None
+    else if String_set.mem ml_file virtual_impl_files then None
     else missing_mli_issue files ml_file
 
 let enumerate ctx =
   let files = Context.analyze_set ctx in
+  let ml_files = List.filter File_kind.is_ml files in
   let executable_modules = Context.executable_modules ctx in
   let test_modules = Context.test_modules ctx in
   let root = Context.project_root ctx in
   let index = Context.index ctx in
   let library_files =
-    List.filter (is_library_file ~root index) files |> string_set
+    List.filter (is_library_file ~root index) ml_files |> string_set
   in
   let virtual_files =
-    List.filter (is_virtual_impl_file ~root index) files |> string_set
+    List.filter (is_virtual_impl_file ~root index) ml_files |> string_set
   in
   let env =
     {
@@ -106,11 +107,11 @@ let enumerate ctx =
       virtuals = virtual_files;
     }
   in
-  List.map (fun file -> { env; file }) files
+  List.map (fun file -> { env; file }) ml_files
 
 let check_unit _ctx { env; file } =
   match
-    check_file ~is_library_file:env.libs ~is_virtual_impl_file:env.virtuals
+    check_file ~library_files:env.libs ~virtual_impl_files:env.virtuals
       ~files:env.files ~executable_modules:env.exes ~test_modules:env.tests file
   with
   | None -> []
