@@ -17,27 +17,17 @@ val run :
   string ->
   result
 (** [run ?domain_mgr ~load_file ~filter ~dune_describe ?analyze_set ~index
-     ?profiling project_root] runs all checks. Returns detected issues and a
-    record of every suppressed issue.
+     ?profiling project_root] runs every rule that matches [filter] and returns
+    the issues found.
 
-    [load_file] reads a file's content. The CLI plumbs an Eio-backed reader so
-    file I/O goes through {!Eio.Path.load}; tests pass a stdlib reader.
+    [load_file path] returns the source bytes of [path]; reached only by the
+    parser-fallback path inside Merlin when no [.cmt] is present.
 
-    [dune_describe] is the project-wide view used by project-scoped rules: E605
-    (Missing Test File), E610 (Test Without Library), E606 (Test File in Wrong
-    Directory), E615 (Test Suite Not Included), E620 (Multiple Test Stanzas),
-    etc. It must reflect the whole project even when [merlint] is invoked on a
-    single file, otherwise project rules fire false positives or fail silently.
+    [dune_describe] is the project-wide view; project-scoped rules need it to
+    reflect the whole project even on a single-file invocation. [analyze_set]
+    narrows what file-scoped rules iterate -- defaults to every file in
+    [dune_describe].
 
-    [analyze_set] narrows what {b file}-scoped rules iterate. Defaults to every
-    file in [dune_describe]. The CLI passes the explicit file list here in
-    single-file mode so file-scoped rules don't widen to the whole project while
-    project-scoped rules still see the full library/test view.
-
-    [domain_mgr] enables parallelism. When given, [run] opens one
-    [Eio.Executor_pool] and shares it across every phase that takes parallel
-    work, including the [build_index] call.
-
-    [index ?pool ()] constructs the {!Project_index.t}. [run] forces it
-    exactly once inside the shared pool's switch, so the project-index scan
-    reuses the same domains as the rule phases. *)
+    [domain_mgr] enables parallelism. When given, [run] opens a single
+    [Eio.Executor_pool] and shares it across the project-index build and every
+    rule phase. [index ?pool ()] is forced exactly once inside that pool. *)
