@@ -70,9 +70,17 @@ let with_open_in path f =
 let read_file path =
   with_open_in path (fun ic -> really_input_string ic (in_channel_length ic))
 
-let parallel_map dm ?(domain_count = 4) xs f =
-  Eio.Switch.run @@ fun sw ->
-  let pool = Eio.Executor_pool.create ~sw ~domain_count dm in
+let default_domain_count () = max 1 (Domain.recommended_domain_count () - 1)
+
+let parallel_map pool xs f =
   Eio.Fiber.List.map
     (fun x -> Eio.Executor_pool.submit_exn pool ~weight:1.0 (fun () -> f x))
     xs
+
+let with_pool dm ?domain_count k =
+  let domain_count =
+    Option.value domain_count ~default:(default_domain_count ())
+  in
+  Eio.Switch.run @@ fun sw ->
+  let pool = Eio.Executor_pool.create ~sw ~domain_count dm in
+  k pool

@@ -4,7 +4,7 @@ let empty_view filename =
 let test_empty_build () =
   let calls = ref 0 in
   let analysis =
-    Merlint.Analysis.build ~domain_mgr:None
+    Merlint.Analysis.build
       ~view_of:(fun filename ->
         incr calls;
         empty_view filename)
@@ -19,7 +19,7 @@ let test_builds_once () =
   Eio_main.run @@ fun _env ->
   let calls = ref [] in
   let analysis =
-    Merlint.Analysis.build ~domain_mgr:None
+    Merlint.Analysis.build
       ~view_of:(fun filename ->
         calls := filename :: !calls;
         empty_view filename)

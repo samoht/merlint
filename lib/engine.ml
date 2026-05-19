@@ -233,6 +233,7 @@ let run_passes passes ctx =
       match File_view.typedtree (Context.view ctx) with
       | None -> []
       | Some tree ->
+          let on_attribute = List.filter_map Rule.Run.pass_attribute passes in
           let on_expr = List.filter_map Rule.Run.pass_expr passes in
           let on_value_binding =
             List.filter_map Rule.Run.pass_value_binding passes
@@ -253,9 +254,16 @@ let run_passes passes ctx =
           let dispatch_signature_item item =
             List.iter (fun f -> f item) on_signature_item
           in
+          let dispatch_attribute attr =
+            List.iter (fun f -> f attr) on_attribute
+          in
           let iterator =
             {
               Tast_iterator.default_iterator with
+              attribute =
+                (fun this attr ->
+                  dispatch_attribute attr;
+                  Tast_iterator.default_iterator.attribute this attr);
               expr =
                 (fun this expr ->
                   dispatch_expr expr;
@@ -276,7 +284,7 @@ let run_passes passes ctx =
               iterator.signature iterator signature);
           List.concat_map Rule.Run.pass_finish passes)
 
-let run_project_rules ?domain_mgr ?profiling enabled_rules project_ctx =
+let run_project_rules ?pool ?profiling enabled_rules project_ctx =
   let config_for = config_lookup () in
   let rules = List.filter Rule.is_project_scoped enabled_rules in
   let jobs =
@@ -284,9 +292,9 @@ let run_project_rules ?domain_mgr ?profiling enabled_rules project_ctx =
   in
   let run = run_one_project_job ?profiling ~config_for in
   let results =
-    match domain_mgr with
+    match pool with
     | None -> List.map run jobs
-    | Some dm -> Fs.parallel_map dm jobs run
+    | Some pool -> Fs.parallel_map pool jobs run
   in
   let issues = List.concat_map fst results in
   let excluded = List.concat_map snd results in
@@ -334,55 +342,22 @@ let analyze_single_file ?profiling ~project_ctx ~config_for ~project_root
   in
   (issues, List.rev !excluded_acc)
 
-(** Group [files] by the opam package they live under (as known to
-    {!Project_index}). Files not under any indexed package land in a single
-    [None] bucket. *)
-let group_files_by_package index files =
-  let dir_to_pkg = Hashtbl.create 256 in
-  Project_index.source_packages_nodes index
-  |> List.iter (fun pkg ->
-      match Project_index.Package.source_dir pkg with
-      | None -> ()
-      | Some dir ->
-          Hashtbl.replace dir_to_pkg (Fpath.to_string dir)
-            (Project_index.Package.name pkg));
-  let pkg_of file =
-    let rec walk dir =
-      match Hashtbl.find_opt dir_to_pkg dir with
-      | Some _ as pkg -> pkg
-      | None ->
-          let parent = Filename.dirname dir in
-          if parent = dir then None else walk parent
-    in
-    walk (Filename.dirname (Fpath.to_string file))
-  in
-  let tbl = Hashtbl.create 16 in
-  List.iter
-    (fun file ->
-      let key = pkg_of file in
-      let prev = try Hashtbl.find tbl key with Not_found -> [] in
-      Hashtbl.replace tbl key (file :: prev))
-    files;
-  Hashtbl.fold (fun k v acc -> (k, List.rev v) :: acc) tbl []
-
-(** Walk [files] grouped by package, processing different packages in parallel
-    via [domain_mgr] when supplied. Files within a single package are processed
-    sequentially -- typedtree-walking rules share a Merlin backend whose
-    compiler-libs state is process-global, so keeping one package per domain at
-    a time avoids state mixing. *)
-let analyze_files ?domain_mgr ~project_ctx ~project_root ~file_rules ~pass_rules
+(** Walk [files] in parallel across [domain_mgr]'s executor pool. Each file is
+    its own work unit; the pool decides how to spread them across domains. The
+    earlier per-package grouping protected a process-global compiler-libs state
+    that [typedtree_from_cmt] hasn't touched since the [with_cmt_state] wrap was
+    removed -- cmt loading is now pure [Marshal.from_channel] and safe to call
+    concurrently from any domain. *)
+let analyze_files ?pool ~project_ctx ~project_root ~file_rules ~pass_rules
     ?profiling files =
   let config_for = config_lookup () in
   let analyse filepath =
     analyze_single_file ?profiling ~project_ctx ~config_for ~project_root
       ~file_rules ~pass_rules filepath
   in
-  let analyse_pkg (_pkg, pkg_files) = List.map analyse pkg_files in
-  match domain_mgr with
+  match pool with
   | None -> List.map analyse files
-  | Some dm ->
-      let groups = group_files_by_package (Context.index project_ctx) files in
-      Fs.parallel_map dm groups analyse_pkg |> List.concat
+  | Some pool -> Fs.parallel_map pool files analyse
 
 (* Vendored paths come from the root dune metadata. The library-owner check
    keeps the package-level query useful for files resolved through the index. *)
@@ -424,20 +399,25 @@ let run ?domain_mgr ~load_file ~filter ~dune_describe ?analyze_set ~index
     (fun () ->
       let file_rules = List.filter Rule.is_direct_file_scoped enabled_rules in
       let pass_rules = List.filter Rule.uses_pass enabled_rules in
-      let (project_issues, project_excluded), file_results =
+      let run_phases ?pool () =
         Eio.Switch.run @@ fun sw ->
         let project_promise, project_resolver = Eio.Promise.create () in
         let file_promise, file_resolver = Eio.Promise.create () in
         Eio.Fiber.fork ~sw (fun () ->
             Trace.span "merlint.phase.project_rules" @@ fun () ->
-            run_project_rules ?domain_mgr ?profiling enabled_rules project_ctx
+            run_project_rules ?pool ?profiling enabled_rules project_ctx
             |> Eio.Promise.resolve project_resolver);
         Eio.Fiber.fork ~sw (fun () ->
             Trace.span "merlint.phase.file_rules" @@ fun () ->
-            analyze_files ?domain_mgr ~project_ctx ~project_root ~file_rules
+            analyze_files ?pool ~project_ctx ~project_root ~file_rules
               ~pass_rules ?profiling analyze_set
             |> Eio.Promise.resolve file_resolver);
         (Eio.Promise.await project_promise, Eio.Promise.await file_promise)
+      in
+      let (project_issues, project_excluded), file_results =
+        match domain_mgr with
+        | None -> run_phases ()
+        | Some dm -> Fs.with_pool dm (fun pool -> run_phases ~pool ())
       in
       let file_issues = List.concat_map fst file_results in
       let file_excluded = List.concat_map snd file_results in

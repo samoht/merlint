@@ -3,7 +3,7 @@ type t = { facts : (string, file_facts) Hashtbl.t; lock : Eio.Mutex.t }
 
 let walk view = { suite_callers = Suite.callers view }
 
-let build ~domain_mgr ~view_of files =
+let build ?pool ~view_of files =
   let t = { facts = Hashtbl.create 256; lock = Eio.Mutex.create () } in
   let process file =
     let view = view_of file in
@@ -11,9 +11,9 @@ let build ~domain_mgr ~view_of files =
     Eio.Mutex.use_rw ~protect:true t.lock (fun () ->
         Hashtbl.replace t.facts file facts)
   in
-  (match domain_mgr with
+  (match pool with
   | None -> List.iter process files
-  | Some dm -> Fs.parallel_map dm files process |> ignore);
+  | Some pool -> Fs.parallel_map pool files process |> ignore);
   t
 
 let suite_callers t filename =
