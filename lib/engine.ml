@@ -270,22 +270,23 @@ let analyze_single_file ?profiling ~project_ctx ~config_for ~project_root
     {!Project_index}). Files not under any indexed package land in a single
     [None] bucket. *)
 let group_files_by_package index files =
-  let pkg_dirs =
-    Project_index.source_packages_nodes index
-    |> List.filter_map (fun pkg ->
-        Option.map
-          (fun dir -> (Project_index.Package.name pkg, Fpath.to_string dir))
-          (Project_index.Package.source_dir pkg))
-  in
+  let dir_to_pkg = Hashtbl.create 256 in
+  Project_index.source_packages_nodes index
+  |> List.iter (fun pkg ->
+      match Project_index.Package.source_dir pkg with
+      | None -> ()
+      | Some dir ->
+          Hashtbl.replace dir_to_pkg (Fpath.to_string dir)
+            (Project_index.Package.name pkg));
   let pkg_of file =
-    let file = Fpath.to_string file in
-    let dir = Filename.dirname file in
-    List.find_map
-      (fun (pkg, pkg_dir) ->
-        let prefix = pkg_dir ^ "/" in
-        if String.starts_with ~prefix dir || dir = pkg_dir then Some pkg
-        else None)
-      pkg_dirs
+    let rec walk dir =
+      match Hashtbl.find_opt dir_to_pkg dir with
+      | Some _ as pkg -> pkg
+      | None ->
+          let parent = Filename.dirname dir in
+          if parent = dir then None else walk parent
+    in
+    walk (Filename.dirname (Fpath.to_string file))
   in
   let tbl = Hashtbl.create 16 in
   List.iter
