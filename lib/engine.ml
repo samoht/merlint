@@ -7,7 +7,12 @@ module T = Ocaml_typing.Typedtree
 module Tast_iterator = Ocaml_typing.Tast_iterator
 
 type exclusion_stats = { rule : string; file : string }
-type result = { issues : Rule.Run.result list; excluded : exclusion_stats list }
+
+type result = {
+  issues : Rule.Run.result list;
+  excluded : exclusion_stats list;
+  files_analyzed : int;
+}
 
 let warn_missing_cmts stats =
   if stats.Merlin.cmt_misses > 0 then
@@ -113,13 +118,16 @@ let file_view ?profiling ~load_file ~backend filename =
   in
   File_view.v ~filename ~typedtree ()
 
-let setup_analysis ~filter ~dune_describe ~analyze_set ~index ~file_view
-    project_root =
+let setup_analysis ~filter ~analyze_set ~index ~file_view project_root =
+  let project_root =
+    Fpath.(v project_root |> normalize |> rem_empty_seg |> to_string)
+  in
   let config = Config.load project_root in
-  let analyze_set = List.map Fpath.to_string analyze_set in
+  let analyze_set =
+    List.map (fun file -> Fpath.(file |> normalize |> to_string)) analyze_set
+  in
   let project_ctx =
-    Context.project ~config ~project_root ~analyze_set ~dune_describe ~index
-      ~file_view ()
+    Context.project ~config ~project_root ~analyze_set ~index ~file_view ()
   in
   let enabled_rules =
     Data.all_rules
@@ -311,7 +319,7 @@ let file_is_vendored index file =
 let drop_vendored_files index files =
   List.filter (fun f -> not (file_is_vendored index f)) files
 
-let run ?domain_mgr ~load_file ~filter ~dune_describe ?analyze_set ~index
+let run ?domain_mgr ~load_file ~filter ?analyze_set ?analyze_roots ~index
     ?profiling project_root =
   Log.info (fun m -> m "Starting analysis of %s" project_root);
   let backend = Merlin.v ~root_dir:project_root () in
@@ -319,19 +327,23 @@ let run ?domain_mgr ~load_file ~filter ~dune_describe ?analyze_set ~index
     let idx = lazy (index ?pool ()) in
     let idx_value = Lazy.force idx in
     let raw_analyze_set =
-      match analyze_set with
-      | Some files -> files
-      | None -> Project_index.source_files idx_value
+      match (analyze_set, analyze_roots) with
+      | Some files, None -> files
+      | None, roots -> Project_index.source_files ?roots idx_value
+      | Some files, Some roots ->
+          Project_index.source_files ~roots idx_value
+          |> List.rev_append files
+          |> List.sort_uniq Fpath.compare
     in
     let analyze_set = drop_vendored_files idx_value raw_analyze_set in
     let file_view = file_view ?profiling ~load_file ~backend in
     let _config, project_ctx, enabled_rules =
-      setup_analysis ~filter ~dune_describe ~analyze_set ~index:idx ~file_view
-        project_root
+      setup_analysis ~filter ~analyze_set ~index:idx ~file_view project_root
     in
     Fs.reset_stats ();
     let file_rules = List.filter Rule.is_direct_file_scoped enabled_rules in
     let pass_rules = List.filter Rule.uses_pass enabled_rules in
+    let files_analyzed = List.length analyze_set in
     Eio.Switch.run @@ fun sw ->
     let project_promise, project_resolver = Eio.Promise.create () in
     let file_promise, file_resolver = Eio.Promise.create () in
@@ -342,7 +354,9 @@ let run ?domain_mgr ~load_file ~filter ~dune_describe ?analyze_set ~index
         analyze_files ?pool ~project_ctx ~project_root ~file_rules ~pass_rules
           ?profiling analyze_set
         |> Eio.Promise.resolve file_resolver);
-    (Eio.Promise.await project_promise, Eio.Promise.await file_promise)
+    ( Eio.Promise.await project_promise,
+      Eio.Promise.await file_promise,
+      files_analyzed )
   in
   Fun.protect
     ~finally:(fun () ->
@@ -350,7 +364,7 @@ let run ?domain_mgr ~load_file ~filter ~dune_describe ?analyze_set ~index
       log_fs_stats ();
       Merlin.close backend)
     (fun () ->
-      let (project_issues, project_excluded), file_results =
+      let (project_issues, project_excluded), file_results, files_analyzed =
         match domain_mgr with
         | None -> run_with_pool ()
         | Some dm -> Fs.with_pool dm (fun pool -> run_with_pool ~pool ())
@@ -360,4 +374,5 @@ let run ?domain_mgr ~load_file ~filter ~dune_describe ?analyze_set ~index
       {
         issues = List.sort Rule.Run.compare (project_issues @ file_issues);
         excluded = project_excluded @ file_excluded;
+        files_analyzed;
       })

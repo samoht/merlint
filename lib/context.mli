@@ -34,8 +34,6 @@ type project = {
           actually asked about, rather than walking the whole monorepo. *)
   in_analyze_set : string -> bool;
       (** Fast membership query for {!analyze_set}. *)
-  dune_describe : Dune_describe.describe memo;
-      (** Dune project description (memoized). *)
   executable_modules : string list memo;
       (** List of executable module names (memoized). *)
   lib_modules : string list memo;
@@ -85,14 +83,13 @@ val project :
   config:Config.t ->
   project_root:string ->
   analyze_set:string list ->
-  dune_describe:Dune_describe.describe ->
   index:Project_index.t Lazy.t ->
   unit ->
   project
-(** [project ~config ~project_root ~analyze_set ~dune_describe ~index ()]
-    creates a project context. [analyze_set] is the source set matched by the
-    user's [merlint <args>] invocation; project-scoped rules should restrict
-    their work to it. *)
+(** [project ~config ~project_root ~analyze_set ~index ()] creates a project
+    context. [analyze_set] is the source set matched by the user's [merlint
+     <args>] invocation; project-scoped rules should restrict their work to
+    it. *)
 
 val index : project -> Project_index.t
 (** [index p] forces and returns the monopam package/library index. *)
@@ -126,9 +123,6 @@ val lib_modules : project -> string list
 
 val test_modules : project -> string list
 (** [test_modules project] returns test module names. *)
-
-val dune_describe : project -> Dune_describe.describe
-(** [dune_describe project] returns the dune project description. *)
 
 val executable_stanzas : project -> Project_index.source_stanza list
 (** [executable_stanzas project] returns the executable stanzas discovered by

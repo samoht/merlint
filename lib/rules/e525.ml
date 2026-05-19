@@ -78,7 +78,9 @@ let lang_issue ctx name dp_path =
   | None -> []
 
 let check_package ctx pkg =
-  match Project_index.Package.source_dir pkg with
+  if Project_index.Package.is_anonymous pkg then []
+  else
+    match Project_index.Package.source_dir pkg with
   | None -> []
   | Some dir ->
       let name = Project_index.Package.name pkg in

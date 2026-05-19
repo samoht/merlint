@@ -11,7 +11,6 @@ let fail_analysis_error fmt = Fmt.kstr (fun s -> raise (Analysis_error s)) fmt
 type 'a memo = { lock : Eio.Mutex.t; value : 'a Lazy.t }
 
 let memo f = { lock = Eio.Mutex.create (); value = lazy (f ()) }
-let memo_value value = memo (fun () -> value)
 
 let force_memo memo =
   Eio.Mutex.lock memo.lock;
@@ -35,7 +34,6 @@ type project = {
   project_root : string;
   analyze_set : string list;
   in_analyze_set : string -> bool;
-  dune_describe : Dune_describe.describe memo;
   executable_modules : string list memo;
   lib_modules : string list memo;
   test_modules : string list memo;
@@ -176,9 +174,8 @@ let discover_test_stanzas ~index =
   |> List.concat_map Project_index.Package.test_stanzas
   |> List.sort_uniq compare
 
-let project ?file_view ?file_content ~config ~project_root ~analyze_set
-    ~dune_describe ~index () =
-  let dune_desc_memo = memo_value dune_describe in
+let project ?file_view ?file_content ~config ~project_root ~analyze_set ~index
+    () =
   let index_memo = memo (fun () -> Lazy.force index) in
   let analyze_set_tbl = Hashtbl.create (List.length analyze_set) in
   List.iter (fun file -> Hashtbl.replace analyze_set_tbl file ()) analyze_set;
@@ -196,7 +193,6 @@ let project ?file_view ?file_content ~config ~project_root ~analyze_set
     project_root;
     analyze_set;
     in_analyze_set;
-    dune_describe = dune_desc_memo;
     executable_modules =
       memo (fun () ->
           discover_executable_modules ~index:(force_memo index_memo));
@@ -222,7 +218,6 @@ let project_root ctx = ctx.project_root
 let executable_modules ctx = force_memo ctx.executable_modules
 let lib_modules ctx = force_memo ctx.lib_modules
 let test_modules ctx = force_memo ctx.test_modules
-let dune_describe ctx = force_memo ctx.dune_describe
 let executable_stanzas ctx = discover_executable_stanzas ~index:(index ctx)
 let test_stanzas ctx = discover_test_stanzas ~index:(index ctx)
 let file_view ctx filename = ctx.file_view_cache filename

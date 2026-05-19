@@ -210,18 +210,18 @@ let print_summary all_issues enabled_rule_count =
       sample
   end
 
-let run_engine ?domain_mgr ~load_file ?profiling rule_filter dune_describe
-    analyze_set build_index project_root =
+let run_engine ?domain_mgr ~load_file ?profiling rule_filter analyze_set
+    analyze_roots build_index project_root =
   match rule_filter with
   | Some filter ->
-      Merlint.Engine.run ?domain_mgr ~load_file ~filter ~dune_describe
-        ?analyze_set ~index:build_index ?profiling project_root
+      Merlint.Engine.run ?domain_mgr ~load_file ~filter ?analyze_set
+        ?analyze_roots ~index:build_index ?profiling project_root
   | None -> (
       match Merlint.Filter.parse "all" with
       | Ok filter ->
-          Merlint.Engine.run ?domain_mgr ~load_file ~filter ~dune_describe
-            ?analyze_set ~index:build_index ?profiling project_root
-      | Error _ -> { Merlint.Engine.issues = []; excluded = [] })
+          Merlint.Engine.run ?domain_mgr ~load_file ~filter ?analyze_set
+            ?analyze_roots ~index:build_index ?profiling project_root
+      | Error _ -> { Merlint.Engine.issues = []; excluded = []; files_analyzed = 0 })
 
 let print_exclusion_stats all_excluded =
   if all_excluded <> [] then begin
@@ -241,7 +241,7 @@ let print_exclusion_stats all_excluded =
     Fmt.pr "@]@."
   end
 
-let run_analysis ?domain_mgr ~load_file project_root dune_describe analyze_set
+let run_analysis ?domain_mgr ~load_file project_root analyze_set analyze_roots
     (build_index : ?pool:Eio.Executor_pool.t -> unit -> Project_index.t)
     rule_filter show_profile =
   let profiling_state =
@@ -251,13 +251,17 @@ let run_analysis ?domain_mgr ~load_file project_root dune_describe analyze_set
   Log.info (fun m ->
       m "Analysing %s files"
         (match files_count with None -> "all" | Some n -> string_of_int n));
-  let { Merlint.Engine.issues = all_issues; excluded = all_excluded } =
+  let {
+    Merlint.Engine.issues = all_issues;
+    excluded = all_excluded;
+    files_analyzed;
+  } =
     run_engine ?domain_mgr ~load_file ?profiling:profiling_state rule_filter
-      dune_describe analyze_set build_index project_root
+      analyze_set analyze_roots build_index project_root
   in
-  (match files_count with
-  | None | Some 0 -> Fmt.pr "Running merlint analysis...@.@."
-  | Some n -> Fmt.pr "Running merlint analysis...@.@.Analyzing %d files@.@." n);
+  (match files_analyzed with
+  | 0 -> Fmt.pr "Running merlint analysis...@.@."
+  | n -> Fmt.pr "Running merlint analysis...@.@.Analyzing %d files@.@." n);
   print_exclusion_stats all_excluded;
 
   (* Group issues by category for reporting *)
@@ -288,7 +292,7 @@ let run_analysis ?domain_mgr ~load_file project_root dune_describe analyze_set
       print_fix_hints all_issues
 
 let ensure_project_built ~path mgr =
-  match Merlint.Dune_describe.ensure_project_built ~path mgr with
+  match Merlint.Build.ensure_project_built ~path mgr with
   | Ok () -> ()
   | Error msg ->
       Fmt.epr "Warning: %s@." msg;
@@ -296,7 +300,7 @@ let ensure_project_built ~path mgr =
       Fmt.epr "Continuing with analysis...@."
 
 let refresh_stale_cmt_targets ~path ~files mgr =
-  match Merlint.Dune_describe.refresh_stale_cmt_targets ~path ~files mgr with
+  match Merlint.Build.refresh_stale_cmt_targets ~path ~files mgr with
   | Ok () -> ()
   | Error msg ->
       Fmt.epr "Warning: %s@." msg;
@@ -312,41 +316,38 @@ let classify_path path =
   else if is_ocaml_source path then `File
   else `Other
 
-let process_path ~describes ~explicit_files path =
-  match classify_path path with
-  | `Dir ->
-      describes := Merlint.Dune_describe.describe (Fpath.v path) :: !describes
-  | `File -> explicit_files := path :: !explicit_files
-  | `Other -> ()
-  | `Missing -> Fmt.epr "Warning: %s does not exist@." path
-
-(** Build the project-wide [dune describe] and the (optional) narrowed list of
-    files to analyse.
-
-    Project-scoped rules (E605, E606, E610, E615, E620, ...) need the whole
-    project's libraries and test stanzas in view regardless of what was passed
-    on the command line. File-scoped rules iterate the explicit list when one is
-    given, the whole project otherwise.
-
-    Returns [(project_describe, analyze_set)] where [analyze_set] is
-    [Some explicit] in single-file mode and [None] in directory / no-arg mode
-    (engine then defaults to [Dune_describe.project_files project_describe]). *)
-let build_dune_describe ~project_root files =
+(* Narrow [analyze_set] from CLI arguments. Bare-file arguments enumerate
+   the files to analyse directly; directory and no-arg invocations leave
+   [analyze_set = None], and the engine walks [Project_index.source_files]
+   instead. *)
+let analyze_set_of_files files =
   match files with
-  | [] -> (Merlint.Dune_describe.describe (Fpath.v project_root), None)
+  | [] -> None
   | _ ->
-      let describes = ref [] in
-      let explicit_files = ref [] in
-      List.iter (process_path ~describes ~explicit_files) files;
-      if !describes = [] && !explicit_files <> [] then
-        (* Single-file mode: synthetic carries only the explicit files; the
-           project rules need the full library/test view, so we run
-           [Dune_describe.describe project_root] and narrow [analyze_set] to the
-           explicit set. *)
-        let project = Merlint.Dune_describe.describe (Fpath.v project_root) in
-        let explicit = List.rev_map Fpath.v !explicit_files in
-        (project, Some explicit)
-      else (Merlint.Dune_describe.merge (List.rev !describes), None)
+      let explicit =
+        List.filter_map
+          (fun p ->
+            match classify_path p with
+            | `File -> Some (Fpath.v p)
+            | `Dir | `Other -> None
+            | `Missing ->
+                Fmt.epr "Warning: %s does not exist@." p;
+                None)
+          files
+      in
+      if explicit = [] then None else Some explicit
+
+let analyze_roots_of_files files =
+  match
+    List.filter_map
+      (fun p ->
+        match classify_path p with
+        | `Dir -> Some (Fpath.v p)
+        | `File | `Other | `Missing -> None)
+      files
+  with
+  | [] -> None
+  | roots -> Some roots
 
 let load_file_via_eio fs filename = Eio.Path.load Eio.Path.(fs / filename)
 
@@ -354,17 +355,20 @@ let project_root_of_files = function
   | file :: _ -> Merlint.Project.root file
   | [] -> Merlint.Project.root "."
 
-let files_for_cmt_refresh analyze_set filtered_describe =
-  match analyze_set with
-  | Some files -> files
-  | None -> Merlint.Dune_describe.project_files filtered_describe
-
-let maybe_build_project mgr ~project_root ~analyze_set ~filtered_describe ~build
-    =
+let maybe_build_project mgr ~project_root ~analyze_set ~analyze_roots ~index
+    ~build =
   if build then (
     Log.info (fun m -> m "Building project...");
     ensure_project_built ~path:project_root mgr;
-    let files = files_for_cmt_refresh analyze_set filtered_describe in
+    let files =
+      match (analyze_set, analyze_roots) with
+      | Some files, None -> files
+      | None, roots -> Project_index.source_files ?roots (Lazy.force index)
+      | Some files, Some roots ->
+          Project_index.source_files ~roots (Lazy.force index)
+          |> List.rev_append files
+          |> List.sort_uniq Fpath.compare
+    in
     refresh_stale_cmt_targets ~path:project_root ~files mgr;
     Log.info (fun m -> m "Build done."))
 
@@ -399,20 +403,18 @@ let analyze_files mgr fs domain_mgr ?(exclude_patterns = []) ?rule_filter
   Log.info (fun m -> m "Dune root: %s (cwd: %s)" project_root (Sys.getcwd ()));
   Fmt.pr "Dune root: %s@." project_root;
   Log.info (fun m -> m "Scanning project structure...");
-  let dune_describe, analyze_set = build_dune_describe ~project_root files in
-
-  (* Apply exclusions (including cram directories which are already filtered) *)
-  let filtered_describe =
-    if exclude_patterns = [] then dune_describe
-    else Merlint.Dune_describe.exclude exclude_patterns dune_describe
-  in
-  maybe_build_project mgr ~project_root ~analyze_set ~filtered_describe ~build;
+  ignore exclude_patterns;
+  let analyze_set = analyze_set_of_files files in
+  let analyze_roots = analyze_roots_of_files files in
   let monorepo = monorepo_for_index project_root in
   let index_roots = index_roots_of_files files in
   let build_index ?pool () =
     build_project_index ~fs ~monorepo ?roots:index_roots ?pool ()
   in
-  run_analysis ~domain_mgr ~load_file project_root filtered_describe analyze_set
+  let lazy_index = lazy (build_index ()) in
+  maybe_build_project mgr ~project_root ~analyze_set ~analyze_roots
+    ~index:lazy_index ~build;
+  run_analysis ~domain_mgr ~load_file project_root analyze_set analyze_roots
     build_index rule_filter show_profile
 
 let files =

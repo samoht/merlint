@@ -31,7 +31,8 @@ let issue_of_setting name loc = function
   | Some _ | None -> [ Issue.v ~loc { package = name; kind = Missing } ]
 
 let check_package pkg =
-  match Project_index.Package.raw_dune_project pkg with
+  if Project_index.Package.is_anonymous pkg then []
+  else match Project_index.Package.raw_dune_project pkg with
   | None -> []
   | Some c -> (
       match Dune.Project.of_string c with
