@@ -5,6 +5,7 @@ let test_run_empty_filter () =
   match Filter.parse "none" with
   | Error msg -> Alcotest.failf "Failed to create filter: %s" msg
   | Ok filter ->
+      Eio_main.run @@ fun _env ->
       let dune_describe = Dune_describe.describe (Fpath.v ".") in
       let index = lazy (failwith "Project_index not built in tests") in
       let result =

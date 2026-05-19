@@ -14,9 +14,9 @@ Build bad fixture project:
   ✓ Naming Conventions (0 total issues)
   ✗ Documentation (2 total issues)
     [E920] Untested OCaml code in documentation (2 issues)
-    When a README.md, .mli or .mld contains OCaml code blocks (```ocaml fenced or
-    {[ ... ]} odoc), add an (mdx (files <file>)) stanza to the same directory's
-    dune file so the snippets are type-checked and run during dune test.
+    When a README.md, .mli or .mld contains OCaml code examples, add an (mdx
+    (files <file>)) stanza to the owning dune file so the snippets are
+    type-checked and run during dune test.
     - bad/README.md:1:0: bad/README.md: contains OCaml code blocks but bad/dune has no (mdx ...) stanza
     - bad/lib/foo.mli:1:0: bad/lib/foo.mli: contains OCaml code blocks but bad/lib/dune has no (mdx ...) stanza
   ✓ Project Structure (0 total issues)
@@ -63,6 +63,4 @@ Build good fixture project:
   
   Summary: ✓ 0 total issues (applied 1 rule)
   ✓ All checks passed!
-
-
 

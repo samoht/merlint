@@ -16,7 +16,7 @@ Build bad fixture project:
     [E910] Package quality policy (1 issue)
     Add x-quality field to *.opam.template to declare required quality features.
     Merlint checks that declared features actually exist.
-    - pkg/dune-project:1:0: pkg: test required by x-quality but missing
+    - bad/pkg/dune-project:1:0: pkg: test required by x-quality but missing
   ✓ Test Quality (0 total issues)
   ✓ Interop Testing (0 total issues)
   ✓ Code Generation (0 total issues)

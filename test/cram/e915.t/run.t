@@ -17,9 +17,9 @@ Build bad fixture project:
     declare tags: ["org:<your-org>" "<topic>" ...] where each topic is a slug from
     categories.toml / merlint.toml's topics list. Edit the package's dune-project
     so dune regenerates the opam file.
-    - pkg1/pkg1.opam:1:0: pkg1/pkg1.opam: missing tags: field
-    - pkg2/pkg2.opam:1:0: pkg2/pkg2.opam: tags: missing org:* marker
-    - pkg3/pkg3.opam:1:0: pkg3/pkg3.opam: unknown topic "weird-new-topic"
+    - bad/pkg1/pkg1.opam:1:0: pkg1/pkg1.opam: missing tags: field
+    - bad/pkg2/pkg2.opam:1:0: pkg2/pkg2.opam: tags: missing org:* marker
+    - bad/pkg3/pkg3.opam:1:0: pkg3/pkg3.opam: unknown topic "weird-new-topic"
   ✓ Test Quality (0 total issues)
   ✓ Interop Testing (0 total issues)
   ✓ Code Generation (0 total issues)
@@ -61,6 +61,5 @@ Build good fixture project:
   
   Summary: ✓ 0 total issues (applied 1 rule)
   ✓ All checks passed!
-
 
 
