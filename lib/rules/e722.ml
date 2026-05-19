@@ -9,9 +9,7 @@ let check (ctx : Context.project) =
     (fun t ->
       let fuzz_files =
         Project_index.source_stanza_files t
-        |>
-        List.filter
-          (fun f -> Fpath.has_ext ".ml" f && File.is_in_fuzz_dir f)
+        |> List.filter (fun f -> Fpath.has_ext ".ml" f && File.is_in_fuzz_dir f)
       in
       match fuzz_files with
       | [] -> None

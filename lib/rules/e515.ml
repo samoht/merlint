@@ -31,7 +31,7 @@ let check (ctx : Context.project) =
               (* Skip if this is already a test directory *)
               if is_test_directory dir then None else Some (dir, name))
             (Project_index.Library.files lib))
-      (Project_query.source_libraries (Context.index ctx))
+      (Project.Query.source_libraries (Context.index ctx))
   in
 
   (* Check if any test files are in the same directory as library files *)
@@ -52,11 +52,7 @@ let check (ctx : Context.project) =
               in
               Some
                 (Issue.v ~loc
-                   {
-                     directory = dir;
-                     library_name = lib_name;
-                     test_name;
-                   })
+                   { directory = dir; library_name = lib_name; test_name })
           | None -> None)
         (Project_index.source_stanza_files test))
     (Context.test_stanzas ctx)

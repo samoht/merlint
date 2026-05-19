@@ -117,7 +117,8 @@ let discover_executable_modules ~index =
 let discover_lib_modules ~index =
   let public_libs =
     source_libraries index
-    |> List.filter (fun lib -> Option.is_some (Project_index.Library.public_name lib))
+    |> List.filter (fun lib ->
+        Option.is_some (Project_index.Library.public_name lib))
   in
   let lib_names = List.map Project_index.Library.local_name public_libs in
   let file_modules =
@@ -175,8 +176,10 @@ let project ?file_view ?file_content ~config ~project_root ~analyze_set
     analyze_set;
     dune_describe = dune_desc_memo;
     executable_modules =
-      memo (fun () -> discover_executable_modules ~index:(force_memo index_memo));
-    lib_modules = memo (fun () -> discover_lib_modules ~index:(force_memo index_memo));
+      memo (fun () ->
+          discover_executable_modules ~index:(force_memo index_memo));
+    lib_modules =
+      memo (fun () -> discover_lib_modules ~index:(force_memo index_memo));
     test_modules =
       memo (fun () -> discover_test_modules ~index:(force_memo index_memo));
     index = index_memo;

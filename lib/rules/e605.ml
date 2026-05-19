@@ -66,7 +66,8 @@ let source_libraries index =
 
 let public_libraries index =
   source_libraries index
-  |> List.filter (fun lib -> Option.is_some (Project_index.Library.public_name lib))
+  |> List.filter (fun lib ->
+      Option.is_some (Project_index.Library.public_name lib))
 
 let library_file_set index =
   public_libraries index

@@ -7,7 +7,7 @@ let ml_module file =
   else None
 
 let library_for_file mod_to_libs file =
-  Option.bind (ml_module file) (Project_query.test_file_library mod_to_libs)
+  Option.bind (ml_module file) (Project.Query.test_file_library mod_to_libs)
 
 let issue_for_non_primary mod_to_libs primary_lib file =
   match (ml_module file, library_for_file mod_to_libs file) with
@@ -33,7 +33,7 @@ let check_test_info mod_to_libs test_stanza =
     | _ -> []
 
 let check (ctx : Context.project) =
-  let mod_to_libs = Project_query.library_module_map (Context.index ctx) in
+  let mod_to_libs = Project.Query.library_module_map (Context.index ctx) in
   Context.test_stanzas ctx |> List.concat_map (check_test_info mod_to_libs)
 
 let pp ppf { test_module; library_name } =

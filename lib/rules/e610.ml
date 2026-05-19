@@ -61,7 +61,8 @@ let library_module_path file =
 
 let library_module_paths libraries =
   List.concat_map
-    (fun lib -> List.filter_map library_module_path (Project_index.Library.files lib))
+    (fun lib ->
+      List.filter_map library_module_path (Project_index.Library.files lib))
     libraries
 
 let library_source_files libraries =
@@ -144,7 +145,7 @@ let check_test_file ~library_module_paths ~referenced_modules file =
         else Some (missing_library_issue file expected_path)
 
 let check ctx =
-  let libraries = Project_query.source_libraries (Context.index ctx) in
+  let libraries = Project.Query.source_libraries (Context.index ctx) in
   let library_module_paths = library_module_paths libraries in
   let referenced_modules =
     collect_referenced_modules ctx (library_source_files libraries)

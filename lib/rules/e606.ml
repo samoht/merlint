@@ -10,7 +10,7 @@ let issue_for_file mod_to_libs resolved file =
   match ml_module file with
   | None -> None
   | Some basename -> (
-      match Project_query.test_file_library mod_to_libs basename with
+      match Project.Query.test_file_library mod_to_libs basename with
       | Some lib when not (List.mem lib resolved) ->
           let loc =
             Location.v ~file:(Fpath.to_string file) ~start_line:1 ~start_col:0
@@ -23,14 +23,15 @@ let check_test_info index mod_to_libs test_stanza =
   let libraries = Project_index.source_stanza_libraries test_stanza in
   if libraries = [] then []
   else
-    let resolved = List.map (Project_query.resolve_library index) libraries in
+    let resolved = List.map (Project.Query.resolve_library index) libraries in
     Project_index.source_stanza_files test_stanza
     |> List.filter_map (issue_for_file mod_to_libs resolved)
 
 let check (ctx : Context.project) =
   let index = Context.index ctx in
-  let mod_to_libs = Project_query.library_module_map index in
-  Context.test_stanzas ctx |> List.concat_map (check_test_info index mod_to_libs)
+  let mod_to_libs = Project.Query.library_module_map index in
+  Context.test_stanzas ctx
+  |> List.concat_map (check_test_info index mod_to_libs)
 
 let pp ppf { test_module; library_name } =
   Fmt.pf ppf

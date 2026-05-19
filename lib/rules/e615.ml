@@ -12,14 +12,14 @@ module Log = (val Logs.src_log log_src : Logs.LOG)
 let should_exclude_test_file index test_file declared_libraries =
   if declared_libraries = [] then false
   else
-    let mod_to_libs = Project_query.library_module_map index in
+    let mod_to_libs = Project.Query.library_module_map index in
     let resolved =
-      List.map (Project_query.resolve_library index) declared_libraries
+      List.map (Project.Query.resolve_library index) declared_libraries
     in
     let basename =
       Filename.remove_extension (Filename.basename (Fpath.to_string test_file))
     in
-    match Project_query.test_file_library mod_to_libs basename with
+    match Project.Query.test_file_library mod_to_libs basename with
     | Some lib -> not (List.mem lib resolved)
     | None -> false
 
@@ -38,7 +38,7 @@ let all_test_modules test_file files =
         let basename = module_basename f in
         if
           String.starts_with ~prefix:"test_" basename
-          && basename <> "test_helpers"
+          && not (File.is_unit_companion_module basename)
         then Some (basename, f)
         else None
       else None)
@@ -74,8 +74,7 @@ let check_test_info ctx index test_stanza =
   let name = Project_index.source_stanza_name test_stanza in
   let files = Project_index.source_stanza_files test_stanza in
   Log.debug (fun m ->
-      m "E615: Checking test stanza '%s' with %d files" name
-        (List.length files));
+      m "E615: Checking test stanza '%s' with %d files" name (List.length files));
   match test_runner files with
   | None -> []
   | Some test_file -> (
