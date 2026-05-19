@@ -2,7 +2,7 @@ Build fixture project:
   $ dune build @check
 
 Test bad example - should find missing module documentation:
-  $ merlint -B -r E400 bad.mli
+  $ merlint --build -r E400 bad.mli
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
@@ -35,7 +35,7 @@ Test bad example - should find missing module documentation:
   [1]
 
 Test good example - should find no issues:
-  $ merlint -B -r E400 good.mli
+  $ merlint --build -r E400 good.mli
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
@@ -57,7 +57,7 @@ Test good example - should find no issues:
 
 
 Test file with license comment followed by doc comment - should find no issues:
-  $ merlint -B -r E400 license.mli
+  $ merlint --build -r E400 license.mli
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   

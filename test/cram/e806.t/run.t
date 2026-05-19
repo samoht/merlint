@@ -2,7 +2,7 @@ Test bad example - go script without go.mod:
 Build bad fixture project:
   $ (cd bad && dune build @check)
 
-  $ merlint -B -r E806 bad/
+  $ merlint --build -r E806 bad/
   Dune root: $TESTCASE_ROOT/bad/
   Running merlint analysis...
   
@@ -36,7 +36,7 @@ Test good example - go script with go.mod:
 Build good fixture project:
   $ (cd good && dune build @check)
 
-  $ merlint -B -r E806 good/
+  $ merlint --build -r E806 good/
   Dune root: $TESTCASE_ROOT/good/
   Running merlint analysis...
   

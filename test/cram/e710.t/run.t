@@ -2,7 +2,7 @@ Test bad example - fuzz_missing.ml has no corresponding library module:
 Build bad fixture project:
   $ (cd bad && dune build @check)
 
-  $ merlint -B -r E710 bad/
+  $ merlint --build -r E710 bad/
   Dune root: $TESTCASE_ROOT/bad/
   Running merlint analysis...
   
@@ -38,7 +38,7 @@ Test good example - fuzz_parser.ml has corresponding parser.ml:
 Build good fixture project:
   $ (cd good && dune build @check)
 
-  $ merlint -B -r E710 good/
+  $ merlint --build -r E710 good/
   Dune root: $TESTCASE_ROOT/good/
   Running merlint analysis...
   

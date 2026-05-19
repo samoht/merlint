@@ -2,7 +2,7 @@ Test bad example - CSV traces but no csv lib in dune:
 Build bad fixture project:
   $ (cd bad && dune build @check)
 
-  $ merlint -B -r E825 bad/
+  $ merlint --build -r E825 bad/
   Dune root: $TESTCASE_ROOT/bad/
   Running merlint analysis...
   
@@ -37,7 +37,7 @@ Test good example - CSV traces with csv lib in dune:
 Build good fixture project:
   $ (cd good && dune build @check)
 
-  $ merlint -B -r E825 good/
+  $ merlint --build -r E825 good/
   Dune root: $TESTCASE_ROOT/good/
   Running merlint analysis...
   

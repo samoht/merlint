@@ -2,7 +2,7 @@ Test bad example - rust script without Cargo.toml:
 Build bad fixture project:
   $ (cd bad && dune build @check)
 
-  $ merlint -B -r E807 bad/
+  $ merlint --build -r E807 bad/
   Dune root: $TESTCASE_ROOT/bad/
   Running merlint analysis...
   
@@ -36,7 +36,7 @@ Test good example - rust script with Cargo.toml:
 Build good fixture project:
   $ (cd good && dune build @check)
 
-  $ merlint -B -r E807 good/
+  $ merlint --build -r E807 good/
   Dune root: $TESTCASE_ROOT/good/
   Running merlint analysis...
   

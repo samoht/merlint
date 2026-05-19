@@ -2,7 +2,7 @@ Build fixture project:
   $ dune build @check
 
 Test bad examples - should find naming issues:
-  $ merlint -B -r E617 test_bad.ml
+  $ merlint --build -r E617 test_bad.ml
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
@@ -35,7 +35,7 @@ Test bad examples - should find naming issues:
     Run `merlint help E617` for the rule's description, hint, and good/bad examples.
   [1]
 
-  $ merlint -B -r E617 test_config.ml
+  $ merlint --build -r E617 test_config.ml
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
@@ -68,7 +68,7 @@ Test bad examples - should find naming issues:
     Run `merlint help E617` for the rule's description, hint, and good/bad examples.
   [1]
 
-  $ merlint -B -r E617 test_parser.ml
+  $ merlint --build -r E617 test_parser.ml
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
@@ -101,7 +101,7 @@ Test bad examples - should find naming issues:
     Run `merlint help E617` for the rule's description, hint, and good/bad examples.
   [1]
 
-  $ merlint -B -r E617 test_user_auth.ml  
+  $ merlint --build -r E617 test_user_auth.ml  
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
@@ -135,7 +135,7 @@ Test bad examples - should find naming issues:
   [1]
 
 Test multi-line suite definition:
-  $ merlint -B -r E617 test_multiline.ml
+  $ merlint --build -r E617 test_multiline.ml
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
@@ -169,7 +169,7 @@ Test multi-line suite definition:
   [1]
 
 Test good examples - should find no issues:
-  $ merlint -B -r E617 good/test_config.ml good/test_parser.ml good/test_user_auth.ml
+  $ merlint --build -r E617 good/test_config.ml good/test_parser.ml good/test_user_auth.ml
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   

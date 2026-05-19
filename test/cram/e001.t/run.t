@@ -2,7 +2,7 @@ Build fixture project:
   $ dune build @check
 
 Test bad example - should find complexity issues:
-  $ merlint -B -r E001 bad.ml
+  $ merlint --build -r E001 bad.ml
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
@@ -35,7 +35,7 @@ Test bad example - should find complexity issues:
   [1]
 
 Test good example - should find no issues:
-  $ merlint -B -r E001 good.ml
+  $ merlint --build -r E001 good.ml
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
@@ -54,7 +54,7 @@ Test good example - should find no issues:
   ✓ All checks passed!
 
 Test large flat pattern match - breadth alone is not complexity:
-  $ merlint -B -r E001 flat_match.ml
+  $ merlint --build -r E001 flat_match.ml
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
@@ -73,7 +73,7 @@ Test large flat pattern match - breadth alone is not complexity:
   ✓ All checks passed!
 
 Test flat boolean predicate - breadth alone is not control-flow complexity:
-  $ merlint -B -r E001 pure_bool.ml
+  $ merlint --build -r E001 pure_bool.ml
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
@@ -92,7 +92,7 @@ Test flat boolean predicate - breadth alone is not control-flow complexity:
   ✓ All checks passed!
 
 Test OCaml syntax that should stay below the complexity threshold:
-  $ merlint -B -r E001 syntax_good.ml
+  $ merlint --build -r E001 syntax_good.ml
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
@@ -111,7 +111,7 @@ Test OCaml syntax that should stay below the complexity threshold:
   ✓ All checks passed!
 
 Test OCaml syntax with nested decisions:
-  $ merlint -B -r E001 syntax_bad.ml
+  $ merlint --build -r E001 syntax_bad.ml
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   

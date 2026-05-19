@@ -2,7 +2,7 @@ Build fixture project:
   $ dune build @check
 
 Test bad example - should find deep nesting issues:
-  $ merlint -B -r E010 bad.ml
+  $ merlint --build -r E010 bad.ml
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
@@ -41,7 +41,7 @@ Test bad example - should find deep nesting issues:
 
 
 Test good example - should find no issues:
-  $ merlint -B -r E010 good.ml
+  $ merlint --build -r E010 good.ml
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   

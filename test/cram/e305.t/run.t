@@ -2,7 +2,7 @@ Build fixture project:
   $ dune build @check
 
 Test bad example - should find bad module naming:
-  $ merlint -B -r E305 bad.ml
+  $ merlint --build -r E305 bad.ml
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
@@ -35,7 +35,7 @@ Test bad example - should find bad module naming:
   [1]
 
 Test good example - should find no issues:
-  $ merlint -B -r E305 good.ml
+  $ merlint --build -r E305 good.ml
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   

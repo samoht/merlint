@@ -2,7 +2,7 @@ Build fixture project:
   $ dune build @check
 
 Test bad example - should find fail (Fmt.str) patterns:
-  $ merlint -B -r E616 test_bad.ml
+  $ merlint --build -r E616 test_bad.ml
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
@@ -40,7 +40,7 @@ Test bad example - should find fail (Fmt.str) patterns:
   [1]
 
 Test good example - should find no issues:
-  $ merlint -B -r E616 test_good.ml
+  $ merlint --build -r E616 test_good.ml
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   

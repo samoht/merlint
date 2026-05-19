@@ -2,7 +2,7 @@ Build fixture project:
   $ dune build @check
 
 Test bad example - should flag a printer not named pp / pp_<type>:
-  $ merlint -B -r E336 bad.mli
+  $ merlint --build -r E336 bad.mli
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
@@ -38,7 +38,7 @@ Test bad example - should flag a printer not named pp / pp_<type>:
 
 
 Test good example - should find no issues:
-  $ merlint -B -r E336 good.ml
+  $ merlint --build -r E336 good.ml
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   

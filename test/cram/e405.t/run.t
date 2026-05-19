@@ -2,7 +2,7 @@ Build fixture project:
   $ dune build @check
 
 Test bad example - should find missing value documentation:
-  $ merlint -B -r E405 bad.mli
+  $ merlint --build -r E405 bad.mli
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
@@ -36,7 +36,7 @@ Test bad example - should find missing value documentation:
   [1]
 
 Test good example - should find no issues:
-  $ merlint -B -r E405 good.mli
+  $ merlint --build -r E405 good.mli
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   

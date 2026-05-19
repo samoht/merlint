@@ -2,7 +2,7 @@ Build fixture project:
   $ dune build @check
 
 Test bad example - should find redundant function prefixes:
-  $ merlint -B -r E331 bad.ml
+  $ merlint --build -r E331 bad.ml
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
@@ -50,7 +50,7 @@ Test bad example - should find redundant function prefixes:
   [1]
 
 Test good example - should find no issues:
-  $ merlint -B -r E331 good.ml
+  $ merlint --build -r E331 good.ml
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   

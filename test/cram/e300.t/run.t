@@ -2,7 +2,7 @@ Build fixture project:
   $ dune build @check
 
 Test bad example - should find bad variant naming:
-  $ merlint -B -r E300 bad.ml
+  $ merlint --build -r E300 bad.ml
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
@@ -37,7 +37,7 @@ Test bad example - should find bad variant naming:
   [1]
 
 Test good example - should find no issues (including compound terms like MacOS):
-  $ merlint -B -r E300 good.ml
+  $ merlint --build -r E300 good.ml
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
@@ -56,7 +56,7 @@ Test good example - should find no issues (including compound terms like MacOS):
   ✓ All checks passed!
 
 Test variant uses are not reported as duplicate definition issues:
-  $ merlint -B -r E300 bad_with_uses.ml
+  $ merlint --build -r E300 bad_with_uses.ml
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   

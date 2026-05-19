@@ -2,7 +2,7 @@ Test bad example - foo uses Wire.Codec but has no c/ directory:
 Build bad fixture project:
   $ (cd bad && dune build @check)
 
-  $ merlint -B -r E900 bad/
+  $ merlint --build -r E900 bad/
   Dune root: $TESTCASE_ROOT/bad/
   Running merlint analysis...
   
@@ -38,7 +38,7 @@ Test good example - foo uses Wire.Codec and has a c/ directory:
 Build good fixture project:
   $ (cd good && dune build @check)
 
-  $ merlint -B -r E900 good/
+  $ merlint --build -r E900 good/
   Dune root: $TESTCASE_ROOT/good/
   Running merlint analysis...
   
@@ -60,7 +60,7 @@ Test no-Wire edge case - plain Codec.v is not Wire.Codec.v and needs no c/ direc
 Build nowire fixture project:
   $ (cd nowire && dune build @check)
 
-  $ merlint -B -r E900 nowire/
+  $ merlint --build -r E900 nowire/
   Dune root: $TESTCASE_ROOT/nowire/
   Running merlint analysis...
   

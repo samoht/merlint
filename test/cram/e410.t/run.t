@@ -2,7 +2,7 @@ Build fixture project:
   $ dune build @check
 
 Test bad example - should find bad documentation style:
-  $ merlint -B -r E410 bad.mli
+  $ merlint --build -r E410 bad.mli
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
@@ -40,7 +40,7 @@ Test bad example - should find bad documentation style:
   [1]
 
 Test good example - should find no issues:
-  $ merlint -B -r E410 good.mli
+  $ merlint --build -r E410 good.mli
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   

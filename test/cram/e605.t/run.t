@@ -2,7 +2,7 @@ Test bad example - should find missing test files:
 Build bad fixture project:
   $ (cd bad && dune build @check)
 
-  $ merlint -B -r E605 bad/
+  $ merlint --build -r E605 bad/
   Dune root: $TESTCASE_ROOT/bad/
   Running merlint analysis...
   
@@ -48,7 +48,7 @@ Test good example - should find no issues (includes bin/common.ml which is an ex
 Build good fixture project:
   $ (cd good && dune build @check)
 
-  $ merlint -B -r E605 good/
+  $ merlint --build -r E605 good/
   Dune root: $TESTCASE_ROOT/good/
   Running merlint analysis...
   
@@ -70,7 +70,7 @@ Build good fixture project:
 
 
 Test multidir - analyzing lib and test together should not report missing tests when they exist:
-  $ merlint -B -r E605 good/lib good/test
+  $ merlint --build -r E605 good/lib good/test
   Dune root: $TESTCASE_ROOT/good
   Running merlint analysis...
   
@@ -89,7 +89,7 @@ Test multidir - analyzing lib and test together should not report missing tests 
   ✓ All checks passed!
 
 Test executable modules are not flagged - bin/common.ml should not require a test:
-  $ merlint -B -r E605 good/bin/common.ml
+  $ merlint --build -r E605 good/bin/common.ml
   Dune root: $TESTCASE_ROOT/good
   Running merlint analysis...
   

@@ -2,7 +2,7 @@ Test bad example - foo/lib/foo_bar.ml has package-prefixed module name:
 Build bad fixture project:
   $ (cd bad && dune build @check)
 
-  $ merlint -B -r E522 bad/
+  $ merlint --build -r E522 bad/
   Dune root: $TESTCASE_ROOT/bad/
   Running merlint analysis...
   
@@ -40,7 +40,7 @@ Test good example - foo/lib/bar.ml has no package prefix:
 Build good fixture project:
   $ (cd good && dune build @check)
 
-  $ merlint -B -r E522 good/
+  $ merlint --build -r E522 good/
   Dune root: $TESTCASE_ROOT/good/
   Running merlint analysis...
   

@@ -2,7 +2,7 @@ Build fixture project:
   $ dune build @check
 
 Test bad example - should flag generic f (Fmt.str ...) but NOT specialized failwith / invalid_arg cases:
-  $ merlint -B -r E217 bad.ml
+  $ merlint --build -r E217 bad.ml
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
@@ -51,7 +51,7 @@ Test bad example - should flag generic f (Fmt.str ...) but NOT specialized failw
   [1]
 
 Test good example - should find no issues:
-  $ merlint -B -r E217 good.ml
+  $ merlint --build -r E217 good.ml
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   

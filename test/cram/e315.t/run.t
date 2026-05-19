@@ -2,7 +2,7 @@ Build fixture project:
   $ dune build @check
 
 Test bad example - should find bad type naming:
-  $ merlint -B -r E315 bad.ml
+  $ merlint --build -r E315 bad.ml
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
@@ -35,7 +35,7 @@ Test bad example - should find bad type naming:
   [1]
 
 Test good example - should find no issues:
-  $ merlint -B -r E315 good.ml
+  $ merlint --build -r E315 good.ml
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   

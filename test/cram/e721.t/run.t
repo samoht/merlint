@@ -3,7 +3,7 @@ Test bad example - fuzz/ nested inside test/:
 Build bad fixture project:
   $ (cd bad && dune build @check)
 
-  $ merlint -B -r E721 bad/
+  $ merlint --build -r E721 bad/
   Dune root: $TESTCASE_ROOT/bad/
   Running merlint analysis...
   
@@ -38,7 +38,7 @@ Test good example - fuzz/ as sibling of test/:
 Build good fixture project:
   $ (cd good && dune build @check)
 
-  $ merlint -B -r E721 good/
+  $ merlint --build -r E721 good/
   Dune root: $TESTCASE_ROOT/good/
   Running merlint analysis...
   

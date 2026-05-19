@@ -3,7 +3,7 @@ Test bad example - should find non-test file in test stanza:
 Build bad fixture project:
   $ (cd bad && dune build @check)
 
-  $ merlint -B -r E618 bad/
+  $ merlint --build -r E618 bad/
   Dune root: $TESTCASE_ROOT/bad/
   Running merlint analysis...
   
@@ -45,7 +45,7 @@ Test good example - should find no issues:
 Build good fixture project:
   $ (cd good && dune build @check)
 
-  $ merlint -B -r E618 good/
+  $ merlint --build -r E618 good/
   Dune root: $TESTCASE_ROOT/good/
   Running merlint analysis...
   

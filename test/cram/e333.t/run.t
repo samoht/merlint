@@ -2,7 +2,7 @@ Build fixture project:
   $ dune build @check
 
 Test bad interface - should flag the standalone _to_ conversions but not action-verb names:
-  $ merlint -B -r E333 bad.mli
+  $ merlint --build -r E333 bad.mli
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
@@ -55,7 +55,7 @@ Test bad interface - should flag the standalone _to_ conversions but not action-
 
 
 Test good example - should find no issues:
-  $ merlint -B -r E333 good.ml
+  $ merlint --build -r E333 good.ml
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
@@ -78,7 +78,7 @@ Test good example - should find no issues:
 
 Test the .mli directly: intra-public conventions, nested module, and a
 parametric alias must all be accepted without flagging:
-  $ merlint -B -r E333 good.mli
+  $ merlint --build -r E333 good.mli
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
@@ -100,7 +100,7 @@ parametric alias must all be accepted without flagging:
 
 
 Implementation declarations are checked too.
-  $ merlint -B -r E333 good.ml
+  $ merlint --build -r E333 good.ml
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
@@ -121,7 +121,7 @@ Implementation declarations are checked too.
 
 
 
-  $ merlint -B -r E333 bad.ml
+  $ merlint --build -r E333 bad.ml
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   

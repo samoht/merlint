@@ -3,7 +3,7 @@ Build fixture project:
 
 Bad interface uses an unconstrained [module type of].
 
-  $ merlint -B -r E220 bad.mli
+  $ merlint --build -r E220 bad.mli
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
@@ -38,7 +38,7 @@ Bad interface uses an unconstrained [module type of].
 
 Alias form is accepted.
 
-  $ merlint -B -r E220 good.mli
+  $ merlint --build -r E220 good.mli
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   

@@ -2,7 +2,7 @@ Test bad example - empty fuzz suites:
 Build bad fixture project:
   $ (cd bad && dune build @check)
 
-  $ merlint -B -r E726 bad/
+  $ merlint --build -r E726 bad/
   Dune root: $TESTCASE_ROOT/bad/
   Running merlint analysis...
   
@@ -41,7 +41,7 @@ Test good example - non-empty fuzz suite:
 Build good fixture project:
   $ (cd good && dune build @check)
 
-  $ merlint -B -r E726 good/
+  $ merlint --build -r E726 good/
   Dune root: $TESTCASE_ROOT/good/
   Running merlint analysis...
   

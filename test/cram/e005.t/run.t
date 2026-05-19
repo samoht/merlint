@@ -2,7 +2,7 @@ Build fixture project:
   $ dune build @check
 
 Test bad example - should find function length issues:
-  $ merlint -B -r E005 bad.ml
+  $ merlint --build -r E005 bad.ml
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
@@ -38,7 +38,7 @@ Test bad example - should find function length issues:
   [1]
 
 Test pattern matching example - should handle additional allowance:
-  $ merlint -B -r E005 pattern_match.ml
+  $ merlint --build -r E005 pattern_match.ml
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
@@ -57,7 +57,7 @@ Test pattern matching example - should handle additional allowance:
   ✓ All checks passed!
 
 Test good example - should find no issues:
-  $ merlint -B -r E005 good.ml
+  $ merlint --build -r E005 good.ml
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
@@ -76,7 +76,7 @@ Test good example - should find no issues:
   ✓ All checks passed!
 
 Test long record - should not be flagged as long function:
-  $ merlint -B -r E005 long_record.ml
+  $ merlint --build -r E005 long_record.ml
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
@@ -95,7 +95,7 @@ Test long record - should not be flagged as long function:
   ✓ All checks passed!
 
 Test long pure list - should not be flagged as long function:
-  $ merlint -B -r E005 pure_list.ml
+  $ merlint --build -r E005 pure_list.ml
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
@@ -115,7 +115,7 @@ Test long pure list - should not be flagged as long function:
 
 
 Test monadic decode ending in a long pure record - should count the binds but not every field:
-  $ merlint -B -r E005 monadic_record.ml
+  $ merlint --build -r E005 monadic_record.ml
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   

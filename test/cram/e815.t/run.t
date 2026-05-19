@@ -2,7 +2,7 @@ Test bad example - dune uses REGEN_TRACES env sentinel:
 Build bad fixture project:
   $ (cd bad && dune build @check)
 
-  $ merlint -B -r E815 bad/
+  $ merlint --build -r E815 bad/
   Dune root: $TESTCASE_ROOT/bad/
   Running merlint analysis...
   
@@ -36,7 +36,7 @@ Test good example - dune has plain regen-traces alias without sentinel:
 Build good fixture project:
   $ (cd good && dune build @check)
 
-  $ merlint -B -r E815 good/
+  $ merlint --build -r E815 good/
   Dune root: $TESTCASE_ROOT/good/
   Running merlint analysis...
   
