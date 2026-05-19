@@ -42,15 +42,20 @@ let exposed_symbol_issues ctx pkg_name mli_path =
 
 let check_package ctx pkg =
   let libs = Project_index.package_libraries pkg in
-  if not (List.exists (library_uses_wire ctx) libs) then []
-  else
-    let pkg_name = Project_index.Package.name pkg in
+  let pkg_name = Project_index.Package.name pkg in
+  let issues =
     libs
     |> List.concat_map Project_index.Library.files
     |> List.filter_map (fun fp ->
-        let s = Fpath.to_string fp in
-        if Filename.check_suffix s ".mli" then Some s else None)
+           let s = Fpath.to_string fp in
+           if Filename.check_suffix s ".mli" && ctx.Context.in_analyze_set s then
+             Some s
+           else None)
     |> List.concat_map (exposed_symbol_issues ctx pkg_name)
+  in
+  if issues = [] then []
+  else if List.exists (library_uses_wire ctx) libs then issues
+  else []
 
 (** Walk <pkg>/lib/*.mli looking for val struct_ / val module_ / val c_stubs /
     val ml_stubs. These belong in c/gen.ml. *)

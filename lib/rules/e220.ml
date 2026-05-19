@@ -33,22 +33,31 @@ let target_of_module_type_of (mty : T.module_type) =
   in
   target mty
 
-let collect_issues_view ~filename view =
-  let issues = ref [] in
-  Query.iter_signature_items view (fun (si : T.signature_item) ->
-      match si.sig_desc with
-      | Tsig_module md when is_plain_module_type_of md.md_type -> (
-          match (md.md_name.txt, target_of_module_type_of md.md_type) with
-          | Some name, Some target ->
-              let loc = Loc.of_typed ~filename si.sig_loc in
-              issues := Issue.v ~loc { module_name = name; target } :: !issues
-          | _ -> ())
-      | _ -> ());
-  List.rev !issues
+type state = {
+  filename : string;
+  enabled : bool;
+  issues : payload Issue.t list ref;
+}
 
-let check (ctx : Context.file) =
-  if not (Filename.check_suffix ctx.filename ".mli") then []
-  else collect_issues_view ~filename:ctx.filename (Context.view ctx)
+let visit_signature_item state (si : T.signature_item) =
+  if state.enabled then
+    match si.sig_desc with
+    | Tsig_module md when is_plain_module_type_of md.md_type -> (
+        match (md.md_name.txt, target_of_module_type_of md.md_type) with
+        | Some name, Some target ->
+            let loc = Loc.of_typed ~filename:state.filename si.sig_loc in
+            state.issues :=
+              Issue.v ~loc { module_name = name; target } :: !(state.issues)
+        | _ -> ())
+    | _ -> ()
+
+let select ctx = Filename.check_suffix ctx.Context.filename ".mli"
+
+let init ctx =
+  let filename = ctx.Context.filename in
+  { filename; enabled = true; issues = ref [] }
+
+let finish _ state = List.rev !(state.issues)
 
 let pp ppf { module_name; target } =
   Fmt.pf ppf
@@ -66,4 +75,5 @@ let rule =
        Y] is cheaper to typecheck and preserves equalities. Keep [module type \
        of] only when you immediately narrow with [with type t = ...] / [with \
        module M = ...]."
-    ~examples:[] ~pp (File check)
+    ~examples:[] ~pp
+    (Rule.pass ~select ~init ~signature_item:visit_signature_item ~finish ())

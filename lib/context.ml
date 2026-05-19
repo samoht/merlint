@@ -23,6 +23,9 @@ type file = {
   filename : string;
   config : Config.t;
   project_root : string;
+  analyze_set : string list;
+  selected_file : string -> bool;
+  project_index : Project_index.t option;
   view : File_view.t;
   content : string Lazy.t;
 }
@@ -31,6 +34,7 @@ type project = {
   config : Config.t;
   project_root : string;
   analyze_set : string list;
+  in_analyze_set : string -> bool;
   dune_describe : Dune_describe.describe memo;
   executable_modules : string list memo;
   lib_modules : string list memo;
@@ -40,17 +44,31 @@ type project = {
   file_content_cache : string -> string;
 }
 
-let file ~filename ~config ~project_root ~load_content =
+let file ~analyze_set ~selected_file ~project_index ~filename ~config
+    ~project_root ~load_content =
   {
     filename;
     config;
     project_root;
+    analyze_set;
+    selected_file;
+    project_index;
     view = File_view.v ~filename ~typedtree:(fun () -> Ok None) ();
     content = lazy (load_content ());
   }
 
-let file_with_view ~filename ~config ~project_root ~view ~load_content =
-  { filename; config; project_root; view; content = lazy (load_content ()) }
+let file_with_view ~analyze_set ~selected_file ~project_index ~filename
+    ~config ~project_root ~view ~load_content =
+  {
+    filename;
+    config;
+    project_root;
+    analyze_set;
+    selected_file;
+    project_index;
+    view;
+    content = lazy (load_content ());
+  }
 
 let default_load_content filename () =
   try In_channel.with_open_text filename In_channel.input_all
@@ -162,6 +180,9 @@ let project ?file_view ?file_content ~config ~project_root ~analyze_set
     ~dune_describe ~index () =
   let dune_desc_memo = memo_value dune_describe in
   let index_memo = memo (fun () -> Lazy.force index) in
+  let analyze_set_tbl = Hashtbl.create (List.length analyze_set) in
+  List.iter (fun file -> Hashtbl.replace analyze_set_tbl file ()) analyze_set;
+  let in_analyze_set file = Hashtbl.mem analyze_set_tbl file in
   let file_view_cache =
     memoize_file_view (Option.value file_view ~default:default_file_view)
   in
@@ -174,6 +195,7 @@ let project ?file_view ?file_content ~config ~project_root ~analyze_set
     config;
     project_root;
     analyze_set;
+    in_analyze_set;
     dune_describe = dune_desc_memo;
     executable_modules =
       memo (fun () ->

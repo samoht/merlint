@@ -167,8 +167,8 @@ let tests_missing ~files ~test_modules lib_mod =
         in_dune in_files);
   (not in_dune) && not in_files
 
-let missing_test_candidate ~index ~files ~private_modules ~test_modules lib_mod
-    =
+let missing_test_candidate ~index ~source_files ~test_files ~private_modules
+    ~test_modules lib_mod =
   (* Short-circuit on the cheap signals first: private modules, source
      location, test presence. *)
   match should_skip_module private_modules lib_mod with
@@ -176,26 +176,39 @@ let missing_test_candidate ~index ~files ~private_modules ~test_modules lib_mod
       log_skip lib_mod reason;
       None
   | None -> (
-      if not (tests_missing ~files ~test_modules lib_mod) then None
-      else
-        match source_candidate ~index ~files lib_mod with
-        | `Missing_source ->
-            log_skip lib_mod "no library source file, only in executables";
-            None
-        | `Skipped_source -> None
-        | `Source file_path -> Some (lib_mod, file_path))
+      match source_candidate ~index ~files:source_files lib_mod with
+      | `Missing_source ->
+          log_skip lib_mod "no library source file, only in executables";
+          None
+      | `Skipped_source -> None
+      | `Source file_path ->
+          if
+            tests_missing ~files:test_files ~test_modules lib_mod
+            && not (Sys.file_exists (expected_test_path file_path))
+          then Some (lib_mod, file_path)
+          else None)
 
 let check (ctx : Context.project) =
-  let files = Context.analyze_set ctx in
-  let lib_modules = Context.lib_modules ctx in
-  let test_modules = Context.test_modules ctx in
   let index = Context.index ctx in
+  let selected_files = Context.analyze_set ctx in
+  let root = Fpath.v (Context.project_root ctx) in
+  let project_files =
+    Project_index.source_files index
+    |> List.map (fun file -> Loc.relative_to ~root file |> Fpath.to_string)
+  in
+  let lib_modules =
+    selected_files
+    |> List.filter (is_public_library_source index)
+    |> List.map module_source_name |> List.sort_uniq String.compare
+  in
+  let test_modules = Context.test_modules ctx in
   let private_modules = private_module_set index in
   let test_modules = List.map String.lowercase_ascii test_modules in
-  log_project_summary ~files ~lib_modules ~test_modules;
+  log_project_summary ~files:project_files ~lib_modules ~test_modules;
   lib_modules
   |> List.filter_map
-       (missing_test_candidate ~index ~files ~private_modules ~test_modules)
+       (missing_test_candidate ~index ~source_files:selected_files
+          ~test_files:project_files ~private_modules ~test_modules)
   |> List.map (fun (m, source_file) -> missing_test_issue m source_file)
 
 let pp ppf { module_name; expected_test_file } =

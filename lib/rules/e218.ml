@@ -108,19 +108,6 @@ let name_matches_kind name kind =
     [(body_loc, binding_name, kind, payload)]. The body location is so the
     inline-call iterator can skip it; the name is so we can flag mis-named
     helpers. *)
-let collect_helpers view =
-  let helpers = ref [] in
-  let collect_binding (vb : T.value_binding) =
-    let body = body_of_function vb.vb_expr in
-    match flagged_kstr_any body with
-    | None -> ()
-    | Some (kind, payload) ->
-        let name = name_of_pattern vb.vb_pat in
-        helpers := (body.exp_loc, name, kind, payload) :: !helpers
-  in
-  Query.iter_value_bindings view collect_binding;
-  !helpers
-
 let mismatch_suggestion name kind =
   let prefix = match kind with Err -> "err" | Fail -> "fail" in
   Fmt.str
@@ -128,38 +115,45 @@ let mismatch_suggestion name kind =
      with [err_]/[fail_])"
     name prefix
 
-let check (ctx : Context.file) =
-  let filename = ctx.filename in
-  let view = Context.view ctx in
-  let helpers = collect_helpers view in
-  let helper_locs = List.map (fun (loc, _, _, _) -> loc) helpers in
-  let issues = ref [] in
-  List.iter
-    (fun (loc, name, kind, _payload) ->
-      match name with
-      | Some n when not (name_matches_kind n kind) ->
-          let suggested = mismatch_suggestion n kind in
-          issues :=
+type state = {
+  filename : string;
+  helper_locs : Ocaml_parsing.Location.t list ref;
+  issues : payload Issue.t list ref;
+}
+
+let visit_value_binding state (vb : T.value_binding) =
+  let body = body_of_function vb.vb_expr in
+  match flagged_kstr_any body with
+  | None -> ()
+  | Some (kind, _payload) -> (
+      state.helper_locs := body.exp_loc :: !(state.helper_locs);
+      match name_of_pattern vb.vb_pat with
+      | Some name when not (name_matches_kind name kind) ->
+          let suggested = mismatch_suggestion name kind in
+          state.issues :=
             Issue.v
-              ~loc:(Loc.of_typed ~filename loc)
+              ~loc:(Loc.of_typed ~filename:state.filename body.exp_loc)
               { variant = Rename; suggested }
-            :: !issues
+            :: !(state.issues)
       | _ -> ())
-    helpers;
-  Query.iter_expressions view (fun expr ->
-      let is_helper = List.mem expr.T.exp_loc helper_locs in
-      if is_helper then ()
-      else
-        match flagged_kstr_inline expr with
-        | None -> ()
-        | Some (kind, payload) ->
-            let suggested = suggestion kind (stem_of_payload payload) in
-            issues :=
-              Issue.v
-                ~loc:(Loc.of_typed ~filename expr.exp_loc)
-                { variant = Inline; suggested }
-              :: !issues);
-  List.rev !issues
+
+let visit_expr state (expr : T.expression) =
+  let is_helper = List.mem expr.T.exp_loc !(state.helper_locs) in
+  if not is_helper then
+    match flagged_kstr_inline expr with
+    | None -> ()
+    | Some (kind, payload) ->
+        let suggested = suggestion kind (stem_of_payload payload) in
+        state.issues :=
+          Issue.v
+            ~loc:(Loc.of_typed ~filename:state.filename expr.exp_loc)
+            { variant = Inline; suggested }
+          :: !(state.issues)
+
+let init ctx =
+  { filename = ctx.Context.filename; helper_locs = ref []; issues = ref [] }
+
+let finish _ state = List.rev !(state.issues)
 
 let pp ppf { variant; suggested } =
   match variant with
@@ -219,4 +213,6 @@ let rule =
        helper is a deduplication tool. The rule only flags inline call sites \
        (kstr with a literal-string format) and skips helper definitions, which \
        thread a [fmt] parameter."
-    ~examples ~pp (File check)
+    ~examples ~pp
+    (Rule.pass ~init ~value_binding:visit_value_binding ~expr:visit_expr ~finish
+       ())

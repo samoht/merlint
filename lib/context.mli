@@ -13,6 +13,11 @@ type file = {
   filename : string;  (** The current file being analyzed. *)
   config : Config.t;  (** The merlint configuration. *)
   project_root : string;  (** The project root directory. *)
+  analyze_set : string list;  (** The source files selected for this run. *)
+  selected_file : string -> bool;
+      (** [selected_file file] is true when [file] is selected for this run. *)
+  project_index : Project_index.t option;
+      (** Shared project index, when available. *)
   view : File_view.t;
       (** Unified typedtree-backed file view. See {!File_view}. *)
   content : string Lazy.t;
@@ -27,6 +32,8 @@ type project = {
       (** The user's request: the source files matched by the [merlint <args>]
           command. Project-scoped rules use this to limit their scan to what was
           actually asked about, rather than walking the whole monorepo. *)
+  in_analyze_set : string -> bool;
+      (** Fast membership query for {!analyze_set}. *)
   dune_describe : Dune_describe.describe memo;
       (** Dune project description (memoized). *)
   executable_modules : string list memo;
@@ -46,24 +53,31 @@ type project = {
 }
 
 val file :
+  analyze_set:string list ->
+  selected_file:(string -> bool) ->
+  project_index:Project_index.t option ->
   filename:string ->
   config:Config.t ->
   project_root:string ->
   load_content:(unit -> string) ->
   file
-(** [file ~filename ~config ~project_root ~load_content] creates a file context.
-    [load_content] is invoked on first access; rules that don't touch source
-    data pay nothing. *)
+(** [file ~analyze_set ~selected_file ~project_index ~filename ~config
+     ~project_root ~load_content] creates a file context. [load_content] is
+    invoked on first access; rules that don't touch source data pay nothing. *)
 
 val file_with_view :
+  analyze_set:string list ->
+  selected_file:(string -> bool) ->
+  project_index:Project_index.t option ->
   filename:string ->
   config:Config.t ->
   project_root:string ->
   view:File_view.t ->
   load_content:(unit -> string) ->
   file
-(** [file_with_view ~filename ~config ~project_root ~view ~load_content] creates
-    a file context backed by an existing shared {!File_view.t}. *)
+(** [file_with_view ~analyze_set ~selected_file ~project_index ~filename ~config
+     ~project_root ~view ~load_content] creates a file context backed by an
+    existing shared {!File_view.t}. *)
 
 val project :
   ?file_view:(string -> File_view.t) ->

@@ -8,18 +8,19 @@ let log_src = Logs.Src.create "merlint.rules.e615" ~doc:"E615 rule diagnostics"
 
 module Log = (val Logs.src_log log_src : Logs.LOG)
 
+type env = { index : Project_index.t; module_map : (string * string list) list }
+
 (** Determine if a test file should be excluded based on E606 logic *)
-let should_exclude_test_file index test_file declared_libraries =
+let should_exclude_test_file env test_file declared_libraries =
   if declared_libraries = [] then false
   else
-    let mod_to_libs = Project.Query.library_module_map index in
     let resolved =
-      List.map (Project.Query.resolve_library index) declared_libraries
+      List.map (Project.Query.resolve_library env.index) declared_libraries
     in
     let basename =
       Filename.remove_extension (Filename.basename (Fpath.to_string test_file))
     in
-    match Project.Query.test_file_library mod_to_libs basename with
+    match Project.Query.test_file_library env.module_map basename with
     | Some lib -> not (List.mem lib resolved)
     | None -> false
 
@@ -44,12 +45,12 @@ let all_test_modules test_file files =
       else None)
     files
 
-let test_modules index test_stanza test_file =
+let test_modules env test_stanza test_file =
   let files = Project_index.source_stanza_files test_stanza in
   let libraries = Project_index.source_stanza_libraries test_stanza in
   all_test_modules test_file files
   |> List.filter_map (fun (basename, f) ->
-      if should_exclude_test_file index f libraries then (
+      if should_exclude_test_file env f libraries then (
         Log.debug (fun m ->
             m "E615: Excluding test module '%s' (would be flagged by E606)"
               basename);
@@ -70,7 +71,7 @@ let missing_issue test_file test_mod =
   Issue.v ~loc
     { test_module = test_mod; test_runner_file = Fpath.to_string test_file }
 
-let check_test_info ctx index test_stanza =
+let check_test_info ctx env test_stanza =
   let name = Project_index.source_stanza_name test_stanza in
   let files = Project_index.source_stanza_files test_stanza in
   Log.debug (fun m ->
@@ -82,7 +83,7 @@ let check_test_info ctx index test_stanza =
         let view = Context.file_view ctx (Fpath.to_string test_file) in
         if not (File_view.is_resolved view) then []
         else
-          let modules = test_modules index test_stanza test_file in
+          let modules = test_modules env test_stanza test_file in
           Log.debug (fun m ->
               m
                 "E615: Found %d test modules in stanza '%s' (after E606 \
@@ -96,11 +97,19 @@ let check_test_info ctx index test_stanza =
           |> List.map (missing_issue test_file)
       with File_view.Analysis_error _ -> [])
 
+let stanza_is_selected ctx stanza =
+  Project_index.source_stanza_files stanza
+  |> List.exists (fun file -> ctx.Context.in_analyze_set (Fpath.to_string file))
+
 let enumerate ctx =
   let index = Context.index ctx in
-  Context.test_stanzas ctx |> List.map (fun test_stanza -> (index, test_stanza))
+  match Context.test_stanzas ctx |> List.filter (stanza_is_selected ctx) with
+  | [] -> []
+  | test_stanzas ->
+      let env = { index; module_map = Project.Query.library_module_map index } in
+      List.map (fun test_stanza -> (env, test_stanza)) test_stanzas
 
-let check_unit ctx (index, test_stanza) = check_test_info ctx index test_stanza
+let check_unit ctx (env, test_stanza) = check_test_info ctx env test_stanza
 
 let pp ppf { test_module; test_runner_file } =
   Fmt.pf ppf "Test module %s is not included in %s" test_module test_runner_file

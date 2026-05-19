@@ -27,31 +27,43 @@ let is_test_or_fuzz_file filename =
   && (String.starts_with ~prefix:"test_" basename
      || String.starts_with ~prefix:"fuzz_" basename)
 
-let check (ctx : Context.file) =
-  let filename = ctx.filename in
-  if not (is_test_or_fuzz_file filename) then []
-  else
-    let issues = ref [] in
-    let add expr is_alcotest =
-      issues :=
-        Issue.v ~loc:(Loc.of_typed ~filename expr.T.exp_loc) { is_alcotest }
-        :: !issues
-    in
-    Query.iter_expressions (Context.view ctx) (fun expr ->
-        match expr.exp_desc with
-        | Texp_apply (fn, args) when is_fail_expr fn ->
-            if
-              List.exists
-                (fun arg -> Query.Expr.calls arg [ "Fmt"; "str" ])
-                (Query.Expr.positional_args args)
-            then add expr true
-        | Texp_apply (fn, args)
-          when Query.Expr.callee_ends_with fn [ "Fmt"; "kstr" ] -> (
-            match Query.Expr.positional_args args with
-            | continuation :: _ when is_fail_expr continuation -> add expr true
-            | _ -> ())
-        | _ -> ());
-    List.rev !issues
+type state = {
+  filename : string;
+  enabled : bool;
+  issues : payload Issue.t list ref;
+}
+
+let add state expr is_alcotest =
+  state.issues :=
+    Issue.v
+      ~loc:(Loc.of_typed ~filename:state.filename expr.T.exp_loc)
+      { is_alcotest }
+    :: !(state.issues)
+
+let visit_expr state (expr : T.expression) =
+  if state.enabled then
+    match expr.exp_desc with
+    | Texp_apply (fn, args) when is_fail_expr fn ->
+        if
+          List.exists
+            (fun arg -> Query.Expr.calls arg [ "Fmt"; "str" ])
+            (Query.Expr.positional_args args)
+        then add state expr true
+    | Texp_apply (fn, args)
+      when Query.Expr.callee_ends_with fn [ "Fmt"; "kstr" ] -> (
+        match Query.Expr.positional_args args with
+        | continuation :: _ when is_fail_expr continuation ->
+            add state expr true
+        | _ -> ())
+    | _ -> ()
+
+let select ctx = is_test_or_fuzz_file ctx.Context.filename
+
+let init ctx =
+  let filename = ctx.Context.filename in
+  { filename; enabled = true; issues = ref [] }
+
+let finish _ state = List.rev !(state.issues)
 
 let pp ppf { is_alcotest } =
   if is_alcotest then
@@ -98,4 +110,5 @@ let test_invalid () =
     failf "Invalid data: %a" pp_data data|};
         };
       ]
-    ~pp (File check)
+    ~pp
+    (Rule.pass ~select ~init ~expr:visit_expr ~finish ())

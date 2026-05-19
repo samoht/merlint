@@ -18,8 +18,24 @@ type example = {
 }
 (** A code example with label. *)
 
+type 'a pass =
+  | Pass : {
+      select : Context.file -> bool;
+      init : Context.file -> 'state;
+      expr : ('state -> Ocaml_typing.Typedtree.expression -> unit) option;
+      value_binding :
+        ('state -> Ocaml_typing.Typedtree.value_binding -> unit) option;
+      structure_item :
+        ('state -> Ocaml_typing.Typedtree.structure_item -> unit) option;
+      signature_item :
+        ('state -> Ocaml_typing.Typedtree.signature_item -> unit) option;
+      finish : Context.file -> 'state -> 'a Issue.t list;
+    }
+      -> 'a pass  (** A rule fragment for the engine's shared traversal. *)
+
 type 'a scope =
   | File of (Context.file -> 'a Issue.t list)
+  | Pass of 'a pass
   | Project of (Context.project -> 'a Issue.t list)
   | Project_units : {
       enumerate : Context.project -> 'unit list;
@@ -44,6 +60,20 @@ val v :
   t
 (** [v ~code ~title ~category ~hint ?examples ~pp scope] creates a new rule. *)
 
+val pass :
+  ?select:(Context.file -> bool) ->
+  ?expr:('state -> Ocaml_typing.Typedtree.expression -> unit) ->
+  ?value_binding:('state -> Ocaml_typing.Typedtree.value_binding -> unit) ->
+  ?structure_item:('state -> Ocaml_typing.Typedtree.structure_item -> unit) ->
+  ?signature_item:('state -> Ocaml_typing.Typedtree.signature_item -> unit) ->
+  init:(Context.file -> 'state) ->
+  finish:(Context.file -> 'state -> 'a Issue.t list) ->
+  unit ->
+  'a scope
+(** [pass ?select ?expr ?value_binding ?structure_item ?signature_item ~init
+     ~finish ()] creates a shared traversal scope with no-op callbacks for
+    omitted node kinds. *)
+
 val code : t -> string
 (** [code rule] returns rule code. *)
 
@@ -65,6 +95,13 @@ val category_name : category -> string
 val is_file_scoped : t -> bool
 (** [is_file_scoped rule] checks if file scoped. *)
 
+val is_direct_file_scoped : t -> bool
+(** [is_direct_file_scoped rule] checks whether [rule] runs as a standalone file
+    function. *)
+
+val uses_pass : t -> bool
+(** [uses_pass rule] checks whether [rule] participates in the shared pass. *)
+
 val is_project_scoped : t -> bool
 (** [is_project_scoped rule] checks if project scoped. *)
 
@@ -83,8 +120,33 @@ module Run : sig
   (** One schedulable project-rule job. A normal project rule produces one job;
       a [Project_units] rule produces one job per enumerated unit. *)
 
+  type active_pass
+  (** One active pass for a concrete file. *)
+
   val file : t -> Context.file -> result list
   (** [file rule context] runs file rule. *)
+
+  val pass : t -> Context.file -> active_pass option
+  (** [pass rule context] initializes [rule]'s pass for [context], when any. *)
+
+  val pass_expr :
+    active_pass -> (Ocaml_typing.Typedtree.expression -> unit) option
+  (** Expression callback registered by an active pass. *)
+
+  val pass_value_binding :
+    active_pass -> (Ocaml_typing.Typedtree.value_binding -> unit) option
+  (** Value-binding callback registered by an active pass. *)
+
+  val pass_structure_item :
+    active_pass -> (Ocaml_typing.Typedtree.structure_item -> unit) option
+  (** Structure-item callback registered by an active pass. *)
+
+  val pass_signature_item :
+    active_pass -> (Ocaml_typing.Typedtree.signature_item -> unit) option
+  (** Signature-item callback registered by an active pass. *)
+
+  val pass_finish : active_pass -> result list
+  (** Finish an active pass and package its issues. *)
 
   val project : t -> Context.project -> result list
   (** [project rule context] runs project rule. *)

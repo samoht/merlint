@@ -92,6 +92,12 @@ let enumerate ctx =
   let test_modules = Context.test_modules ctx in
   let root = Context.project_root ctx in
   let index = Context.index ctx in
+  let root_path = Fpath.v root in
+  let project_files =
+    Project_index.source_files index
+    |> List.map (fun file ->
+           Loc.relative_to ~root:root_path file |> Fpath.to_string)
+  in
   let library_files =
     List.filter (is_library_file ~root index) ml_files |> string_set
   in
@@ -100,7 +106,7 @@ let enumerate ctx =
   in
   let env =
     {
-      files = string_set files;
+      files = string_set project_files;
       exes = string_set executable_modules;
       tests = string_set test_modules;
       libs = library_files;
@@ -109,7 +115,7 @@ let enumerate ctx =
   in
   List.map (fun file -> { env; file }) ml_files
 
-let check_unit _ctx { env; file } =
+let check_unit { env; file } =
   match
     check_file ~library_files:env.libs ~virtual_impl_files:env.virtuals
       ~files:env.files ~executable_modules:env.exes ~test_modules:env.tests file
@@ -130,4 +136,4 @@ let rule =
     ~examples:
       [ Example.bad Examples.E505.bad_ml; Example.good Examples.E505.good_mli ]
     ~pp
-    (Project_units { enumerate; check = check_unit })
+    (Project_units { enumerate; check = Fun.const check_unit })
