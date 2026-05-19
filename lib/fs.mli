@@ -40,14 +40,23 @@ val read_file : string -> string
     [Sys_error] if the file can't be opened. *)
 
 val parallel_map :
+  Eio.Executor_pool.t -> 'a list -> ('a -> 'b) -> 'b list
+(** [parallel_map pool xs f] applies [f] to every [xs] element on [pool].
+    Results are returned in [xs] order. Caller must guarantee that [f] is safe
+    to run concurrently across domains -- merlint's rules walk typedtree records
+    with no global mutable state, which qualifies; rules that mutate shared
+    accumulators must serialise on their own. *)
+
+val with_pool :
   _ Eio.Domain_manager.t ->
   ?domain_count:int ->
-  'a list ->
-  ('a -> 'b) ->
-  'b list
-(** [parallel_map dm ?domain_count xs f] applies [f] to every [xs] element on an
-    [Eio.Executor_pool] backed by [dm]. Results are returned in [xs] order.
-    Caller must guarantee that [f] is safe to run concurrently across domains --
-    merlint's project rules walk typedtree records with no global mutable state,
-    which qualifies; rules that mutate shared accumulators must serialise on
-    their own. [domain_count] defaults to 4. *)
+  (Eio.Executor_pool.t -> 'a) ->
+  'a
+(** [with_pool dm ?domain_count k] creates a fresh [Eio.Executor_pool] in a
+    scoped [Eio.Switch] and runs [k] with it. The pool is torn down when [k]
+    returns, releasing all domains. Use this once at the top of a pipeline so
+    every downstream [parallel_map] call shares the same pool -- merlint pays a
+    real cost (one OS thread per domain) every time a pool is created.
+
+    [domain_count] defaults to the runtime's recommended domain count, minus
+    the calling domain, with a floor of one. *)

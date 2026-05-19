@@ -79,7 +79,8 @@ let test_typedtree_loaded_once_across_domains () =
   in
   let dm = Eio.Stdenv.domain_mgr env in
   let results =
-    Merlint.Fs.parallel_map dm [ 1; 2; 3; 4 ] (fun _ ->
+    Merlint.Fs.with_pool dm @@ fun pool ->
+    Merlint.Fs.parallel_map pool [ 1; 2; 3; 4 ] (fun _ ->
         Merlint.File_view.is_resolved v)
   in
   Alcotest.(check (list bool)) "all resolved" [ true; true; true; true ] results;
