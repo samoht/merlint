@@ -65,15 +65,10 @@ let check (ctx : Context.project) =
     Project_index.test_module_names idx |> String_set.of_list
   in
   let selected = ctx.Context.in_analyze_set in
-  let project_root = Fpath.v (Context.project_root ctx) in
-  let abs file =
-    if Fpath.is_abs file then Fpath.to_string file
-    else Fpath.to_string Fpath.(project_root // file |> normalize)
-  in
   let needs_test file =
     let path = Fpath.to_string file in
     if not (File_kind.is_ml path) then None
-    else if not (selected (abs file) || selected path) then None
+    else if not (selected path) then None
     else
       let m = module_name_of_path file in
       if String.starts_with ~prefix:"test_" m then None

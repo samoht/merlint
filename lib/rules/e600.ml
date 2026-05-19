@@ -23,7 +23,7 @@ let is_test_module_basename basename =
   && not (File.is_unit_companion_module basename)
 
 let is_library_file index filename =
-  let file = Fpath.v filename |> Fpath.normalize in
+  let file = Fpath.v filename in
   Project_index.libraries_of_file index file <> []
   || Project_index.has_library_stanza_in_dir index (Fpath.parent file)
 

@@ -43,18 +43,13 @@ let should_skip_module ~executable_modules ~test_modules ml_file =
     Log.debug (fun m -> m "File %s is unit companion module" ml_file);
   is_exe || is_test || is_companion
 
-let source_path ~root file =
+let is_library_file index file =
   let file = Fpath.v file in
-  if Fpath.is_abs file then Fpath.normalize file
-  else Fpath.normalize Fpath.(v root // file)
-
-let is_library_file ~root index file =
-  let file = source_path ~root file in
   Project_index.libraries_of_file index file <> []
   || Project_index.has_library_stanza_in_dir index (Fpath.parent file)
 
-let is_virtual_impl_file ~root index file =
-  let file = source_path ~root file in
+let is_virtual_impl_file index file =
+  let file = Fpath.v file in
   Project_index.libraries_of_file index file
   |> List.exists Project_index.Library.is_virtual_implementation
 
@@ -90,8 +85,8 @@ let enumerate ctx =
   let ml_files = List.filter File_kind.is_ml files in
   let executable_modules = Context.executable_modules ctx in
   let test_modules = Context.test_modules ctx in
-  let root = Context.project_root ctx in
   let index = Context.index ctx in
+  let root = Context.project_root ctx in
   let root_path = Fpath.v root in
   let project_files =
     Project_index.source_files index
@@ -99,10 +94,10 @@ let enumerate ctx =
         Loc.relative_to ~root:root_path file |> Fpath.to_string)
   in
   let library_files =
-    List.filter (is_library_file ~root index) ml_files |> string_set
+    List.filter (is_library_file index) ml_files |> string_set
   in
   let virtual_files =
-    List.filter (is_virtual_impl_file ~root index) ml_files |> string_set
+    List.filter (is_virtual_impl_file index) ml_files |> string_set
   in
   let env =
     {

@@ -37,6 +37,7 @@ let build_roots ctx =
   let project_root = Fpath.v ctx.Context.project_root in
   let roots =
     Context.index ctx |> Project_index.source_packages_nodes
+    |> List.filter (fun pkg -> not (Project_index.Package.is_anonymous pkg))
     |> List.filter_map Project_index.Package.source_dir
   in
   project_root :: roots |> List.sort_uniq Fpath.compare

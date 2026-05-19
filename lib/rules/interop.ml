@@ -35,7 +35,7 @@ let package_oracles pkg pkg_dir =
     Fs.readdir_or_empty interop |> List.filter_map (oracle_of_tool pkg interop)
 
 let path_has_interop path =
-  let parts = Fpath.segs (Fpath.normalize path) in
+  let parts = Fpath.segs path in
   let rec aux = function
     | "test" :: "interop" :: _ -> true
     | _ :: rest -> aux rest

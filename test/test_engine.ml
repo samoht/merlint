@@ -6,7 +6,6 @@ let test_run_empty_filter () =
   | Error msg -> Alcotest.failf "Failed to create filter: %s" msg
   | Ok filter ->
       Eio_main.run @@ fun env ->
-      let dune_describe = Dune_describe.describe (Fpath.v ".") in
       let fs = Eio.Stdenv.fs env in
       let index ?pool () =
         ignore pool;
@@ -15,7 +14,7 @@ let test_run_empty_filter () =
       let result =
         Engine.run
           ~load_file:(fun f -> In_channel.with_open_text f In_channel.input_all)
-          ~filter ~dune_describe ~index "."
+          ~filter ~index "."
       in
       Alcotest.(check int)
         "no results with all rules disabled" 0
