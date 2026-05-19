@@ -7,17 +7,18 @@ Build bad fixture project:
   Dune root: $TESTCASE_ROOT/bad/
   Running merlint analysis...
   
-  Analyzing 2 files
+  Analyzing 3 files
   
   ✓ Code Quality (0 total issues)
   ✓ Code Style (0 total issues)
   ✓ Naming Conventions (0 total issues)
   ✓ Documentation (0 total issues)
   ✓ Project Structure (0 total issues)
-  ✗ Test Quality (1 total issues)
-    [E615] Test Suite Not Included (1 issue)
+  ✗ Test Quality (2 total issues)
+    [E615] Test Suite Not Included (2 issues)
     All test modules should be included in the main test runner (test.ml). Add the
     missing test suite to ensure all tests are run.
+    - bad/test/test.ml:1:0: Test module test_helpers is not included in bad/test/test.ml
     - bad/test/test.ml:1:0: Test module test_parser is not included in bad/test/test.ml
   ✓ Interop Testing (0 total issues)
   ✓ Code Generation (0 total issues)
@@ -25,11 +26,11 @@ Build bad fixture project:
   ╭──────────────┬───────────────────────────────╮
   │ Category     │ Issues                        │
   ├──────────────┼───────────────────────────────┤
-  │ Test Quality │ 1 (1 test suite not included) │
+  │ Test Quality │ 2 (2 test suite not included) │
   ╰──────────────┴───────────────────────────────╯
   
   
-  Summary: ✗ 1 total issue (applied 1 rule)
+  Summary: ✗ 2 total issues (applied 1 rule)
   ✗ Some checks failed. See details above.
     Run `merlint help E615` for the rule's description, hint, and good/bad examples.
   [1]
@@ -42,7 +43,7 @@ Build good fixture project:
   Dune root: $TESTCASE_ROOT/good/
   Running merlint analysis...
   
-  Analyzing 2 files
+  Analyzing 3 files
   
   ✓ Code Quality (0 total issues)
   ✓ Code Style (0 total issues)

@@ -17,8 +17,8 @@ val is_test_file : string -> bool
 val is_unit_companion_module : string -> bool
 (** [is_unit_companion_module basename] returns [true] when [basename] is a
     companion implementation module such as [foo_intf]. These files belong to
-    the same unit as [foo.ml]/[foo.mli], rather than defining a
-    separate module-level API or test suite. *)
+    the same unit as [foo.ml]/[foo.mli], rather than defining a separate
+    module-level API or test suite. *)
 
 val is_in_private_library : Project_index.t -> string -> bool
 (** [is_in_private_library index filename] returns [true] if [filename] belongs

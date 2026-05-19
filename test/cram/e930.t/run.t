@@ -18,7 +18,7 @@ Build bad fixture project:
     org standardises on Eio: no package may depend on lwt, miou, or mirage
     runtimes. Pure sans-IO packages (codec.* / protocol without an eio tag) must
     additionally not depend on eio*, unix, or ambient clocks.
-    - pkg/pkg.opam:1:0: pkg/pkg.opam: sans-io policy violated by depends: unix; bad/pkg/lib/dune libraries: unix
+    - bad/pkg/pkg.opam:1:0: bad/pkg/pkg.opam: sans-io policy violated by depends: unix; bad/pkg/lib/dune libraries: unix
   ✓ Test Quality (0 total issues)
   ✓ Interop Testing (0 total issues)
   ✓ Code Generation (0 total issues)

@@ -5,16 +5,30 @@ type payload = { ml_file : string; expected_mli : string }
 let log_src = Logs.Src.create "merlint.rules.e505" ~doc:"E505 rule diagnostics"
 
 module Log = (val Logs.src_log log_src : Logs.LOG)
+module String_set = Set.Make (String)
+
+type env = {
+  files : String_set.t;
+  exes : String_set.t;
+  tests : String_set.t;
+  libs : String_set.t;
+  virtuals : String_set.t;
+}
+
+type work = { env : env; file : string }
+
+let string_set xs =
+  List.fold_left (fun acc x -> String_set.add x acc) String_set.empty xs
 
 let is_test_module module_name module_name_capitalized test_modules =
-  List.mem module_name test_modules
-  || List.mem module_name_capitalized test_modules
+  String_set.mem module_name test_modules
+  || String_set.mem module_name_capitalized test_modules
   || String.starts_with ~prefix:"test_" module_name
 
 let should_skip_module ~executable_modules ~test_modules ml_file =
   let module_name = Filename.basename (Filename.remove_extension ml_file) in
   let module_name_capitalized = String.capitalize_ascii module_name in
-  let is_exe = List.mem module_name_capitalized executable_modules in
+  let is_exe = String_set.mem module_name_capitalized executable_modules in
   let is_test =
     is_test_module module_name module_name_capitalized test_modules
   in
@@ -34,39 +48,19 @@ let source_path ~root file =
   if Fpath.is_abs file then Fpath.normalize file
   else Fpath.normalize Fpath.(v root // file)
 
-let library_file_check ~root index =
-  let cache = Hashtbl.create 64 in
-  fun file ->
-    let file = source_path ~root file in
-    let key = Fpath.to_string file in
-    match Hashtbl.find_opt cache key with
-    | Some v -> v
-    | None ->
-        let v =
-          Project_index.libraries_of_file index file <> []
-          || Project_index.has_library_stanza_in_dir index (Fpath.parent file)
-        in
-        Hashtbl.replace cache key v;
-        v
+let is_library_file ~root index file =
+  let file = source_path ~root file in
+  Project_index.libraries_of_file index file <> []
+  || Project_index.has_library_stanza_in_dir index (Fpath.parent file)
 
-let virtual_impl_file_check ~root index =
-  let cache = Hashtbl.create 64 in
-  fun file ->
-    let file = source_path ~root file in
-    let key = Fpath.to_string file in
-    match Hashtbl.find_opt cache key with
-    | Some v -> v
-    | None ->
-        let v =
-          Project_index.libraries_of_file index file
-          |> List.exists Project_index.Library.is_virtual_implementation
-        in
-        Hashtbl.replace cache key v;
-        v
+let is_virtual_impl_file ~root index file =
+  let file = source_path ~root file in
+  Project_index.libraries_of_file index file
+  |> List.exists Project_index.Library.is_virtual_implementation
 
 let missing_mli_issue files ml_file =
   let mli_path = Filename.remove_extension ml_file ^ ".mli" in
-  if List.mem mli_path files then None
+  if String_set.mem mli_path files then None
   else
     let loc =
       Location.v ~file:ml_file ~start_line:1 ~start_col:0 ~end_line:1 ~end_col:0
@@ -76,7 +70,7 @@ let missing_mli_issue files ml_file =
 let check_file ~is_library_file ~is_virtual_impl_file ~files ~executable_modules
     ~test_modules ml_file =
   if not (File_kind.is_ml ml_file) then None
-  else if not (is_library_file ml_file) then None
+  else if not (String_set.mem ml_file is_library_file) then None
   else
     let module_name = Filename.basename (Filename.remove_extension ml_file) in
     let is_companion = File.is_unit_companion_module module_name in
@@ -86,25 +80,41 @@ let check_file ~is_library_file ~is_virtual_impl_file ~files ~executable_modules
          E505. Test-shaped names such as [test_helpers] still need interfaces
          when dune metadata says they belong to a library. *)
       let module_name_capitalized = String.capitalize_ascii module_name in
-      if List.mem module_name_capitalized executable_modules then None
+      if String_set.mem module_name_capitalized executable_modules then None
       else missing_mli_issue files ml_file
-    else if is_virtual_impl_file ml_file then None
+    else if String_set.mem ml_file is_virtual_impl_file then None
     else missing_mli_issue files ml_file
 
-let check (ctx : Context.project) =
+let enumerate ctx =
   let files = Context.analyze_set ctx in
   let executable_modules = Context.executable_modules ctx in
   let test_modules = Context.test_modules ctx in
-  let is_library_file =
-    library_file_check ~root:(Context.project_root ctx) (Context.index ctx)
+  let root = Context.project_root ctx in
+  let index = Context.index ctx in
+  let library_files =
+    List.filter (is_library_file ~root index) files |> string_set
   in
-  let is_virtual_impl_file =
-    virtual_impl_file_check ~root:(Context.project_root ctx) (Context.index ctx)
+  let virtual_files =
+    List.filter (is_virtual_impl_file ~root index) files |> string_set
   in
-  List.filter_map
-    (check_file ~is_library_file ~is_virtual_impl_file ~files
-       ~executable_modules ~test_modules)
-    files
+  let env =
+    {
+      files = string_set files;
+      exes = string_set executable_modules;
+      tests = string_set test_modules;
+      libs = library_files;
+      virtuals = virtual_files;
+    }
+  in
+  List.map (fun file -> { env; file }) files
+
+let check_unit _ctx { env; file } =
+  match
+    check_file ~is_library_file:env.libs ~is_virtual_impl_file:env.virtuals
+      ~files:env.files ~executable_modules:env.exes ~test_modules:env.tests file
+  with
+  | None -> []
+  | Some issue -> [ issue ]
 
 let pp ppf { ml_file; expected_mli } =
   Fmt.pf ppf "Library module %s is missing interface file %s" ml_file
@@ -118,4 +128,5 @@ let rule =
        implementation details and provide a clean API."
     ~examples:
       [ Example.bad Examples.E505.bad_ml; Example.good Examples.E505.good_mli ]
-    ~pp (Project check)
+    ~pp
+    (Project_units { enumerate; check = check_unit })
