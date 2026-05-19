@@ -389,7 +389,7 @@ let index_roots_of_files = function
 let build_project_index ~fs ~monorepo ?roots ?pool () =
   let t0 = Unix.gettimeofday () in
   let idx =
-    Merlint.Trace.span "merlint.phase.project_index" @@ fun () ->
+
     Project_index.build ?pool ?roots ~fs ~monorepo ()
   in
   Log.info (fun m ->
@@ -404,7 +404,7 @@ let analyze_files mgr fs domain_mgr ?(exclude_patterns = []) ?rule_filter
   Fmt.pr "Dune root: %s@." project_root;
   Log.info (fun m -> m "Scanning project structure...");
   let dune_describe, analyze_set =
-    Merlint.Trace.span "merlint.phase.dune_describe" @@ fun () ->
+
     build_dune_describe ~project_root files
   in
 
