@@ -143,6 +143,8 @@ let log_skip lib_mod reason =
 
 let should_skip_module private_modules lib_mod =
   if String.starts_with ~prefix:"test_" lib_mod then None
+  else if File.is_unit_companion_module (String.lowercase_ascii lib_mod) then
+    Some "companion interface module"
   else if List.mem (String.lowercase_ascii lib_mod) private_modules then
     Some "listed in private_modules"
   else None
