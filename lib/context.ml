@@ -100,8 +100,39 @@ let test_module_of_file f =
     else None
   else None
 
-let discover_test_modules ~index dune_desc =
-  let dune_test_modules = Dune_describe.test_modules dune_desc in
+let source_packages index = Project_index.source_packages_nodes index
+
+let source_libraries index =
+  source_packages index |> List.concat_map Project_index.package_libraries
+
+let ml_module_name file =
+  let s = Fpath.to_string file in
+  if File_kind.is_ml s then Some Fpath.(file |> rem_ext |> basename) else None
+
+let discover_executable_modules ~index =
+  source_packages index
+  |> List.concat_map Project_index.Package.executable_modules
+  |> List.sort_uniq String.compare
+
+let discover_lib_modules ~index =
+  let public_libs =
+    source_libraries index
+    |> List.filter (fun lib -> Option.is_some (Project_index.Library.public_name lib))
+  in
+  let lib_names = List.map Project_index.Library.local_name public_libs in
+  let file_modules =
+    public_libs
+    |> List.concat_map Project_index.Library.files
+    |> List.filter_map ml_module_name
+  in
+  lib_names @ file_modules |> List.sort_uniq String.compare
+
+let discover_test_modules ~index =
+  let dune_test_modules =
+    source_packages index
+    |> List.concat_map Project_index.Package.test_modules
+    |> List.sort_uniq String.compare
+  in
   let file_test_modules =
     Project_index.source_files index
     |> List.filter_map (fun fp -> test_module_of_file (Fpath.to_string fp))
@@ -134,14 +165,10 @@ let project ?file_view ?file_content ~config ~project_root ~analyze_set
     analyze_set;
     dune_describe = dune_desc_memo;
     executable_modules =
-      memo (fun () ->
-          Dune_describe.executable_modules (force_memo dune_desc_memo));
-    lib_modules =
-      memo (fun () -> Dune_describe.lib_modules (force_memo dune_desc_memo));
+      memo (fun () -> discover_executable_modules ~index:(force_memo index_memo));
+    lib_modules = memo (fun () -> discover_lib_modules ~index:(force_memo index_memo));
     test_modules =
-      memo (fun () ->
-          discover_test_modules ~index:(force_memo index_memo)
-            (force_memo dune_desc_memo));
+      memo (fun () -> discover_test_modules ~index:(force_memo index_memo));
     index = index_memo;
     file_view_cache;
     file_content_cache;

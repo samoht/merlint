@@ -34,6 +34,21 @@ let source_path ~root file =
   if Fpath.is_abs file then Fpath.normalize file
   else Fpath.normalize Fpath.(v root // file)
 
+let library_file_check ~root index =
+  let cache = Hashtbl.create 64 in
+  fun file ->
+    let file = source_path ~root file in
+    let key = Fpath.to_string file in
+    match Hashtbl.find_opt cache key with
+    | Some v -> v
+    | None ->
+        let v =
+          Project_index.libraries_of_file index file <> []
+          || Project_index.has_library_stanza_in_dir index (Fpath.parent file)
+        in
+        Hashtbl.replace cache key v;
+        v
+
 let virtual_impl_file_check ~root index =
   let cache = Hashtbl.create 64 in
   fun file ->
@@ -58,10 +73,21 @@ let missing_mli_issue files ml_file =
     in
     Some (Issue.v ~loc { ml_file; expected_mli = mli_path })
 
-let check_file ~is_virtual_impl_file ~files ~executable_modules ~test_modules
-    ml_file =
+let check_file ~is_library_file ~is_virtual_impl_file ~files ~executable_modules
+    ~test_modules ml_file =
   if not (File_kind.is_ml ml_file) then None
-  else if should_skip_module ~executable_modules ~test_modules ml_file then None
+  else if not (is_library_file ml_file) then None
+  else
+    let module_name = Filename.basename (Filename.remove_extension ml_file) in
+    let is_intf = String.ends_with ~suffix:"_intf" module_name in
+    if is_intf then None
+    else if should_skip_module ~executable_modules ~test_modules ml_file then
+      (* For a library-owned module, only executable ownership should suppress
+         E505. Test-shaped names such as [test_helpers] still need interfaces
+         when dune metadata says they belong to a library. *)
+      let module_name_capitalized = String.capitalize_ascii module_name in
+      if List.mem module_name_capitalized executable_modules then None
+      else missing_mli_issue files ml_file
   else if is_virtual_impl_file ml_file then None
   else missing_mli_issue files ml_file
 
@@ -69,11 +95,15 @@ let check (ctx : Context.project) =
   let files = Context.analyze_set ctx in
   let executable_modules = Context.executable_modules ctx in
   let test_modules = Context.test_modules ctx in
+  let is_library_file =
+    library_file_check ~root:(Context.project_root ctx) (Context.index ctx)
+  in
   let is_virtual_impl_file =
     virtual_impl_file_check ~root:(Context.project_root ctx) (Context.index ctx)
   in
   List.filter_map
-    (check_file ~is_virtual_impl_file ~files ~executable_modules ~test_modules)
+    (check_file ~is_library_file ~is_virtual_impl_file ~files
+       ~executable_modules ~test_modules)
     files
 
 let pp ppf { ml_file; expected_mli } =

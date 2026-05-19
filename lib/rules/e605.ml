@@ -60,34 +60,35 @@ let missing_test_issue module_name source_file =
   Issue.v ~loc { module_name; expected_test_file = expected_path }
 
 (** Build a set of file paths that belong to libraries. *)
-let library_file_set dune_desc =
-  Dune_describe.libraries dune_desc
-  |> List.concat_map (fun (lib : Dune_describe.library_info) -> lib.files)
+let source_libraries index =
+  Project_index.source_packages_nodes index
+  |> List.concat_map Project_index.package_libraries
+
+let public_libraries index =
+  source_libraries index
+  |> List.filter (fun lib -> Option.is_some (Project_index.Library.public_name lib))
+
+let library_file_set index =
+  public_libraries index
+  |> List.concat_map Project_index.Library.files
   |> List.map (fun p -> String.lowercase_ascii (Fpath.to_string p))
 
 (** Collect the union of module names listed in [(private_modules ...)] across
     all libraries. Private modules are not exposed outside their library, so
     they cannot be referenced from a [test_<module>.ml] in a sibling test
     stanza, and should not be required to have a test file. *)
-let private_module_set dune_desc =
-  Dune_describe.libraries dune_desc
-  |> List.concat_map (fun (lib : Dune_describe.library_info) ->
-      lib.private_modules)
+let private_module_set index =
+  source_libraries index
+  |> List.concat_map Project_index.Library.private_modules
   |> List.map String.lowercase_ascii
   |> List.sort_uniq String.compare
-
-(** Build a set of file paths that belong to executables. *)
-let executable_file_set dune_desc =
-  Dune_describe.executables dune_desc
-  |> List.concat_map snd
-  |> List.map (fun p -> String.lowercase_ascii (Fpath.to_string p))
 
 let module_source_name file = Filename.basename (Filename.remove_extension file)
 
 let source_matches_module lib_mod file =
   File_kind.is_ml file && module_source_name file = lib_mod
 
-let lib_source ~files ~lib_files ~exec_files lib_mod =
+let lib_source ~files ~lib_files lib_mod =
   let matches = List.filter (source_matches_module lib_mod) files in
   match
     List.find_opt
@@ -95,10 +96,7 @@ let lib_source ~files ~lib_files ~exec_files lib_mod =
       matches
   with
   | Some _ as found -> found
-  | None ->
-      List.find_opt
-        (fun file -> not (List.mem (String.lowercase_ascii file) exec_files))
-        matches
+  | None -> None
 
 let is_test_source file =
   File_kind.is_ml file
@@ -157,8 +155,8 @@ let should_skip_module private_modules lib_mod =
     Some "listed in private_modules"
   else None
 
-let source_candidate ~files ~lib_files ~exec_files lib_mod =
-  match lib_source ~files ~lib_files ~exec_files lib_mod with
+let source_candidate ~files ~lib_files lib_mod =
+  match lib_source ~files ~lib_files lib_mod with
   | None -> `Missing_source
   | Some file_path -> (
       match skipped_module_reason file_path with
@@ -175,8 +173,8 @@ let tests_missing ~files ~test_modules lib_mod =
         in_dune in_files);
   (not in_dune) && not in_files
 
-let missing_test_candidate ~files ~lib_files ~exec_files ~private_modules
-    ~test_modules lib_mod =
+let missing_test_candidate ~files ~lib_files ~private_modules ~test_modules
+    lib_mod =
   (* Short-circuit on the cheap signals first: private modules, source
      location, test presence. *)
   match should_skip_module private_modules lib_mod with
@@ -186,7 +184,7 @@ let missing_test_candidate ~files ~lib_files ~exec_files ~private_modules
   | None -> (
       if not (tests_missing ~files ~test_modules lib_mod) then None
       else
-        match source_candidate ~files ~lib_files ~exec_files lib_mod with
+        match source_candidate ~files ~lib_files lib_mod with
         | `Missing_source ->
             log_skip lib_mod "no library source file, only in executables";
             None
@@ -197,16 +195,14 @@ let check (ctx : Context.project) =
   let files = Context.analyze_set ctx in
   let lib_modules = Context.lib_modules ctx in
   let test_modules = Context.test_modules ctx in
-  let dune_desc = Context.dune_describe ctx in
-  let lib_files = library_file_set dune_desc in
-  let exec_files = executable_file_set dune_desc in
-  let private_modules = private_module_set dune_desc in
+  let index = Context.index ctx in
+  let lib_files = library_file_set index in
+  let private_modules = private_module_set index in
   let test_modules = List.map String.lowercase_ascii test_modules in
   log_project_summary ~files ~lib_modules ~test_modules;
   lib_modules
   |> List.filter_map
-       (missing_test_candidate ~files ~lib_files ~exec_files ~private_modules
-          ~test_modules)
+       (missing_test_candidate ~files ~lib_files ~private_modules ~test_modules)
   |> List.map (fun (m, source_file) -> missing_test_issue m source_file)
 
 let pp ppf { module_name; expected_test_file } =

@@ -3,13 +3,13 @@
 type payload = { filename : string; module_name : string }
 
 (** Check if a fuzz_*.mli file exports only suite with correct type. *)
-let check_fuzz_mli_file dune_describe filename view =
+let check_fuzz_mli_file index filename view =
   let basename = Filename.basename filename in
   if
     File_kind.is_mli basename
     && String.starts_with ~prefix:"fuzz_" basename
     && File.is_in_fuzz_dir (Fpath.v filename)
-    && (not (File.is_in_private_library dune_describe filename))
+    && (not (File.is_in_private_library index filename))
     && not (File.is_in_examples filename)
   then
     if Suite.is_compliant_view ~expected:"string * Alcobar.test_case list" view
@@ -25,7 +25,7 @@ let check_fuzz_mli_file dune_describe filename view =
   else []
 
 (** Check if fuzz_*.ml files have corresponding .mli files. *)
-let check_missing_fuzz_mli dune_describe files =
+let check_missing_fuzz_mli index files =
   List.filter_map
     (fun ml_file ->
       if File_kind.is_ml ml_file then
@@ -34,7 +34,7 @@ let check_missing_fuzz_mli dune_describe files =
         if
           String.starts_with ~prefix:"fuzz_" basename
           && File.is_in_fuzz_dir fp
-          && (not (File.is_in_private_library dune_describe ml_file))
+          && (not (File.is_in_private_library index ml_file))
           && not (File.is_in_examples ml_file)
         then
           let base_name = Filename.remove_extension ml_file in
@@ -57,15 +57,15 @@ let check_missing_fuzz_mli dune_describe files =
 
 let check ctx =
   let files = Context.analyze_set ctx in
-  let dune_describe = Context.dune_describe ctx in
-  let missing_mli_issues = check_missing_fuzz_mli dune_describe files in
+  let index = Context.index ctx in
+  let missing_mli_issues = check_missing_fuzz_mli index files in
   let content_issues =
     List.concat_map
       (fun filename ->
         if File_kind.is_mli filename then
           try
             let view = Context.file_view ctx filename in
-            check_fuzz_mli_file dune_describe filename view
+            check_fuzz_mli_file index filename view
           with File_view.Analysis_error _ -> []
         else [])
       files

@@ -14,9 +14,9 @@ val is_test_file : string -> bool
 (** [is_test_file filename] returns [true] if [filename] names a test module or
     is below a [test] or [tests] directory. *)
 
-val is_in_private_library : Dune_describe.describe -> string -> bool
-(** [is_in_private_library dune_describe filename] returns [true] if [filename]
-    belongs to a private library (no public_name). *)
+val is_in_private_library : Project_index.t -> string -> bool
+(** [is_in_private_library index filename] returns [true] if [filename] belongs
+    to a private library (no public_name). *)
 
 val process_ocaml_files :
   Context.project -> (string -> string -> 'a list) -> 'a list

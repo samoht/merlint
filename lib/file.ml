@@ -25,13 +25,10 @@ let is_test_file filename =
        (fun part -> String.equal part "test" || String.equal part "tests")
        (Fpath.segs path)
 
-let is_in_private_library dune_describe filename =
+let is_in_private_library index filename =
   let fp = Fpath.v filename |> Fpath.normalize in
-  List.exists
-    (fun (lib : Dune_describe.library_info) ->
-      Option.is_none lib.public_name
-      && List.exists (fun f -> Fpath.equal (Fpath.normalize f) fp) lib.files)
-    (Dune_describe.libraries dune_describe)
+  Project_index.libraries_of_file index fp
+  |> List.exists (fun lib -> Option.is_none (Project_index.Library.public_name lib))
 
 let process_ocaml_files ctx f =
   Context.analyze_set ctx
