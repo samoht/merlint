@@ -54,15 +54,19 @@ let check_stanza ctx stanza_name files =
 
 (** Check if fuzz.ml includes all fuzz modules via Fuzz_*.suite *)
 let check (ctx : Context.project) =
-  let dune_describe = Context.dune_describe ctx in
   let test_issues =
-    Dune_describe.tests dune_describe
-    |> List.concat_map (fun (t : Dune_describe.test_info) ->
-        check_stanza ctx t.name t.files)
+    Context.test_stanzas ctx
+    |> List.concat_map (fun t ->
+           check_stanza ctx
+             (Project_index.source_stanza_name t)
+             (Project_index.source_stanza_files t))
   in
   let executable_issues =
-    Dune_describe.executables dune_describe
-    |> List.concat_map (fun (name, files) -> check_stanza ctx name files)
+    Context.executable_stanzas ctx
+    |> List.concat_map (fun exe ->
+           check_stanza ctx
+             (Project_index.source_stanza_name exe)
+             (Project_index.source_stanza_files exe))
   in
   test_issues @ executable_issues
 

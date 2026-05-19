@@ -7,23 +7,22 @@ let path_segments s =
 
 (** Check if a fuzz/ directory is nested under a test/ directory. *)
 let check (ctx : Context.project) =
-  let dune_describe = Context.dune_describe ctx in
   let all_dirs =
     let test_dirs =
       List.filter_map
-        (fun (t : Dune_describe.test_info) ->
-          match t.files with
+        (fun t ->
+          match Project_index.source_stanza_files t with
           | f :: _ -> Some (Fpath.parent f |> Fpath.to_string)
           | [] -> None)
-        (Dune_describe.tests dune_describe)
+        (Context.test_stanzas ctx)
     in
     let exec_dirs =
       List.filter_map
-        (fun (_, files) ->
-          match files with
+        (fun exe ->
+          match Project_index.source_stanza_files exe with
           | f :: _ -> Some (Fpath.parent f |> Fpath.to_string)
           | [] -> None)
-        (Dune_describe.executables dune_describe)
+        (Context.executable_stanzas ctx)
     in
     List.sort_uniq String.compare (test_dirs @ exec_dirs)
   in

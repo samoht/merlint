@@ -6,9 +6,9 @@ let is_valid basename =
   String.starts_with ~prefix:"test_" basename || String.equal basename "test"
 
 let check (ctx : Context.project) =
-  let dune_describe = Context.dune_describe ctx in
   List.concat_map
-    (fun (test_info : Dune_describe.test_info) ->
+    (fun test_stanza ->
+      let test_stanza_name = Project_index.source_stanza_name test_stanza in
       List.filter_map
         (fun file ->
           if
@@ -25,12 +25,12 @@ let check (ctx : Context.project) =
                 (Issue.v ~loc
                    {
                      filename = Fpath.to_string file;
-                     test_stanza = test_info.Dune_describe.name;
+                     test_stanza = test_stanza_name;
                    })
             else None
           else None)
-        test_info.Dune_describe.files)
-    (Dune_describe.tests dune_describe)
+        (Project_index.source_stanza_files test_stanza))
+    (Context.test_stanzas ctx)
 
 let pp ppf { filename; test_stanza } =
   let basename = Filename.basename filename in

@@ -147,6 +147,16 @@ let discover_test_modules ~index =
         (List.length file_test_modules));
   all_test_modules
 
+let discover_executable_stanzas ~index =
+  source_packages index
+  |> List.concat_map Project_index.Package.executable_stanzas
+  |> List.sort_uniq compare
+
+let discover_test_stanzas ~index =
+  source_packages index
+  |> List.concat_map Project_index.Package.test_stanzas
+  |> List.sort_uniq compare
+
 let project ?file_view ?file_content ~config ~project_root ~analyze_set
     ~dune_describe ~index () =
   let dune_desc_memo = memo_value dune_describe in
@@ -188,5 +198,7 @@ let executable_modules ctx = force_memo ctx.executable_modules
 let lib_modules ctx = force_memo ctx.lib_modules
 let test_modules ctx = force_memo ctx.test_modules
 let dune_describe ctx = force_memo ctx.dune_describe
+let executable_stanzas ctx = discover_executable_stanzas ~index:(index ctx)
+let test_stanzas ctx = discover_test_stanzas ~index:(index ctx)
 let file_view ctx filename = ctx.file_view_cache filename
 let file_content ctx filename = ctx.file_content_cache filename

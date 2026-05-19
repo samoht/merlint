@@ -4,33 +4,27 @@ type payload = { directory : string; stanza_names : string list }
 
 (** Collect all stanza names in fuzz/ directories from both test and executable
     stanzas. *)
-let fuzz_stanzas_by_dir dune_describe =
-  let collect_dirs entries =
+let fuzz_stanzas_by_dir ctx =
+  let collect_dirs stanzas =
     List.filter_map
-      (fun (name, files) ->
+      (fun stanza ->
+        let name = Project_index.source_stanza_name stanza in
         if not (String.starts_with ~prefix:"fuzz" name) then None
         else
           match
             List.find_opt
               (fun f -> Fpath.has_ext ".ml" f && File.is_in_fuzz_dir f)
-              files
+              (Project_index.source_stanza_files stanza)
           with
           | Some f -> Some (Fpath.parent f |> Fpath.to_string, name)
           | None -> None)
-      entries
+      stanzas
   in
-  let from_tests =
-    List.map
-      (fun (t : Dune_describe.test_info) -> (t.name, t.files))
-      (Dune_describe.tests dune_describe)
-    |> collect_dirs
-  in
-  let from_execs = Dune_describe.executables dune_describe |> collect_dirs in
-  from_tests @ from_execs
+  collect_dirs (Context.test_stanzas ctx)
+  @ collect_dirs (Context.executable_stanzas ctx)
 
 let check (ctx : Context.project) =
-  let dune_describe = Context.dune_describe ctx in
-  let by_dir = fuzz_stanzas_by_dir dune_describe in
+  let by_dir = fuzz_stanzas_by_dir ctx in
   let dirs = List.sort_uniq String.compare (List.map fst by_dir) in
   List.concat_map
     (fun dir ->

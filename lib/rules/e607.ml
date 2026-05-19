@@ -7,7 +7,7 @@ let ml_module file =
   else None
 
 let library_for_file mod_to_libs file =
-  Option.bind (ml_module file) (Dune_describe.test_file_library mod_to_libs)
+  Option.bind (ml_module file) (Project_query.test_file_library mod_to_libs)
 
 let issue_for_non_primary mod_to_libs primary_lib file =
   match (ml_module file, library_for_file mod_to_libs file) with
@@ -19,25 +19,22 @@ let issue_for_non_primary mod_to_libs primary_lib file =
       Some (Issue.v ~loc { test_module = basename; library_name = lib })
   | _ -> None
 
-let check_test_info mod_to_libs (test_info : Dune_describe.test_info) =
-  if test_info.libraries <> [] then []
+let check_test_info mod_to_libs test_stanza =
+  let files = Project_index.source_stanza_files test_stanza in
+  if Project_index.source_stanza_libraries test_stanza <> [] then []
   else
     let unique_libs =
-      List.filter_map (library_for_file mod_to_libs) test_info.files
+      List.filter_map (library_for_file mod_to_libs) files
       |> List.sort_uniq String.compare
     in
     match unique_libs with
     | primary_lib :: _ :: _ ->
-        List.filter_map
-          (issue_for_non_primary mod_to_libs primary_lib)
-          test_info.files
+        List.filter_map (issue_for_non_primary mod_to_libs primary_lib) files
     | _ -> []
 
 let check (ctx : Context.project) =
-  let dune_describe = Context.dune_describe ctx in
-  let mod_to_libs = Dune_describe.libraries_of_module dune_describe in
-  Dune_describe.tests dune_describe
-  |> List.concat_map (check_test_info mod_to_libs)
+  let mod_to_libs = Project_query.library_module_map (Context.index ctx) in
+  Context.test_stanzas ctx |> List.concat_map (check_test_info mod_to_libs)
 
 let pp ppf { test_module; library_name } =
   Fmt.pf ppf
