@@ -41,7 +41,6 @@ let run_file_rule ?profiling ctx rule =
   Log.debug (fun m -> m "Running rule %s on %s" code ctx.Context.filename);
   let start_time = Unix.gettimeofday () in
   let res =
-
     try Rule.Run.file rule ctx
     with exn ->
       Log.err (fun m ->
@@ -67,7 +66,6 @@ let run_project_job ?profiling job =
   Log.debug (fun m -> m "Running project rule job %s" code);
   let start_time = Unix.gettimeofday () in
   let res =
-
     try Rule.Run.project_job job
     with exn ->
       Log.err (fun m ->

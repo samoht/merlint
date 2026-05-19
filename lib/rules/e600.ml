@@ -184,7 +184,8 @@ let content_issues ctx index state =
     else []
   in
   let bad_mli_issue =
-    if test_mli_target index filename then check_test_mli_file index filename (Context.view ctx)
+    if test_mli_target index filename then
+      check_test_mli_file index filename (Context.view ctx)
     else []
   in
   runner_issue @ wrong_file_issue @ bad_mli_issue
@@ -212,7 +213,8 @@ let finish ctx state =
       let filename = state.filename in
       if test_ml_target index filename || content_target index filename then
         Option.to_list
-          (check_missing_test_mli ctx index filename ~has_runner:state.has_runner)
+          (check_missing_test_mli ctx index filename
+             ~has_runner:state.has_runner)
         @ content_issues ctx index state
       else []
 
@@ -246,5 +248,5 @@ let rule =
        unit Alcotest.test_case list' and no other values. (3) Alcotest.run \
        should only appear in test.ml, not in individual test_*.ml modules."
     ~examples:[] ~pp
-    (Rule.pass ~select ~init ~expr:visit_expr ~structure_item:visit_structure_item
-       ~finish ())
+    (Rule.pass ~select ~init ~expr:visit_expr
+       ~structure_item:visit_structure_item ~finish ())

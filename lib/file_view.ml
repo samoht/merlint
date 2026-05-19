@@ -379,11 +379,15 @@ type item_kind =
   | Item_exception
   | Item_field
 
+type doc = { doc_text : string; doc_loc : Location.t }
+
 type file_item = {
   item_name : string;
   item_kind : item_kind;
   item_loc : Location.t;
   item_deprecated : bool;
+  item_doc : doc option;
+  item_deriving : string list;
   item_type : Typed_types.type_expr option;
   item_children : file_item list;
 }
@@ -464,13 +468,64 @@ let typed_has_deprecated attrs =
       || attr.attr_name.txt = "ocaml.deprecated")
     attrs
 
-let typed_item ~name ~kind ?item_type ?(children = []) ?(deprecated = false) loc
-    =
+let doc_payload_string (payload : Parsetree.payload) =
+  match payload with
+  | PStr
+      [
+        {
+          pstr_desc =
+            Pstr_eval
+              ( {
+                  pexp_desc =
+                    Pexp_constant { pconst_desc = Pconst_string (doc, _, _); _ };
+                  _;
+                },
+                _ );
+          _;
+        };
+      ] ->
+      Some doc
+  | _ -> None
+
+let typed_doc attrs =
+  List.find_map
+    (fun (attr : Parsetree.attribute) ->
+      if attr.attr_name.txt = "ocaml.doc" then
+        Some
+          {
+            doc_text =
+              Option.value ~default:"" (doc_payload_string attr.attr_payload)
+              |> String.trim;
+            doc_loc = attr.attr_loc;
+          }
+      else None)
+    attrs
+
+let rec deriving_names_expr expr =
+  match expr.Parsetree.pexp_desc with
+  | Pexp_ident { txt = Longident.Lident name; _ } -> [ name ]
+  | Pexp_tuple fields ->
+      List.concat_map (fun (_, expr) -> deriving_names_expr expr) fields
+  | _ -> []
+
+let deriving_names attrs =
+  List.concat_map
+    (fun (attr : Parsetree.attribute) ->
+      match (attr.attr_name.txt, attr.attr_payload) with
+      | "deriving", PStr [ { pstr_desc = Pstr_eval (expr, _); _ } ] ->
+          deriving_names_expr expr
+      | _ -> [])
+    attrs
+
+let typed_item ~name ~kind ?item_type ?doc ?(children = []) ?(deriving = [])
+    ?(deprecated = false) loc =
   {
     item_name = name;
     item_kind = kind;
     item_loc = loc;
     item_deprecated = deprecated;
+    item_doc = doc;
+    item_deriving = deriving;
     item_type;
     item_children = children;
   }
@@ -526,18 +581,22 @@ let typed_type_item (decl : Typedtree.type_declaration) =
       (Option.map
          (fun (ct : Typedtree.core_type) -> ct.ctyp_type)
          decl.typ_manifest)
+    ?doc:(typed_doc decl.typ_attributes)
+    ~deriving:(deriving_names decl.typ_attributes)
     ~children:(typed_type_children decl)
     ~deprecated:(typed_has_deprecated decl.typ_attributes)
     decl.typ_loc
 
 let typed_extension_item (ext : Typedtree.extension_constructor) =
   typed_item ~name:ext.ext_name.txt ~kind:Item_constructor
+    ?doc:(typed_doc ext.ext_attributes)
     ~deprecated:(typed_has_deprecated ext.ext_attributes)
     ext.ext_loc
 
 let typed_exception_item (exn : Typedtree.type_exception) =
   let ext = exn.tyexn_constructor in
   typed_item ~name:ext.ext_name.txt ~kind:Item_exception
+    ?doc:(typed_doc ext.ext_attributes)
     ~deprecated:(typed_has_deprecated ext.ext_attributes)
     ext.ext_loc
 
@@ -555,6 +614,7 @@ and typed_structure_item (item : Typedtree.structure_item) =
       [
         typed_item ~name:vd.val_name.txt ~kind:Item_value
           ~item_type:vd.val_desc.ctyp_type
+          ?doc:(typed_doc vd.val_attributes)
           ~deprecated:(typed_has_deprecated vd.val_attributes)
           vd.val_loc;
       ]
@@ -568,6 +628,7 @@ and typed_structure_item (item : Typedtree.structure_item) =
           in
           [
             typed_item ~name ~kind:Item_module ~children
+              ?doc:(typed_doc mb.mb_attributes)
               ~deprecated:(typed_has_deprecated mb.mb_attributes)
               mb.mb_loc;
           ])
@@ -582,6 +643,7 @@ and typed_structure_item (item : Typedtree.structure_item) =
                 | _ -> []
               in
               typed_item ~name ~kind:Item_module ~children
+                ?doc:(typed_doc mb.mb_attributes)
                 ~deprecated:(typed_has_deprecated mb.mb_attributes)
                 mb.mb_loc)
             mb.mb_name.txt)
@@ -593,6 +655,7 @@ and typed_structure_item (item : Typedtree.structure_item) =
             (match mtd.mtd_type with
             | Some { mty_desc = Tmty_signature s; _ } -> typed_signature_items s
             | _ -> [])
+          ?doc:(typed_doc mtd.mtd_attributes)
           ~deprecated:(typed_has_deprecated mtd.mtd_attributes)
           mtd.mtd_loc;
       ]
@@ -622,6 +685,7 @@ and typed_signature_item (item : Typedtree.signature_item) =
       [
         typed_item ~name:vd.val_name.txt ~kind:Item_value
           ~item_type:vd.val_desc.ctyp_type
+          ?doc:(typed_doc vd.val_attributes)
           ~deprecated:(typed_has_deprecated vd.val_attributes)
           vd.val_loc;
       ]
@@ -635,6 +699,7 @@ and typed_signature_item (item : Typedtree.signature_item) =
                 (match md.md_type.mty_desc with
                 | Tmty_signature s -> typed_signature_items s
                 | _ -> [])
+              ?doc:(typed_doc md.md_attributes)
               ~deprecated:(typed_has_deprecated md.md_attributes)
               md.md_loc;
           ])
@@ -648,6 +713,7 @@ and typed_signature_item (item : Typedtree.signature_item) =
                   (match md.md_type.mty_desc with
                   | Tmty_signature s -> typed_signature_items s
                   | _ -> [])
+                ?doc:(typed_doc md.md_attributes)
                 ~deprecated:(typed_has_deprecated md.md_attributes)
                 md.md_loc)
             md.md_name.txt)
@@ -659,6 +725,7 @@ and typed_signature_item (item : Typedtree.signature_item) =
             (match mtd.mtd_type with
             | Some { mty_desc = Tmty_signature s; _ } -> typed_signature_items s
             | _ -> [])
+          ?doc:(typed_doc mtd.mtd_attributes)
           ~deprecated:(typed_has_deprecated mtd.mtd_attributes)
           mtd.mtd_loc;
       ]
@@ -879,6 +946,13 @@ end
 
 (* {2 Item} *)
 
+module Doc = struct
+  type t = { doc : doc; filename : string }
+
+  let text t = t.doc.doc_text
+  let loc t = Loc.of_typed ~filename:t.filename t.doc.doc_loc
+end
+
 module Item = struct
   type kind =
     | Value
@@ -908,6 +982,11 @@ module Item = struct
   let kind (t : t) = kind_of_item t.item.item_kind
   let deprecated (t : t) = t.item.item_deprecated
   let loc (t : t) = Loc.of_typed ~filename:t.filename t.item.item_loc
+
+  let doc (t : t) =
+    Option.map (fun doc -> { Doc.doc; filename = t.filename }) t.item.item_doc
+
+  let derives (t : t) name = List.mem name t.item.item_deriving
   let type_sig (t : t) = t.item.item_type
 
   let children (t : t) =

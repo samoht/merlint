@@ -106,7 +106,9 @@ let enumerate ctx =
   match Context.test_stanzas ctx |> List.filter (stanza_is_selected ctx) with
   | [] -> []
   | test_stanzas ->
-      let env = { index; module_map = Project.Query.library_module_map index } in
+      let env =
+        { index; module_map = Project.Query.library_module_map index }
+      in
       List.map (fun test_stanza -> (env, test_stanza)) test_stanzas
 
 let check_unit ctx (env, test_stanza) = check_test_info ctx env test_stanza

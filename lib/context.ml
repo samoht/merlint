@@ -57,8 +57,8 @@ let file ~analyze_set ~selected_file ~project_index ~filename ~config
     content = lazy (load_content ());
   }
 
-let file_with_view ~analyze_set ~selected_file ~project_index ~filename
-    ~config ~project_root ~view ~load_content =
+let file_with_view ~analyze_set ~selected_file ~project_index ~filename ~config
+    ~project_root ~view ~load_content =
   {
     filename;
     config;

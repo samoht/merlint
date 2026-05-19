@@ -17,6 +17,7 @@ type 'a pass =
   | Pass : {
       select : Context.file -> bool;
       init : Context.file -> 'state;
+      attribute : ('state -> Ocaml_typing.Typedtree.attribute -> unit) option;
       expr : ('state -> Ocaml_typing.Typedtree.expression -> unit) option;
       value_binding :
         ('state -> Ocaml_typing.Typedtree.value_binding -> unit) option;
@@ -53,11 +54,20 @@ type t = T : _ desc -> t
 let v ~code ~title ~category ~hint ?(examples = []) ~pp check =
   T { code; title; category; hint; examples; check; pp }
 
-let pass ?(select = fun _ -> true) ?expr ?value_binding ?structure_item
-    ?signature_item ~init ~finish () =
+let pass ?(select = fun _ -> true) ?attribute ?expr ?value_binding
+    ?structure_item ?signature_item ~init ~finish () =
   Pass
     (Pass
-       { select; init; expr; value_binding; structure_item; signature_item; finish })
+       {
+         select;
+         init;
+         attribute;
+         expr;
+         value_binding;
+         structure_item;
+         signature_item;
+         finish;
+       })
 
 (* Accessors *)
 let code (T r) = r.code
@@ -109,6 +119,7 @@ module Run = struct
         code : string;
         title : string;
         pp : 'a Fmt.t;
+        attribute : (Ocaml_typing.Typedtree.attribute -> unit) option;
         expr : (Ocaml_typing.Typedtree.expression -> unit) option;
         value_binding : (Ocaml_typing.Typedtree.value_binding -> unit) option;
         structure_item : (Ocaml_typing.Typedtree.structure_item -> unit) option;
@@ -145,6 +156,7 @@ module Run = struct
                code = desc.code;
                title = desc.title;
                pp = desc.pp;
+               attribute = Option.map (fun f -> f state) pass.attribute;
                expr = Option.map (fun f -> f state) pass.expr;
                value_binding = Option.map (fun f -> f state) pass.value_binding;
                structure_item =
@@ -183,6 +195,7 @@ module Run = struct
   let project_job (Job { code; title; pp; run }) =
     List.map (fun issue -> Result (code, title, pp, issue)) (run ())
 
+  let pass_attribute (Active_pass { attribute; _ }) = attribute
   let pass_expr (Active_pass { expr; _ }) = expr
   let pass_value_binding (Active_pass { value_binding; _ }) = value_binding
   let pass_structure_item (Active_pass { structure_item; _ }) = structure_item

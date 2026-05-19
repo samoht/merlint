@@ -152,11 +152,11 @@ let selected_test_files ctx =
   Context.test_stanzas ctx
   |> List.concat_map Project_index.source_stanza_files
   |> List.filter (fun file ->
-         let path = Fpath.to_string file in
-         ctx.Context.in_analyze_set path
-         && File_kind.is_ml path
-         && String.starts_with ~prefix:"test_" Fpath.(file |> rem_ext |> basename)
-         && not (File.is_in_examples path))
+      let path = Fpath.to_string file in
+      ctx.Context.in_analyze_set path
+      && File_kind.is_ml path
+      && String.starts_with ~prefix:"test_" Fpath.(file |> rem_ext |> basename)
+      && not (File.is_in_examples path))
 
 let enumerate ctx =
   match selected_test_files ctx with

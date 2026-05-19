@@ -39,8 +39,7 @@ val read_file : string -> string
 (** [read_file p] slurps the file as a string via {!with_open_in}. Raises
     [Sys_error] if the file can't be opened. *)
 
-val parallel_map :
-  Eio.Executor_pool.t -> 'a list -> ('a -> 'b) -> 'b list
+val parallel_map : Eio.Executor_pool.t -> 'a list -> ('a -> 'b) -> 'b list
 (** [parallel_map pool xs f] applies [f] to every [xs] element on [pool].
     Results are returned in [xs] order. Caller must guarantee that [f] is safe
     to run concurrently across domains -- merlint's rules walk typedtree records
@@ -58,5 +57,5 @@ val with_pool :
     every downstream [parallel_map] call shares the same pool -- merlint pays a
     real cost (one OS thread per domain) every time a pool is created.
 
-    [domain_count] defaults to the runtime's recommended domain count, minus
-    the calling domain, with a floor of one. *)
+    [domain_count] defaults to the runtime's recommended domain count, minus the
+    calling domain, with a floor of one. *)

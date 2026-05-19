@@ -7,7 +7,6 @@ type style_issue =
   | Bad_operator_format
   | Wrong_arg_count of { expected : int; found : int }
   | Redundant_phrase of string
-  | Regular_comment_instead_of_doc
 
 (* Top-level arrow at position [i] (not inside parens). *)
 
@@ -196,209 +195,17 @@ let check_value_doc ~name ~doc =
 
   !issues
 
-let pp_style_issue ppf = function
-  | Missing_period -> Fmt.string ppf "should end with a period"
-  | Bad_function_format ->
-      Fmt.string ppf "uses [name] format but name doesn't match"
-  | Bad_value_format ->
-      Fmt.string ppf "uses [name] format but name doesn't match"
+let style_issue_message = function
+  | Missing_period -> "should end with a period"
+  | Bad_function_format -> "uses [name] format but name doesn't match"
+  | Bad_value_format -> "uses [name] format but name doesn't match"
   | Bad_operator_format ->
-      Fmt.string ppf "should use '[x op y] description.' format for operators"
+      "should use '[x op y] description.' format for operators"
   | Wrong_arg_count { expected; found } ->
-      Fmt.pf ppf "has %d args in doc but function takes %d required args" found
-        expected
-  | Redundant_phrase phrase -> Fmt.pf ppf "avoid redundant phrase '%s'" phrase
-  | Regular_comment_instead_of_doc ->
-      Fmt.string ppf "use doc comment (** ... *) instead of regular comment"
+      Printf.sprintf "has %d args in doc but function takes %d required args"
+        found expected
+  | Redundant_phrase phrase ->
+      Printf.sprintf "avoid redundant phrase '%s'" phrase
 
+let pp_style_issue ppf issue = Fmt.string ppf (style_issue_message issue)
 let equal_style_issue = ( = )
-
-type doc_comment = {
-  value_name : string;
-  signature : string;
-  doc : string;
-  doc_line : int;
-  val_line : int;
-}
-
-let is_function_signature signature =
-  (* Check if the signature contains -> indicating a function *)
-  Re.execp (Re.compile (Re.str "->")) signature
-
-(** Extract the doc attribute from an attribute list *)
-let doc_attribute (attrs : Parsetree.attributes) =
-  List.find_opt
-    (fun (attr : Parsetree.attribute) ->
-      match attr.attr_name.txt with "ocaml.doc" -> true | _ -> false)
-    attrs
-  |> Option.map (fun (attr : Parsetree.attribute) ->
-      match attr.attr_payload with
-      | PStr
-          [
-            {
-              pstr_desc =
-                Pstr_eval
-                  ( {
-                      pexp_desc =
-                        Pexp_constant
-                          { pconst_desc = Pconst_string (doc, _, _); _ };
-                      _;
-                    },
-                    _ );
-              _;
-            };
-          ] ->
-          String.trim doc
-      | _ -> "")
-
-(** Extract the location info from a compiler-libs location *)
-let extract_location_info loc_start loc_end =
-  (* Access Lexing.position fields directly *)
-  let start_line = loc_start.Lexing.pos_lnum in
-  let end_line = loc_end.Lexing.pos_lnum in
-  (start_line, end_line)
-
-(** Get the string representation of a core type. The [~wrap_arrows] parameter
-    controls whether arrow types should be wrapped in parentheses (used for
-    function-typed arguments). *)
-let rec string_of_core_type ?(wrap_arrows = false) (typ : Parsetree.core_type) =
-  match typ.ptyp_desc with
-  | Ptyp_var name -> "'" ^ name
-  | Ptyp_constr ({ txt = Lident name; _ }, []) -> name
-  | Ptyp_constr ({ txt = Ldot (_, name); _ }, []) -> name.txt
-  | Ptyp_arrow (label, t1, t2) ->
-      (* When processing arguments, wrap arrow types in parentheses *)
-      let label_prefix = match label with Optional _ -> "?" | _ -> "" in
-      let arg_str = string_of_core_type ~wrap_arrows:true t1 in
-      let ret_str = string_of_core_type t2 in
-      let result = label_prefix ^ arg_str ^ " -> " ^ ret_str in
-      if wrap_arrows then "(" ^ result ^ ")" else result
-  | Ptyp_tuple types ->
-      let type_strs =
-        List.map (fun (_, t) -> string_of_core_type ~wrap_arrows:true t) types
-      in
-      String.concat " * " type_strs
-  | _ -> "<complex type>"
-
-(** Check if a line is a regular comment immediately before a val declaration.
-*)
-let is_comment_before_val lines i trimmed =
-  Re.execp (Re.compile (Re.str "(* ")) trimmed
-  && Re.execp (Re.compile (Re.str " *)")) trimmed
-  && (not (String.starts_with ~prefix:"(**" trimmed))
-  && i + 1 < List.length lines
-  && String.starts_with ~prefix:"val " (String.trim (List.nth lines (i + 1)))
-
-(** Find regular comments that precede value declarations *)
-let regular_comments lines =
-  let regular_comments = ref [] in
-  List.iteri
-    (fun i line ->
-      let trimmed = String.trim line in
-      if is_comment_before_val lines i trimmed then
-        regular_comments := (i + 2, "BAD_COMMENT") :: !regular_comments)
-    lines;
-  !regular_comments
-
-(** Process a value declaration and extract its documentation *)
-let process_value_declaration (vd : Parsetree.value_description)
-    ~regular_comments ~last_floating_doc =
-  let value_name = vd.pval_name.txt in
-  let signature = string_of_core_type vd.pval_type in
-  let val_line, _ =
-    extract_location_info vd.pval_loc.loc_start vd.pval_loc.loc_end
-  in
-
-  (* Check if this value has a regular comment *)
-  let has_regular_comment =
-    List.exists (fun (line, _) -> line = val_line) regular_comments
-  in
-
-  if has_regular_comment then
-    (* Found regular comment instead of doc comment *)
-    {
-      value_name;
-      signature;
-      doc = "BAD_COMMENT";
-      doc_line = val_line - 1;
-      val_line;
-    }
-  else
-    (* First check for attached doc attribute *)
-    let attached_doc = doc_attribute vd.pval_attributes in
-
-    (* Use attached doc if available, otherwise use floating doc *)
-    let doc_info =
-      match attached_doc with
-      | Some doc when doc <> "" -> Some (doc, val_line)
-      | _ -> !last_floating_doc
-    in
-
-    (* Clear floating doc after use *)
-    last_floating_doc := None;
-
-    (* Always add the value, even without doc *)
-    let doc, doc_line =
-      match doc_info with Some (d, l) -> (d, l) | None -> ("", val_line)
-    in
-
-    { value_name; signature; doc; doc_line; val_line }
-
-let doc_payload_string (payload : Parsetree.payload) =
-  match payload with
-  | PStr
-      [
-        {
-          pstr_desc =
-            Pstr_eval
-              ( {
-                  pexp_desc =
-                    Pexp_constant { pconst_desc = Pconst_string (doc, _, _); _ };
-                  _;
-                },
-                _ );
-          _;
-        };
-      ] ->
-      Some doc
-  | _ -> None
-
-let remember_floating_doc (attr : Parsetree.attribute) last_floating_doc =
-  match doc_payload_string attr.attr_payload with
-  | Some doc ->
-      let doc_line, _ =
-        extract_location_info attr.attr_loc.loc_start attr.attr_loc.loc_end
-      in
-      last_floating_doc := Some (doc, doc_line)
-  | None -> ()
-
-let collect_signature_doc_item ~regular_comments ~last_floating_doc doc_comments
-    (sig_item : Parsetree.signature_item) =
-  match sig_item.psig_desc with
-  | Psig_attribute attr when attr.attr_name.txt = "ocaml.doc" ->
-      remember_floating_doc attr last_floating_doc
-  | Psig_value vd ->
-      let comment =
-        process_value_declaration vd ~regular_comments ~last_floating_doc
-      in
-      doc_comments := comment :: !doc_comments
-  | _ -> last_floating_doc := None
-
-(** Extract documentation comments using compiler-libs *)
-let extract_doc_comments content =
-  try
-    let signature =
-      Cl_lock.with_lock @@ fun () ->
-      let lexbuf = Lexing.from_string content in
-      Parse.interface lexbuf
-    in
-    let lines = String.split_on_char '\n' content in
-    let regular_comments = regular_comments lines in
-    let doc_comments = ref [] in
-    let last_floating_doc = ref None in
-    List.iter
-      (collect_signature_doc_item ~regular_comments ~last_floating_doc
-         doc_comments)
-      signature;
-    List.rev !doc_comments
-  with Parsing.Parse_error | Failure _ -> []

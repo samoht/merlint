@@ -24,11 +24,6 @@ val is_in_private_library : Project_index.t -> string -> bool
 (** [is_in_private_library index filename] returns [true] if [filename] belongs
     to a private library (no public_name). *)
 
-val process_ocaml_files :
-  Context.project -> (string -> string -> 'a list) -> 'a list
-(** [process_ocaml_files ctx f] processes all OCaml files in project with
-    function [f]. *)
-
 val process_lines_with_location :
   string -> string -> (int -> string -> Location.t -> 'a option) -> 'a list
 (** [process_lines_with_location filename content f] processes lines with

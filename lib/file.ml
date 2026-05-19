@@ -34,16 +34,6 @@ let is_in_private_library index filename =
   |> List.exists (fun lib ->
       Option.is_none (Project_index.Library.public_name lib))
 
-let process_ocaml_files ctx f =
-  Context.analyze_set ctx
-  |> List.concat_map (fun filename ->
-      if File_kind.is_ml_or_mli filename then
-        try
-          let content = Context.file_content ctx filename in
-          f filename content
-        with Sys_error _ -> []
-      else [])
-
 let process_lines_with_location filename content f =
   let lines = String.split_on_char '\n' content in
   List.concat_map

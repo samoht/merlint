@@ -22,6 +22,7 @@ type 'a pass =
   | Pass : {
       select : Context.file -> bool;
       init : Context.file -> 'state;
+      attribute : ('state -> Ocaml_typing.Typedtree.attribute -> unit) option;
       expr : ('state -> Ocaml_typing.Typedtree.expression -> unit) option;
       value_binding :
         ('state -> Ocaml_typing.Typedtree.value_binding -> unit) option;
@@ -62,6 +63,7 @@ val v :
 
 val pass :
   ?select:(Context.file -> bool) ->
+  ?attribute:('state -> Ocaml_typing.Typedtree.attribute -> unit) ->
   ?expr:('state -> Ocaml_typing.Typedtree.expression -> unit) ->
   ?value_binding:('state -> Ocaml_typing.Typedtree.value_binding -> unit) ->
   ?structure_item:('state -> Ocaml_typing.Typedtree.structure_item -> unit) ->
@@ -70,9 +72,9 @@ val pass :
   finish:(Context.file -> 'state -> 'a Issue.t list) ->
   unit ->
   'a scope
-(** [pass ?select ?expr ?value_binding ?structure_item ?signature_item ~init
-     ~finish ()] creates a shared traversal scope with no-op callbacks for
-    omitted node kinds. *)
+(** [pass ?select ?attribute ?expr ?value_binding ?structure_item
+     ?signature_item ~init ~finish ()] creates a shared traversal scope with
+    no-op callbacks for omitted node kinds. *)
 
 val code : t -> string
 (** [code rule] returns rule code. *)
@@ -128,6 +130,10 @@ module Run : sig
 
   val pass : t -> Context.file -> active_pass option
   (** [pass rule context] initializes [rule]'s pass for [context], when any. *)
+
+  val pass_attribute :
+    active_pass -> (Ocaml_typing.Typedtree.attribute -> unit) option
+  (** Attribute callback registered by an active pass. *)
 
   val pass_expr :
     active_pass -> (Ocaml_typing.Typedtree.expression -> unit) option

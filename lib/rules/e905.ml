@@ -47,10 +47,10 @@ let check_package ctx pkg =
     libs
     |> List.concat_map Project_index.Library.files
     |> List.filter_map (fun fp ->
-           let s = Fpath.to_string fp in
-           if Filename.check_suffix s ".mli" && ctx.Context.in_analyze_set s then
-             Some s
-           else None)
+        let s = Fpath.to_string fp in
+        if Filename.check_suffix s ".mli" && ctx.Context.in_analyze_set s then
+          Some s
+        else None)
     |> List.concat_map (exposed_symbol_issues ctx pkg_name)
   in
   if issues = [] then []
