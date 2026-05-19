@@ -296,6 +296,14 @@ let ensure_project_built ~path mgr =
       Fmt.epr "Function type analysis may not work properly.@.";
       Fmt.epr "Continuing with analysis...@."
 
+let refresh_stale_cmt_targets ~path ~files mgr =
+  match Merlint.Dune_describe.refresh_stale_cmt_targets ~path ~files mgr with
+  | Ok () -> ()
+  | Error msg ->
+      Fmt.epr "Warning: %s@." msg;
+      Fmt.epr "Some typedtree-backed rules may be skipped.@.";
+      Fmt.epr "Continuing with analysis...@."
+
 let is_ocaml_source path =
   Filename.check_suffix path ".ml" || Filename.check_suffix path ".mli"
 
@@ -344,7 +352,7 @@ let build_dune_describe ~project_root files =
 let load_file_via_eio fs filename = Eio.Path.load Eio.Path.(fs / filename)
 
 let analyze_files mgr fs domain_mgr ?(exclude_patterns = []) ?rule_filter
-    ?(show_profile = false) ?(no_build = false) files =
+    ?(show_profile = false) ?(build = false) ?(no_build = false) files =
   let load_file = load_file_via_eio fs in
   (* Find project root *)
   let project_root =
@@ -356,12 +364,6 @@ let analyze_files mgr fs domain_mgr ?(exclude_patterns = []) ?rule_filter
   Log.info (fun m -> m "Dune root: %s (cwd: %s)" project_root (Sys.getcwd ()));
   Fmt.pr "Dune root: %s@." project_root;
 
-  (* Ensure project is built before running merlin-based analyses *)
-  if not no_build then (
-    Log.info (fun m -> m "Building project...");
-    ensure_project_built ~path:project_root mgr;
-    Log.info (fun m -> m "Build done."));
-
   (* Build dune describes from directories/files *)
   Log.info (fun m -> m "Scanning project structure...");
   let dune_describe, analyze_set = build_dune_describe ~project_root files in
@@ -371,6 +373,20 @@ let analyze_files mgr fs domain_mgr ?(exclude_patterns = []) ?rule_filter
     if exclude_patterns = [] then dune_describe
     else Merlint.Dune_describe.exclude exclude_patterns dune_describe
   in
+
+  (* Ensure project is built before running typedtree-backed analyses, then
+     explicitly refresh stale bytecode .cmt targets for the actual analysis
+     set. Dune may rebuild native objects while leaving byte .cmt files stale. *)
+  if build || not no_build then (
+    Log.info (fun m -> m "Building project...");
+    ensure_project_built ~path:project_root mgr;
+    let files =
+      match analyze_set with
+      | Some files -> files
+      | None -> Merlint.Dune_describe.project_files filtered_describe
+    in
+    refresh_stale_cmt_targets ~path:project_root ~files mgr;
+    Log.info (fun m -> m "Build done."));
 
   let monorepo = Fpath.v project_root in
   let resolve_root raw =
@@ -433,7 +449,14 @@ let no_build_flag =
     "Skip the automatic 'dune build' step. Use when the project is already \
      built or for faster repeated runs."
   in
-  Arg.(value & flag & info [ "no-build"; "B" ] ~doc)
+  Arg.(value & flag & info [ "no-build" ] ~doc)
+
+let build_flag =
+  let doc =
+    "Run 'dune build @check' and refresh stale .cmt/.cmti artifacts before \
+     analysis."
+  in
+  Arg.(value & flag & info [ "build"; "B" ] ~doc)
 
 let show_configuration files =
   let path = match files with [] -> Sys.getcwd () | path :: _ -> path in
@@ -476,8 +499,8 @@ let parse_rule_filter rules_spec =
           Log.err (fun m -> m "Invalid rules specification: %s" msg);
           Stdlib.exit 1)
 
-let main exclude_patterns rules_spec ~show_profile ~show_config ~no_build files
-    () =
+let main exclude_patterns rules_spec ~show_profile ~show_config ~build ~no_build
+    files () =
   if show_config then show_configuration files
   else
     let rule_filter = parse_rule_filter rules_spec in
@@ -486,13 +509,13 @@ let main exclude_patterns rules_spec ~show_profile ~show_config ~no_build files
     let fs = Eio.Stdenv.fs env in
     let domain_mgr = Eio.Stdenv.domain_mgr env in
     analyze_files mgr fs domain_mgr ~exclude_patterns ?rule_filter ~show_profile
-      ~no_build files
+      ~build ~no_build files
 
 let analyze_term =
   Term.(
-    const (fun e r p c n f u ->
-        main e r ~show_profile:p ~show_config:c ~no_build:n f u)
-    $ exclude_flag $ rules_flag $ profile_flag $ show_config_flag
+    const (fun e r p c b n f u ->
+        main e r ~show_profile:p ~show_config:c ~build:b ~no_build:n f u)
+    $ exclude_flag $ rules_flag $ profile_flag $ show_config_flag $ build_flag
     $ no_build_flag $ files
     $ Term.(const (fun () () -> ()) $ Vlog.setup "merlint" $ Memtrace.term))
 

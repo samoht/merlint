@@ -20,24 +20,24 @@ let write_file path content =
 
 let mkdir path = if not (Sys.file_exists path) then Unix.mkdir path 0o700
 
-let test_file_helpers () =
+let test_script_contains () =
   with_temp_dir "merlint-interop-" @@ fun root ->
-  let dune = Filename.concat root "dune" in
-  let test_ml = Filename.concat root "test.ml" in
-  write_file dune "(test (name test))\n";
-  write_file test_ml "let () = ()\n";
-  Alcotest.(check string)
-    "read_file existing" "(test (name test))\n"
-    (Merlint.Interop.read_file dune);
-  Alcotest.(check string)
-    "read_file missing" ""
-    (Merlint.Interop.read_file (Filename.concat root "x"));
-  Alcotest.(check string)
-    "dune_content" "(test (name test))\n"
-    (Merlint.Interop.dune_content root);
-  Alcotest.(check string)
-    "test_content" "let () = ()\n"
-    (Merlint.Interop.test_content root)
+  write_file
+    (Filename.concat root "setup.sh")
+    "pip install --break-system-packages\n";
+  write_file (Filename.concat root "notes.txt") "--break-system-packages\n";
+  Alcotest.(check bool)
+    "script hit" true
+    (Merlint.Interop.script_contains ~dir:root ~file:"setup.sh"
+       ~affix:"--break-system-packages");
+  Alcotest.(check bool)
+    "non-script ignored" false
+    (Merlint.Interop.script_contains ~dir:root ~file:"notes.txt"
+       ~affix:"--break-system-packages");
+  Alcotest.(check bool)
+    "missing ignored" false
+    (Merlint.Interop.script_contains ~dir:root ~file:"missing.sh"
+       ~affix:"--break-system-packages")
 
 let test_oracle_dirs () =
   with_temp_dir "merlint-interop-" @@ fun root ->
@@ -70,6 +70,6 @@ let test_oracle_dirs () =
 let suite =
   ( "interop",
     [
-      Alcotest.test_case "file helpers" `Quick test_file_helpers;
+      Alcotest.test_case "script text query" `Quick test_script_contains;
       Alcotest.test_case "oracle discovery" `Quick test_oracle_dirs;
     ] )

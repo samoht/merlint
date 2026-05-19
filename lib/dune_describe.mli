@@ -29,6 +29,16 @@ val ensure_project_built :
 (** [ensure_project_built ~path mgr] ensures the project at [path] is built by
     running 'dune build path'. *)
 
+val refresh_stale_cmt_targets :
+  path:string ->
+  files:Fpath.t list ->
+  _ Eio.Process.mgr ->
+  (unit, string) result
+(** [refresh_stale_cmt_targets ~path ~files mgr] asks dune to rebuild existing
+    [.cmt]/[.cmti] targets whose source file is newer than the typedtree
+    artifact. This complements {!ensure_project_built}: native builds may update
+    [.cmx] while leaving bytecode [.cmt] stale. *)
+
 val is_executable : describe -> Fpath.t -> bool
 (** [is_executable describe file_path] checks if a file is an executable (binary
     or test) - no .mli needed. *)

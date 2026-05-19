@@ -91,6 +91,11 @@ let oracle_dirs index =
       xs
 
 let oracle_dirs_for ctx = oracle_dirs (Context.index ctx)
-let read_file path = try Fs.read_file path with Sys_error _ -> ""
-let dune_content dir = read_file (Filename.concat dir "dune")
-let test_content dir = read_file (Filename.concat dir "test.ml")
+
+let script_contains ~dir ~file ~affix =
+  if Filename.check_suffix file ".sh" || Filename.check_suffix file ".py" then
+    try
+      let content = Fs.read_file (Filename.concat dir file) in
+      Astring.String.is_infix ~affix content
+    with Sys_error _ -> false
+  else false

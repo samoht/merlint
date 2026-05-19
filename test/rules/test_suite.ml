@@ -1,7 +1,10 @@
 let unresolved_view ?(filename = "test_suite.mli") () =
   Merlint.File_view.v ~filename ~typedtree:(fun () -> Ok None) ()
 
+let with_eio f = Eio_main.run @@ fun _env -> f ()
+
 let test_unknown_type_lazy () =
+  with_eio @@ fun () ->
   let forced = ref false in
   let view =
     Merlint.File_view.v ~filename:"test_suite.mli"
@@ -16,6 +19,7 @@ let test_unknown_type_lazy () =
   Alcotest.(check bool) "typedtree not forced" false !forced
 
 let test_unresolved_skips () =
+  with_eio @@ fun () ->
   let view = unresolved_view () in
   Alcotest.(check bool)
     "not compliant without typedtree" false

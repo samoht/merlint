@@ -119,15 +119,15 @@ let run_file_rule ?profiling ctx rule =
   | None -> ());
   res
 
-let run_project_rule ?profiling ctx rule =
-  let code = Rule.code rule in
-  Log.debug (fun m -> m "Running project rule %s" code);
+let run_project_job ?profiling job =
+  let code = Rule.Run.project_job_code job in
+  Log.debug (fun m -> m "Running project rule job %s" code);
   let start_time = Unix.gettimeofday () in
   let res =
-    try Rule.Run.project rule ctx
+    try Rule.Run.project_job job
     with exn ->
       Log.err (fun m ->
-          m "Project rule %s failed: %s" code (Printexc.to_string exn));
+          m "Project rule job %s failed: %s" code (Printexc.to_string exn));
       []
   in
   let duration = Unix.gettimeofday () -. start_time in
@@ -211,19 +211,22 @@ let split_excluded ~config_for ~code issues =
   in
   (kept, List.rev !excluded)
 
-let run_one_project_rule ?profiling ~config_for project_ctx rule =
-  let code = Rule.code rule in
-  let issues = run_project_rule ?profiling project_ctx rule in
+let run_one_project_job ?profiling ~config_for job =
+  let code = Rule.Run.project_job_code job in
+  let issues = run_project_job ?profiling job in
   split_excluded ~config_for ~code issues
 
 let run_project_rules ?domain_mgr ?profiling enabled_rules project_ctx =
   let config_for = config_lookup () in
   let rules = List.filter Rule.is_project_scoped enabled_rules in
-  let run = run_one_project_rule ?profiling ~config_for project_ctx in
+  let jobs =
+    List.concat_map (fun rule -> Rule.Run.project_jobs rule project_ctx) rules
+  in
+  let run = run_one_project_job ?profiling ~config_for in
   let results =
     match domain_mgr with
-    | None -> List.map run rules
-    | Some dm -> Fs.parallel_map dm rules run
+    | None -> List.map run jobs
+    | Some dm -> Fs.parallel_map dm jobs run
   in
   let issues = List.concat_map fst results in
   let excluded = List.concat_map snd results in
@@ -271,8 +274,7 @@ let group_files_by_package index files =
     Project_index.source_packages_nodes index
     |> List.filter_map (fun pkg ->
         Option.map
-          (fun dir ->
-            (Project_index.Package.name pkg, Fpath.to_string dir))
+          (fun dir -> (Project_index.Package.name pkg, Fpath.to_string dir))
           (Project_index.Package.source_dir pkg))
   in
   let pkg_of file =
@@ -294,11 +296,11 @@ let group_files_by_package index files =
     files;
   Hashtbl.fold (fun k v acc -> (k, List.rev v) :: acc) tbl []
 
-(** Walk [files] grouped by package, processing different packages in
-    parallel via [domain_mgr] when supplied. Files within a single package
-    are processed sequentially -- typedtree-walking rules share a Merlin
-    backend whose compiler-libs state is process-global, so keeping one
-    package per domain at a time avoids state mixing. *)
+(** Walk [files] grouped by package, processing different packages in parallel
+    via [domain_mgr] when supplied. Files within a single package are processed
+    sequentially -- typedtree-walking rules share a Merlin backend whose
+    compiler-libs state is process-global, so keeping one package per domain at
+    a time avoids state mixing. *)
 let analyze_files ?domain_mgr ~project_ctx ~project_root ~file_rules ?profiling
     files =
   let config_for = config_lookup () in

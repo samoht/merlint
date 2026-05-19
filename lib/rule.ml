@@ -16,6 +16,11 @@ type example = { is_good : bool; code : string }
 type 'a scope =
   | File of (Context.file -> 'a Issue.t list)
   | Project of (Context.project -> 'a Issue.t list)
+  | Project_units : {
+      enumerate : Context.project -> 'unit list;
+      check : Context.project -> 'unit -> 'a Issue.t list;
+    }
+      -> 'a scope
 
 type 'a desc = {
   code : string;
@@ -51,10 +56,10 @@ let category_name = function
   | Code_generation -> "Code Generation"
 
 let is_file_scoped (T desc) =
-  match desc.check with File _ -> true | Project _ -> false
+  match desc.check with File _ -> true | Project _ | Project_units _ -> false
 
 let is_project_scoped (T desc) =
-  match desc.check with Project _ -> true | File _ -> false
+  match desc.check with Project _ | Project_units _ -> true | File _ -> false
 
 let equal (T desc1) (T desc2) = desc1.code = desc2.code
 let pp ppf (T desc) = Fmt.pf ppf "[%s] %s" desc.code desc.title
@@ -63,6 +68,15 @@ let pp ppf (T desc) = Fmt.pf ppf "[%s] %s" desc.code desc.title
 module Run = struct
   type result = Result : string * string * 'a Fmt.t * 'a Issue.t -> result
 
+  type project_job =
+    | Job : {
+        code : string;
+        title : string;
+        pp : 'a Fmt.t;
+        run : unit -> 'a Issue.t list;
+      }
+        -> project_job
+
   let file (T desc) ctx =
     match desc.check with
     | File check_fn ->
@@ -70,17 +84,40 @@ module Run = struct
         List.map
           (fun issue -> Result (desc.code, desc.title, desc.pp, issue))
           issues
-    | Project _ -> []
+    | Project _ | Project_units _ -> []
 
-  let project (T desc) ctx =
+  let project_jobs (T desc) ctx =
     match desc.check with
     | Project check_fn ->
-        let issues = check_fn ctx in
+        [
+          Job
+            {
+              code = desc.code;
+              title = desc.title;
+              pp = desc.pp;
+              run = (fun () -> check_fn ctx);
+            };
+        ]
+    | Project_units { enumerate; check } ->
         List.map
-          (fun issue -> Result (desc.code, desc.title, desc.pp, issue))
-          issues
+          (fun unit ->
+            Job
+              {
+                code = desc.code;
+                title = desc.title;
+                pp = desc.pp;
+                run = (fun () -> check ctx unit);
+              })
+          (enumerate ctx)
     | File _ -> []
 
+  let project_job (Job { code; title; pp; run }) =
+    List.map (fun issue -> Result (code, title, pp, issue)) (run ())
+
+  let project (T desc) ctx =
+    project_jobs (T desc) ctx |> List.concat_map project_job
+
+  let project_job_code (Job { code; _ }) = code
   let code (Result (c, _, _, _)) = c
   let title (Result (_, t, _, _)) = t
   let pp ppf (Result (_, _, fmt, issue)) = Issue.pp fmt ppf issue
