@@ -211,16 +211,16 @@ let print_summary all_issues enabled_rule_count =
   end
 
 let run_engine ?domain_mgr ~load_file ?profiling rule_filter dune_describe
-    analyze_set index project_root =
+    analyze_set build_index project_root =
   match rule_filter with
   | Some filter ->
       Merlint.Engine.run ?domain_mgr ~load_file ~filter ~dune_describe
-        ?analyze_set ~index ?profiling project_root
+        ?analyze_set ~index:build_index ?profiling project_root
   | None -> (
       match Merlint.Filter.parse "all" with
       | Ok filter ->
           Merlint.Engine.run ?domain_mgr ~load_file ~filter ~dune_describe
-            ?analyze_set ~index ?profiling project_root
+            ?analyze_set ~index:build_index ?profiling project_root
       | Error _ -> { Merlint.Engine.issues = []; excluded = [] })
 
 let print_exclusion_stats all_excluded =
@@ -242,7 +242,7 @@ let print_exclusion_stats all_excluded =
   end
 
 let run_analysis ?domain_mgr ~load_file project_root dune_describe analyze_set
-    index rule_filter show_profile =
+    build_index rule_filter show_profile =
   let profiling_state =
     if show_profile then Some (Merlint.Profiling.v ()) else None
   in
@@ -254,7 +254,7 @@ let run_analysis ?domain_mgr ~load_file project_root dune_describe analyze_set
   Log.info (fun m -> m "Starting visual analysis on %d files" files_count);
   let { Merlint.Engine.issues = all_issues; excluded = all_excluded } =
     run_engine ?domain_mgr ~load_file ?profiling:profiling_state rule_filter
-      dune_describe analyze_set index project_root
+      dune_describe analyze_set build_index project_root
   in
   if files_count = 0 then Fmt.pr "Running merlint analysis...@.@."
   else
@@ -386,11 +386,11 @@ let index_roots_of_files = function
   | [] -> None
   | xs -> Some (List.map resolve_index_root xs)
 
-let build_project_index ~domain_mgr ~fs ~monorepo ?roots () =
+let build_project_index ~fs ~monorepo ?roots ?pool () =
   let t0 = Unix.gettimeofday () in
   let idx =
     Merlint.Trace.span "merlint.phase.project_index" @@ fun () ->
-    Project_index.build ~domain_mgr ?roots ~fs ~monorepo ()
+    Project_index.build ?pool ?roots ~fs ~monorepo ()
   in
   Log.info (fun m ->
       m "Project_index.build: %.0f ms" ((Unix.gettimeofday () -. t0) *. 1000.0));
@@ -416,11 +416,11 @@ let analyze_files mgr fs domain_mgr ?(exclude_patterns = []) ?rule_filter
   maybe_build_project mgr ~project_root ~analyze_set ~filtered_describe ~build;
   let monorepo = monorepo_for_index project_root in
   let index_roots = index_roots_of_files files in
-  let index =
-    lazy (build_project_index ~domain_mgr ~fs ~monorepo ?roots:index_roots ())
+  let build_index ?pool () =
+    build_project_index ~fs ~monorepo ?roots:index_roots ?pool ()
   in
   run_analysis ~domain_mgr ~load_file project_root filtered_describe analyze_set
-    index rule_filter show_profile
+    build_index rule_filter show_profile
 
 let files =
   let doc =
