@@ -15,6 +15,7 @@ let library_uses_wire ctx lib =
       let f = Fpath.to_string fp in
       Filename.check_suffix f ".ml"
       && (not (Filename.check_suffix f ".mli"))
+      && ctx.Context.in_analyze_set f
       && file_uses_wire ctx f)
 
 let has_c_dir pkg_dir =

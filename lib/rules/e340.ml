@@ -25,37 +25,44 @@ let helper_range (vb : T.value_binding) =
   | Some name when String.starts_with ~prefix:"err_" name -> Some vb.vb_loc
   | _ -> None
 
-let error_helper_ranges view =
-  let ranges = ref [] in
-  Query.iter_value_bindings view (fun vb ->
-      Option.iter (fun loc -> ranges := loc :: !ranges) (helper_range vb));
-  !ranges
-
 let loc_contains_line (loc : Ocaml_parsing.Location.t) line_num =
   line_num >= loc.loc_start.pos_lnum && line_num <= loc.loc_end.pos_lnum
 
-let check (ctx : Context.file) =
-  let filename = ctx.filename in
-  let view = Context.view ctx in
-  let error_helpers = error_helper_ranges view in
+type state = {
+  filename : string;
+  error_helpers : Ocaml_parsing.Location.t list ref;
+  issues : payload Issue.t list ref;
+}
+
+let visit_value_binding state vb =
+  Option.iter
+    (fun loc -> state.error_helpers := loc :: !(state.error_helpers))
+    (helper_range vb)
+
+let visit_expr state (expr : T.expression) =
   let is_inside_error_helper line_num =
-    List.exists (fun loc -> loc_contains_line loc line_num) error_helpers
+    List.exists
+      (fun loc -> loc_contains_line loc line_num)
+      !(state.error_helpers)
   in
-  let issues = ref [] in
-  Query.iter_expressions view (fun (expr : T.expression) ->
-      match expr.exp_desc with
-      | Texp_construct (lid, _, [ arg ]) ->
-          let line_num = expr.exp_loc.loc_start.pos_lnum in
-          if error_constructor lid.txt && not (is_inside_error_helper line_num)
-          then
-            Option.iter
-              (fun error_message ->
-                issues :=
-                  issue ~loc:(Loc.of_typed ~filename expr.exp_loc) error_message
-                  :: !issues)
-              (error_payload_message arg)
-      | _ -> ());
-  List.rev !issues
+  match expr.exp_desc with
+  | Texp_construct (lid, _, [ arg ]) ->
+      let line_num = expr.exp_loc.loc_start.pos_lnum in
+      if error_constructor lid.txt && not (is_inside_error_helper line_num) then
+        Option.iter
+          (fun error_message ->
+            state.issues :=
+              issue
+                ~loc:(Loc.of_typed ~filename:state.filename expr.exp_loc)
+                error_message
+              :: !(state.issues))
+          (error_payload_message arg)
+  | _ -> ()
+
+let init ctx =
+  { filename = ctx.Context.filename; error_helpers = ref []; issues = ref [] }
+
+let finish _ state = List.rev !(state.issues)
 
 let pp ppf { error_message; suggested_function } =
   Fmt.pf ppf
@@ -75,4 +82,6 @@ let rule =
        different error cases in one place."
     ~examples:
       [ Example.bad Examples.E340.bad_ml; Example.good Examples.E340.good_ml ]
-    ~pp (File check)
+    ~pp
+    (Rule.pass ~init ~value_binding:visit_value_binding ~expr:visit_expr ~finish
+       ())

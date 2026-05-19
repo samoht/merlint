@@ -120,21 +120,24 @@ let classify_group issues bindings =
                 :: !issues)
         named
 
+type state = {
+  filename : string;
+  issues : (Ocaml_parsing.Location.t * payload) list ref;
+}
 (** Walk every top-level (and nested) structure looking for
     [Pstr_value (Recursive, bindings)] with at least two bindings whose patterns
     are [Ppat_var]. Returns a list of [(loc, name, kind, group_names)] for each
     misused [and]-binding. *)
-let collect_misused_bindings view =
-  let issues = ref [] in
-  Query.iter_structure_items view (fun (item : T.structure_item) ->
-      match item.str_desc with
-      | Tstr_value (Recursive, bindings) -> classify_group issues bindings
-      | _ -> ());
-  Query.iter_expressions view (fun (expr : T.expression) ->
-      match expr.exp_desc with
-      | Texp_let (Recursive, bindings, _) -> classify_group issues bindings
-      | _ -> ());
-  List.rev !issues
+
+let visit_structure_item state (item : T.structure_item) =
+  match item.str_desc with
+  | Tstr_value (Recursive, bindings) -> classify_group state.issues bindings
+  | _ -> ()
+
+let visit_expr state (expr : T.expression) =
+  match expr.exp_desc with
+  | Texp_let (Recursive, bindings, _) -> classify_group state.issues bindings
+  | _ -> ()
 
 let pp ppf { name; kind; group } =
   let group_str = String.concat ", " group in
@@ -152,11 +155,12 @@ let pp ppf { name; kind; group } =
      its siblings: %s"
     name suggestion
 
-let check (ctx : Context.file) =
-  let filename = ctx.filename in
-  collect_misused_bindings (Context.view ctx)
+let init ctx = { filename = ctx.Context.filename; issues = ref [] }
+
+let finish _ state =
+  List.rev !(state.issues)
   |> List.map (fun (loc, payload) ->
-      Issue.v ~loc:(Loc.of_typed ~filename loc) payload)
+      Issue.v ~loc:(Loc.of_typed ~filename:state.filename loc) payload)
 
 let rule =
   Rule.v ~code:"E219" ~title:"Useless [and] in [let rec ... and ...] groups"
@@ -187,4 +191,6 @@ let rec is_even n = n = 0 || is_odd (n - 1)
 and is_odd n = n <> 0 && is_even (n - 1)|};
         };
       ]
-    ~pp (File check)
+    ~pp
+    (Rule.pass ~init ~structure_item:visit_structure_item ~expr:visit_expr
+       ~finish ())

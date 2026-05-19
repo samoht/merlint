@@ -84,37 +84,40 @@ let is_explicit_output_helper path =
       true
   | _ -> false
 
-let check (ctx : Context.file) =
-  let filename = ctx.filename in
-  let issues = ref [] in
-  Query.iter_expressions (Context.view ctx) (fun expr ->
-      let flag suggested =
-        issues :=
-          Issue.v ~loc:(Loc.of_typed ~filename expr.T.exp_loc) { suggested }
-          :: !issues
-      in
-      match expr.exp_desc with
-      | Texp_apply _ -> (
-          let fn, args = Query.Expr.application expr in
-          match Query.Expr.callee_parts fn with
-          | Some path
-            when (not (handled_by_specialized_rule path))
-                 && (not (is_pipe_operator path))
-                 && not (is_operator path) ->
-              let rewriteable =
-                if is_explicit_output_helper path then
-                  match List.rev args with
-                  | arg :: _ -> Query.Expr.calls arg [ "Fmt"; "str" ]
-                  | [] -> false
-                else is_unary_fmt_str_arg args
-              in
-              if rewriteable then flag (suggestion_for_apply path)
-          | _ -> ())
-      | Texp_construct (lid, _, [ arg ])
-        when (not lid.loc.loc_ghost) && Query.Expr.calls arg [ "Fmt"; "str" ] ->
-          flag (suggestion_for_construct (Query.Longident.parts lid.txt))
-      | _ -> ());
-  List.rev !issues
+type state = { filename : string; issues : payload Issue.t list ref }
+
+let visit_expr state (expr : T.expression) =
+  let flag suggested =
+    state.issues :=
+      Issue.v
+        ~loc:(Loc.of_typed ~filename:state.filename expr.T.exp_loc)
+        { suggested }
+      :: !(state.issues)
+  in
+  match expr.exp_desc with
+  | Texp_apply _ -> (
+      let fn, args = Query.Expr.application expr in
+      match Query.Expr.callee_parts fn with
+      | Some path
+        when (not (handled_by_specialized_rule path))
+             && (not (is_pipe_operator path))
+             && not (is_operator path) ->
+          let rewriteable =
+            if is_explicit_output_helper path then
+              match List.rev args with
+              | arg :: _ -> Query.Expr.calls arg [ "Fmt"; "str" ]
+              | [] -> false
+            else is_unary_fmt_str_arg args
+          in
+          if rewriteable then flag (suggestion_for_apply path)
+      | _ -> ())
+  | Texp_construct (lid, _, [ arg ])
+    when (not lid.loc.loc_ghost) && Query.Expr.calls arg [ "Fmt"; "str" ] ->
+      flag (suggestion_for_construct (Query.Longident.parts lid.txt))
+  | _ -> ()
+
+let init ctx = { filename = ctx.Context.filename; issues = ref [] }
+let finish _ state = List.rev !(state.issues)
 
 let pp ppf { suggested } =
   Fmt.pf ppf "Wrap with [%s] instead of [... (Fmt.str ...)]" suggested
@@ -165,4 +168,5 @@ let log_event buf ev =
 let trace n = Fmt.pr "n=%d@." n|};
         };
       ]
-    ~pp (File check)
+    ~pp
+    (Rule.pass ~init ~expr:visit_expr ~finish ())

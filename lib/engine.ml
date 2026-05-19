@@ -3,6 +3,8 @@
 let src = Logs.Src.create "merlint.engine" ~doc:"Linting engine"
 
 module Log = (val Logs.src_log src : Logs.LOG)
+module T = Ocaml_typing.Typedtree
+module Tast_iterator = Ocaml_typing.Tast_iterator
 
 type exclusion_stats = { rule : string; file : string }
 type result = { issues : Rule.Run.result list; excluded : exclusion_stats list }
@@ -224,6 +226,56 @@ let run_one_project_job ?profiling ~config_for job =
   let issues = run_project_job ?profiling job in
   split_excluded ~config_for ~code issues
 
+let run_passes passes ctx =
+  match passes with
+  | [] -> []
+  | _ -> (
+      match File_view.typedtree (Context.view ctx) with
+      | None -> []
+      | Some tree ->
+          let on_expr = List.filter_map Rule.Run.pass_expr passes in
+          let on_value_binding =
+            List.filter_map Rule.Run.pass_value_binding passes
+          in
+          let on_structure_item =
+            List.filter_map Rule.Run.pass_structure_item passes
+          in
+          let on_signature_item =
+            List.filter_map Rule.Run.pass_signature_item passes
+          in
+          let dispatch_expr expr = List.iter (fun f -> f expr) on_expr in
+          let dispatch_value_binding value_binding =
+            List.iter (fun f -> f value_binding) on_value_binding
+          in
+          let dispatch_structure_item item =
+            List.iter (fun f -> f item) on_structure_item
+          in
+          let dispatch_signature_item item =
+            List.iter (fun f -> f item) on_signature_item
+          in
+          let iterator =
+            {
+              Tast_iterator.default_iterator with
+              expr =
+                (fun this expr ->
+                  dispatch_expr expr;
+                  Tast_iterator.default_iterator.expr this expr);
+              value_binding =
+                (fun this value_binding ->
+                  dispatch_value_binding value_binding;
+                  Tast_iterator.default_iterator.value_binding this
+                    value_binding);
+            }
+          in
+          (match tree with
+          | `Implementation structure ->
+              List.iter dispatch_structure_item structure.T.str_items;
+              iterator.structure iterator structure
+          | `Interface signature ->
+              List.iter dispatch_signature_item signature.T.sig_items;
+              iterator.signature iterator signature);
+          List.concat_map Rule.Run.pass_finish passes)
+
 let run_project_rules ?domain_mgr ?profiling enabled_rules project_ctx =
   let config_for = config_lookup () in
   let rules = List.filter Rule.is_project_scoped enabled_rules in
@@ -241,7 +293,7 @@ let run_project_rules ?domain_mgr ?profiling enabled_rules project_ctx =
   (issues, excluded)
 
 let analyze_single_file ?profiling ~project_ctx ~config_for ~project_root
-    ~file_rules filepath =
+    ~file_rules ~pass_rules filepath =
   let filename = Fpath.to_string filepath in
   let config = config_for filename in
   let excluded_acc = ref [] in
@@ -251,11 +303,19 @@ let analyze_single_file ?profiling ~project_ctx ~config_for ~project_root
       let view = Context.file_view project_ctx filename in
       let file_ctx =
         Context.file_with_view ~filename ~config ~project_root ~view
+          ~analyze_set:(Context.analyze_set project_ctx)
+          ~selected_file:project_ctx.Context.in_analyze_set
+          ~project_index:(Some (Context.index project_ctx))
           ~load_content:(fun () -> Context.file_content project_ctx filename)
       in
-      let all_results =
+      let active_passes =
+        List.filter_map (fun rule -> Rule.Run.pass rule file_ctx) pass_rules
+      in
+      let shared_results = run_passes active_passes file_ctx in
+      let direct_results =
         List.concat_map (run_file_rule ?profiling file_ctx) file_rules
       in
+      let all_results = shared_results @ direct_results in
       List.filter
         (fun r ->
           let code = Rule.Run.code r in
@@ -310,12 +370,12 @@ let group_files_by_package index files =
     sequentially -- typedtree-walking rules share a Merlin backend whose
     compiler-libs state is process-global, so keeping one package per domain at
     a time avoids state mixing. *)
-let analyze_files ?domain_mgr ~project_ctx ~project_root ~file_rules ?profiling
-    files =
+let analyze_files ?domain_mgr ~project_ctx ~project_root ~file_rules ~pass_rules
+    ?profiling files =
   let config_for = config_lookup () in
   let analyse filepath =
     analyze_single_file ?profiling ~project_ctx ~config_for ~project_root
-      ~file_rules filepath
+      ~file_rules ~pass_rules filepath
   in
   let analyse_pkg (_pkg, pkg_files) = List.map analyse pkg_files in
   match domain_mgr with
@@ -362,15 +422,22 @@ let run ?domain_mgr ~load_file ~filter ~dune_describe ?analyze_set ~index
       log_fs_stats ();
       Merlin.close backend)
     (fun () ->
-      let project_issues, project_excluded =
-        Trace.span "merlint.phase.project_rules" @@ fun () ->
-        run_project_rules ?domain_mgr ?profiling enabled_rules project_ctx
-      in
-      let file_rules = List.filter Rule.is_file_scoped enabled_rules in
-      let file_results =
-        Trace.span "merlint.phase.file_rules" @@ fun () ->
-        analyze_files ?domain_mgr ~project_ctx ~project_root ~file_rules
-          ?profiling analyze_set
+      let file_rules = List.filter Rule.is_direct_file_scoped enabled_rules in
+      let pass_rules = List.filter Rule.uses_pass enabled_rules in
+      let (project_issues, project_excluded), file_results =
+        Eio.Switch.run @@ fun sw ->
+        let project_promise, project_resolver = Eio.Promise.create () in
+        let file_promise, file_resolver = Eio.Promise.create () in
+        Eio.Fiber.fork ~sw (fun () ->
+            Trace.span "merlint.phase.project_rules" @@ fun () ->
+            run_project_rules ?domain_mgr ?profiling enabled_rules project_ctx
+            |> Eio.Promise.resolve project_resolver);
+        Eio.Fiber.fork ~sw (fun () ->
+            Trace.span "merlint.phase.file_rules" @@ fun () ->
+            analyze_files ?domain_mgr ~project_ctx ~project_root ~file_rules
+              ~pass_rules ?profiling analyze_set
+            |> Eio.Promise.resolve file_resolver);
+        (Eio.Promise.await project_promise, Eio.Promise.await file_promise)
       in
       let file_issues = List.concat_map fst file_results in
       let file_excluded = List.concat_map snd file_results in

@@ -4,23 +4,25 @@ module T = Ocaml_typing.Typedtree
 
 let is_failwith expr = Query.Expr.callee_ends_with expr [ "failwith" ]
 
-let check (ctx : Context.file) =
-  let issues = ref [] in
-  let filename = ctx.filename in
-  Query.iter_expressions (Context.view ctx) (fun expr ->
-      let flag () =
-        issues :=
-          Issue.v ~loc:(Loc.of_typed ~filename expr.T.exp_loc) () :: !issues
-      in
-      let fn, args = Query.Expr.application expr in
-      if is_failwith fn then (
-        if List.exists (fun arg -> Query.Expr.calls arg [ "Fmt"; "str" ]) args
-        then flag ())
-      else if Query.Expr.callee_ends_with fn [ "Fmt"; "kstr" ] then
-        match args with
-        | continuation :: _ when is_failwith continuation -> flag ()
-        | _ -> ());
-  List.rev !issues
+type state = { filename : string; issues : unit Issue.t list ref }
+
+let visit_expr state (expr : T.expression) =
+  let flag () =
+    state.issues :=
+      Issue.v ~loc:(Loc.of_typed ~filename:state.filename expr.T.exp_loc) ()
+      :: !(state.issues)
+  in
+  let fn, args = Query.Expr.application expr in
+  if is_failwith fn then (
+    if List.exists (fun arg -> Query.Expr.calls arg [ "Fmt"; "str" ]) args then
+      flag ())
+  else if Query.Expr.callee_ends_with fn [ "Fmt"; "kstr" ] then
+    match args with
+    | continuation :: _ when is_failwith continuation -> flag ()
+    | _ -> ()
+
+let init ctx = { filename = ctx.Context.filename; issues = ref [] }
+let finish _ state = List.rev !(state.issues)
 
 let pp ppf () =
   Fmt.pf ppf
@@ -59,4 +61,5 @@ let rule =
     input|};
         };
       ]
-    ~pp (File check)
+    ~pp
+    (Rule.pass ~init ~expr:visit_expr ~finish ())

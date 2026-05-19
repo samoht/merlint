@@ -8,7 +8,7 @@ type reason =
   | Missing_interface
   | Bad_interface
 
-type payload = { filename : string; module_name : string; reason : reason }
+type payload = { filename : string; reason : reason }
 
 let log_src = Logs.Src.create "merlint.rules.e600" ~doc:"E600 rule diagnostics"
 
@@ -26,11 +26,6 @@ let is_library_file index filename =
   let file = Fpath.v filename |> Fpath.normalize in
   Project_index.libraries_of_file index file <> []
   || Project_index.has_library_stanza_in_dir index (Fpath.parent file)
-
-let has_test_runner view = File_view.calls_path view [ "Alcotest"; "run" ]
-
-let uses_test_module_suites view =
-  Suite.references_with_prefix view ~prefix:"Test_"
 
 let rec is_list_expr (expr : T.expression) =
   match expr.exp_desc with
@@ -50,12 +45,6 @@ let item_defines_tests (item : T.structure_item) =
   | Tstr_value (_, bindings) -> List.exists binding_defines_tests bindings
   | _ -> false
 
-let defines_own_tests view =
-  match File_view.typedtree view with
-  | Some (`Implementation structure) ->
-      List.exists item_defines_tests structure.str_items
-  | Some (`Interface _) | None -> false
-
 let test_mli_needs_issue view =
   match File_view.typedtree view with
   | None -> false
@@ -73,70 +62,17 @@ let test_mli_target index filename =
   && (not (File.is_in_private_library index filename))
   && not (File.is_in_examples filename)
 
-(** Check if a test.ml file properly uses test module suites instead of defining
-    its own tests. *)
-let check_test_file_uses_modules filename view =
-  Log.debug (fun m -> m "E600: Checking file %s" filename);
-  if not (is_test_file filename) then (
-    Log.debug (fun m -> m "E600:   Not a test.ml file");
-    [])
-  else if not (has_test_runner view) then (
-    Log.debug (fun m -> m "E600:   No test runner found");
-    [])
-  else
-    let defines_own = defines_own_tests view in
-    let uses_modules = uses_test_module_suites view in
-    Log.debug (fun m ->
-        m "E600:   defines_own_tests=%b, uses_test_module_suites=%b" defines_own
-          uses_modules);
-    if defines_own && not uses_modules then (
-      (* Issue if test.ml defines its own tests instead of using test modules *)
-      Log.debug (fun m ->
-          m "E600:   Found issue - defines own tests without using modules");
-      [
-        Issue.v
-          ~loc:
-            (Location.v ~file:filename ~start_line:1 ~start_col:0 ~end_line:1
-               ~end_col:0)
-          {
-            filename;
-            module_name = "test";
-            reason = Runner_defines_inline_tests;
-          };
-      ])
-    else (
-      Log.debug (fun m -> m "E600:   No issue found");
-      [])
-
-(** Check if test_*.ml file incorrectly contains Alcotest.run. The test runner
-    should only be in test.ml, not in individual test modules. *)
-let check_runner_in_wrong_file index filename view =
+let runner_in_wrong_file_target index filename =
   let basename = Filename.basename filename in
-  if
-    File_kind.is_ml basename
-    && is_test_module_basename (Filename.remove_extension basename)
-    && basename <> "test.ml"
-    && (not (is_library_file index filename))
-    && (not (File.is_in_examples filename))
-    && has_test_runner view
-  then
-    [
-      Issue.v
-        ~loc:
-          (Location.v ~file:filename ~start_line:1 ~start_col:0 ~end_line:1
-             ~end_col:0)
-        {
-          filename;
-          module_name = basename |> Filename.chop_extension;
-          reason = Runner_in_module;
-        };
-    ]
-  else []
+  File_kind.is_ml basename
+  && is_test_module_basename (Filename.remove_extension basename)
+  && basename <> "test.ml"
+  && (not (is_library_file index filename))
+  && not (File.is_in_examples filename)
 
 (** Check if a test_*.mli file exports only suite with correct type. Skips files
     that belong to private libraries. *)
 let check_test_mli_file index filename view =
-  let basename = Filename.basename filename in
   if test_mli_target index filename then
     if test_mli_needs_issue view then
       [
@@ -144,14 +80,15 @@ let check_test_mli_file index filename view =
           ~loc:
             (Location.v ~file:filename ~start_line:1 ~start_col:0 ~end_line:1
                ~end_col:0)
-          {
-            filename;
-            module_name = basename |> Filename.chop_extension;
-            reason = Bad_interface;
-          };
+          { filename; reason = Bad_interface };
       ]
     else []
   else []
+
+let content_target index filename =
+  is_test_file filename
+  || runner_in_wrong_file_target index filename
+  || test_mli_target index filename
 
 let test_ml_target index ml_file =
   let basename = Filename.basename ml_file in
@@ -162,65 +99,124 @@ let test_ml_target index ml_file =
   && (not (File.is_in_private_library index ml_file))
   && not (File.is_in_examples ml_file)
 
-let file_has_runner ctx ml_file =
-  try has_test_runner (Context.file_view ctx ml_file)
-  with File_view.Analysis_error _ -> false
-
 let missing_test_mli_issue files ml_file =
   let mli_path = Filename.remove_extension ml_file ^ ".mli" in
-  if List.mem mli_path files then None
+  if files mli_path then None
   else
-    let basename = Filename.basename ml_file in
     let loc =
       Location.v ~file:ml_file ~start_line:1 ~start_col:0 ~end_line:1 ~end_col:0
     in
-    Some
-      (Issue.v ~loc
-         {
-           filename = ml_file;
-           module_name = Filename.chop_extension basename;
-           reason = Missing_interface;
-         })
+    Some (Issue.v ~loc { filename = ml_file; reason = Missing_interface })
 
 (** Check if test_*.ml files have corresponding .mli files. Skip files that
     contain Alcotest.run since they shouldn't be test modules, and files that
     belong to private libraries. *)
-let check_missing_test_mli ctx index files =
-  List.filter_map
-    (fun ml_file ->
-      if test_ml_target index ml_file && not (file_has_runner ctx ml_file) then
-        missing_test_mli_issue files ml_file
-      else None)
-    files
+let check_missing_test_mli ctx index ml_file ~has_runner =
+  if test_ml_target index ml_file && not has_runner then
+    missing_test_mli_issue ctx.Context.selected_file ml_file
+  else None
 
-(** Check all files for test convention issues *)
-let check ctx =
-  let files = Context.analyze_set ctx in
-  let index = Context.index ctx in
-  (* Debug log to see what files we're analyzing *)
-  Log.debug (fun m -> m "E600: Analyzing %d files:" (List.length files));
-  List.iter (fun f -> Log.debug (fun m -> m "E600:   - %s" f)) files;
-
-  (* Check for missing .mli files for test modules *)
-  let missing_mli_issues = check_missing_test_mli ctx index files in
-
-  let content_issues =
-    List.concat_map
-      (fun filename ->
-        if File_kind.is_ml_or_mli filename then
-          try
-            let view = Context.file_view ctx filename in
-            check_test_file_uses_modules filename view
-            @ check_runner_in_wrong_file index filename view
-            @ check_test_mli_file index filename view
-          with File_view.Analysis_error _ -> []
-        else [])
-      files
+let path_ends_with path suffix =
+  let rec drop n xs =
+    if n <= 0 then xs else match xs with [] -> [] | _ :: xs -> drop (n - 1) xs
   in
+  let len = List.length path in
+  let suffix_len = List.length suffix in
+  len >= suffix_len && drop (len - suffix_len) path = suffix
 
-  missing_mli_issues @ content_issues
+let expr_calls expr suffix =
+  match Query.Expr.callee_parts expr with
+  | Some path -> path_ends_with path suffix
+  | None -> false
 
-let pp ppf { filename; module_name = _; reason } =
+let expr_references_test_suite expr =
+  match expr.T.exp_desc with
+  | Texp_ident (path, _, _) -> (
+      match List.rev (Query.Path.parts path) with
+      | "suite" :: module_name :: _ ->
+          String.starts_with ~prefix:"Test_" module_name
+      | _ -> false)
+  | _ -> false
+
+type state = {
+  filename : string;
+  index : Project_index.t option;
+  mutable has_runner : bool;
+  mutable defines_own : bool;
+  mutable uses_test_suite : bool;
+}
+
+let visit_expr state (expr : T.expression) =
+  if not state.has_runner then
+    state.has_runner <- expr_calls expr [ "Alcotest"; "run" ];
+  if not state.uses_test_suite then
+    state.uses_test_suite <- expr_references_test_suite expr
+
+let visit_structure_item state item =
+  if is_test_file state.filename && not state.defines_own then
+    state.defines_own <- item_defines_tests item
+
+let content_issues ctx index state =
+  let filename = state.filename in
+  let runner_issue =
+    if
+      is_test_file filename && state.has_runner && state.defines_own
+      && not state.uses_test_suite
+    then
+      [
+        Issue.v
+          ~loc:
+            (Location.v ~file:filename ~start_line:1 ~start_col:0 ~end_line:1
+               ~end_col:0)
+          { filename; reason = Runner_defines_inline_tests };
+      ]
+    else []
+  in
+  let wrong_file_issue =
+    if runner_in_wrong_file_target index filename && state.has_runner then
+      [
+        Issue.v
+          ~loc:
+            (Location.v ~file:filename ~start_line:1 ~start_col:0 ~end_line:1
+               ~end_col:0)
+          { filename; reason = Runner_in_module };
+      ]
+    else []
+  in
+  let bad_mli_issue =
+    if test_mli_target index filename then check_test_mli_file index filename (Context.view ctx)
+    else []
+  in
+  runner_issue @ wrong_file_issue @ bad_mli_issue
+
+let init ctx =
+  {
+    filename = ctx.Context.filename;
+    index = ctx.Context.project_index;
+    has_runner = false;
+    defines_own = false;
+    uses_test_suite = false;
+  }
+
+let select ctx =
+  match ctx.Context.project_index with
+  | None -> false
+  | Some index ->
+      let filename = ctx.filename in
+      test_ml_target index filename || content_target index filename
+
+let finish ctx state =
+  match state.index with
+  | None -> []
+  | Some index ->
+      let filename = state.filename in
+      if test_ml_target index filename || content_target index filename then
+        Option.to_list
+          (check_missing_test_mli ctx index filename ~has_runner:state.has_runner)
+        @ content_issues ctx index state
+      else []
+
+let pp ppf { filename; reason } =
   match reason with
   | Bad_interface ->
       Fmt.pf ppf
@@ -249,4 +245,6 @@ let rule =
        (test_*.mli) should only export a 'suite' value with type 'string * \
        unit Alcotest.test_case list' and no other values. (3) Alcotest.run \
        should only appear in test.ml, not in individual test_*.ml modules."
-    ~examples:[] ~pp (Project check)
+    ~examples:[] ~pp
+    (Rule.pass ~select ~init ~expr:visit_expr ~structure_item:visit_structure_item
+       ~finish ())

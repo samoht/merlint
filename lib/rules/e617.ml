@@ -41,21 +41,6 @@ let extract_suite_name_of_expr (expr : T.expression) =
 
 (** Locate the suite name from a typed structure by looking for
     [let suite = ("name", ...)] bindings. *)
-let suite_name view =
-  let found = ref None in
-  Query.iter_structure_items view (fun (item : T.structure_item) ->
-      match (item.str_desc, !found) with
-      | Tstr_value (_, bindings), None ->
-          found :=
-            List.find_map
-              (fun (vb : T.value_binding) ->
-                match Query.Pattern.var_name vb.vb_pat with
-                | Some "suite" -> extract_suite_name_of_expr vb.vb_expr
-                | _ -> None)
-              bindings
-      | _ -> ());
-  !found
-
 let suite_issue ~filename ~expected_name
     ((suite_name, name_loc) : string * Ocaml_parsing.Location.t) =
   let loc =
@@ -87,20 +72,39 @@ let is_test_module_file filename =
   let basename = Filename.basename filename in
   String.starts_with ~prefix:"test_" basename && File_kind.is_ml basename
 
-let issues_of_view ~filename view =
-  let expected_name = extract_expected_name filename in
-  match suite_name view with
+type state = {
+  filename : string;
+  enabled : bool;
+  suite_name : (string * Ocaml_parsing.Location.t) option ref;
+}
+
+let visit_structure_item state (item : T.structure_item) =
+  if state.enabled then
+    match (item.str_desc, !(state.suite_name)) with
+    | Tstr_value (_, bindings), None ->
+        state.suite_name :=
+          List.find_map
+            (fun (vb : T.value_binding) ->
+              match Query.Pattern.var_name vb.vb_pat with
+              | Some "suite" -> extract_suite_name_of_expr vb.vb_expr
+              | _ -> None)
+            bindings
+    | _ -> ()
+
+let select ctx = is_test_module_file ctx.Context.filename
+
+let init ctx =
+  let filename = ctx.Context.filename in
+  { filename; enabled = true; suite_name = ref None }
+
+let finish _ state =
+  let expected_name = extract_expected_name state.filename in
+  match !(state.suite_name) with
   | None -> []
   | Some found -> (
-      match suite_issue ~filename ~expected_name found with
+      match suite_issue ~filename:state.filename ~expected_name found with
       | None -> []
       | Some issue -> [ issue ])
-
-let check (ctx : Context.file) =
-  let filename = ctx.filename in
-  if is_test_module_file filename then
-    issues_of_view ~filename (Context.view ctx)
-  else []
 
 let pp ppf { suite_name; issue_type } =
   match issue_type with
@@ -149,4 +153,5 @@ let suite = ("user_auth", tests)
 let suite = ("parser", tests)|};
         };
       ]
-    ~pp (File check)
+    ~pp
+    (Rule.pass ~select ~init ~structure_item:visit_structure_item ~finish ())
