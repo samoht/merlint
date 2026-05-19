@@ -460,7 +460,7 @@ let no_build_flag =
     "Deprecated no-op. Merlint does not build by default; pass --build to run \
      'dune build @check' before analysis."
   in
-  Arg.(value & flag & info [ "no-build" ] ~doc)
+  Term.(const ignore $ Arg.(value & flag & info [ "no-build" ] ~doc))
 
 let build_flag =
   let doc =
@@ -510,8 +510,8 @@ let parse_rule_filter rules_spec =
           Log.err (fun m -> m "Invalid rules specification: %s" msg);
           Stdlib.exit 1)
 
-let main exclude_patterns rules_spec ~show_profile ~show_config ~build
-    ~no_build:_no_build files () =
+let main exclude_patterns rules_spec ~show_profile ~show_config ~build files ()
+    =
   if show_config then show_configuration files
   else
     let rule_filter = parse_rule_filter rules_spec in
@@ -524,8 +524,8 @@ let main exclude_patterns rules_spec ~show_profile ~show_config ~build
 
 let analyze_term =
   Term.(
-    const (fun e r p c b n f u ->
-        main e r ~show_profile:p ~show_config:c ~build:b ~no_build:n f u)
+    const (fun e r p c b () f u ->
+        main e r ~show_profile:p ~show_config:c ~build:b f u)
     $ exclude_flag $ rules_flag $ profile_flag $ show_config_flag $ build_flag
     $ no_build_flag $ files
     $ Term.(const (fun () () -> ()) $ Vlog.setup "merlint" $ Memtrace.term))
