@@ -9,16 +9,24 @@ module Tast_iterator = Ocaml_typing.Tast_iterator
 type exclusion_stats = { rule : string; file : string }
 type result = { issues : Rule.Run.result list; excluded : exclusion_stats list }
 
-let warn_missing_cmts n =
-  if n > 0 then
+let warn_missing_cmts stats =
+  if stats.Merlin.cmt_misses > 0 then
+    let files = stats.cmt_miss_files in
+    let sample = List.filteri (fun i _ -> i < 10) files in
+    let extra = List.length files - List.length sample in
+    let pp_sample ppf files =
+      List.iter (fun file -> Fmt.pf ppf "@,%s" file) files;
+      if extra > 0 then Fmt.pf ppf "@,... and %d more" extra
+    in
     Log.warn (fun m ->
         m
-          "%d typedtree-backed quer%s found no fresh .cmt/.cmti file. The \
+          "@[<v>%d typedtree-backed quer%s found no fresh .cmt/.cmti file. The \
            affected typedtree-backed rule runs were skipped for those files; \
            run [dune build @check] (or pass [--build]) before merlint so the \
-           build artefacts are present and up to date."
-          n
-          (if n = 1 then "y" else "ies"))
+           build artefacts are present and up to date.%a@]"
+          stats.cmt_misses
+          (if stats.cmt_misses = 1 then "y" else "ies")
+          pp_sample sample)
 
 let log_fs_stats () =
   let s = Fs.stats () in
@@ -34,7 +42,7 @@ let log_backend_stats backend =
   Log.info (fun m ->
       m "Merlin stats: cmt_hits=%d cmt_misses=%d cmt_reads=%d source_parses=%d"
         s.cmt_hits s.cmt_misses s.cmt_reads s.source_parses);
-  warn_missing_cmts s.cmt_misses
+  warn_missing_cmts s
 
 let run_file_rule ?profiling ctx rule =
   let code = Rule.code rule in
@@ -307,14 +315,15 @@ let run ?domain_mgr ~load_file ~filter ~dune_describe ?analyze_set ~index
     ?profiling project_root =
   Log.info (fun m -> m "Starting analysis of %s" project_root);
   let backend = Merlin.v ~root_dir:project_root () in
-  let raw_analyze_set =
-    match analyze_set with
-    | Some files -> files
-    | None -> Dune_describe.project_files dune_describe
-  in
   let run_with_pool ?pool () =
     let idx = lazy (index ?pool ()) in
-    let analyze_set = drop_vendored_files (Lazy.force idx) raw_analyze_set in
+    let idx_value = Lazy.force idx in
+    let raw_analyze_set =
+      match analyze_set with
+      | Some files -> files
+      | None -> Project_index.source_files idx_value
+    in
+    let analyze_set = drop_vendored_files idx_value raw_analyze_set in
     let file_view = file_view ?profiling ~load_file ~backend in
     let _config, project_ctx, enabled_rules =
       setup_analysis ~filter ~dune_describe ~analyze_set ~index:idx ~file_view

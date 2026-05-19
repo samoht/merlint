@@ -13,8 +13,8 @@ exception Analysis_error of string
 type t
 
 val pp : t Fmt.t
-(** [pp] prints a {!t} as its filename — enough to identify the view in
-    debug output. *)
+(** [pp] prints a {!t} as its filename — enough to identify the view in debug
+    output. *)
 
 val v :
   filename:string ->
@@ -199,9 +199,9 @@ module Value_sig : sig
   *)
 
   val type_path : t -> Name.t option
-  (** [type_path v] is the outermost type-constructor path of the declared
-      type, when the type is a [Ttyp_constr] / [Ptyp_constr]; [None] for
-      arrows, tuples, variables, etc. *)
+  (** [type_path v] is the outermost type-constructor path of the declared type,
+      when the type is a [Ttyp_constr] / [Ptyp_constr]; [None] for arrows,
+      tuples, variables, etc. *)
 end
 
 (** {2 Function-application sites — typedtree walk} *)
