@@ -1,0 +1,15 @@
+opam-version: "2.0"
+synopsis: "Vendored library that merlint must ignore"
+maintainer: "ext"
+authors: "ext"
+homepage: "https://example.org/ext"
+bug-reports: "https://example.org/ext"
+dev-repo: "git+https://example.org/ext.git"
+depends: [
+  "dune" {>= "3.0"}
+  "ocaml"
+]
+build: [
+  ["dune" "subst"] {dev}
+  ["dune" "build" "-p" name "-j" jobs]
+]

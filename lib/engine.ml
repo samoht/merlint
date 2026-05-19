@@ -324,6 +324,16 @@ let analyze_files ?domain_mgr ~project_ctx ~project_root ~file_rules ?profiling
       let groups = group_files_by_package (Context.index project_ctx) files in
       Fs.parallel_map dm groups analyse_pkg |> List.concat
 
+(* A file is vendored when every library that owns it is vendored. Files outside
+   any indexed library (orphan sources, scripts) pass through unfiltered. *)
+let file_is_vendored index file =
+  match Project_index.libraries_of_file index file with
+  | [] -> false
+  | libs -> List.for_all Project_index.Library.is_vendored libs
+
+let drop_vendored_files index files =
+  List.filter (fun f -> not (file_is_vendored index f)) files
+
 let run ?domain_mgr ~load_file ~filter ~dune_describe ?analyze_set ~index
     ?profiling project_root =
   Log.info (fun m -> m "Starting analysis of %s" project_root);
@@ -333,6 +343,10 @@ let run ?domain_mgr ~load_file ~filter ~dune_describe ?analyze_set ~index
     match analyze_set with
     | Some files -> files
     | None -> Dune_describe.project_files dune_describe
+  in
+  let analyze_set =
+    let idx = Lazy.force index in
+    drop_vendored_files idx analyze_set
   in
   let file_view = file_view ?profiling ~stats ~load_file ~backend in
   let _config, project_ctx, enabled_rules =

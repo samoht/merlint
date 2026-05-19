@@ -4,6 +4,7 @@
   merlint
   merlint_doc
   ocaml-merlin
+  ocaml-project-index
   alcotest
   compiler-libs.common
   eio
