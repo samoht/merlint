@@ -99,6 +99,7 @@ let run_file_rule ?profiling ctx rule =
   Log.debug (fun m -> m "Running rule %s on %s" code ctx.Context.filename);
   let start_time = Unix.gettimeofday () in
   let res =
+    Trace.rule_span code @@ fun () ->
     try Rule.Run.file rule ctx
     with exn ->
       Log.err (fun m ->
@@ -124,6 +125,7 @@ let run_project_job ?profiling job =
   Log.debug (fun m -> m "Running project rule job %s" code);
   let start_time = Unix.gettimeofday () in
   let res =
+    Trace.rule_span code @@ fun () ->
     try Rule.Run.project_job job
     with exn ->
       Log.err (fun m ->
@@ -141,7 +143,7 @@ let run_project_job ?profiling job =
 let merlin_op ?profiling ?stats filename f =
   Option.iter (fun stats -> record_merlin_call stats filename) stats;
   let start = Unix.gettimeofday () in
-  let r = f () in
+  let r = Trace.merlin_span "typedtree" f in
   let duration = Unix.gettimeofday () -. start in
   (match profiling with
   | Some prof ->
@@ -150,13 +152,19 @@ let merlin_op ?profiling ?stats filename f =
   | None -> ());
   r
 
+let source_filename filename =
+  let file = Fpath.v filename in
+  if Fpath.is_abs file then Fpath.to_string (Fpath.normalize file)
+  else Fpath.(v (Sys.getcwd ()) // file |> normalize |> to_string)
+
 let file_view ?profiling ~stats ~load_file ~backend filename =
+  let source_filename = source_filename filename in
   let content =
     lazy
       (record_file_read stats filename;
-       load_file filename)
+       load_file source_filename)
   in
-  let source = Merlin.Source.v ~file:filename ~content in
+  let source = Merlin.Source.v ~file:source_filename ~content in
   let typedtree () =
     merlin_op ?profiling ?stats:(Some stats) filename (fun () ->
         Merlin.typedtree backend ~source)
@@ -339,10 +347,12 @@ let run ?domain_mgr ~load_file ~filter ~dune_describe ?analyze_set ~index
       Merlin.close backend)
     (fun () ->
       let project_issues, project_excluded =
+        Trace.span "merlint.phase.project_rules" @@ fun () ->
         run_project_rules ?domain_mgr ?profiling enabled_rules project_ctx
       in
       let file_rules = List.filter Rule.is_file_scoped enabled_rules in
       let file_results =
+        Trace.span "merlint.phase.file_rules" @@ fun () ->
         analyze_files ?domain_mgr ~project_ctx ~project_root ~file_rules
           ?profiling analyze_set
       in

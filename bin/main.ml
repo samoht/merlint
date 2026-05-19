@@ -351,62 +351,74 @@ let build_dune_describe ~project_root files =
 
 let load_file_via_eio fs filename = Eio.Path.load Eio.Path.(fs / filename)
 
+let project_root_of_files = function
+  | file :: _ -> Merlint.Project.root file
+  | [] -> Merlint.Project.root "."
+
+let files_for_cmt_refresh analyze_set filtered_describe =
+  match analyze_set with
+  | Some files -> files
+  | None -> Merlint.Dune_describe.project_files filtered_describe
+
+let maybe_build_project mgr ~project_root ~analyze_set ~filtered_describe ~build
+    ~no_build =
+  if build || not no_build then (
+    Log.info (fun m -> m "Building project...");
+    ensure_project_built ~path:project_root mgr;
+    let files = files_for_cmt_refresh analyze_set filtered_describe in
+    refresh_stale_cmt_targets ~path:project_root ~files mgr;
+    Log.info (fun m -> m "Build done."))
+
+let monorepo_for_index project_root =
+  let cwd = Fpath.(v (Sys.getcwd ()) |> normalize) in
+  let root = Fpath.(v project_root |> normalize) in
+  match Fpath.rem_prefix cwd root with
+  | Some rel when Fpath.to_string rel <> "" -> rel
+  | Some _ -> Fpath.v "."
+  | None -> root
+
+let resolve_index_root raw =
+  let p = Fpath.v raw in
+  if Fpath.is_abs p then Fpath.normalize p
+  else Fpath.normalize Fpath.(v (Sys.getcwd ()) // p)
+
+let index_roots_of_files = function
+  | [] -> None
+  | xs -> Some (List.map resolve_index_root xs)
+
+let build_project_index ~domain_mgr ~fs ~monorepo ?roots () =
+  let t0 = Unix.gettimeofday () in
+  let idx =
+    Merlint.Trace.span "merlint.phase.project_index" @@ fun () ->
+    Project_index.build ~domain_mgr ?roots ~fs ~monorepo ()
+  in
+  Log.info (fun m ->
+      m "Project_index.build: %.0f ms" ((Unix.gettimeofday () -. t0) *. 1000.0));
+  idx
+
 let analyze_files mgr fs domain_mgr ?(exclude_patterns = []) ?rule_filter
     ?(show_profile = false) ?(build = false) ?(no_build = false) files =
   let load_file = load_file_via_eio fs in
-  (* Find project root *)
-  let project_root =
-    match files with
-    | file :: _ -> Merlint.Project.root file
-    | [] -> Merlint.Project.root "."
-  in
-
+  let project_root = project_root_of_files files in
   Log.info (fun m -> m "Dune root: %s (cwd: %s)" project_root (Sys.getcwd ()));
   Fmt.pr "Dune root: %s@." project_root;
-
-  (* Build dune describes from directories/files *)
   Log.info (fun m -> m "Scanning project structure...");
-  let dune_describe, analyze_set = build_dune_describe ~project_root files in
+  let dune_describe, analyze_set =
+    Merlint.Trace.span "merlint.phase.dune_describe" @@ fun () ->
+    build_dune_describe ~project_root files
+  in
 
   (* Apply exclusions (including cram directories which are already filtered) *)
   let filtered_describe =
     if exclude_patterns = [] then dune_describe
     else Merlint.Dune_describe.exclude exclude_patterns dune_describe
   in
-
-  (* Ensure project is built before running typedtree-backed analyses, then
-     explicitly refresh stale bytecode .cmt targets for the actual analysis
-     set. Dune may rebuild native objects while leaving byte .cmt files stale. *)
-  if build || not no_build then (
-    Log.info (fun m -> m "Building project...");
-    ensure_project_built ~path:project_root mgr;
-    let files =
-      match analyze_set with
-      | Some files -> files
-      | None -> Merlint.Dune_describe.project_files filtered_describe
-    in
-    refresh_stale_cmt_targets ~path:project_root ~files mgr;
-    Log.info (fun m -> m "Build done."));
-
-  let monorepo = Fpath.v project_root in
-  let resolve_root raw =
-    let p = Fpath.v raw in
-    if Fpath.is_abs p then Fpath.normalize p
-    else Fpath.normalize Fpath.(v (Sys.getcwd ()) // p)
-  in
-  let index_roots =
-    match files with [] -> None | xs -> Some (List.map resolve_root xs)
-  in
+  maybe_build_project mgr ~project_root ~analyze_set ~filtered_describe ~build
+    ~no_build;
+  let monorepo = monorepo_for_index project_root in
+  let index_roots = index_roots_of_files files in
   let index =
-    lazy
-      (let t0 = Unix.gettimeofday () in
-       let idx =
-         Project_index.build ~domain_mgr ?roots:index_roots ~fs ~monorepo ()
-       in
-       Log.info (fun m ->
-           m "Project_index.build: %.0f ms"
-             ((Unix.gettimeofday () -. t0) *. 1000.0));
-       idx)
+    lazy (build_project_index ~domain_mgr ~fs ~monorepo ?roots:index_roots ())
   in
   run_analysis ~domain_mgr ~load_file project_root filtered_describe analyze_set
     index rule_filter show_profile
