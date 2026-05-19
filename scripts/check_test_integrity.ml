@@ -80,8 +80,7 @@ let is_rule_code s =
   && (s.[0] = 'e' || s.[0] = 'E')
   &&
   let rest = String.sub s 1 (String.length s - 1) in
-  String.length rest > 0
-  && String.for_all (fun c -> c >= '0' && c <= '9') rest
+  String.length rest > 0 && String.for_all (fun c -> c >= '0' && c <= '9') rest
 
 (* Extract error code from directory name *)
 let extract_error_code dir_name =

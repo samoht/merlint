@@ -4,11 +4,10 @@ would otherwise trip E105 (catch-all handler), E300 (variant naming), E505
 (missing mli), and others. A clean run proves merlint honours the dune
 boundary.
 
-  $ merlint -B .
+  $ merlint --build .
+  Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
-
-  Analyzing 0 files
-
+  
   ✓ Code Quality (0 total issues)
   ✓ Code Style (0 total issues)
   ✓ Naming Conventions (0 total issues)
@@ -17,6 +16,8 @@ boundary.
   ✓ Test Quality (0 total issues)
   ✓ Interop Testing (0 total issues)
   ✓ Code Generation (0 total issues)
-
+  
   Summary: ✓ 0 total issues (applied 92 rules)
   ✓ All checks passed!
+
+
