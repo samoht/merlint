@@ -40,12 +40,12 @@ let issue_for ctx (doc : Project_index.doc_file) =
         Fpath.v path_s |> Loc.current_dir_relative |> Fpath.to_string
       in
       let dune_file =
-        Fpath.(parent doc.path / "dune")
-        |> Loc.current_dir_relative |> Fpath.to_string
+        doc.Project_index.dune_file |> Loc.current_dir_relative
+        |> Fpath.to_string
       in
       Some
         (Issue.v ~loc:(Location.in_file display)
-           { dune_file; doc_file = Filename.basename display })
+           { dune_file; doc_file = display })
 
 let docs_in_scope ctx =
   let docs = ref [] in
@@ -67,15 +67,13 @@ let check (ctx : Context.project) =
   docs_in_scope ctx |> List.filter_map (issue_for ctx)
 
 let pp ppf { dune_file; doc_file } =
-  Fmt.pf ppf "%s/%s: contains OCaml code blocks but %s has no (mdx ...) stanza"
-    (Filename.dirname dune_file)
+  Fmt.pf ppf "%s: contains OCaml code blocks but %s has no (mdx ...) stanza"
     doc_file dune_file
 
 let rule =
   Rule.v ~code:"E920" ~title:"Untested OCaml code in documentation"
     ~hint:
-      "When a README.md, .mli or .mld contains OCaml code blocks (```ocaml \
-       fenced or {[ ... ]} odoc), add an (mdx (files <file>)) stanza to the \
-       same directory's dune file so the snippets are type-checked and run \
-       during dune test."
+      "When a README.md, .mli or .mld contains OCaml code examples, add an \
+       (mdx (files <file>)) stanza to the owning dune file so the snippets are \
+       type-checked and run during dune test."
     ~category:Rule.Documentation ~examples:[] ~pp (Project check)

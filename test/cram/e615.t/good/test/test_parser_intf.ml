@@ -1,0 +1,1 @@
+let companion_value = ()

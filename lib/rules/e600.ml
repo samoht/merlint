@@ -18,7 +18,9 @@ let is_test_file filename =
   (* Only test executables named test.ml should follow this convention *)
   Filename.basename filename = "test.ml"
 
-let is_test_module_basename basename = String.starts_with ~prefix:"test_" basename
+let is_test_module_basename basename =
+  String.starts_with ~prefix:"test_" basename
+  && not (File.is_unit_companion_module basename)
 
 let is_library_file index filename =
   let file = Fpath.v filename |> Fpath.normalize in
@@ -67,7 +69,7 @@ let test_mli_target index filename =
   File_kind.is_mli basename
   && is_test_module_basename (Filename.remove_extension basename)
   && basename <> "test.mli"
-  && not (is_library_file index filename)
+  && (not (is_library_file index filename))
   && (not (File.is_in_private_library index filename))
   && not (File.is_in_examples filename)
 
@@ -114,7 +116,7 @@ let check_runner_in_wrong_file index filename view =
     File_kind.is_ml basename
     && is_test_module_basename (Filename.remove_extension basename)
     && basename <> "test.ml"
-    && not (is_library_file index filename)
+    && (not (is_library_file index filename))
     && (not (File.is_in_examples filename))
     && has_test_runner view
   then
@@ -156,7 +158,7 @@ let test_ml_target index ml_file =
   File_kind.is_ml ml_file
   && is_test_module_basename (Filename.remove_extension basename)
   && basename <> "test.ml"
-  && not (is_library_file index ml_file)
+  && (not (is_library_file index ml_file))
   && (not (File.is_in_private_library index ml_file))
   && not (File.is_in_examples ml_file)
 

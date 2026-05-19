@@ -1,5 +1,4 @@
 type file_facts = { suite_callers : Suite.callers option }
-
 type t = { facts : (string, file_facts) Hashtbl.t; lock : Eio.Mutex.t }
 
 let walk view = { suite_callers = Suite.callers view }

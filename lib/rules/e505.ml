@@ -18,16 +18,16 @@ let should_skip_module ~executable_modules ~test_modules ml_file =
   let is_test =
     is_test_module module_name module_name_capitalized test_modules
   in
-  let is_intf = String.ends_with ~suffix:"_intf" module_name in
+  let is_companion = File.is_unit_companion_module module_name in
   if is_exe then
     Log.debug (fun m ->
         m "File %s is executable (module %s)" ml_file module_name_capitalized);
   if is_test then
     Log.debug (fun m ->
         m "File %s is test module (module %s)" ml_file module_name);
-  if is_intf then
-    Log.debug (fun m -> m "File %s is interface definition file" ml_file);
-  is_exe || is_test || is_intf
+  if is_companion then
+    Log.debug (fun m -> m "File %s is unit companion module" ml_file);
+  is_exe || is_test || is_companion
 
 let source_path ~root file =
   let file = Fpath.v file in
@@ -79,8 +79,8 @@ let check_file ~is_library_file ~is_virtual_impl_file ~files ~executable_modules
   else if not (is_library_file ml_file) then None
   else
     let module_name = Filename.basename (Filename.remove_extension ml_file) in
-    let is_intf = String.ends_with ~suffix:"_intf" module_name in
-    if is_intf then None
+    let is_companion = File.is_unit_companion_module module_name in
+    if is_companion then None
     else if should_skip_module ~executable_modules ~test_modules ml_file then
       (* For a library-owned module, only executable ownership should suppress
          E505. Test-shaped names such as [test_helpers] still need interfaces
@@ -88,8 +88,8 @@ let check_file ~is_library_file ~is_virtual_impl_file ~files ~executable_modules
       let module_name_capitalized = String.capitalize_ascii module_name in
       if List.mem module_name_capitalized executable_modules then None
       else missing_mli_issue files ml_file
-  else if is_virtual_impl_file ml_file then None
-  else missing_mli_issue files ml_file
+    else if is_virtual_impl_file ml_file then None
+    else missing_mli_issue files ml_file
 
 let check (ctx : Context.project) =
   let files = Context.analyze_set ctx in

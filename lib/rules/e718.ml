@@ -14,13 +14,13 @@ let is_valid basename =
 let fuzz_stanzas ctx =
   Context.test_stanzas ctx @ Context.executable_stanzas ctx
   |> List.filter_map (fun stanza ->
-         let fuzz_files =
-           Project_index.source_stanza_files stanza
-           |> List.filter (fun f -> Fpath.has_ext ".ml" f && File.is_in_fuzz_dir f)
-         in
-         match fuzz_files with
-         | [] -> None
-         | _ -> Some (Project_index.source_stanza_name stanza, fuzz_files))
+      let fuzz_files =
+        Project_index.source_stanza_files stanza
+        |> List.filter (fun f -> Fpath.has_ext ".ml" f && File.is_in_fuzz_dir f)
+      in
+      match fuzz_files with
+      | [] -> None
+      | _ -> Some (Project_index.source_stanza_name stanza, fuzz_files))
 
 let naming_issue stanza_name file =
   let basename = Fpath.(file |> rem_ext |> basename) in
