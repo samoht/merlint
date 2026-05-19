@@ -101,7 +101,7 @@ let run_file_rule ?profiling ctx rule =
   Log.debug (fun m -> m "Running rule %s on %s" code ctx.Context.filename);
   let start_time = Unix.gettimeofday () in
   let res =
-    Trace.rule_span code @@ fun () ->
+
     try Rule.Run.file rule ctx
     with exn ->
       Log.err (fun m ->
@@ -127,7 +127,7 @@ let run_project_job ?profiling job =
   Log.debug (fun m -> m "Running project rule job %s" code);
   let start_time = Unix.gettimeofday () in
   let res =
-    Trace.rule_span code @@ fun () ->
+
     try Rule.Run.project_job job
     with exn ->
       Log.err (fun m ->
@@ -145,7 +145,7 @@ let run_project_job ?profiling job =
 let merlin_op ?profiling ?stats filename f =
   Option.iter (fun stats -> record_merlin_call stats filename) stats;
   let start = Unix.gettimeofday () in
-  let r = Trace.merlin_span "typedtree" f in
+  let r = f () in
   let duration = Unix.gettimeofday () -. start in
   (match profiling with
   | Some prof ->
@@ -396,11 +396,11 @@ let run ?domain_mgr ~load_file ~filter ~dune_describe ?analyze_set ~index
     let project_promise, project_resolver = Eio.Promise.create () in
     let file_promise, file_resolver = Eio.Promise.create () in
     Eio.Fiber.fork ~sw (fun () ->
-        Trace.span "merlint.phase.project_rules" @@ fun () ->
+
         run_project_rules ?pool ?profiling enabled_rules project_ctx
         |> Eio.Promise.resolve project_resolver);
     Eio.Fiber.fork ~sw (fun () ->
-        Trace.span "merlint.phase.file_rules" @@ fun () ->
+
         analyze_files ?pool ~project_ctx ~project_root ~file_rules ~pass_rules
           ?profiling analyze_set
         |> Eio.Promise.resolve file_resolver);

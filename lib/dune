@@ -21,7 +21,6 @@
   bytesrw
   nox-sexp
   ocaml-project-index
-  runtime_events
   unix))
 
 (rule
