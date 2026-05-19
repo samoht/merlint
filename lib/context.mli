@@ -116,6 +116,14 @@ val test_modules : project -> string list
 val dune_describe : project -> Dune_describe.describe
 (** [dune_describe project] returns the dune project description. *)
 
+val executable_stanzas : project -> Project_index.source_stanza list
+(** [executable_stanzas project] returns the executable stanzas discovered by
+    the shared project index. *)
+
+val test_stanzas : project -> Project_index.source_stanza list
+(** [test_stanzas project] returns the test stanzas discovered by the shared
+    project index. *)
+
 val file_view : project -> string -> File_view.t
 (** [file_view project filename] returns the shared, lazy file view for
     [filename]. *)

@@ -12,20 +12,21 @@ type payload = {
 }
 
 (** Collect fuzz directories from executable stanzas. *)
-let fuzz_dirs dune_describe =
+let fuzz_dirs ctx =
   let dirs =
     List.filter_map
-      (fun (name, files) ->
+      (fun exe ->
+        let name = Project_index.source_stanza_name exe in
         if not (String.starts_with ~prefix:"fuzz" name) then None
         else
           match
             List.find_opt
               (fun f -> Fpath.has_ext ".ml" f && File.is_in_fuzz_dir f)
-              files
+              (Project_index.source_stanza_files exe)
           with
           | Some f -> Some (Fpath.parent f |> Fpath.to_string)
           | None -> None)
-      (Dune_describe.executables dune_describe)
+      (Context.executable_stanzas ctx)
   in
   List.sort_uniq String.compare dirs
 
@@ -107,8 +108,7 @@ let check_dir ctx dir =
 (** Check that fuzz dune files contain required rule aliases with proper
     content. *)
 let check (ctx : Context.project) =
-  let dune_describe = Context.dune_describe ctx in
-  List.concat_map (check_dir ctx) (fuzz_dirs dune_describe)
+  List.concat_map (check_dir ctx) (fuzz_dirs ctx)
 
 let pp ppf { directory; kind } =
   match kind with

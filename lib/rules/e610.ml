@@ -61,19 +61,18 @@ let library_module_path file =
 
 let library_module_paths libraries =
   List.concat_map
-    (fun (lib_info : Dune_describe.library_info) ->
-      List.filter_map library_module_path lib_info.files)
+    (fun lib -> List.filter_map library_module_path (Project_index.Library.files lib))
     libraries
 
 let library_source_files libraries =
   List.concat_map
-    (fun (lib_info : Dune_describe.library_info) ->
+    (fun lib ->
       List.filter_map
         (fun file ->
           if Fpath.has_ext ".ml" file || Fpath.has_ext ".mli" file then
             Some (Fpath.to_string file)
           else None)
-        lib_info.files)
+        (Project_index.Library.files lib))
     libraries
 
 module String_set = Set.Make (String)
@@ -145,8 +144,7 @@ let check_test_file ~library_module_paths ~referenced_modules file =
         else Some (missing_library_issue file expected_path)
 
 let check ctx =
-  let dune_describe = Context.dune_describe ctx in
-  let libraries = Dune_describe.libraries dune_describe in
+  let libraries = Project_query.source_libraries (Context.index ctx) in
   let library_module_paths = library_module_paths libraries in
   let referenced_modules =
     collect_referenced_modules ctx (library_source_files libraries)
@@ -155,9 +153,8 @@ let check ctx =
       m "E610: library_module_paths = %a"
         Fmt.(list ~sep:comma string)
         library_module_paths);
-  Dune_describe.tests dune_describe
-  |> List.concat_map (fun (test_info : Dune_describe.test_info) ->
-      test_info.files)
+  Context.test_stanzas ctx
+  |> List.concat_map Project_index.source_stanza_files
   |> List.filter_map (check_test_file ~library_module_paths ~referenced_modules)
 
 let pp ppf { test_file = _; expected_module } =

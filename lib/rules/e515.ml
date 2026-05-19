@@ -17,29 +17,27 @@ let is_test_support_library name =
   String.starts_with ~prefix:"test" name_lower
 
 let check (ctx : Context.project) =
-  let dune_describe = Context.dune_describe ctx in
-  let libraries = Dune_describe.libraries dune_describe in
-  let tests = Dune_describe.tests dune_describe in
-
   (* Get directories containing non-test library files *)
   let lib_dirs =
     List.concat_map
-      (fun (lib : Dune_describe.library_info) ->
+      (fun lib ->
         (* Skip test support libraries *)
-        if is_test_support_library lib.name then []
+        let name = Project_index.Library.local_name lib in
+        if is_test_support_library name then []
         else
           List.filter_map
             (fun file ->
               let dir = Fpath.parent file |> Fpath.to_string in
               (* Skip if this is already a test directory *)
-              if is_test_directory dir then None else Some (dir, lib.name))
-            lib.files)
-      libraries
+              if is_test_directory dir then None else Some (dir, name))
+            (Project_index.Library.files lib))
+      (Project_query.source_libraries (Context.index ctx))
   in
 
   (* Check if any test files are in the same directory as library files *)
   List.concat_map
-    (fun (test : Dune_describe.test_info) ->
+    (fun test ->
+      let test_name = Project_index.source_stanza_name test in
       List.filter_map
         (fun file ->
           let test_dir = Fpath.parent file |> Fpath.to_string in
@@ -57,11 +55,11 @@ let check (ctx : Context.project) =
                    {
                      directory = dir;
                      library_name = lib_name;
-                     test_name = test.name;
+                     test_name;
                    })
           | None -> None)
-        test.files)
-    tests
+        (Project_index.source_stanza_files test))
+    (Context.test_stanzas ctx)
 
 let pp ppf { directory; library_name; test_name } =
   Fmt.pf ppf

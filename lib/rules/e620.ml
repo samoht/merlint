@@ -3,16 +3,17 @@
 type payload = { directory : string; stanza_names : string list }
 
 let check (ctx : Context.project) =
-  let dune_describe = Context.dune_describe ctx in
-  let tests = Dune_describe.tests dune_describe in
   (* Group test stanzas by directory *)
   let by_dir =
     List.filter_map
-      (fun (t : Dune_describe.test_info) ->
-        match t.files with
-        | f :: _ -> Some (Fpath.parent f |> Fpath.to_string, t.name)
+      (fun t ->
+        match Project_index.source_stanza_files t with
+        | f :: _ ->
+            Some
+              ( Fpath.parent f |> Fpath.to_string,
+                Project_index.source_stanza_name t )
         | [] -> None)
-      tests
+      (Context.test_stanzas ctx)
   in
   let dirs = List.sort_uniq String.compare (List.map fst by_dir) in
   List.concat_map

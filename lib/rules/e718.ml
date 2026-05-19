@@ -11,30 +11,16 @@ let is_valid basename =
 
 (** Collect all stanzas with files in fuzz/ directories from both test and
     executable stanzas. *)
-let fuzz_stanzas dune_describe =
-  let from_tests =
-    List.filter_map
-      (fun (t : Dune_describe.test_info) ->
-        let fuzz_files =
-          List.filter
-            (fun f -> Fpath.has_ext ".ml" f && File.is_in_fuzz_dir f)
-            t.files
-        in
-        match fuzz_files with [] -> None | _ -> Some (t.name, fuzz_files))
-      (Dune_describe.tests dune_describe)
-  in
-  let from_execs =
-    List.filter_map
-      (fun (name, files) ->
-        let fuzz_files =
-          List.filter
-            (fun f -> Fpath.has_ext ".ml" f && File.is_in_fuzz_dir f)
-            files
-        in
-        match fuzz_files with [] -> None | _ -> Some (name, fuzz_files))
-      (Dune_describe.executables dune_describe)
-  in
-  from_tests @ from_execs
+let fuzz_stanzas ctx =
+  Context.test_stanzas ctx @ Context.executable_stanzas ctx
+  |> List.filter_map (fun stanza ->
+         let fuzz_files =
+           Project_index.source_stanza_files stanza
+           |> List.filter (fun f -> Fpath.has_ext ".ml" f && File.is_in_fuzz_dir f)
+         in
+         match fuzz_files with
+         | [] -> None
+         | _ -> Some (Project_index.source_stanza_name stanza, fuzz_files))
 
 let naming_issue stanza_name file =
   let basename = Fpath.(file |> rem_ext |> basename) in
@@ -109,8 +95,7 @@ let missing_issues ctx stanzas =
   |> List.concat_map (missing_issues_for_dir ctx all_files)
 
 let check (ctx : Context.project) =
-  let dune_describe = Context.dune_describe ctx in
-  let stanzas = fuzz_stanzas dune_describe in
+  let stanzas = fuzz_stanzas ctx in
   naming_issues stanzas @ missing_issues ctx stanzas
 
 let pp ppf { directory; kind } =
