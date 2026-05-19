@@ -56,8 +56,8 @@ let warn_missing_cmts n =
         m
           "%d typedtree-backed quer%s found no fresh .cmt/.cmti file. The \
            affected typedtree-backed rule runs were skipped for those files; \
-           run [dune build @check] (or pass [-B]) before merlint so the build \
-           artefacts are present and up to date."
+           run [dune build @check] (or pass [--build]) before merlint so the \
+           build artefacts are present and up to date."
           n
           (if n = 1 then "y" else "ies"))
 
@@ -324,9 +324,11 @@ let analyze_files ?domain_mgr ~project_ctx ~project_root ~file_rules ?profiling
       let groups = group_files_by_package (Context.index project_ctx) files in
       Fs.parallel_map dm groups analyse_pkg |> List.concat
 
-(* A file is vendored when every library that owns it is vendored. Files outside
-   any indexed library (orphan sources, scripts) pass through unfiltered. *)
+(* Vendored paths come from the root dune metadata. The library-owner check
+   keeps the package-level query useful for files resolved through the index. *)
 let file_is_vendored index file =
+  Project_index.is_vendored_path index file
+  ||
   match Project_index.libraries_of_file index file with
   | [] -> false
   | libs -> List.for_all Project_index.Library.is_vendored libs
