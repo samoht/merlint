@@ -1,2 +1,2 @@
 val suite : string * unit Alcotest.test_case list
-(** Tests for filesystem helper functions. *)
+(** [suite] is the Alcotest suite for filesystem helper functions. *)

@@ -1,2 +1,2 @@
 val suite : string * unit Alcotest.test_case list
-(** Tests for project-wide analysis facts. *)
+(** [suite] is the Alcotest suite for project-wide analysis facts. *)
