@@ -1,5 +1,10 @@
 type t = Ml | Mli | Other
 
+let pp ppf = function
+  | Ml -> Fmt.string ppf "Ml"
+  | Mli -> Fmt.string ppf "Mli"
+  | Other -> Fmt.string ppf "Other"
+
 let of_filename f =
   let n = String.length f in
   if
