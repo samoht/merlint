@@ -62,6 +62,142 @@ let group_issues_by_code issues =
 
 let print_fix_hints all_issues = if all_issues <> [] then exit 1
 
+let rule_category_name code =
+  match
+    List.find_opt (fun r -> Merlint.Rule.code r = code) Merlint.Data.all_rules
+  with
+  | Some rule -> Merlint.Rule.(category_name (category rule))
+  | None -> ""
+
+module Json_report = struct
+  module C = Json.Codec
+
+  type position = { line : int; column : int }
+  type location = { file : string; start : position; end_ : position }
+
+  type issue = {
+    code : string;
+    title : string;
+    category : string;
+    message : string;
+    location : location option;
+  }
+
+  type exclusion = { rule : string; file : string }
+
+  type t = {
+    project_root : string;
+    files_analyzed : int;
+    rules_applied : int;
+    total_issues : int;
+    passed : bool;
+    issues : issue list;
+    excluded : exclusion list;
+  }
+
+  let position line column = { line; column }
+  let location file start end_ = ({ file; start; end_ } : location)
+
+  let issue code title category message location =
+    { code; title; category; message; location }
+
+  let exclusion rule file = ({ rule; file } : exclusion)
+
+  let v project_root files_analyzed rules_applied total_issues passed issues
+      excluded =
+    {
+      project_root;
+      files_analyzed;
+      rules_applied;
+      total_issues;
+      passed;
+      issues;
+      excluded;
+    }
+
+  let position_json =
+    C.Object.map position
+    |> C.Object.member "line" C.int ~enc:(fun (t : position) -> t.line)
+    |> C.Object.member "column" C.int ~enc:(fun (t : position) -> t.column)
+    |> C.Object.seal
+
+  let location_json =
+    C.Object.map location
+    |> C.Object.member "file" C.string ~enc:(fun (t : location) -> t.file)
+    |> C.Object.member "start" position_json ~enc:(fun (t : location) ->
+        t.start)
+    |> C.Object.member "end" position_json ~enc:(fun (t : location) -> t.end_)
+    |> C.Object.seal
+
+  let issue_json =
+    C.Object.map issue
+    |> C.Object.member "code" C.string ~enc:(fun (t : issue) -> t.code)
+    |> C.Object.member "title" C.string ~enc:(fun (t : issue) -> t.title)
+    |> C.Object.member "category" C.string ~enc:(fun (t : issue) -> t.category)
+    |> C.Object.member "message" C.string ~enc:(fun (t : issue) -> t.message)
+    |> C.Object.member "location" (C.option location_json)
+         ~enc:(fun (t : issue) -> t.location)
+    |> C.Object.seal
+
+  let exclusion_json =
+    C.Object.map exclusion
+    |> C.Object.member "rule" C.string ~enc:(fun (t : exclusion) -> t.rule)
+    |> C.Object.member "file" C.string ~enc:(fun (t : exclusion) -> t.file)
+    |> C.Object.seal
+
+  let json =
+    C.Object.map v
+    |> C.Object.member "project_root" C.string ~enc:(fun (t : t) ->
+        t.project_root)
+    |> C.Object.member "files_analyzed" C.int ~enc:(fun (t : t) ->
+        t.files_analyzed)
+    |> C.Object.member "rules_applied" C.int ~enc:(fun (t : t) ->
+        t.rules_applied)
+    |> C.Object.member "total_issues" C.int ~enc:(fun (t : t) -> t.total_issues)
+    |> C.Object.member "passed" C.bool ~enc:(fun (t : t) -> t.passed)
+    |> C.Object.member "issues" (C.list issue_json) ~enc:(fun (t : t) ->
+        t.issues)
+    |> C.Object.member "excluded" (C.list exclusion_json) ~enc:(fun (t : t) ->
+        t.excluded)
+    |> C.Object.seal
+
+  let position_of_location (pos : Merlint.Location.position) =
+    position pos.line pos.col
+
+  let location_of_merlint (loc : Merlint.Location.t) =
+    location loc.file
+      (position_of_location loc.start)
+      (position_of_location loc.end_)
+
+  let issue_of_run run =
+    let code = Merlint.Rule.Run.code run in
+    issue code
+      (Merlint.Rule.Run.title run)
+      (rule_category_name code)
+      (Merlint.Rule.Run.message run)
+      (Option.map location_of_merlint (Merlint.Rule.Run.location run))
+
+  let exclusion_of_engine (e : Merlint.Engine.exclusion_stats) =
+    exclusion e.rule e.file
+
+  let make ~project_root ~files_analyzed ~enabled_rule_count ~excluded issues =
+    let issues =
+      issues |> List.sort Merlint.Rule.Run.compare |> List.map issue_of_run
+    in
+    let total_issues = List.length issues in
+    v project_root files_analyzed enabled_rule_count total_issues
+      (total_issues = 0) issues
+      (List.map exclusion_of_engine excluded)
+
+  let print t = Fmt.pr "%s@." (Json.to_string json t)
+end
+
+let print_json_report ~project_root ~files_analyzed ~enabled_rule_count
+    ~excluded issues =
+  Json_report.make ~project_root ~files_analyzed ~enabled_rule_count ~excluded
+    issues
+  |> Json_report.print
+
 (* Group issues by category for visual reporting *)
 let group_issues_by_category all_issues =
   let all_categories =
@@ -242,7 +378,8 @@ let print_exclusion_stats all_excluded =
     Fmt.pr "@]@."
   end
 
-let run_analysis ?domain_mgr ~load_file project_root analyze_set analyze_roots
+let run_analysis ?domain_mgr ~load_file ~json_output project_root analyze_set
+    analyze_roots
     (build_index : ?pool:Eio.Executor_pool.t -> unit -> Project_index.t)
     rule_filter show_profile ~bail =
   let profiling_state =
@@ -260,37 +397,38 @@ let run_analysis ?domain_mgr ~load_file project_root analyze_set analyze_roots
     run_engine ?domain_mgr ~load_file ?profiling:profiling_state rule_filter
       ~bail analyze_set analyze_roots build_index project_root
   in
-  (match files_analyzed with
-  | 0 -> Fmt.pr "Running merlint analysis...@.@."
-  | n -> Fmt.pr "Running merlint analysis...@.@.Analyzing %d files@.@." n);
-  print_exclusion_stats all_excluded;
-
-  (* Group issues by category for reporting *)
-  let issues_by_category = group_issues_by_category all_issues in
-
-  (* Process each category *)
-  print_categorized_issues issues_by_category;
-
-  (* Print summary table *)
-  print_summary_table issues_by_category;
-
-  (* Calculate the actual number of rules that were applied *)
   let enabled_rules = enabled_rules rule_filter in
   let enabled_rule_count = List.length enabled_rules in
+  if json_output then
+    print_json_report ~project_root ~files_analyzed ~enabled_rule_count
+      ~excluded:all_excluded all_issues
+  else (
+    (match files_analyzed with
+    | 0 -> Fmt.pr "Running merlint analysis...@.@."
+    | n -> Fmt.pr "Running merlint analysis...@.@.Analyzing %d files@.@." n);
+    print_exclusion_stats all_excluded;
 
-  (* Print custom summary *)
-  print_summary all_issues enabled_rule_count;
+    (* Group issues by category for reporting *)
+    let issues_by_category = group_issues_by_category all_issues in
 
-  (* Print profiling summary if enabled *)
-  match profiling_state with
-  | Some state ->
-      Merlint.Profiling.print_summary state;
-      Merlint.Profiling.print_rule_summary state;
-      Merlint.Profiling.print_file_summary state
-  | None ->
-      ();
+    (* Process each category *)
+    print_categorized_issues issues_by_category;
 
-      print_fix_hints all_issues
+    (* Print summary table *)
+    print_summary_table issues_by_category;
+
+    (* Print custom summary *)
+    print_summary all_issues enabled_rule_count;
+
+    (* Print profiling summary if enabled *)
+    match profiling_state with
+    | Some state ->
+        Merlint.Profiling.print_summary state;
+        Merlint.Profiling.print_rule_summary state;
+        Merlint.Profiling.print_file_summary state
+    | None -> ());
+
+  print_fix_hints all_issues
 
 let ensure_project_built ~path mgr =
   match Merlint.Build.ensure_project_built ~path mgr with
@@ -398,11 +536,12 @@ let build_project_index ~fs ~monorepo ?roots ?pool () =
   idx
 
 let analyze_files mgr fs domain_mgr ?(exclude_patterns = []) ?rule_filter
-    ?(show_profile = false) ?(build = false) ?(bail = false) files =
+    ?(show_profile = false) ?(build = false) ?(bail = false)
+    ?(json_output = false) files =
   let load_file = load_file_via_eio fs in
   let project_root = project_root_of_files files in
   Log.info (fun m -> m "Dune root: %s (cwd: %s)" project_root (Sys.getcwd ()));
-  Fmt.pr "Dune root: %s@." project_root;
+  if not json_output then Fmt.pr "Dune root: %s@." project_root;
   Log.info (fun m -> m "Scanning project structure...");
   ignore exclude_patterns;
   let analyze_set = analyze_set_of_files files in
@@ -415,8 +554,8 @@ let analyze_files mgr fs domain_mgr ?(exclude_patterns = []) ?rule_filter
   let lazy_index = lazy (build_index ()) in
   maybe_build_project mgr ~project_root ~analyze_set ~analyze_roots
     ~index:lazy_index ~build;
-  run_analysis ~domain_mgr ~load_file project_root analyze_set analyze_roots
-    build_index rule_filter show_profile ~bail
+  run_analysis ~domain_mgr ~load_file ~json_output project_root analyze_set
+    analyze_roots build_index rule_filter show_profile ~bail
 
 let files =
   let doc =
@@ -519,8 +658,9 @@ let main exclude_patterns rules_spec ~show_profile ~show_config ~build ~bail
     let mgr = Eio.Stdenv.process_mgr env in
     let fs = Eio.Stdenv.fs env in
     let domain_mgr = Eio.Stdenv.domain_mgr env in
+    let json_output = Vlog.json_enabled () in
     analyze_files mgr fs domain_mgr ~exclude_patterns ?rule_filter ~show_profile
-      ~build ~bail files
+      ~build ~bail ~json_output files
 
 let analyze_term =
   Term.(

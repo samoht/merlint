@@ -52,6 +52,44 @@ let test_check_function_doc () =
   Alcotest.(check (list style_issue))
     "wrong name in brackets" [ Bad_function_format ] issues;
 
+  (* No arguments is OK: [fn] can simply name the function. *)
+  let issues =
+    check_function_doc ~name:"make"
+      ~signature:"?foo:int -> ?bar:string -> unit -> t"
+      ~doc:"[make] is a value with defaults."
+  in
+  Alcotest.(check (list style_issue)) "no args is fine" [] issues;
+
+  (* Optional arguments may be omitted if all mandatory args are mentioned. *)
+  let issues =
+    check_function_doc ~name:"make"
+      ~signature:"?foo:int -> ?bar:string -> unit -> t"
+      ~doc:"[make ()] is a value with defaults."
+  in
+  Alcotest.(check (list style_issue)) "optional args may be omitted" [] issues;
+
+  (* Mentioning args requires mentioning at least all mandatory args. *)
+  let issues =
+    check_function_doc ~name:"combine"
+      ~signature:"?sep:string -> string -> string -> string"
+      ~doc:"[combine x] combines strings."
+  in
+  Alcotest.(check (list style_issue))
+    "too few mandatory args"
+    [ Wrong_arg_count { min = 2; max = 3; found = 1 } ]
+    issues;
+
+  (* Too many arguments is suspicious and should be reported. *)
+  let issues =
+    check_function_doc ~name:"make"
+      ~signature:"?foo:int -> ?bar:string -> unit -> t"
+      ~doc:"[make a b c d] has too many documented arguments."
+  in
+  Alcotest.(check (list style_issue))
+    "too many args"
+    [ Wrong_arg_count { min = 1; max = 3; found = 4 } ]
+    issues;
+
   (* Function with function-typed arguments - arrows inside parens should not count *)
   let issues =
     check_function_doc ~name:"field_codec"
@@ -79,42 +117,36 @@ let test_check_value_doc () =
   let open Merlint.Docs in
   (* Good value doc with [name] format *)
   let issues =
-    check_value_doc ~name:"version"
-      ~doc:"[version] is the current version."
+    check_value_doc ~name:"version" ~doc:"[version] is the current version."
   in
   Alcotest.(check (list style_issue)) "good value doc" [] issues;
 
   (* No [name] format is OK now - we only flag if [name] is used but wrong *)
-  let issues =
-    check_value_doc ~name:"version" ~doc:"The current version."
-  in
+  let issues = check_value_doc ~name:"version" ~doc:"The current version." in
   Alcotest.(check (list style_issue)) "no bracket format is fine" [] issues;
 
   (* Brackets in prose are references, not the doc-prefix form. *)
   let issues =
-    check_value_doc ~name:"version"
-      ~doc:"The current [version] value."
+    check_value_doc ~name:"version" ~doc:"The current [version] value."
   in
-  Alcotest.(check (list style_issue)) "value bracket reference in prose" [] issues;
+  Alcotest.(check (list style_issue))
+    "value bracket reference in prose" [] issues;
 
   (* Bracketed literals are not value doc-prefixes. *)
   let issues =
-    check_value_doc ~name:"authority"
-      ~doc:"[:authority] pseudo-header."
+    check_value_doc ~name:"authority" ~doc:"[:authority] pseudo-header."
   in
   Alcotest.(check (list style_issue)) "value bracket literal" [] issues;
 
   (* Missing period *)
   let issues =
-    check_value_doc ~name:"count"
-      ~doc:"[count] is the total count"
+    check_value_doc ~name:"count" ~doc:"[count] is the total count"
   in
   Alcotest.(check (list style_issue)) "missing period" [ Missing_period ] issues;
 
   (* Redundant phrase - but no Bad_value_format since we're not using [name] format *)
   let issues =
-    check_value_doc ~name:"data"
-      ~doc:"This value represents data."
+    check_value_doc ~name:"data" ~doc:"This value represents data."
   in
   Alcotest.(check (list style_issue))
     "redundant phrase only"
@@ -122,9 +154,7 @@ let test_check_value_doc () =
     issues;
 
   (* Wrong name in [name] format *)
-  let issues =
-    check_value_doc ~name:"correct" ~doc:"[wrong] is a bad name."
-  in
+  let issues = check_value_doc ~name:"correct" ~doc:"[wrong] is a bad name." in
   Alcotest.(check (list style_issue))
     "wrong name in brackets" [ Bad_value_format ] issues
 

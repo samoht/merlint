@@ -26,3 +26,5 @@ let pp pp_data ppf t =
   match t.location with
   | None -> Fmt.pf ppf "(global) %a" pp_data t.data
   | Some loc -> Fmt.pf ppf "%a: %a" Location.pp loc pp_data t.data
+
+let message pp_data t = Fmt.str "%a" pp_data t.data

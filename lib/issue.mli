@@ -10,6 +10,9 @@ val v : ?loc:Location.t -> ?severity:int -> 'a -> 'a t
 val pp : 'a Fmt.t -> 'a t Fmt.t
 (** [pp payload_pp] creates a pretty-printer. *)
 
+val message : 'a Fmt.t -> 'a t -> string
+(** [message payload_pp issue] renders only the issue payload. *)
+
 val compare : 'a t -> 'a t -> int
 (** [compare a b] compares issues by severity (descending), then by location. *)
 

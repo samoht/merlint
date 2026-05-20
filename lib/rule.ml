@@ -211,6 +211,7 @@ module Run = struct
   let code (Result (c, _, _, _)) = c
   let title (Result (_, t, _, _)) = t
   let pp ppf (Result (_, _, fmt, issue)) = Issue.pp fmt ppf issue
+  let message (Result (_, _, fmt, issue)) = Issue.message fmt issue
   let location (Result (_, _, _, issue)) = Issue.location issue
 
   let compare (Result (_, _, _, a)) (Result (_, _, _, b)) =

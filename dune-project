@@ -34,6 +34,7 @@
   nox-dune
   nox-opam
   nox-toml
+  nox-json
   nox-tty
   vlog
   eio_main

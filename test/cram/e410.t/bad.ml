@@ -5,3 +5,4 @@ let border_current = "border-current"
 let default = "default"
 let create ?(debug = false) ~name t =
   if debug then name ^ t else t
+let trim t = t

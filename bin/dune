@@ -12,6 +12,7 @@
   fmt
   logs
   vlog
+  nox-json
   nox-tty
   version
   ocaml-project-index
