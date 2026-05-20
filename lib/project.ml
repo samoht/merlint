@@ -24,7 +24,7 @@ let config_files path = snd (workspace_root_and_configs path)
 
 module Query = struct
   let source_libraries index =
-    Project_index.source_packages_nodes index
+    Project_index.source_package_list index
     |> List.concat_map Project_index.package_libraries
 
   let add_module_lib acc lib_name file =

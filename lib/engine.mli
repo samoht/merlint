@@ -20,11 +20,13 @@ val run :
   ?analyze_roots:Fpath.t list ->
   index:(?pool:Eio.Executor_pool.t -> unit -> Project_index.t) ->
   ?profiling:Profiling.t ->
+  ?bail:bool ->
   string ->
   result
 (** [run ?domain_mgr ~load_file ~filter ?analyze_set ?analyze_roots ~index
-     ?profiling project_root] runs every rule that matches [filter] and returns
-    the issues found.
+     ?profiling ?bail project_root] runs every rule that matches [filter] and
+    returns the issues found. When [bail] is [true], the result keeps only the
+    first issue in normal report order.
 
     [load_file path] returns the source bytes of [path]; reached only by the
     parser-fallback path inside Merlin when no [.cmt] is present.

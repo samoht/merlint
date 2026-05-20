@@ -36,7 +36,7 @@ let dune_warning_status ctx dune_path =
 let build_roots ctx =
   let project_root = Fpath.v ctx.Context.project_root in
   let roots =
-    Context.index ctx |> Project_index.source_packages_nodes
+    Context.index ctx |> Project_index.source_package_list
     |> List.filter (fun pkg -> not (Project_index.Package.is_anonymous pkg))
     |> List.filter_map Project_index.Package.source_dir
   in

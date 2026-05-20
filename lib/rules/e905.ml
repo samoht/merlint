@@ -60,7 +60,7 @@ let check_package ctx pkg =
 (** Walk <pkg>/lib/*.mli looking for val struct_ / val module_ / val c_stubs /
     val ml_stubs. These belong in c/gen.ml. *)
 let check (ctx : Context.project) =
-  Context.index ctx |> Project_index.source_packages_nodes
+  Context.index ctx |> Project_index.source_package_list
   |> List.concat_map (check_package ctx)
 
 let pp ppf { file; symbol } =

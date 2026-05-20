@@ -24,28 +24,31 @@ type payload = {
 
 module P = Project_index.Package
 
-let resolve_pkgs index libs =
+let packages_of_lib package lib =
+  Project_index.libraries_used_by package [ lib ]
+  |> List.map Project_index.Library.package
+  |> List.map Project_index.Package.name
+
+let resolve_pkgs package libs =
   List.fold_left
     (fun acc lib ->
-      match Project_index.package_of index lib with
-      | Some p -> Dep_deps.String_set.add p acc
-      | None -> acc)
+      packages_of_lib package lib
+      |> List.fold_left (fun acc pkg -> Dep_deps.String_set.add pkg acc) acc)
     Dep_deps.String_set.empty libs
 
-let example_lib_for libs ~index ~dep =
+let example_lib_for libs ~package ~dep =
   libs
-  |> List.find_opt (fun lib -> Project_index.package_of index lib = Some dep)
+  |> List.find_opt (fun lib -> List.mem dep (packages_of_lib package lib))
   |> Option.value ~default:dep
 
 let check_package package =
-  let index = P.index package in
   let pkg_name = P.name package in
   let runtime_uses = P.runtime_library_uses package in
   let test_uses = P.test_library_uses package in
   let dev_uses = P.dev_library_uses package in
-  let runtime_pkgs = resolve_pkgs index runtime_uses in
-  let test_pkgs = resolve_pkgs index test_uses in
-  let dev_pkgs = resolve_pkgs index dev_uses in
+  let runtime_pkgs = resolve_pkgs package runtime_uses in
+  let test_pkgs = resolve_pkgs package test_uses in
+  let dev_pkgs = resolve_pkgs package dev_uses in
   let runtime_depends = P.depends package in
   List.filter_map
     (fun dep ->
@@ -54,7 +57,7 @@ let check_package package =
       else if Dep_deps.String_set.mem dep Dep_deps.build_tools then None
       else if Dep_deps.String_set.mem dep runtime_pkgs then None
       else if Dep_deps.String_set.mem dep test_pkgs then
-        let used_via = example_lib_for test_uses ~index ~dep in
+        let used_via = example_lib_for test_uses ~package ~dep in
         Some
           {
             package = pkg_name;
@@ -63,7 +66,7 @@ let check_package package =
             suggest = With_test;
           }
       else if Dep_deps.String_set.mem dep dev_pkgs then
-        let used_via = example_lib_for dev_uses ~index ~dep in
+        let used_via = example_lib_for dev_uses ~package ~dep in
         Some
           {
             package = pkg_name;

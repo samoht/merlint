@@ -36,5 +36,5 @@ val run_per_package :
   Project_index.t ->
   'a Issue.t list
 (** [run_per_package ~check_package index] applies [check_package] to every
-    {!Project_index.source_packages_nodes}, attaches an {!opam_loc} to each
+    {!Project_index.source_package_list}, attaches an {!opam_loc} to each
     payload, and concatenates the results. *)

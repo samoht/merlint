@@ -116,7 +116,7 @@ let test_module_of_file f =
     else None
   else None
 
-let source_packages index = Project_index.source_packages_nodes index
+let source_packages index = Project_index.source_package_list index
 
 let source_libraries index =
   source_packages index |> List.concat_map Project_index.package_libraries

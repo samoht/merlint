@@ -19,13 +19,13 @@ let issue_for_file mod_to_libs resolved file =
           Some (Issue.v ~loc { test_module = basename; library_name = lib })
       | _ -> None)
 
-let check_test_info index mod_to_libs test_stanza =
-  let libraries = Project_index.source_stanza_libraries test_stanza in
+let check_test_info index mod_to_libs
+    (test_stanza : Project_index.source_stanza) =
+  let libraries = test_stanza.libraries in
   if libraries = [] then []
   else
     let resolved = List.map (Project.Query.resolve_library index) libraries in
-    Project_index.source_stanza_files test_stanza
-    |> List.filter_map (issue_for_file mod_to_libs resolved)
+    test_stanza.files |> List.filter_map (issue_for_file mod_to_libs resolved)
 
 let check (ctx : Context.project) =
   let index = Context.index ctx in

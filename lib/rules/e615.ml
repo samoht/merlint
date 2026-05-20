@@ -45,9 +45,9 @@ let all_test_modules test_file files =
       else None)
     files
 
-let test_modules env test_stanza test_file =
-  let files = Project_index.source_stanza_files test_stanza in
-  let libraries = Project_index.source_stanza_libraries test_stanza in
+let test_modules env (test_stanza : Project_index.source_stanza) test_file =
+  let files = test_stanza.files in
+  let libraries = test_stanza.libraries in
   all_test_modules test_file files
   |> List.filter_map (fun (basename, f) ->
       if should_exclude_test_file env f libraries then (
@@ -71,9 +71,9 @@ let missing_issue test_file test_mod =
   Issue.v ~loc
     { test_module = test_mod; test_runner_file = Fpath.to_string test_file }
 
-let check_test_info ctx env test_stanza =
-  let name = Project_index.source_stanza_name test_stanza in
-  let files = Project_index.source_stanza_files test_stanza in
+let check_test_info ctx env (test_stanza : Project_index.source_stanza) =
+  let name = test_stanza.name in
+  let files = test_stanza.files in
   Log.debug (fun m ->
       m "E615: Checking test stanza '%s' with %d files" name (List.length files));
   match test_runner files with
@@ -97,8 +97,8 @@ let check_test_info ctx env test_stanza =
           |> List.map (missing_issue test_file)
       with File_view.Analysis_error _ -> [])
 
-let stanza_is_selected ctx stanza =
-  Project_index.source_stanza_files stanza
+let stanza_is_selected ctx (stanza : Project_index.source_stanza) =
+  stanza.files
   |> List.exists (fun file -> ctx.Context.in_analyze_set (Fpath.to_string file))
 
 let enumerate ctx =

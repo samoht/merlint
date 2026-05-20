@@ -90,7 +90,7 @@ let check_package ctx pkg =
         dune_issue ctx name dune_path @ lang_issue ctx name dp_path
 
 let check (ctx : Context.project) =
-  Context.index ctx |> Project_index.source_packages_nodes
+  Context.index ctx |> Project_index.source_package_list
   |> List.concat_map (check_package ctx)
 
 let pp ppf { package; kind } =

@@ -49,7 +49,7 @@ let issue_for ctx (doc : Project_index.doc_file) =
 
 let docs_in_scope ctx =
   let docs = ref [] in
-  Context.index ctx |> Project_index.source_packages_nodes
+  Context.index ctx |> Project_index.source_package_list
   |> List.iter (fun pkg ->
       List.iter
         (fun d -> docs := d :: !docs)

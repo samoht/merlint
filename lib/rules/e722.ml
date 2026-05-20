@@ -6,9 +6,9 @@ type payload = { stanza_name : string; directory : string }
     (executable ...) stanzas instead. *)
 let check (ctx : Context.project) =
   List.filter_map
-    (fun t ->
+    (fun (t : Project_index.source_stanza) ->
       let fuzz_files =
-        Project_index.source_stanza_files t
+        t.files
         |> List.filter (fun f -> Fpath.has_ext ".ml" f && File.is_in_fuzz_dir f)
       in
       match fuzz_files with
@@ -20,12 +20,7 @@ let check (ctx : Context.project) =
               ~file:(Filename.concat dir "dune")
               ~start_line:1 ~start_col:0 ~end_line:1 ~end_col:0
           in
-          Some
-            (Issue.v ~loc
-               {
-                 stanza_name = Project_index.source_stanza_name t;
-                 directory = dir;
-               }))
+          Some (Issue.v ~loc { stanza_name = t.name; directory = dir }))
     (Context.test_stanzas ctx)
 
 let pp ppf { stanza_name; directory = _ } =

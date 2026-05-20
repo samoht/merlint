@@ -35,7 +35,7 @@ let check_package ctx pkg =
         [ Issue.v ~loc { package = name } ]
 
 let check (ctx : Context.project) =
-  Context.index ctx |> Project_index.source_packages_nodes
+  Context.index ctx |> Project_index.source_package_list
   |> List.concat_map (check_package ctx)
 
 let pp ppf { package } =

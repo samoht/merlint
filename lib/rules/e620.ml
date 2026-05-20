@@ -6,12 +6,9 @@ let check (ctx : Context.project) =
   (* Group test stanzas by directory *)
   let by_dir =
     List.filter_map
-      (fun t ->
-        match Project_index.source_stanza_files t with
-        | f :: _ ->
-            Some
-              ( Fpath.parent f |> Fpath.to_string,
-                Project_index.source_stanza_name t )
+      (fun (t : Project_index.source_stanza) ->
+        match t.files with
+        | f :: _ -> Some (Fpath.parent f |> Fpath.to_string, t.name)
         | [] -> None)
       (Context.test_stanzas ctx)
   in

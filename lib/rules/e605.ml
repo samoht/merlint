@@ -58,6 +58,24 @@ let skipped_by_dir file_path =
 
 let check (ctx : Context.project) =
   let idx = Context.index ctx in
+  let unattributed_test_scope_libraries =
+    Project_index.unattributed_stanza_groups idx
+    |> List.concat_map (fun (group : Project_index.unattributed_stanza_group) ->
+        List.concat_map
+          (fun (stanza : Project_index.unattributed_stanza) -> stanza.libraries)
+          group.stanzas)
+    |> String_set.of_list
+  in
+  let covered_by_unattributed_test_scope file =
+    Project_index.libraries_of_file idx file
+    |> List.exists (fun lib ->
+        String_set.mem
+          (Project_index.Library.name lib)
+          unattributed_test_scope_libraries
+        || String_set.mem
+             (Project_index.Library.local_name lib)
+             unattributed_test_scope_libraries)
+  in
   let private_modules =
     Project_index.private_module_names idx |> String_set.of_list
   in
@@ -73,9 +91,11 @@ let check (ctx : Context.project) =
       let m = module_name_of_path file in
       if String.starts_with ~prefix:"test_" m then None
       else if File.is_unit_companion_module m then None
+      else if Project_index.is_generated_source_file idx file then None
       else if String_set.mem m private_modules then None
       else if skipped_by_dir path then None
       else if String_set.mem ("test_" ^ m) test_modules then None
+      else if covered_by_unattributed_test_scope file then None
       else if Sys.file_exists (expected_test_path path) then None
       else Some (missing_test_issue m path)
   in

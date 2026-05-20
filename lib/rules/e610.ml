@@ -150,7 +150,8 @@ let check_test_file ~library_module_paths ~referenced_modules file =
 
 let selected_test_files ctx =
   Context.test_stanzas ctx
-  |> List.concat_map Project_index.source_stanza_files
+  |> List.concat_map (fun (stanza : Project_index.source_stanza) ->
+      stanza.files)
   |> List.filter (fun file ->
       let path = Fpath.to_string file in
       ctx.Context.in_analyze_set path

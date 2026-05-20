@@ -210,17 +210,17 @@ let print_summary all_issues enabled_rule_count =
       sample
   end
 
-let run_engine ?domain_mgr ~load_file ?profiling rule_filter analyze_set
+let run_engine ?domain_mgr ~load_file ?profiling ~bail rule_filter analyze_set
     analyze_roots build_index project_root =
   match rule_filter with
   | Some filter ->
       Merlint.Engine.run ?domain_mgr ~load_file ~filter ?analyze_set
-        ?analyze_roots ~index:build_index ?profiling project_root
+        ?analyze_roots ~index:build_index ?profiling ~bail project_root
   | None -> (
       match Merlint.Filter.parse "all" with
       | Ok filter ->
           Merlint.Engine.run ?domain_mgr ~load_file ~filter ?analyze_set
-            ?analyze_roots ~index:build_index ?profiling project_root
+            ?analyze_roots ~index:build_index ?profiling ~bail project_root
       | Error _ ->
           { Merlint.Engine.issues = []; excluded = []; files_analyzed = 0 })
 
@@ -244,7 +244,7 @@ let print_exclusion_stats all_excluded =
 
 let run_analysis ?domain_mgr ~load_file project_root analyze_set analyze_roots
     (build_index : ?pool:Eio.Executor_pool.t -> unit -> Project_index.t)
-    rule_filter show_profile =
+    rule_filter show_profile ~bail =
   let profiling_state =
     if show_profile then Some (Merlint.Profiling.v ()) else None
   in
@@ -258,7 +258,7 @@ let run_analysis ?domain_mgr ~load_file project_root analyze_set analyze_roots
     files_analyzed;
   } =
     run_engine ?domain_mgr ~load_file ?profiling:profiling_state rule_filter
-      analyze_set analyze_roots build_index project_root
+      ~bail analyze_set analyze_roots build_index project_root
   in
   (match files_analyzed with
   | 0 -> Fmt.pr "Running merlint analysis...@.@."
@@ -398,7 +398,7 @@ let build_project_index ~fs ~monorepo ?roots ?pool () =
   idx
 
 let analyze_files mgr fs domain_mgr ?(exclude_patterns = []) ?rule_filter
-    ?(show_profile = false) ?(build = false) files =
+    ?(show_profile = false) ?(build = false) ?(bail = false) files =
   let load_file = load_file_via_eio fs in
   let project_root = project_root_of_files files in
   Log.info (fun m -> m "Dune root: %s (cwd: %s)" project_root (Sys.getcwd ()));
@@ -416,7 +416,7 @@ let analyze_files mgr fs domain_mgr ?(exclude_patterns = []) ?rule_filter
   maybe_build_project mgr ~project_root ~analyze_set ~analyze_roots
     ~index:lazy_index ~build;
   run_analysis ~domain_mgr ~load_file project_root analyze_set analyze_roots
-    build_index rule_filter show_profile
+    build_index rule_filter show_profile ~bail
 
 let files =
   let doc =
@@ -443,6 +443,10 @@ let rules_flag =
 let profile_flag =
   let doc = "Show profiling statistics for analysis operations" in
   Arg.(value & flag & info [ "profile"; "p" ] ~doc)
+
+let bail_flag =
+  let doc = "Report only the first issue in normal report order." in
+  Arg.(value & flag & info [ "bail" ] ~doc)
 
 let show_config_flag =
   let doc =
@@ -506,8 +510,8 @@ let parse_rule_filter rules_spec =
           Log.err (fun m -> m "Invalid rules specification: %s" msg);
           Stdlib.exit 1)
 
-let main exclude_patterns rules_spec ~show_profile ~show_config ~build files ()
-    =
+let main exclude_patterns rules_spec ~show_profile ~show_config ~build ~bail
+    files () =
   if show_config then show_configuration files
   else
     let rule_filter = parse_rule_filter rules_spec in
@@ -516,14 +520,14 @@ let main exclude_patterns rules_spec ~show_profile ~show_config ~build files ()
     let fs = Eio.Stdenv.fs env in
     let domain_mgr = Eio.Stdenv.domain_mgr env in
     analyze_files mgr fs domain_mgr ~exclude_patterns ?rule_filter ~show_profile
-      ~build files
+      ~build ~bail files
 
 let analyze_term =
   Term.(
-    const (fun e r p c b () f u ->
-        main e r ~show_profile:p ~show_config:c ~build:b f u)
-    $ exclude_flag $ rules_flag $ profile_flag $ show_config_flag $ build_flag
-    $ no_build_flag $ files
+    const (fun e r p bail c b () f u ->
+        main e r ~show_profile:p ~show_config:c ~build:b ~bail f u)
+    $ exclude_flag $ rules_flag $ profile_flag $ bail_flag $ show_config_flag
+    $ build_flag $ no_build_flag $ files
     $ Term.(const (fun () () -> ()) $ Vlog.setup "merlint" $ Memtrace.term))
 
 let scan =

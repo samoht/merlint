@@ -76,7 +76,7 @@ let check (ctx : Context.project) =
     let topics =
       match Categories.load root with [] -> ctx.config.topics | slugs -> slugs
     in
-    Context.index ctx |> Project_index.source_packages_nodes
+    Context.index ctx |> Project_index.source_package_list
     |> List.filter (fun pkg -> not (Project_index.Package.is_anonymous pkg))
     |> List.filter_map (issue_for_package ~root ~topics)
 

@@ -1842,6 +1842,13 @@ and replace each call site with [err_x &quot;...&quot; args] / [fail_x &quot;...
 </div>
 </div></div>
 </div>
+<div class="error-card" id="E622">
+    <div>
+        <span class="error-code">E622</span>
+        <span class="error-title">Package-less test stanza</span>
+    </div>
+    <div class="error-hint"><p>In a multi-package dune project, test stanzas must say which package owns them with [(package PKG)]. Without that field, project-index cannot safely attribute test modules or test dependency scopes. Add [(package &lt;package-name&gt;)] rather than relying on default-package inference.</p></div>
+</div>
 <div class="error-card" id="E700">
     <div>
         <span class="error-code">E700</span>
@@ -1934,6 +1941,13 @@ and replace each call site with [err_x &quot;...&quot; args] / [fail_x &quot;...
       ] )</code></pre>
 </div>
 </div></div>
+</div>
+<div class="error-card" id="E727">
+    <div>
+        <span class="error-code">E727</span>
+        <span class="error-title">Package-less fuzz runner</span>
+    </div>
+    <div class="error-hint"><p>In a multi-package dune project, the rules that attach a private fuzz runner to the runtest and fuzz aliases must say which package owns them with [(package PKG)]. The executable stays private; put the package field on the [(rule (alias runtest) ...)] and [(rule (alias fuzz) ...)] stanzas.</p></div>
 </div>
 <div class="error-card" id="E800">
     <div>

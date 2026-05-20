@@ -7,8 +7,8 @@ let is_valid basename =
 
 let check (ctx : Context.project) =
   List.concat_map
-    (fun test_stanza ->
-      let test_stanza_name = Project_index.source_stanza_name test_stanza in
+    (fun (test_stanza : Project_index.source_stanza) ->
+      let test_stanza_name = test_stanza.name in
       List.filter_map
         (fun file ->
           if
@@ -29,7 +29,7 @@ let check (ctx : Context.project) =
                    })
             else None
           else None)
-        (Project_index.source_stanza_files test_stanza))
+        test_stanza.files)
     (Context.test_stanzas ctx)
 
 let pp ppf { filename; test_stanza } =
