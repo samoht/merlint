@@ -54,8 +54,8 @@ val with_pool :
 (** [with_pool dm ?domain_count k] creates a fresh [Eio.Executor_pool] in a
     scoped [Eio.Switch] and runs [k] with it. The pool is torn down when [k]
     returns, releasing all domains. Use this once at the top of a pipeline so
-    every downstream [parallel_map] call shares the same pool -- merlint pays a
-    real cost (one OS thread per domain) every time a pool is created.
+    every downstream {!val-parallel_map} call shares the same pool -- merlint
+    pays a real cost (one OS thread per domain) every time a pool is created.
 
     [domain_count] defaults to the runtime's recommended domain count, minus the
     calling domain, with a floor of one. *)

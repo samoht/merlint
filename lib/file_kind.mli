@@ -6,8 +6,9 @@ val pp : t Fmt.t
 (** [pp] formats a file kind. *)
 
 val of_filename : string -> t
-(** [of_filename f] is [Ml] when [f] ends in [.ml], [Mli] when it ends in
-    [.mli], [Other] otherwise. *)
+(** [of_filename f] is {!constructor-Ml} when [f] ends in [.ml],
+    {!constructor-Mli} when it ends in [.mli], {!constructor-Other} otherwise.
+*)
 
 val is_ml : string -> bool
 (** [is_ml f] is [of_filename f = Ml]. *)

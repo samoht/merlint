@@ -14,8 +14,8 @@ val render_rule : format:format -> Rule.t -> string
 
 val render_all : format:format -> Rule.t list -> string
 (** [render_all ~format rules] renders a full reference document containing
-    every rule. In [Markdown] format the rules are wrapped in the style-guide
-    structure from {!Guide.content}. *)
+    every rule. In {!constructor-Markdown} format the rules are wrapped in the
+    style-guide structure from {!Guide.content}. *)
 
 val render_index : Rule.t list -> string
 (** [render_index rules] is a one-line-per-rule terminal index

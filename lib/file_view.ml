@@ -597,8 +597,7 @@ let typed_class_type_field_item (field : Typedtree.class_type_field) =
   match field.ctf_desc with
   | Tctf_val (name, _mutable, _virtual, typ) ->
       Some
-        (typed_item ~name ~kind:Item_instance_variable
-           ~item_type:typ.ctyp_type
+        (typed_item ~name ~kind:Item_instance_variable ~item_type:typ.ctyp_type
            ?doc:(typed_doc field.ctf_attributes)
            ~deprecated:(typed_has_deprecated field.ctf_attributes)
            field.ctf_loc)
@@ -610,17 +609,31 @@ let typed_class_type_field_item (field : Typedtree.class_type_field) =
            field.ctf_loc)
   | Tctf_inherit _ | Tctf_constraint _ | Tctf_attribute _ -> None
 
+let typed_class_signature_items (signature : Typedtree.class_signature) =
+  List.filter_map typed_class_type_field_item signature.csig_fields
+
 let rec typed_class_type_children (typ : Typedtree.class_type) =
   match typ.cltyp_desc with
   | Tcty_signature s -> typed_class_signature_items s
   | Tcty_arrow (_, _, typ) | Tcty_open (_, typ) -> typed_class_type_children typ
   | Tcty_constr _ -> []
 
-and typed_class_signature_items (signature : Typedtree.class_signature) =
-  List.filter_map typed_class_type_field_item signature.csig_fields
-
 let rec typed_structure_items (structure : Typedtree.structure) =
   List.concat_map typed_structure_item structure.str_items
+
+and typed_module_binding_item (mb : Typedtree.module_binding) =
+  Option.map
+    (fun name ->
+      let children =
+        match mb.mb_expr.mod_desc with
+        | Tmod_structure s -> typed_structure_items s
+        | _ -> []
+      in
+      typed_item ~name ~kind:Item_module ~children
+        ?doc:(typed_doc mb.mb_attributes)
+        ~deprecated:(typed_has_deprecated mb.mb_attributes)
+        mb.mb_loc)
+    mb.mb_name.txt
 
 and typed_structure_item (item : Typedtree.structure_item) =
   match item.str_desc with
@@ -639,34 +652,9 @@ and typed_structure_item (item : Typedtree.structure_item) =
       ]
   | Tstr_type (_, decls) -> List.map typed_type_item decls
   | Tstr_module mb ->
-      Option.fold mb.mb_name.txt ~none:[] ~some:(fun name ->
-          let children =
-            match mb.mb_expr.mod_desc with
-            | Tmod_structure s -> typed_structure_items s
-            | _ -> []
-          in
-          [
-            typed_item ~name ~kind:Item_module ~children
-              ?doc:(typed_doc mb.mb_attributes)
-              ~deprecated:(typed_has_deprecated mb.mb_attributes)
-              mb.mb_loc;
-          ])
-  | Tstr_recmodule mods ->
-      List.filter_map
-        (fun (mb : Typedtree.module_binding) ->
-          Option.map
-            (fun name ->
-              let children =
-                match mb.mb_expr.mod_desc with
-                | Tmod_structure s -> typed_structure_items s
-                | _ -> []
-              in
-              typed_item ~name ~kind:Item_module ~children
-                ?doc:(typed_doc mb.mb_attributes)
-                ~deprecated:(typed_has_deprecated mb.mb_attributes)
-                mb.mb_loc)
-            mb.mb_name.txt)
-        mods
+      Option.fold (typed_module_binding_item mb) ~none:[] ~some:(fun item ->
+          [ item ])
+  | Tstr_recmodule mods -> List.filter_map typed_module_binding_item mods
   | Tstr_modtype mtd ->
       [
         typed_item ~name:mtd.mtd_name.txt ~kind:Item_module_type
