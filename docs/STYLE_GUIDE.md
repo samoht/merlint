@@ -162,7 +162,7 @@ val process : int -> int
 
 ### [E410] Bad Documentation Style
 
-Follow OCaml documentation conventions: Functions should use '[name args] description.' format. Values should use '[name] description.' format. Operators should use infix notation like '[x op y] description.' All documentation should end with a period. Avoid redundant phrases like 'This function...'.
+Follow OCaml documentation conventions: when documentation starts with [name ...], [name] should be the function or value being documented. Operators should use infix notation like '[x op y] description.' All documentation should end with a period. Avoid redundant phrases like 'This function...'.
 
 **Examples:**
 

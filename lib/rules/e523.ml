@@ -58,6 +58,14 @@ let uses_standard_modules (stanza : Dune.File.module_stanza) =
       true
   | Some (Dune.File.Library.Only _) | None -> false
 
+let explicit_modules (stanza : Dune.File.module_stanza) =
+  match stanza.modules with
+  | Some (Dune.File.Library.Only xs) ->
+      xs |> List.map String.lowercase_ascii |> List.sort_uniq String.compare
+  | Some (Dune.File.Library.All_standard | Dune.File.Library.Standard_except _)
+  | None ->
+      []
+
 let uncovered_modules path dune =
   let covered = Dune.File.explicitly_claimed_modules dune in
   let generated =
@@ -68,8 +76,15 @@ let uncovered_modules path dune =
       let ml = String.lowercase_ascii m in
       not (List.mem ml covered || List.mem ml generated))
 
-let redundant_issue issue = function
-  | [ stanza ] when has_explicit_modules stanza -> Some (issue Redundant)
+let redundant_issue path issue = function
+  | [ stanza ] when has_explicit_modules stanza ->
+      let explicit = explicit_modules stanza in
+      let discovered =
+        Filename.dirname path |> ml_modules_in_dir
+        |> List.map String.lowercase_ascii
+        |> List.sort_uniq String.compare
+      in
+      if explicit = discovered then Some (issue Redundant) else None
   | [ _ ] | [] -> None
   | _ -> None
 
@@ -96,7 +111,7 @@ let check_dune path contents =
   | Ok dune -> (
       match Dune.File.module_stanzas dune with
       | [] -> None
-      | [ _ ] as stanzas -> redundant_issue issue stanzas
+      | [ _ ] as stanzas -> redundant_issue path issue stanzas
       | stanzas -> incomplete_issue path issue dune stanzas)
 
 let check (ctx : Context.project) =

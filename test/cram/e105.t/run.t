@@ -34,6 +34,11 @@ Test bad example - should find catch-all exception handler:
     Run `merlint help E105` for the rule's description, hint, and good/bad examples.
   [1]
 
+Test JSON report - should encode the scan report, not only logs:
+  $ merlint --build --json -r E105 bad.ml
+  {"project_root":"$TESTCASE_ROOT/","files_analyzed":1,"rules_applied":1,"total_issues":1,"passed":false,"issues":[{"code":"E105","title":"Catch-all Exception Handler","category":"Code Quality","message":"Catch-all exception handler found. This can hide unexpected errors.","location":{"file":"bad.ml","start":{"line":1,"column":29},"end":{"line":1,"column":30}}}],"excluded":[]}
+  [1]
+
 Test good example - should find no issues:
   $ merlint --build -r E105 good.ml
   Dune root: $TESTCASE_ROOT/

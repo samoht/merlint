@@ -177,6 +177,9 @@ module Run : sig
   val pp : result Fmt.t
   (** [pp fmt result] pretty prints result. *)
 
+  val message : result -> string
+  (** [message result] renders the issue message without its source location. *)
+
   val location : result -> Location.t option
   (** [location result] returns location. *)
 

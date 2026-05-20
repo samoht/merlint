@@ -11,3 +11,6 @@ val default : t
 
 (** [create t] is missing args. *)
 val create : ?debug:bool -> name:string -> t -> t
+
+(** [trim t extra] has too many args. *)
+val trim : t -> t

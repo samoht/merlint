@@ -5,53 +5,41 @@ type style_issue =
   | Bad_function_format
   | Bad_value_format
   | Bad_operator_format
-  | Wrong_arg_count of { expected : int; found : int }
+  | Wrong_arg_count of { min : int; max : int; found : int }
   | Redundant_phrase of string
 
-(* Top-level arrow at position [i] (not inside parens). *)
-
-(** Count required and total arguments in a signature string. e.g., "?foo:int ->
-    string -> int -> bool" has 2 required, 3 total. Returns (required_count,
-    total_count). Ignores arrows inside parentheses (function-typed arguments).
-*)
 let is_top_level_arrow signature i depth =
   depth = 0
   && i + 1 < String.length signature
   && signature.[i] = '-'
   && signature.[i + 1] = '>'
 
-let count_args signature =
+let is_optional_arg arg =
+  match String.trim arg with "" -> false | s -> s.[0] = '?'
+
+let count_signature_args signature =
   let len = String.length signature in
-  let rec scan acc_total acc_optional depth i optional_in_arg =
-    if i >= len then (acc_optional, acc_total)
+  let rec scan args depth start i =
+    if i >= len then List.rev args
     else if is_top_level_arrow signature i depth then
-      let new_optional =
-        if optional_in_arg then acc_optional + 1 else acc_optional
-      in
-      scan (acc_total + 1) new_optional depth (i + 2) false
+      let arg = String.sub signature start (i - start) in
+      scan (arg :: args) depth (i + 2) (i + 2)
     else
       match signature.[i] with
-      | '(' -> scan acc_total acc_optional (depth + 1) (i + 1) optional_in_arg
-      | ')' ->
-          scan acc_total acc_optional
-            (max 0 (depth - 1))
-            (i + 1) optional_in_arg
-      | '?' when depth = 0 -> scan acc_total acc_optional depth (i + 1) true
-      | _ -> scan acc_total acc_optional depth (i + 1) optional_in_arg
+      | '(' -> scan args (depth + 1) start (i + 1)
+      | ')' -> scan args (max 0 (depth - 1)) start (i + 1)
+      | _ -> scan args depth start (i + 1)
   in
-  let optional_count, total_count = scan 0 0 0 0 false in
-  let required_count = max 0 (total_count - optional_count) in
-  (required_count, total_count)
+  let args = scan [] 0 0 0 in
+  let max = List.length args in
+  let optional = List.filter is_optional_arg args |> List.length in
+  (max - optional, max)
 
-(** Count arguments in a doc pattern [name arg1 arg2 ...] *)
-let count_doc_args doc_content =
-  (* doc_content is the content inside [...], e.g., "name arg1 arg2" *)
-  let parts =
-    String.split_on_char ' ' doc_content
-    |> List.filter (fun s -> String.trim s <> "")
-  in
-  (* First part is the name, rest are args *)
-  max 0 (List.length parts - 1)
+let count_doc_args bracket_content =
+  String.split_on_char ' ' bracket_content
+  |> List.filter (fun s -> String.trim s <> "")
+  |> List.length
+  |> fun n -> max 0 (n - 1)
 
 let initial_bracket_content doc =
   let doc = String.trim doc in
@@ -98,15 +86,12 @@ let check_function_bracket ~name ~signature ~bracket_content issues =
   let doc_name = if List.length parts > 0 then List.hd parts else "" in
   if doc_name <> name then issues := Bad_function_format :: !issues;
   let found_args = count_doc_args bracket_content in
-  if found_args > 0 then begin
-    let min_args, max_args = count_args signature in
-    if found_args < min_args then
+  if found_args > 0 then
+    let min_args, max_args = count_signature_args signature in
+    if found_args < min_args || found_args > max_args then
       issues :=
-        Wrong_arg_count { expected = min_args; found = found_args } :: !issues
-    else if found_args > max_args then
-      issues :=
-        Wrong_arg_count { expected = max_args; found = found_args } :: !issues
-  end
+        Wrong_arg_count { min = min_args; max = max_args; found = found_args }
+        :: !issues
 
 let check_bracket_format ~name ~signature ~is_operator ~doc issues =
   match initial_bracket_content doc with
@@ -131,7 +116,9 @@ let check_ends_with_period ~doc issues =
 
 let check_function_doc ~name ~signature ~doc =
   (* If doc uses [x ...] format, verify x matches the function name
-     and has the right number of arguments. Otherwise, accept any doc format. *)
+     being documented and, when it mentions arguments, covers all mandatory
+     arguments without listing impossible arguments. Otherwise, accept any doc
+     format. *)
   let issues = ref [] in
 
   (* Check if this is an operator *)
@@ -204,9 +191,14 @@ let style_issue_message = function
   | Bad_value_format -> "uses [name] format but name doesn't match"
   | Bad_operator_format ->
       "should use '[x op y] description.' format for operators"
-  | Wrong_arg_count { expected; found } ->
-      Fmt.str "has %d args in doc but function takes %d required args" found
-        expected
+  | Wrong_arg_count { min; max; found } ->
+      if found < min then
+        Fmt.str
+          "has %d args in doc but function takes at least %d mandatory args"
+          found min
+      else
+        Fmt.str "has %d args in doc but function takes at most %d args" found
+          max
   | Redundant_phrase phrase -> Fmt.str "avoid redundant phrase '%s'" phrase
 
 let pp_style_issue ppf issue = Fmt.string ppf (style_issue_message issue)

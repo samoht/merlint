@@ -49,11 +49,11 @@ let pp ppf { value_name; location = _; issue } =
 let rule =
   Rule.v ~code:"E410" ~title:"Bad Documentation Style" ~category:Documentation
     ~hint:
-      "Follow OCaml documentation conventions: Functions should use '[name \
-       args] description.' format. Values should use '[name] description.' \
-       format. Operators should use infix notation like '[x op y] \
-       description.' All documentation should end with a period. Avoid \
-       redundant phrases like 'This function...'."
+      "Follow OCaml documentation conventions: when documentation starts with \
+       [name ...], [name] should be the function or value being documented. \
+       Operators should use infix notation like '[x op y] description.' All \
+       documentation should end with a period. Avoid redundant phrases like \
+       'This function...'."
     ~examples:
       [
         {
