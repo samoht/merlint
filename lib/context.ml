@@ -178,7 +178,16 @@ let project ?file_view ?file_content ~config ~project_root ~analyze_set ~index
     () =
   let index_memo = memo (fun () -> Lazy.force index) in
   let analyze_set_tbl = Hashtbl.create (List.length analyze_set) in
-  List.iter (fun file -> Hashtbl.replace analyze_set_tbl file ()) analyze_set;
+  let project_root_path = Fpath.v project_root in
+  let add_analyze_file file =
+    Hashtbl.replace analyze_set_tbl file ();
+    let path = Fpath.v file in
+    if not (Fpath.is_abs path) then
+      Hashtbl.replace analyze_set_tbl
+        Fpath.(project_root_path // path |> normalize |> to_string)
+        ()
+  in
+  List.iter add_analyze_file analyze_set;
   let in_analyze_set file = Hashtbl.mem analyze_set_tbl file in
   let file_view_cache =
     memoize_file_view (Option.value file_view ~default:default_file_view)

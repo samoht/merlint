@@ -32,22 +32,23 @@ let issue_of_setting name loc = function
 
 let check_package pkg =
   if Project_index.Package.is_anonymous pkg then []
-  else match Project_index.Package.raw_dune_project pkg with
-  | None -> []
-  | Some c -> (
-      match Dune.Project.of_string c with
-      | Error _ -> []
-      | Ok project ->
-          let name = Project_index.Package.name pkg in
-          let loc =
-            match Project_index.Package.source_dir pkg with
-            | None -> Location.in_file (Filename.concat name "dune-project")
-            | Some dir ->
-                Fpath.(dir / "dune-project")
-                |> Loc.current_dir_relative |> Loc.in_file
-          in
-          issue_of_setting name loc
-            (Dune.Project.implicit_transitive_deps project))
+  else
+    match Project_index.Package.raw_dune_project pkg with
+    | None -> []
+    | Some c -> (
+        match Dune.Project.of_string c with
+        | Error _ -> []
+        | Ok project ->
+            let name = Project_index.Package.name pkg in
+            let loc =
+              match Project_index.Package.source_dir pkg with
+              | None -> Location.in_file (Filename.concat name "dune-project")
+              | Some dir ->
+                  Fpath.(dir / "dune-project")
+                  |> Loc.current_dir_relative |> Loc.in_file
+            in
+            issue_of_setting name loc
+              (Dune.Project.implicit_transitive_deps project))
 
 let check (ctx : Context.project) =
   Context.index ctx |> Project_index.source_packages_nodes

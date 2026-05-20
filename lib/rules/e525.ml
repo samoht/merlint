@@ -81,13 +81,13 @@ let check_package ctx pkg =
   if Project_index.Package.is_anonymous pkg then []
   else
     match Project_index.Package.source_dir pkg with
-  | None -> []
-  | Some dir ->
-      let name = Project_index.Package.name pkg in
-      let pkg_dir = Fpath.to_string dir in
-      let dune_path = Filename.concat pkg_dir "dune" in
-      let dp_path = Filename.concat pkg_dir "dune-project" in
-      dune_issue ctx name dune_path @ lang_issue ctx name dp_path
+    | None -> []
+    | Some dir ->
+        let name = Project_index.Package.name pkg in
+        let pkg_dir = Fpath.to_string dir in
+        let dune_path = Filename.concat pkg_dir "dune" in
+        let dp_path = Filename.concat pkg_dir "dune-project" in
+        dune_issue ctx name dune_path @ lang_issue ctx name dp_path
 
 let check (ctx : Context.project) =
   Context.index ctx |> Project_index.source_packages_nodes

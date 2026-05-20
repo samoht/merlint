@@ -221,7 +221,8 @@ let run_engine ?domain_mgr ~load_file ?profiling rule_filter analyze_set
       | Ok filter ->
           Merlint.Engine.run ?domain_mgr ~load_file ~filter ?analyze_set
             ?analyze_roots ~index:build_index ?profiling project_root
-      | Error _ -> { Merlint.Engine.issues = []; excluded = []; files_analyzed = 0 })
+      | Error _ ->
+          { Merlint.Engine.issues = []; excluded = []; files_analyzed = 0 })
 
 let print_exclusion_stats all_excluded =
   if all_excluded <> [] then begin

@@ -1,5 +1,5 @@
-(** Shell out to [dune build] for the artefacts typedtree-backed rules need.
-    See {!Build.mli}. *)
+(** Shell out to [dune build] for the artefacts typedtree-backed rules need. See
+    {!Build.mli}. *)
 
 let src = Logs.Src.create "merlint.build" ~doc:"Build helpers"
 
@@ -16,9 +16,7 @@ let log_command cmd =
 
 let ensure_project_built ~path mgr =
   let suppress_stderr =
-    match Logs.Src.level src with
-    | Some Logs.Debug -> ""
-    | _ -> " 2>/dev/null"
+    match Logs.Src.level src with Some Logs.Debug -> "" | _ -> " 2>/dev/null"
   in
   let cmd =
     Fmt.str "dune build --root %s @check%s" (Filename.quote path)
@@ -42,21 +40,20 @@ let maybe_cmt_target ~root file =
       try
         let source_mtime = (Unix.stat (Fpath.to_string file)).st_mtime in
         let cmt_mtime = (Unix.stat cmt).st_mtime in
-        if cmt_mtime >= source_mtime then None
-        else dune_target_of_cmt ~root cmt
+        if cmt_mtime >= source_mtime then None else dune_target_of_cmt ~root cmt
       with Unix.Unix_error _ -> None)
 
 let refresh_stale_cmt_targets ~path ~files mgr =
   let targets = List.filter_map (maybe_cmt_target ~root:path) files in
   match targets with
   | [] -> Ok ()
-  | targets ->
+  | targets -> (
       let cmd =
         "dune build --root " ^ Filename.quote path ^ " "
         ^ String.concat " "
             (List.map (fun p -> Filename.quote (Fpath.to_string p)) targets)
       in
       log_command cmd;
-      (match Command.run mgr cmd with
+      match Command.run mgr cmd with
       | Ok _ -> Ok ()
       | Error msg -> err_build_failed msg)
