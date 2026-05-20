@@ -3,7 +3,8 @@
 module String_map = Map.Make (String)
 module String_set = Set.Make (String)
 
-type target = { name : string; kind : File_view.Item.kind }
+type component = { name : string; kind : File_view.Item.kind }
+type target = { name : string; path : component list }
 
 type payload = {
   documented_name : string;
@@ -21,7 +22,10 @@ let odoc_prefix = function
   | Class_type -> "class-type"
   | Constructor -> "constructor"
   | Exception -> "exception"
+  | Extension -> "extension"
   | Field -> "field"
+  | Method -> "method"
+  | Instance_variable -> "instance-variable"
 
 let kind_name = function
   | File_view.Item.Value -> "value"
@@ -32,23 +36,44 @@ let kind_name = function
   | Class_type -> "class type"
   | Constructor -> "constructor"
   | Exception -> "exception"
+  | Extension -> "extension"
   | Field -> "field"
+  | Method -> "method"
+  | Instance_variable -> "instance variable"
 
-let link target = Fmt.str "{!%s-%s}" (odoc_prefix target.kind) target.name
+let component_link component =
+  Fmt.str "%s-%s" (odoc_prefix component.kind) component.name
 
-let name_path prefix name =
-  match prefix with [] -> name | _ -> String.concat "." (prefix @ [ name ])
+let link target =
+  target.path |> List.map component_link |> String.concat "." |> Fmt.str "{!%s}"
 
-let rec add_item prefix acc item =
+let name_path (prefix : component list) name =
+  match prefix with
+  | [] -> name
+  | _ -> String.concat "." (List.map (fun c -> c.name) prefix @ [ name ])
+
+let target_kind target =
+  match List.rev target.path with
+  | [] -> File_view.Item.Value
+  | last :: _ -> last.kind
+
+let rec add_item (prefix : component list) acc item =
   let name = File_view.Item.name item in
+  let kind = File_view.Item.kind item in
   let path = name_path prefix name in
-  let target = { name = path; kind = File_view.Item.kind item } in
+  let component : component = { name; kind } in
+  let target = { name = path; path = prefix @ [ component ] } in
   let acc = String_map.add path target acc in
   let acc =
-    match prefix with [] -> String_map.add name target acc | _ -> acc
+    match prefix with
+    | [] -> String_map.add name target acc
+    | _ -> (
+        match List.rev target.path with
+        | [ _ ] | [] -> acc
+        | last :: _ -> String_map.add name { target with path = [ last ] } acc)
   in
   List.fold_left
-    (add_item (prefix @ [ name ]))
+    (add_item (target.path))
     acc
     (File_view.Item.children item)
 
@@ -167,7 +192,7 @@ let check (ctx : Context.file) =
 let pp ppf { documented_name; reference; target; location = _ } =
   Fmt.pf ppf
     "Documentation for '%s' mentions exported %s [%s]; use odoc link %s"
-    documented_name (kind_name target.kind) reference (link target)
+    documented_name (kind_name (target_kind target)) reference (link target)
 
 let rule =
   Rule.v ~code:"E420" ~title:"Missing Odoc Cross-Reference Link"
@@ -175,7 +200,8 @@ let rule =
     ~hint:
       "When documentation mentions another exported API item, use an odoc \
        cross-reference link such as {!type-t}, {!val-v}, {!module-M}, \
-       {!module-type-S}, {!exception-E}, {!constructor-C}, {!field-f}, \
-       {!class-c}, or {!class-type-c}. Keep [x] for code literals and \
-       documented arguments."
+       {!module-type-S}, {!exception-E}, {!extension-X}, {!constructor-C}, \
+       {!field-f}, {!class-c}, {!class-type-c}, {!method-m}, or \
+       {!instance-variable-v}. Keep [x] for code literals and documented \
+       arguments."
     ~examples:[] ~pp (File check)

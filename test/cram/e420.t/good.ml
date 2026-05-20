@@ -1,5 +1,7 @@
 type t = { value : int }
 type mode = Fast | Slow
+type extensible = ..
+type extensible += Added
 exception E
 
 module type S = sig
@@ -11,7 +13,8 @@ module M : S = struct
 end
 
 class c = object
-  method m = 0
+  val mutable iv = 0
+  method m = iv
 end
 
 class type ct = object

@@ -4,6 +4,12 @@ type t = { value : int }
 (** [mode] selects the execution mode. *)
 type mode = Fast | Slow
 
+(** [extensible] is extensible. *)
+type extensible = ..
+
+(** [Added] extends {!type-extensible}. *)
+type extensible += Added
+
 (** [E] is raised on failure. *)
 exception E
 
@@ -17,6 +23,7 @@ module M : S
 
 (** [c] is a class. *)
 class c : object
+  val mutable iv : int
   method m : int
 end
 
@@ -26,7 +33,10 @@ class type ct = object
 end
 
 (** [make x] builds a {!type-t} with field {!field-value}, using constructor
-    {!constructor-Fast}, module {!module-M}, module type {!module-type-S},
-    exception {!exception-E}, class {!class-c}, and class type
-    {!class-type-ct}. It keeps [x], [tar], and [gzip] as code literals. *)
+    {!constructor-Fast}, extension {!extension-Added}, module {!module-M}, module
+    type {!module-type-S}, exception {!exception-E}, class {!class-c}, class
+    method {!class-c.method-m}, instance variable {!class-c.instance-variable-iv},
+    class type {!class-type-ct}, and class type method
+    {!class-type-ct.method-n}. It keeps [x], [tar], and [gzip] as code
+    literals. *)
 val make : int -> t

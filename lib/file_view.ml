@@ -377,7 +377,10 @@ type item_kind =
   | Item_class_type
   | Item_constructor
   | Item_exception
+  | Item_extension
   | Item_field
+  | Item_method
+  | Item_instance_variable
 
 type doc = { doc_text : string; doc_loc : Location.t }
 
@@ -578,7 +581,7 @@ let typed_type_item (decl : Typedtree.type_declaration) =
     decl.typ_loc
 
 let typed_extension_item (ext : Typedtree.extension_constructor) =
-  typed_item ~name:ext.ext_name.txt ~kind:Item_constructor
+  typed_item ~name:ext.ext_name.txt ~kind:Item_extension
     ?doc:(typed_doc ext.ext_attributes)
     ~deprecated:(typed_has_deprecated ext.ext_attributes)
     ext.ext_loc
@@ -589,6 +592,32 @@ let typed_exception_item (exn : Typedtree.type_exception) =
     ?doc:(typed_doc ext.ext_attributes)
     ~deprecated:(typed_has_deprecated ext.ext_attributes)
     ext.ext_loc
+
+let typed_class_type_field_item (field : Typedtree.class_type_field) =
+  match field.ctf_desc with
+  | Tctf_val (name, _mutable, _virtual, typ) ->
+      Some
+        (typed_item ~name ~kind:Item_instance_variable
+           ~item_type:typ.ctyp_type
+           ?doc:(typed_doc field.ctf_attributes)
+           ~deprecated:(typed_has_deprecated field.ctf_attributes)
+           field.ctf_loc)
+  | Tctf_method (name, _private, _virtual, typ) ->
+      Some
+        (typed_item ~name ~kind:Item_method ~item_type:typ.ctyp_type
+           ?doc:(typed_doc field.ctf_attributes)
+           ~deprecated:(typed_has_deprecated field.ctf_attributes)
+           field.ctf_loc)
+  | Tctf_inherit _ | Tctf_constraint _ | Tctf_attribute _ -> None
+
+let rec typed_class_type_children (typ : Typedtree.class_type) =
+  match typ.cltyp_desc with
+  | Tcty_signature s -> typed_class_signature_items s
+  | Tcty_arrow (_, _, typ) | Tcty_open (_, typ) -> typed_class_type_children typ
+  | Tcty_constr _ -> []
+
+and typed_class_signature_items (signature : Typedtree.class_signature) =
+  List.filter_map typed_class_type_field_item signature.csig_fields
 
 let rec typed_structure_items (structure : Typedtree.structure) =
   List.concat_map typed_structure_item structure.str_items
@@ -654,7 +683,10 @@ and typed_structure_item (item : Typedtree.structure_item) =
   | Tstr_class classes ->
       List.map
         (fun ((cd, _) : Typedtree.class_declaration * string list) ->
-          typed_item ~name:cd.ci_id_name.txt ~kind:Item_class cd.ci_loc)
+          typed_item ~name:cd.ci_id_name.txt ~kind:Item_class
+            ?doc:(typed_doc cd.ci_attributes)
+            ~deprecated:(typed_has_deprecated cd.ci_attributes)
+            cd.ci_loc)
         classes
   | Tstr_class_type classes ->
       List.map
@@ -662,7 +694,11 @@ and typed_structure_item (item : Typedtree.structure_item) =
                Typed_ident.t
                * string Ocaml_parsing.Asttypes.loc
                * Typedtree.class_type_declaration) ->
-          typed_item ~name:name.txt ~kind:Item_class_type cd.ci_loc)
+          typed_item ~name:name.txt ~kind:Item_class_type
+            ~children:(typed_class_type_children cd.ci_expr)
+            ?doc:(typed_doc cd.ci_attributes)
+            ~deprecated:(typed_has_deprecated cd.ci_attributes)
+            cd.ci_loc)
         classes
   | Tstr_eval _ | Tstr_open _ | Tstr_include _ | Tstr_attribute _ -> []
 
@@ -724,12 +760,20 @@ and typed_signature_item (item : Typedtree.signature_item) =
   | Tsig_class classes ->
       List.map
         (fun (cd : Typedtree.class_description) ->
-          typed_item ~name:cd.ci_id_name.txt ~kind:Item_class cd.ci_loc)
+          typed_item ~name:cd.ci_id_name.txt ~kind:Item_class
+            ~children:(typed_class_type_children cd.ci_expr)
+            ?doc:(typed_doc cd.ci_attributes)
+            ~deprecated:(typed_has_deprecated cd.ci_attributes)
+            cd.ci_loc)
         classes
   | Tsig_class_type classes ->
       List.map
         (fun (cd : Typedtree.class_type_declaration) ->
-          typed_item ~name:cd.ci_id_name.txt ~kind:Item_class_type cd.ci_loc)
+          typed_item ~name:cd.ci_id_name.txt ~kind:Item_class_type
+            ~children:(typed_class_type_children cd.ci_expr)
+            ?doc:(typed_doc cd.ci_attributes)
+            ~deprecated:(typed_has_deprecated cd.ci_attributes)
+            cd.ci_loc)
         classes
   | Tsig_open _ | Tsig_include _ | Tsig_attribute _ | Tsig_modsubst _
   | Tsig_modtypesubst _ ->
@@ -954,7 +998,10 @@ module Item = struct
     | Class_type
     | Constructor
     | Exception
+    | Extension
     | Field
+    | Method
+    | Instance_variable
 
   type t = { item : file_item; filename : string }
 
@@ -967,7 +1014,10 @@ module Item = struct
     | Item_class_type -> Class_type
     | Item_constructor -> Constructor
     | Item_exception -> Exception
+    | Item_extension -> Extension
     | Item_field -> Field
+    | Item_method -> Method
+    | Item_instance_variable -> Instance_variable
 
   let name (t : t) = t.item.item_name
   let kind (t : t) = kind_of_item t.item.item_kind
