@@ -1,6 +1,13 @@
 type file_facts = { suite_callers : Suite.callers option }
 type t = { facts : (string, file_facts) Hashtbl.t; lock : Eio.Mutex.t }
 
+let pp ppf t =
+  let files =
+    Hashtbl.fold (fun file _ acc -> file :: acc) t.facts []
+    |> List.sort String.compare
+  in
+  Fmt.pf ppf "@[<2>{ files = %a }@]" (Fmt.Dump.list Fmt.string) files
+
 let walk view = { suite_callers = Suite.callers view }
 
 let build ?pool ~view_of files =
