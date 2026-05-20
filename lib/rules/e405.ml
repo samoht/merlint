@@ -9,6 +9,12 @@ let missing_doc item =
 
 let check (ctx : Context.file) =
   if not (File_kind.is_mli ctx.filename) then []
+  else if
+    match ctx.project_index with
+    | Some idx ->
+        Project_index.is_generated_source_file idx (Fpath.v ctx.filename)
+    | None -> false
+  then []
   else
     Context.view ctx |> File_view.value_items
     |> List.filter_map (fun item ->

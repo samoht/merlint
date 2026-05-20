@@ -31,6 +31,12 @@ let dedupe_issue ~seen ~max_underscores ~allowed ref_ =
 
 let check (ctx : Context.file) =
   if File.is_test_file ctx.filename then []
+  else if
+    match ctx.project_index with
+    | Some idx ->
+        Project_index.is_generated_source_file idx (Fpath.v ctx.filename)
+    | None -> false
+  then []
   else
     let max_underscores = ctx.config.max_underscores_in_name in
     let allowed = ctx.config.allowed_words in

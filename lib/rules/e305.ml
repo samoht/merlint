@@ -18,18 +18,23 @@ let is_snake_case_module name =
 
 let check (ctx : Context.file) =
   let allowed = ctx.config.allowed_words in
-  File_view.outline_module_definitions (Context.view ctx)
-  |> List.filter_map (fun module_ref ->
-      let module_name = File_view.Reference.base module_ref in
-      if List.mem module_name allowed then None
-      else if not (is_snake_case_module module_name) then
-        let expected = Naming.to_capitalized_snake_case module_name in
-        if expected <> module_name then
-          Option.map
-            (fun loc -> Issue.v ~loc { module_name; expected })
-            (File_view.Reference.loc module_ref)
-        else None
-      else None)
+  match ctx.project_index with
+  | Some idx
+    when Project_index.is_generated_source_file idx (Fpath.v ctx.filename) ->
+      []
+  | _ ->
+      File_view.outline_module_definitions (Context.view ctx)
+      |> List.filter_map (fun module_ref ->
+          let module_name = File_view.Reference.base module_ref in
+          if List.mem module_name allowed then None
+          else if not (is_snake_case_module module_name) then
+            let expected = Naming.to_capitalized_snake_case module_name in
+            if expected <> module_name then
+              Option.map
+                (fun loc -> Issue.v ~loc { module_name; expected })
+                (File_view.Reference.loc module_ref)
+            else None
+          else None)
 
 let pp ppf { module_name; expected } =
   Fmt.pf ppf "Module '%s' should use Snake_case: '%s'" module_name expected
