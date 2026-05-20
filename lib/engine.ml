@@ -122,9 +122,13 @@ let setup_analysis ~filter ~analyze_set ~index ~file_view project_root =
   let project_root =
     Fpath.(v project_root |> normalize |> rem_empty_seg |> to_string)
   in
+  let project_root_path = Fpath.v project_root in
   let config = Config.load project_root in
   let analyze_set =
-    List.map (fun file -> Fpath.(file |> normalize |> to_string)) analyze_set
+    List.map
+      (fun file ->
+        Loc.relative_to ~root:project_root_path file |> Fpath.to_string)
+      analyze_set
   in
   let project_ctx =
     Context.project ~config ~project_root ~analyze_set ~index ~file_view ()

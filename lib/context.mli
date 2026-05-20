@@ -87,9 +87,9 @@ val project :
   unit ->
   project
 (** [project ~config ~project_root ~analyze_set ~index ()] creates a project
-    context. [analyze_set] is the source set matched by the user's [merlint
-     <args>] invocation; project-scoped rules should restrict their work to
-    it. *)
+    context. [analyze_set] is the source set matched by the user's
+    [merlint <args>] invocation; project-scoped rules should restrict their work
+    to it. *)
 
 val index : project -> Project_index.t
 (** [index p] forces and returns the monopam package/library index. *)
