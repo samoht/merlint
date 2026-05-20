@@ -4,6 +4,9 @@
 
 type t
 
+val pp : t Fmt.t
+(** [pp] formats the filenames with precomputed analysis facts. *)
+
 val build :
   ?pool:Eio.Executor_pool.t ->
   view_of:(string -> File_view.t) ->
