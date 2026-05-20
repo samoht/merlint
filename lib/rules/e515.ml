@@ -36,8 +36,8 @@ let check (ctx : Context.project) =
 
   (* Check if any test files are in the same directory as library files *)
   List.concat_map
-    (fun test ->
-      let test_name = Project_index.source_stanza_name test in
+    (fun (test : Project_index.source_stanza) ->
+      let test_name = test.name in
       List.filter_map
         (fun file ->
           let test_dir = Fpath.parent file |> Fpath.to_string in
@@ -54,7 +54,7 @@ let check (ctx : Context.project) =
                 (Issue.v ~loc
                    { directory = dir; library_name = lib_name; test_name })
           | None -> None)
-        (Project_index.source_stanza_files test))
+        test.files)
     (Context.test_stanzas ctx)
 
 let pp ppf { directory; library_name; test_name } =

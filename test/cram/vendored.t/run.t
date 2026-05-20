@@ -17,7 +17,5 @@ boundary.
   ✓ Interop Testing (0 total issues)
   ✓ Code Generation (0 total issues)
   
-  Summary: ✓ 0 total issues (applied 92 rules)
+  Summary: ✓ 0 total issues (applied 94 rules)
   ✓ All checks passed!
-
-

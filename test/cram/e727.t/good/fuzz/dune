@@ -1,0 +1,17 @@
+(executable
+ (name fuzz)
+ (libraries pkg-a))
+
+(rule
+ (alias runtest)
+ (package pkg-a)
+ (deps fuzz.exe)
+ (action
+  (run %{exe:fuzz.exe})))
+
+(rule
+ (alias fuzz)
+ (package pkg-a)
+ (deps fuzz.exe)
+ (action
+  (run %{exe:fuzz.exe})))

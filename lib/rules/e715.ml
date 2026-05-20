@@ -56,17 +56,13 @@ let check_stanza ctx stanza_name files =
 let check (ctx : Context.project) =
   let test_issues =
     Context.test_stanzas ctx
-    |> List.concat_map (fun t ->
-        check_stanza ctx
-          (Project_index.source_stanza_name t)
-          (Project_index.source_stanza_files t))
+    |> List.concat_map (fun (t : Project_index.source_stanza) ->
+        check_stanza ctx t.name t.files)
   in
   let executable_issues =
     Context.executable_stanzas ctx
-    |> List.concat_map (fun exe ->
-        check_stanza ctx
-          (Project_index.source_stanza_name exe)
-          (Project_index.source_stanza_files exe))
+    |> List.concat_map (fun (exe : Project_index.source_stanza) ->
+        check_stanza ctx exe.name exe.files)
   in
   test_issues @ executable_issues
 

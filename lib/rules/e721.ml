@@ -10,16 +10,16 @@ let check (ctx : Context.project) =
   let all_dirs =
     let test_dirs =
       List.filter_map
-        (fun t ->
-          match Project_index.source_stanza_files t with
+        (fun (t : Project_index.source_stanza) ->
+          match t.files with
           | f :: _ -> Some (Fpath.parent f |> Fpath.to_string)
           | [] -> None)
         (Context.test_stanzas ctx)
     in
     let exec_dirs =
       List.filter_map
-        (fun exe ->
-          match Project_index.source_stanza_files exe with
+        (fun (exe : Project_index.source_stanza) ->
+          match exe.files with
           | f :: _ -> Some (Fpath.parent f |> Fpath.to_string)
           | [] -> None)
         (Context.executable_stanzas ctx)

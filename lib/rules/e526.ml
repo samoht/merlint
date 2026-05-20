@@ -51,7 +51,7 @@ let check_package pkg =
               (Dune.Project.implicit_transitive_deps project))
 
 let check (ctx : Context.project) =
-  Context.index ctx |> Project_index.source_packages_nodes
+  Context.index ctx |> Project_index.source_package_list
   |> List.concat_map check_package
 
 let pp ppf { package; kind } =

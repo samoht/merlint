@@ -48,7 +48,7 @@ let path_has_interop path =
    FS walk from "every package" down to "the analyse-set". *)
 let oracle_dirs_uncached index =
   let package_dirs =
-    Project_index.source_packages_nodes index
+    Project_index.source_package_list index
     |> List.filter_map (fun pkg ->
         Option.map
           (fun dir -> (Project_index.Package.name pkg, Fpath.to_string dir))

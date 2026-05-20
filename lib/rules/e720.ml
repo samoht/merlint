@@ -7,14 +7,14 @@ type payload = { directory : string; stanza_names : string list }
 let fuzz_stanzas_by_dir ctx =
   let collect_dirs stanzas =
     List.filter_map
-      (fun stanza ->
-        let name = Project_index.source_stanza_name stanza in
+      (fun (stanza : Project_index.source_stanza) ->
+        let name = stanza.name in
         if not (String.starts_with ~prefix:"fuzz" name) then None
         else
           match
             List.find_opt
               (fun f -> Fpath.has_ext ".ml" f && File.is_in_fuzz_dir f)
-              (Project_index.source_stanza_files stanza)
+              stanza.files
           with
           | Some f -> Some (Fpath.parent f |> Fpath.to_string, name)
           | None -> None)

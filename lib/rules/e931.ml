@@ -120,7 +120,7 @@ let check (ctx : Context.project) =
             in
             let loc = Issue_location.in_file opam_path in
             [ Issue.v ~loc { package = P.name pkg; findings } ])
-    (Project_index.packages_nodes index)
+    (Project_index.package_list index)
 
 let pp_finding ppf { file; line; col; ident; suggestion } =
   Fmt.pf ppf "%s:%d:%d ambient clock [%s] in lib code: %s" file line col ident

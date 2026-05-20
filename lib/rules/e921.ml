@@ -45,7 +45,7 @@ let scan_file ctx path =
 let sources_in_scope ctx =
   let acc = ref [] in
   let add path = acc := Fpath.to_string path :: !acc in
-  Context.index ctx |> Project_index.source_packages_nodes
+  Context.index ctx |> Project_index.source_package_list
   |> List.iter (fun pkg ->
       List.iter
         (fun (d : Project_index.doc_file) -> add d.path)

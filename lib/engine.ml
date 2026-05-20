@@ -323,44 +323,64 @@ let file_is_vendored index file =
 let drop_vendored_files index files =
   List.filter (fun f -> not (file_is_vendored index f)) files
 
+let analysis_files ?analyze_set ?analyze_roots index =
+  let raw =
+    match (analyze_set, analyze_roots) with
+    | Some files, None -> files
+    | None, roots -> Project_index.source_files ?roots index
+    | Some files, Some roots ->
+        Project_index.source_files ~roots index
+        |> List.rev_append files
+        |> List.sort_uniq Fpath.compare
+  in
+  drop_vendored_files index raw
+
+let run_enabled_rules ?pool ?profiling ~project_ctx ~project_root ~enabled_rules
+    analyze_set =
+  let file_rules = List.filter Rule.is_direct_file_scoped enabled_rules in
+  let pass_rules = List.filter Rule.uses_pass enabled_rules in
+  Eio.Switch.run @@ fun sw ->
+  let project_promise, project_resolver = Eio.Promise.create () in
+  let file_promise, file_resolver = Eio.Promise.create () in
+  Eio.Fiber.fork ~sw (fun () ->
+      run_project_rules ?pool ?profiling enabled_rules project_ctx
+      |> Eio.Promise.resolve project_resolver);
+  Eio.Fiber.fork ~sw (fun () ->
+      analyze_files ?pool ~project_ctx ~project_root ~file_rules ~pass_rules
+        ?profiling analyze_set
+      |> Eio.Promise.resolve file_resolver);
+  (Eio.Promise.await project_promise, Eio.Promise.await file_promise)
+
+let build_result ?(bail = false) (project_issues, project_excluded) file_results
+    files_analyzed =
+  let file_issues = List.concat_map fst file_results in
+  let file_excluded = List.concat_map snd file_results in
+  let issues = List.sort Rule.Run.compare (project_issues @ file_issues) in
+  let issues =
+    if bail then match issues with [] -> [] | issue :: _ -> [ issue ]
+    else issues
+  in
+  { issues; excluded = project_excluded @ file_excluded; files_analyzed }
+
 let run ?domain_mgr ~load_file ~filter ?analyze_set ?analyze_roots ~index
-    ?profiling project_root =
+    ?profiling ?(bail = false) project_root =
   Log.info (fun m -> m "Starting analysis of %s" project_root);
   let backend = Merlin.v ~root_dir:project_root () in
   let run_with_pool ?pool () =
     let idx = lazy (index ?pool ()) in
     let idx_value = Lazy.force idx in
-    let raw_analyze_set =
-      match (analyze_set, analyze_roots) with
-      | Some files, None -> files
-      | None, roots -> Project_index.source_files ?roots idx_value
-      | Some files, Some roots ->
-          Project_index.source_files ~roots idx_value
-          |> List.rev_append files
-          |> List.sort_uniq Fpath.compare
-    in
-    let analyze_set = drop_vendored_files idx_value raw_analyze_set in
+    let analyze_set = analysis_files ?analyze_set ?analyze_roots idx_value in
     let file_view = file_view ?profiling ~load_file ~backend in
     let _config, project_ctx, enabled_rules =
       setup_analysis ~filter ~analyze_set ~index:idx ~file_view project_root
     in
     Fs.reset_stats ();
-    let file_rules = List.filter Rule.is_direct_file_scoped enabled_rules in
-    let pass_rules = List.filter Rule.uses_pass enabled_rules in
     let files_analyzed = List.length analyze_set in
-    Eio.Switch.run @@ fun sw ->
-    let project_promise, project_resolver = Eio.Promise.create () in
-    let file_promise, file_resolver = Eio.Promise.create () in
-    Eio.Fiber.fork ~sw (fun () ->
-        run_project_rules ?pool ?profiling enabled_rules project_ctx
-        |> Eio.Promise.resolve project_resolver);
-    Eio.Fiber.fork ~sw (fun () ->
-        analyze_files ?pool ~project_ctx ~project_root ~file_rules ~pass_rules
-          ?profiling analyze_set
-        |> Eio.Promise.resolve file_resolver);
-    ( Eio.Promise.await project_promise,
-      Eio.Promise.await file_promise,
-      files_analyzed )
+    let project_results, file_results =
+      run_enabled_rules ?pool ?profiling ~project_ctx ~project_root
+        ~enabled_rules analyze_set
+    in
+    (project_results, file_results, files_analyzed)
   in
   Fun.protect
     ~finally:(fun () ->
@@ -373,10 +393,6 @@ let run ?domain_mgr ~load_file ~filter ?analyze_set ?analyze_roots ~index
         | None -> run_with_pool ()
         | Some dm -> Fs.with_pool dm (fun pool -> run_with_pool ~pool ())
       in
-      let file_issues = List.concat_map fst file_results in
-      let file_excluded = List.concat_map snd file_results in
-      {
-        issues = List.sort Rule.Run.compare (project_issues @ file_issues);
-        excluded = project_excluded @ file_excluded;
-        files_analyzed;
-      })
+      build_result ~bail
+        (project_issues, project_excluded)
+        file_results files_analyzed)

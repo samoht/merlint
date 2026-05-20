@@ -15,18 +15,18 @@ let check (ctx : Context.project) =
   let fuzz_files =
     let from_tests =
       List.concat_map
-        (fun t ->
+        (fun (t : Project_index.source_stanza) ->
           List.filter
             (fun f -> Fpath.has_ext ".ml" f && File.is_in_fuzz_dir f)
-            (Project_index.source_stanza_files t))
+            t.files)
         (Context.test_stanzas ctx)
     in
     let from_execs =
       List.concat_map
-        (fun exe ->
+        (fun (exe : Project_index.source_stanza) ->
           List.filter
             (fun f -> Fpath.has_ext ".ml" f && File.is_in_fuzz_dir f)
-            (Project_index.source_stanza_files exe))
+            exe.files)
         (Context.executable_stanzas ctx)
     in
     from_tests @ from_execs

@@ -15,14 +15,14 @@ type payload = {
 let fuzz_dirs ctx =
   let dirs =
     List.filter_map
-      (fun exe ->
-        let name = Project_index.source_stanza_name exe in
+      (fun (exe : Project_index.source_stanza) ->
+        let name = exe.name in
         if not (String.starts_with ~prefix:"fuzz" name) then None
         else
           match
             List.find_opt
               (fun f -> Fpath.has_ext ".ml" f && File.is_in_fuzz_dir f)
-              (Project_index.source_stanza_files exe)
+              exe.files
           with
           | Some f -> Some (Fpath.parent f |> Fpath.to_string)
           | None -> None)

@@ -19,9 +19,9 @@ let issue_for_non_primary mod_to_libs primary_lib file =
       Some (Issue.v ~loc { test_module = basename; library_name = lib })
   | _ -> None
 
-let check_test_info mod_to_libs test_stanza =
-  let files = Project_index.source_stanza_files test_stanza in
-  if Project_index.source_stanza_libraries test_stanza <> [] then []
+let check_test_info mod_to_libs (test_stanza : Project_index.source_stanza) =
+  let files = test_stanza.files in
+  if test_stanza.libraries <> [] then []
   else
     let unique_libs =
       List.filter_map (library_for_file mod_to_libs) files

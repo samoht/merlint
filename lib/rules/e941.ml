@@ -29,7 +29,7 @@ let check_used_lib ~package ~depends_set ~own used_lib =
   if Dep_deps.is_builtin used_lib then `Skip
   else if Dep_deps.String_set.mem used_lib own then `Skip
   else
-    match Project_index.library (P.index package) used_lib with
+    match Project_index.library_used_by package used_lib with
     | None -> `Skip
     | Some lib ->
         let used_pkg = P.name (Project_index.Library.package lib) in
@@ -56,19 +56,19 @@ let check_lib ~package ~depends_set ~own lib =
             })
 
 let check_bin_use ~package ~depends_set ~build_set bin =
-  match Project_index.package_of_binary_node (P.index package) bin with
+  match Project_index.package_of_binary (P.index package) bin with
   | None -> None
   | Some used_pkg
-    when P.name used_pkg = P.name package
-         || Dep_deps.String_set.mem (P.name used_pkg) Dep_deps.build_tools
-         || Dep_deps.String_set.mem (P.name used_pkg) depends_set
-         || Dep_deps.String_set.mem (P.name used_pkg) build_set ->
+    when used_pkg = P.name package
+         || Dep_deps.String_set.mem used_pkg Dep_deps.build_tools
+         || Dep_deps.String_set.mem used_pkg depends_set
+         || Dep_deps.String_set.mem used_pkg build_set ->
       None
   | Some used_pkg ->
       Some
         {
           package = P.name package;
-          missing_dep = P.name used_pkg;
+          missing_dep = used_pkg;
           used_via = Fmt.str "%%{bin:%s}" bin;
           source_lib = "(rule)";
         }

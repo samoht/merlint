@@ -69,7 +69,7 @@ let opam_loc pkg =
   | None -> Location.in_file (Project_index.Package.name pkg ^ ".opam")
 
 (** [run_per_package ~check_package index] applies [check_package] to every
-    {!Project_index.source_packages_nodes}, attaches an [opam_loc]-derived
+    {!Project_index.source_package_list}, attaches an [opam_loc]-derived
     location to each payload, and concatenates the results. The shared driver
     for package-level dep-declaration rules. *)
 let run_per_package ~check_package index =
@@ -77,4 +77,4 @@ let run_per_package ~check_package index =
     (fun pkg ->
       let loc = opam_loc pkg in
       check_package pkg |> List.map (fun p -> Issue.v ~loc p))
-    (Project_index.source_packages_nodes index)
+    (Project_index.source_package_list index)
