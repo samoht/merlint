@@ -53,6 +53,25 @@ let count_doc_args doc_content =
   (* First part is the name, rest are args *)
   max 0 (List.length parts - 1)
 
+let initial_bracket_content doc =
+  let doc = String.trim doc in
+  if String.length doc = 0 || doc.[0] <> '[' then None
+  else
+    match String.index_from_opt doc 1 ']' with
+    | None -> None
+    | Some stop -> Some (String.sub doc 1 (stop - 1))
+
+let is_value_name s =
+  let is_ident_char = function
+    | 'a' .. 'z' | 'A' .. 'Z' | '0' .. '9' | '_' | '\'' -> true
+    | _ -> false
+  in
+  String.length s > 0
+  &&
+  match s.[0] with
+  | 'a' .. 'z' | '_' -> String.for_all is_ident_char s
+  | _ -> false
+
 let check_operator_bracket ~name ~doc issues =
   let op_prefix =
     if String.length name > 0 && name.[0] = '.' then
@@ -90,18 +109,8 @@ let check_function_bracket ~name ~signature ~bracket_content issues =
   end
 
 let check_bracket_format ~name ~signature ~is_operator ~doc issues =
-  let bracket_pattern =
-    Re.compile
-      (Re.seq
-         [
-           Re.str "[";
-           Re.group (Re.rep1 (Re.diff Re.any (Re.char ']')));
-           Re.str "]";
-         ])
-  in
-  match Re.exec_opt bracket_pattern doc with
-  | Some groups ->
-      let bracket_content = Re.Group.get groups 1 in
+  match initial_bracket_content doc with
+  | Some bracket_content ->
       if is_operator then check_operator_bracket ~name ~doc issues
       else check_function_bracket ~name ~signature ~bracket_content issues
   | None -> ()
@@ -141,8 +150,6 @@ let check_function_doc ~name ~signature ~doc =
   (* Extract the content inside [...] if present *)
   check_bracket_format ~name ~signature ~is_operator ~doc issues;
 
-  (* No bracket format - that's fine, accept as valid *)
-
   (* Check for redundant phrases *)
   let lower = String.lowercase_ascii doc in
   if
@@ -166,19 +173,15 @@ let check_type_doc ~doc =
   !issues
 
 let check_value_bracket ~name ~doc issues =
-  let bracket_pattern =
-    Re.compile
-      (Re.seq
-         [
-           Re.str "[";
-           Re.group (Re.rep1 (Re.diff Re.any (Re.set " ]")));
-           Re.str "]";
-         ])
-  in
-  match Re.exec_opt bracket_pattern doc with
-  | Some groups ->
-      let doc_name = Re.Group.get groups 1 in
-      if doc_name <> name then issues := Bad_value_format :: !issues
+  match initial_bracket_content doc with
+  | Some bracket_content ->
+      let doc_name =
+        match String.index_opt bracket_content ' ' with
+        | None -> bracket_content
+        | Some stop -> String.sub bracket_content 0 stop
+      in
+      if is_value_name doc_name && doc_name <> name then
+        issues := Bad_value_format :: !issues
   | None -> ()
 
 let check_value_doc ~name ~doc =

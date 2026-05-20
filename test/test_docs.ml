@@ -37,6 +37,13 @@ let test_check_function_doc () =
   in
   Alcotest.(check (list style_issue)) "no brackets is fine" [] issues;
 
+  (* Brackets in prose are ignored by this style check. *)
+  let issues =
+    check_function_doc ~name:"qux" ~signature:"int -> int"
+      ~doc:"Computes qux of [x]."
+  in
+  Alcotest.(check (list style_issue)) "bracket reference in prose" [] issues;
+
   (* Wrong name in [name] format *)
   let issues =
     check_function_doc ~name:"correct" ~signature:"int -> int"
@@ -72,23 +79,42 @@ let test_check_value_doc () =
   let open Merlint.Docs in
   (* Good value doc with [name] format *)
   let issues =
-    check_value_doc ~name:"version" ~doc:"[version] is the current version."
+    check_value_doc ~name:"version"
+      ~doc:"[version] is the current version."
   in
   Alcotest.(check (list style_issue)) "good value doc" [] issues;
 
   (* No [name] format is OK now - we only flag if [name] is used but wrong *)
-  let issues = check_value_doc ~name:"version" ~doc:"The current version." in
+  let issues =
+    check_value_doc ~name:"version" ~doc:"The current version."
+  in
   Alcotest.(check (list style_issue)) "no bracket format is fine" [] issues;
+
+  (* Brackets in prose are references, not the doc-prefix form. *)
+  let issues =
+    check_value_doc ~name:"version"
+      ~doc:"The current [version] value."
+  in
+  Alcotest.(check (list style_issue)) "value bracket reference in prose" [] issues;
+
+  (* Bracketed literals are not value doc-prefixes. *)
+  let issues =
+    check_value_doc ~name:"authority"
+      ~doc:"[:authority] pseudo-header."
+  in
+  Alcotest.(check (list style_issue)) "value bracket literal" [] issues;
 
   (* Missing period *)
   let issues =
-    check_value_doc ~name:"count" ~doc:"[count] is the total count"
+    check_value_doc ~name:"count"
+      ~doc:"[count] is the total count"
   in
   Alcotest.(check (list style_issue)) "missing period" [ Missing_period ] issues;
 
   (* Redundant phrase - but no Bad_value_format since we're not using [name] format *)
   let issues =
-    check_value_doc ~name:"data" ~doc:"This value represents data."
+    check_value_doc ~name:"data"
+      ~doc:"This value represents data."
   in
   Alcotest.(check (list style_issue))
     "redundant phrase only"
@@ -96,7 +122,9 @@ let test_check_value_doc () =
     issues;
 
   (* Wrong name in [name] format *)
-  let issues = check_value_doc ~name:"correct" ~doc:"[wrong] is a bad name." in
+  let issues =
+    check_value_doc ~name:"correct" ~doc:"[wrong] is a bad name."
+  in
   Alcotest.(check (list style_issue))
     "wrong name in brackets" [ Bad_value_format ] issues
 

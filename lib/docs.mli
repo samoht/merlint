@@ -15,7 +15,10 @@ type style_issue =
   | Redundant_phrase of string
 
 val check_function_doc :
-  name:string -> signature:string -> doc:string -> style_issue list
+  name:string ->
+  signature:string ->
+  doc:string ->
+  style_issue list
 (** [check_function_doc ~name ~signature ~doc] checks function documentation
     style. If using [name args] format, verifies the name matches and arg count
     is correct. *)
