@@ -42,6 +42,7 @@ let () =
       Test_e405.suite;
       Test_e410.suite;
       Test_e415.suite;
+      Test_e420.suite;
       Test_e500.suite;
       Test_e505.suite;
       Test_e510.suite;

@@ -14,10 +14,14 @@ let is_function_type item =
   | Some typ -> File_view.Type_view.is_function typ
   | None -> false
 
+let is_opaque_type item =
+  File_view.Item.children item = [] && Option.is_none (File_view.Item.type_sig item)
+
 let check_type items t_item =
   if
     has_pp items
     || File_view.Item.derives t_item "show"
+    || is_opaque_type t_item
     || is_function_type t_item
   then []
   else
