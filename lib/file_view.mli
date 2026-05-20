@@ -134,7 +134,10 @@ module Item : sig
     | Class_type
     | Constructor
     | Exception
+    | Extension
     | Field
+    | Method
+    | Instance_variable
 
   type t
 
