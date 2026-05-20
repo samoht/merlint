@@ -5,3 +5,4 @@
     concerns within a single directory, which is discouraged. *)
 
 val rule : Rule.t
+(** [rule] is the E515 rule definition. *)

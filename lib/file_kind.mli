@@ -2,6 +2,9 @@
 
 type t = Ml | Mli | Other
 
+val pp : t Fmt.t
+(** [pp] formats a file kind. *)
+
 val of_filename : string -> t
 (** [of_filename f] is [Ml] when [f] ends in [.ml], [Mli] when it ends in
     [.mli], [Other] otherwise. *)
