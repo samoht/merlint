@@ -4,7 +4,7 @@ module String_map = Map.Make (String)
 module String_set = Set.Make (String)
 
 type component = { name : string; kind : File_view.Item.kind }
-type target = { name : string; path : component list }
+type target = { path : component list }
 
 type payload = {
   documented_name : string;
@@ -50,7 +50,9 @@ let link target =
 let name_path (prefix : component list) name =
   match prefix with
   | [] -> name
-  | _ -> String.concat "." (List.map (fun c -> c.name) prefix @ [ name ])
+  | _ ->
+      String.concat "."
+        (List.map (fun (c : component) -> c.name) prefix @ [ name ])
 
 let target_kind target =
   match List.rev target.path with
@@ -62,7 +64,7 @@ let rec add_item (prefix : component list) acc item =
   let kind = File_view.Item.kind item in
   let path = name_path prefix name in
   let component : component = { name; kind } in
-  let target = { name = path; path = prefix @ [ component ] } in
+  let target = { path = prefix @ [ component ] } in
   let acc = String_map.add path target acc in
   let acc =
     match prefix with
@@ -70,12 +72,9 @@ let rec add_item (prefix : component list) acc item =
     | _ -> (
         match List.rev target.path with
         | [ _ ] | [] -> acc
-        | last :: _ -> String_map.add name { target with path = [ last ] } acc)
+        | last :: _ -> String_map.add name { path = [ last ] } acc)
   in
-  List.fold_left
-    (add_item (target.path))
-    acc
-    (File_view.Item.children item)
+  List.fold_left (add_item target.path) acc (File_view.Item.children item)
 
 let targets items = List.fold_left (add_item []) String_map.empty items
 let trim = String.trim
@@ -109,7 +108,7 @@ let prefix_names item doc =
                (String_set.singleton self)
       | _ -> String_set.singleton self)
 
-let find_from s start pattern =
+let substring_from s start pattern =
   let plen = String.length pattern in
   let rec loop i =
     if i + plen > String.length s then None
@@ -124,14 +123,14 @@ let code_spans doc =
     if i >= len then List.rev acc
     else if i + 1 < len && doc.[i] = '{' && doc.[i + 1] = '[' then
       let next =
-        match find_from doc (i + 2) "]}" with
+        match substring_from doc (i + 2) "]}" with
         | Some stop -> stop + 2
         | None -> len
       in
       loop acc next
     else if i + 1 < len && doc.[i] = '{' && doc.[i + 1] = 'v' then
       let next =
-        match find_from doc (i + 2) "v}" with
+        match substring_from doc (i + 2) "v}" with
         | Some stop -> stop + 2
         | None -> len
       in
@@ -192,7 +191,9 @@ let check (ctx : Context.file) =
 let pp ppf { documented_name; reference; target; location = _ } =
   Fmt.pf ppf
     "Documentation for '%s' mentions exported %s [%s]; use odoc link %s"
-    documented_name (kind_name (target_kind target)) reference (link target)
+    documented_name
+    (kind_name (target_kind target))
+    reference (link target)
 
 let rule =
   Rule.v ~code:"E420" ~title:"Missing Odoc Cross-Reference Link"

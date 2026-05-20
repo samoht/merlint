@@ -8,9 +8,9 @@ type result = {
   excluded : exclusion_stats list;
   files_analyzed : int;
 }
-(** Analysis result. [files_analyzed] is the size of the file set the engine
-    actually iterated -- either the [?analyze_set] supplied by the caller or
-    every source file the project index found. *)
+(** Analysis result. {!field-files_analyzed} is the size of the file set the
+    engine actually iterated -- either the [?analyze_set] supplied by the caller
+    or every source file the project index found. *)
 
 val run :
   ?domain_mgr:[> Eio.Domain_manager.ty ] Eio.Resource.t ->

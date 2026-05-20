@@ -11,34 +11,39 @@ Bad: code spans naming exported API items should be odoc links.
   ✓ Code Quality (0 total issues)
   ✓ Code Style (0 total issues)
   ✓ Naming Conventions (0 total issues)
-  ✗ Documentation (9 total issues)
-    [E420] Missing Odoc Cross-Reference Link (9 issues)
+  ✗ Documentation (13 total issues)
+    [E420] Missing Odoc Cross-Reference Link (13 issues)
     When documentation mentions another exported API item, use an odoc
     cross-reference link such as {!type-t}, {!val-v}, {!module-M},
-    {!module-type-S}, {!exception-E}, {!constructor-C}, {!field-f}, {!class-c}, or
-    {!class-type-c}. Keep [x] for code literals and documented arguments.
-    - bad.mli:15:0: Documentation for 'M' mentions exported module type [S]; use odoc link {!module-type-S}
-    - bad.mli:28:0: Documentation for 'make' mentions exported class type [ct]; use odoc link {!class-type-ct}
-    - bad.mli:28:0: Documentation for 'make' mentions exported class [c]; use odoc link {!class-c}
-    - bad.mli:28:0: Documentation for 'make' mentions exported exception [E]; use odoc link {!exception-E}
-    - bad.mli:28:0: Documentation for 'make' mentions exported module type [S]; use odoc link {!module-type-S}
-    - bad.mli:28:0: Documentation for 'make' mentions exported module [M]; use odoc link {!module-M}
-    - bad.mli:28:0: Documentation for 'make' mentions exported constructor [Fast]; use odoc link {!constructor-Fast}
-    - bad.mli:28:0: Documentation for 'make' mentions exported field [value]; use odoc link {!field-value}
-    - bad.mli:28:0: Documentation for 'make' mentions exported type [t]; use odoc link {!type-t}
+    {!module-type-S}, {!exception-E}, {!extension-X}, {!constructor-C},
+    {!field-f}, {!class-c}, {!class-type-c}, {!method-m}, or
+    {!instance-variable-v}. Keep [x] for code literals and documented arguments.
+    - bad.mli:21:0: Documentation for 'M' mentions exported module type [S]; use odoc link {!module-type-S}
+    - bad.mli:35:0: Documentation for 'make' mentions exported method [ct.n]; use odoc link {!class-type-ct.method-n}
+    - bad.mli:35:0: Documentation for 'make' mentions exported class type [ct]; use odoc link {!class-type-ct}
+    - bad.mli:35:0: Documentation for 'make' mentions exported instance variable [c.iv]; use odoc link {!class-c.instance-variable-iv}
+    - bad.mli:35:0: Documentation for 'make' mentions exported method [c.m]; use odoc link {!class-c.method-m}
+    - bad.mli:35:0: Documentation for 'make' mentions exported class [c]; use odoc link {!class-c}
+    - bad.mli:35:0: Documentation for 'make' mentions exported exception [E]; use odoc link {!exception-E}
+    - bad.mli:35:0: Documentation for 'make' mentions exported module type [S]; use odoc link {!module-type-S}
+    - bad.mli:35:0: Documentation for 'make' mentions exported module [M]; use odoc link {!module-M}
+    - bad.mli:35:0: Documentation for 'make' mentions exported extension [Added]; use odoc link {!extension-Added}
+    - bad.mli:35:0: Documentation for 'make' mentions exported constructor [Fast]; use odoc link {!constructor-Fast}
+    - bad.mli:35:0: Documentation for 'make' mentions exported field [value]; use odoc link {!field-value}
+    - bad.mli:35:0: Documentation for 'make' mentions exported type [t]; use odoc link {!type-t}
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   ✓ Interop Testing (0 total issues)
   ✓ Code Generation (0 total issues)
   
-  ╭───────────────┬─────────────────────────────────────────╮
-  │ Category      │ Issues                                  │
-  ├───────────────┼─────────────────────────────────────────┤
-  │ Documentation │ 9 (9 missing odoc cross-reference link) │
-  ╰───────────────┴─────────────────────────────────────────╯
+  ╭───────────────┬───────────────────────────────────────────╮
+  │ Category      │ Issues                                    │
+  ├───────────────┼───────────────────────────────────────────┤
+  │ Documentation │ 13 (13 missing odoc cross-reference link) │
+  ╰───────────────┴───────────────────────────────────────────╯
   
   
-  Summary: ✗ 9 total issues (applied 1 rule)
+  Summary: ✗ 13 total issues (applied 1 rule)
   ✗ Some checks failed. See details above.
     Run `merlint help E420` for the rule's description, hint, and good/bad examples.
   [1]

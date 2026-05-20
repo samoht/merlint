@@ -120,7 +120,8 @@ module Run : sig
 
   type project_job
   (** One schedulable project-rule job. A normal project rule produces one job;
-      a [Project_units] rule produces one job per enumerated unit. *)
+      a {!constructor-Project_units} rule produces one job per enumerated unit.
+  *)
 
   type active_pass
   (** One active pass for a concrete file. *)
