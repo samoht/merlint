@@ -62,7 +62,10 @@ let check (ctx : Context.project) =
     Project_index.unattributed_stanza_groups idx
     |> List.concat_map (fun (group : Project_index.unattributed_stanza_group) ->
         List.concat_map
-          (fun (stanza : Project_index.unattributed_stanza) -> stanza.libraries)
+          (fun (stanza : Project_index.unattributed_stanza) ->
+            match stanza.kind with
+            | Project_index.Test | Project_index.Fuzz -> stanza.libraries
+            | Project_index.Mdx -> [])
           group.stanzas)
     |> String_set.of_list
   in

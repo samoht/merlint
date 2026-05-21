@@ -14,7 +14,7 @@ let check (ctx : Context.project) =
         |> List.filter_map (fun (stanza : Project_index.unattributed_stanza) ->
             match stanza.kind with
             | Project_index.Fuzz -> Some stanza.name
-            | Project_index.Test -> None)
+            | Project_index.Test | Project_index.Mdx -> None)
         |> List.sort_uniq String.compare
       in
       if aliases = [] then None

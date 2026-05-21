@@ -2089,6 +2089,13 @@ and replace each call site with [err_x &quot;...&quot; args] / [fail_x &quot;...
     </div>
     <div class="error-hint"><p>A README.md, .mli, or .mld file contains an mdx-error block produced by [dune promote] after a failing mdx run. The error output belongs in a [.corrected] file for review, not in the committed source. Fix the underlying example so it type-checks and remove the block.</p></div>
 </div>
+<div class="error-card" id="E922">
+    <div>
+        <span class="error-code">E922</span>
+        <span class="error-title">Package-less MDX stanza</span>
+    </div>
+    <div class="error-hint"><p>In a multi-package dune project, MDX stanzas must say which package owns the documentation check with [(package PKG)]. Dune attaches MDX to runtest automatically; the package field is for ownership and package-filtering, not alias plumbing.</p></div>
+</div>
 <div class="error-card" id="E930">
     <div>
         <span class="error-code">E930</span>
