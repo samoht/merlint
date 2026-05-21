@@ -1,0 +1,3 @@
+(library
+ (name pkg_a_helper)
+ (public_name pkg-a.helper))
