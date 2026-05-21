@@ -6,7 +6,9 @@ let check (ctx : Context.project) =
   let dirs = Interop.oracle_dirs_for ctx in
   List.filter_map
     (fun (d : Interop.oracle_dir) ->
-      let scripts = Filename.concat d.path "scripts" in
+      let scripts =
+        Context.Path.(d.path / "scripts") |> Context.string_of_path
+      in
       let has_go =
         try
           Fs.readdir scripts |> Array.to_list
@@ -16,7 +18,8 @@ let check (ctx : Context.project) =
       let go_mod = Filename.concat scripts "go.mod" in
       let has_go_mod = Fs.file_exists go_mod in
       if has_go && not has_go_mod then
-        Some (Issue.v ~loc:(Location.in_file go_mod) { dir = d.path })
+        Some
+          (Issue.v ~loc:(Location.in_file go_mod) { dir = Interop.display d })
       else None)
     dirs
 

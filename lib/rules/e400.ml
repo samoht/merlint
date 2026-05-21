@@ -47,7 +47,7 @@ let check_mli_documentation_content ~module_name ~filename content =
   check_first_non_empty lines
 
 let check (ctx : Context.file) =
-  let filename = ctx.filename in
+  let filename = Context.filename ctx in
   if not (File_kind.is_mli filename) then []
   else
     let module_name = Filename.basename filename |> Filename.remove_extension in

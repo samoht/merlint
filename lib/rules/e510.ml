@@ -79,12 +79,12 @@ let has_log_source_surface view =
 
 let issue ctx =
   let module_name =
-    Filename.basename ctx.Context.filename
+    Filename.basename (Context.filename ctx)
     |> Filename.remove_extension |> String.capitalize_ascii
   in
   let loc =
     let pos = { Location.line = 1; col = 0 } in
-    { Location.file = ctx.filename; start = pos; end_ = pos }
+    { Location.file = Context.filename ctx; start = pos; end_ = pos }
   in
   Issue.v ~loc { module_name }
 

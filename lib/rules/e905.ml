@@ -14,10 +14,11 @@ let file_uses_wire ctx path =
 let library_uses_wire ctx lib =
   Project_index.Library.files lib
   |> List.exists (fun fp ->
+      let file = Context.resolve ctx fp in
       let f = Fpath.to_string fp in
       Filename.check_suffix f ".ml"
       && (not (Filename.check_suffix f ".mli"))
-      && file_uses_wire ctx f)
+      && file_uses_wire ctx file)
 
 let exposed_symbol_issues ctx pkg_name mli_path =
   try
@@ -34,7 +35,10 @@ let exposed_symbol_issues ctx pkg_name mli_path =
       List.filter_map
         (fun sym ->
           if List.mem sym names then
-            let file = Filename.concat pkg_name (Filename.basename mli_path) in
+            let file =
+              Filename.concat pkg_name
+                (Filename.basename (Context.string_of_path mli_path))
+            in
             Some (Issue.v ~loc:(Location.in_file file) { file; symbol = sym })
           else None)
         wire_symbols
@@ -43,19 +47,22 @@ let exposed_symbol_issues ctx pkg_name mli_path =
 let check_package ctx pkg =
   let libs = Project_index.package_libraries pkg in
   let pkg_name = Project_index.Package.name pkg in
-  let issues =
-    libs
-    |> List.concat_map Project_index.Library.files
-    |> List.filter_map (fun fp ->
-        let s = Fpath.to_string fp in
-        if Filename.check_suffix s ".mli" && ctx.Context.in_analyze_set s then
-          Some s
-        else None)
-    |> List.concat_map (exposed_symbol_issues ctx pkg_name)
-  in
-  if issues = [] then []
-  else if List.exists (library_uses_wire ctx) libs then issues
-  else []
+  if pkg_name = "wire" then []
+  else
+    let issues =
+      libs
+      |> List.concat_map Project_index.Library.files
+      |> List.filter_map (fun fp ->
+          let file = Context.resolve ctx fp in
+          let s = Fpath.to_string fp in
+          if Filename.check_suffix s ".mli" && ctx.Context.in_analyze_set file
+          then Some file
+          else None)
+      |> List.concat_map (exposed_symbol_issues ctx pkg_name)
+    in
+    if issues = [] then []
+    else if List.exists (library_uses_wire ctx) libs then issues
+    else []
 
 (** Walk <pkg>/lib/*.mli looking for val struct_ / val module_ / val c_stubs /
     val ml_stubs. These belong in c/gen.ml. *)

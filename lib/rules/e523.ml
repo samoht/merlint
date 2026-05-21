@@ -20,10 +20,10 @@ type payload = { dune : string; kind : kind }
 
 let dune_files index =
   Project_index.dune_dirs index
-  |> List.map (fun dir -> Filename.concat (Fpath.to_string dir) "dune")
+  |> List.map (fun dir -> Fpath.add_seg dir "dune")
 
 let content ctx path =
-  try Some (Context.file_content ctx path)
+  try Some (Context.file_content ctx (Context.resolve ctx path))
   with Sys_error _ | File_view.Analysis_error _ -> None
 
 (** [.ml] files dune auto-discovers as modules. Files with extra dots in the
@@ -71,7 +71,8 @@ let uncovered_modules path dune =
   let generated =
     Dune.File.generated_modules dune |> List.map String.lowercase_ascii
   in
-  Filename.dirname path |> ml_modules_in_dir
+  Fpath.to_string (Fpath.parent path)
+  |> ml_modules_in_dir
   |> List.filter (fun m ->
       let ml = String.lowercase_ascii m in
       not (List.mem ml covered || List.mem ml generated))
@@ -80,7 +81,8 @@ let redundant_issue path issue = function
   | [ stanza ] when has_explicit_modules stanza ->
       let explicit = explicit_modules stanza in
       let discovered =
-        Filename.dirname path |> ml_modules_in_dir
+        Fpath.to_string (Fpath.parent path)
+        |> ml_modules_in_dir
         |> List.map String.lowercase_ascii
         |> List.sort_uniq String.compare
       in
@@ -100,7 +102,7 @@ let incomplete_issue path issue dune module_stanzas =
     | missing -> Some (issue (Uncovered missing))
 
 let check_dune path contents =
-  let display_path = Fpath.v path |> Loc.current_dir_relative in
+  let display_path = Loc.current_dir_relative path in
   let issue kind =
     Issue.v ~loc:(Loc.in_file display_path)
       { dune = Fpath.to_string display_path; kind }

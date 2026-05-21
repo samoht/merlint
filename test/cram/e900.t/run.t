@@ -77,3 +77,25 @@ Build nowire fixture project:
   
   Summary: ✓ 0 total issues (applied 1 rule)
   ✓ All checks passed!
+
+Test provider edge case - the wire package itself defines Wire.Codec and does
+not need a consumer c/ directory:
+  $ (cd self && dune build @check)
+
+  $ merlint --build -r E900 self/
+  Dune root: $TESTCASE_ROOT/self/
+  Running merlint analysis...
+  
+  Analyzing 1 files
+  
+  ✓ Code Quality (0 total issues)
+  ✓ Code Style (0 total issues)
+  ✓ Naming Conventions (0 total issues)
+  ✓ Documentation (0 total issues)
+  ✓ Project Structure (0 total issues)
+  ✓ Test Quality (0 total issues)
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
+  
+  Summary: ✓ 0 total issues (applied 1 rule)
+  ✓ All checks passed!

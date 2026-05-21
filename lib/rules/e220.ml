@@ -51,10 +51,10 @@ let visit_signature_item state (si : T.signature_item) =
         | _ -> ())
     | _ -> ()
 
-let select ctx = Filename.check_suffix ctx.Context.filename ".mli"
+let select ctx = Filename.check_suffix (Context.filename ctx) ".mli"
 
 let init ctx =
-  let filename = ctx.Context.filename in
+  let filename = Context.filename ctx in
   { filename; enabled = true; issues = ref [] }
 
 let finish _ state = List.rev !(state.issues)

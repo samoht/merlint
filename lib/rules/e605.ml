@@ -89,7 +89,7 @@ let check (ctx : Context.project) =
   let needs_test file =
     let path = Fpath.to_string file in
     if not (File_kind.is_ml path) then None
-    else if not (selected path) then None
+    else if not (selected (Context.resolve ctx file)) then None
     else
       let m = module_name_of_path file in
       if String.starts_with ~prefix:"test_" m then None

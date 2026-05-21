@@ -10,6 +10,7 @@ let md_mdx_error_re = Re.compile Re.(seq [ bol; str "```mdx-error" ])
 let odoc_mdx_error_re = Re.compile (Re.str "{err@mdx-error")
 
 let scan_file ctx path =
+  let path = Context.resolve ctx path in
   match
     try Some (Context.file_content ctx path)
     with Sys_error _ | File_view.Analysis_error _ -> None
@@ -17,7 +18,7 @@ let scan_file ctx path =
   | None -> []
   | Some content ->
       let re =
-        if Filename.check_suffix path ".md" then md_mdx_error_re
+        if Context.Path.has_ext ".md" path then md_mdx_error_re
         else odoc_mdx_error_re
       in
       let line_of_offset off =
@@ -31,7 +32,8 @@ let scan_file ctx path =
       |> List.map (fun g ->
           let line = line_of_offset (Re.Group.start g 0) in
           let display =
-            Fpath.v path |> Loc.current_dir_relative |> Fpath.to_string
+            Loc.current_dir_relative (Context.fpath_of_path path)
+            |> Fpath.to_string
           in
           let loc =
             Location.v ~file:display ~start_line:line ~start_col:0
@@ -44,7 +46,7 @@ let scan_file ctx path =
    The index already enumerates these; we don't readdir. *)
 let sources_in_scope ctx =
   let acc = ref [] in
-  let add path = acc := Fpath.to_string path :: !acc in
+  let add path = acc := path :: !acc in
   Context.index ctx |> Project_index.source_package_list
   |> List.iter (fun pkg ->
       List.iter
@@ -59,7 +61,7 @@ let sources_in_scope ctx =
             (fun fp ->
               if Filename.check_suffix (Fpath.to_string fp) ".mli" then add fp)
             (Project_index.Library.files lib)));
-  List.sort_uniq String.compare !acc
+  List.sort_uniq Fpath.compare !acc
 
 let check (ctx : Context.project) =
   sources_in_scope ctx |> List.concat_map (scan_file ctx)

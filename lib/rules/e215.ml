@@ -21,7 +21,7 @@ let visit_expr state (expr : T.expression) =
     | continuation :: _ when is_failwith continuation -> flag ()
     | _ -> ()
 
-let init ctx = { filename = ctx.Context.filename; issues = ref [] }
+let init ctx = { filename = Context.filename ctx; issues = ref [] }
 let finish _ state = List.rev !(state.issues)
 
 let pp ppf () =

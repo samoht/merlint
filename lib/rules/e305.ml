@@ -20,7 +20,8 @@ let check (ctx : Context.file) =
   let allowed = ctx.config.allowed_words in
   match ctx.project_index with
   | Some idx
-    when Project_index.is_generated_source_file idx (Fpath.v ctx.filename) ->
+    when Project_index.is_generated_source_file idx
+           (Context.fpath_of_path (Context.file_path ctx)) ->
       []
   | _ ->
       File_view.outline_module_definitions (Context.view ctx)

@@ -8,25 +8,32 @@ let check (ctx : Context.project) =
     List.filter_map
       (fun (t : Project_index.source_stanza) ->
         match t.files with
-        | f :: _ -> Some (Fpath.parent f |> Fpath.to_string, t.name)
+        | f :: _ -> Some (Context.Path.parent (Context.resolve ctx f), t.name)
         | [] -> None)
       (Context.test_stanzas ctx)
   in
-  let dirs = List.sort_uniq String.compare (List.map fst by_dir) in
+  let dirs = List.sort_uniq Context.Path.compare (List.map fst by_dir) in
   List.concat_map
     (fun dir ->
       let stanzas =
         List.filter_map
-          (fun (d, name) -> if d = dir then Some name else None)
+          (fun (d, name) ->
+            if Context.Path.compare d dir = 0 then Some name else None)
           by_dir
       in
       if List.length stanzas > 1 then
         let loc =
           Location.v
-            ~file:(Filename.concat dir "dune")
+            ~file:(Context.string_of_path Context.Path.(dir / "dune"))
             ~start_line:1 ~start_col:0 ~end_line:1 ~end_col:0
         in
-        [ Issue.v ~loc { directory = dir; stanza_names = stanzas } ]
+        [
+          Issue.v ~loc
+            {
+              directory = Context.Path.dir_display_string dir;
+              stanza_names = stanzas;
+            };
+        ]
       else [])
     dirs
 

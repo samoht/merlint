@@ -1,7 +1,8 @@
 (** Shared helpers for E8xx interop testing rules. *)
 
 type oracle_dir = {
-  path : string;
+  path : Context.path;
+  display : string;
   package : string;
   tool : string;
   has_scripts : bool;
@@ -10,16 +11,20 @@ type oracle_dir = {
   has_dune : bool;
 }
 
+let display dir = dir.display
+let display_child dir name = Filename.concat dir.display name
+
 let oracle_of_tool pkg interop tool =
   let path = Filename.concat interop tool in
   if not (Fs.is_directory path) then None
   else
     let display_path =
-      Fpath.v path |> Loc.current_dir_relative |> Fpath.to_string
+      Loc.current_dir_relative (Fpath.v path) |> Fpath.to_string
     in
     Some
       {
-        path = display_path;
+        path = Context.Path.v path;
+        display = display_path;
         package = pkg;
         tool;
         has_scripts = Fs.file_exists (Filename.concat path "scripts");
@@ -64,7 +69,8 @@ let oracle_dirs_uncached index =
         let path = Fpath.to_string dir in
         let tool = Filename.basename path in
         {
-          path = Fpath.v path |> Loc.current_dir_relative |> Fpath.to_string;
+          path = Context.Path.v (Fpath.to_string dir);
+          display = Loc.current_dir_relative dir |> Fpath.to_string;
           package = "";
           tool;
           has_scripts = Fs.file_exists (Filename.concat path "scripts");
@@ -74,7 +80,7 @@ let oracle_dirs_uncached index =
         })
   in
   List.sort_uniq
-    (fun a b -> String.compare a.path b.path)
+    (fun a b -> Context.Path.compare a.path b.path)
     (package_oracles @ dune_oracles)
 
 (* Cache the walk by index identity -- 10+ E8xx rules call this per run and

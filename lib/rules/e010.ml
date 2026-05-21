@@ -15,11 +15,11 @@ let check (ctx : Context.file) =
         else None)
     |> Option.value
          ~default:
-           (Location.v ~file:ctx.filename ~start_line:1 ~start_col:0 ~end_line:1
-              ~end_col:0)
+           (Location.v ~file:(Context.filename ctx) ~start_line:1 ~start_col:0
+              ~end_line:1 ~end_col:0)
   in
 
-  if File.is_test_file ctx.filename then []
+  if File.is_test_file_path (Context.project_relative_file ctx) then []
   else
     List.filter_map
       (fun ({ name; nesting = depth; is_function; _ } : Function_metrics.value)

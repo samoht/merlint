@@ -57,13 +57,14 @@ let package_issues ctx root pkg =
   then []
   else
     let claimed =
-      modules_explicitly_claimed ctx (Filename.concat lib_dir "dune")
+      modules_explicitly_claimed ctx
+        (Context.resolve ctx (Fpath.v (Filename.concat lib_dir "dune")))
     in
     let prefix = package_prefix pkg in
     try_readdir lib_dir |> List.filter_map (issue_for_module pkg claimed prefix)
 
 let check (ctx : Context.project) =
-  let root = ctx.project_root in
+  let root = Context.project_root_path ctx in
   try_readdir root |> List.concat_map (package_issues ctx root)
 
 let pp ppf { package = _; file } =

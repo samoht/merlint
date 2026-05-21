@@ -7,9 +7,13 @@ let check (ctx : Context.project) =
   List.filter_map
     (fun (d : Interop.oracle_dir) ->
       if d.has_scripts then
-        let generate_sh = Filename.concat d.path "scripts/generate.sh" in
-        if not (Fs.file_exists generate_sh) then
-          Some (Issue.v ~loc:(Location.in_file generate_sh) { dir = d.path })
+        let generate_sh = Context.Path.(d.path / "scripts" / "generate.sh") in
+        let generate_sh_s = Context.string_of_path generate_sh in
+        if not (Fs.file_exists generate_sh_s) then
+          let loc =
+            Location.in_file (Interop.display_child d "scripts/generate.sh")
+          in
+          Some (Issue.v ~loc { dir = Interop.display d })
         else None
       else None)
     dirs

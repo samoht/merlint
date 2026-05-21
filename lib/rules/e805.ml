@@ -6,7 +6,9 @@ let check (ctx : Context.project) =
   let dirs = Interop.oracle_dirs_for ctx in
   List.filter_map
     (fun (d : Interop.oracle_dir) ->
-      let scripts = Filename.concat d.path "scripts" in
+      let scripts =
+        Context.Path.(d.path / "scripts") |> Context.string_of_path
+      in
       let has_python =
         try
           Fs.readdir scripts |> Array.to_list
@@ -20,7 +22,7 @@ let check (ctx : Context.project) =
         let loc =
           Location.in_file (Filename.concat scripts "requirements.txt")
         in
-        Some (Issue.v ~loc { dir = d.path })
+        Some (Issue.v ~loc { dir = Interop.display d })
       else None)
     dirs
 

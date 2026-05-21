@@ -1,7 +1,7 @@
 (** E500: Missing OCamlformat File *)
 
 let check (ctx : Context.project) =
-  let project_root = ctx.project_root in
+  let project_root = Context.project_root_path ctx in
   let ocamlformat_path = Filename.concat project_root ".ocamlformat" in
   if not (Fs.file_exists ocamlformat_path) then [ Issue.v () ] else []
 

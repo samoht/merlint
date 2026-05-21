@@ -76,7 +76,7 @@ let item_issue ~allowed ~module_name item =
 let check (ctx : Context.file) =
   let allowed = ctx.config.allowed_words in
   let module_name =
-    Filename.basename ctx.filename
+    Filename.basename (Context.filename ctx)
     |> Filename.remove_extension |> String.lowercase_ascii
   in
   List.filter_map

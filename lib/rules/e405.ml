@@ -8,11 +8,12 @@ let missing_doc item =
   Item.kind item = Item.Value && Option.is_none (Item.doc item)
 
 let check (ctx : Context.file) =
-  if not (File_kind.is_mli ctx.filename) then []
+  if not (File_kind.is_mli (Context.filename ctx)) then []
   else if
     match ctx.project_index with
     | Some idx ->
-        Project_index.is_generated_source_file idx (Fpath.v ctx.filename)
+        Project_index.is_generated_source_file idx
+          (Context.fpath_of_path (Context.file_path ctx))
     | None -> false
   then []
   else

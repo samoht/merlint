@@ -2,9 +2,10 @@
 
 type payload = { dir : string }
 
-let dune_file ctx dir =
-  let path = Filename.concat dir "dune" in
-  try Context.file_content ctx path |> Dune.File.of_string |> Result.to_option
+let dune_file ctx (dir : Interop.oracle_dir) =
+  try
+    Context.file_content ctx Context.Path.(dir.path / "dune")
+    |> Dune.File.of_string |> Result.to_option
   with File_view.Analysis_error _ -> None
 
 (* Match either the library name [csv] or its public name [nox-csv] (the
@@ -23,7 +24,9 @@ let check (ctx : Context.project) =
   List.filter_map
     (fun (d : Interop.oracle_dir) ->
       if d.has_traces && d.has_dune then
-        let traces = Filename.concat d.path "traces" in
+        let traces =
+          Context.Path.(d.path / "traces") |> Context.string_of_path
+        in
         let has_csv =
           try
             Fs.readdir traces |> Array.to_list
@@ -31,11 +34,11 @@ let check (ctx : Context.project) =
           with Sys_error _ -> false
         in
         if has_csv then
-          match dune_file ctx d.path with
+          match dune_file ctx d with
           | Some dune when has_csv_dependency dune -> None
           | _ ->
-              let loc = Location.in_file (Filename.concat d.path "dune") in
-              Some (Issue.v ~loc { dir = d.path })
+              let loc = Location.in_file (Interop.display_child d "dune") in
+              Some (Issue.v ~loc { dir = Interop.display d })
         else None
       else None)
     dirs

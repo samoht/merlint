@@ -15,16 +15,17 @@ let expected_suite file =
     Some (String.sub basename 5 (String.length basename - 5))
   else None
 
-let suite_names ctx filename =
+let suite_names ctx file =
   try
-    Context.file_view ctx filename
-    |> Suite.bindings ~filename
+    let filename = Context.string_of_path file in
+    Context.file_view ctx file |> Suite.bindings ~filename
     |> List.filter_map (fun (binding : Suite.binding) -> binding.name)
   with File_view.Analysis_error _ -> []
 
-let issue_for_suite filename expected suite =
+let issue_for_suite file expected suite =
   if suite = expected then None
   else
+    let filename = Context.string_of_path file in
     let loc =
       Issue_location.v ~file:filename ~start_line:1 ~start_col:0 ~end_line:1
         ~end_col:0
@@ -38,8 +39,8 @@ let issue_for_suite filename expected suite =
          })
 
 let check_file ctx filename =
-  let fp = Fpath.v filename in
-  if not (Fpath.has_ext ".ml" fp && File.is_in_fuzz_dir fp) then []
+  let fp = Context.fpath_of_path filename in
+  if not (Context.Path.has_ext ".ml" filename && File.is_in_fuzz_dir fp) then []
   else
     match expected_suite fp with
     | None -> []

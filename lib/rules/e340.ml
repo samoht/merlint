@@ -60,7 +60,7 @@ let visit_expr state (expr : T.expression) =
   | _ -> ()
 
 let init ctx =
-  { filename = ctx.Context.filename; error_helpers = ref []; issues = ref [] }
+  { filename = Context.filename ctx; error_helpers = ref []; issues = ref [] }
 
 let finish _ state = List.rev !(state.issues)
 

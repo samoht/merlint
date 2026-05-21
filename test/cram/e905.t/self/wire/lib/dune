@@ -1,0 +1,4 @@
+(library
+ (name wire)
+ (public_name wire)
+ (modules wire wire_3d))

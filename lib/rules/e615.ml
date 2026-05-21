@@ -80,7 +80,7 @@ let check_test_info ctx env (test_stanza : Project_index.source_stanza) =
   | None -> []
   | Some test_file -> (
       try
-        let view = Context.file_view ctx (Fpath.to_string test_file) in
+        let view = Context.file_view ctx (Context.resolve ctx test_file) in
         if not (File_view.is_resolved view) then []
         else
           let modules = test_modules env test_stanza test_file in
@@ -99,7 +99,8 @@ let check_test_info ctx env (test_stanza : Project_index.source_stanza) =
 
 let stanza_is_selected ctx (stanza : Project_index.source_stanza) =
   stanza.files
-  |> List.exists (fun file -> ctx.Context.in_analyze_set (Fpath.to_string file))
+  |> List.exists (fun file ->
+      ctx.Context.in_analyze_set (Context.resolve ctx file))
 
 let enumerate ctx =
   let index = Context.index ctx in

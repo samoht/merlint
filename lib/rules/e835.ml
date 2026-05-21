@@ -12,14 +12,14 @@ let first_bad_script scripts =
   List.find_opt (script_has_break_system_packages scripts) entries
 
 let issue_for_oracle (d : Interop.oracle_dir) =
-  let scripts = Filename.concat d.path "scripts" in
+  let scripts = Context.Path.(d.path / "scripts") |> Context.string_of_path in
   if not (Fs.file_exists scripts) then None
   else
     match first_bad_script scripts with
     | None -> None
     | Some file ->
         let loc = Location.in_file (Filename.concat scripts file) in
-        Some (Issue.v ~loc { dir = d.path; file })
+        Some (Issue.v ~loc { dir = Interop.display d; file })
 
 let check (ctx : Context.project) =
   let dirs = Interop.oracle_dirs_for ctx in

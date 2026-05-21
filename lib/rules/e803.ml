@@ -44,13 +44,14 @@ let check (ctx : Context.project) =
   List.filter_map
     (fun (d : Interop.oracle_dir) ->
       if d.has_test_ml then
-        let path = Filename.concat d.path "test.ml" in
+        let path = Context.Path.(d.path / "test.ml") in
         let found =
           try shell_call (Context.file_view ctx path)
           with File_view.Analysis_error _ -> None
         in
         match found with
-        | Some (pattern, loc) -> Some (Issue.v ~loc { dir = d.path; pattern })
+        | Some (pattern, loc) ->
+            Some (Issue.v ~loc { dir = Interop.display d; pattern })
         | None -> None
       else None)
     dirs

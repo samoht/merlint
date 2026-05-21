@@ -50,10 +50,12 @@ let check (ctx : Context.file) =
   let config =
     { max_function_length = ctx.Context.config.max_function_length }
   in
-  let filename = ctx.filename in
+  let filename = Context.filename ctx in
+  let project_file = Context.project_relative_file ctx in
   Log.debug (fun m ->
-      m "E005: Checking %s (is_test=%b)" filename (File.is_test_file filename));
-  if File.is_test_file filename then []
+      m "E005: Checking %s (is_test=%b)" filename
+        (File.is_test_file_path project_file));
+  if File.is_test_file_path project_file then []
   else
     List.filter_map
       (issue_of_item ~config ~metrics:(metric_by_name ctx))

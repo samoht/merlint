@@ -57,10 +57,10 @@ let visit_expr state (expr : T.expression) =
         | _ -> ())
     | _ -> ()
 
-let select ctx = is_test_or_fuzz_file ctx.Context.filename
+let select ctx = is_test_or_fuzz_file (Context.filename ctx)
 
 let init ctx =
-  let filename = ctx.Context.filename in
+  let filename = Context.filename ctx in
   { filename; enabled = true; issues = ref [] }
 
 let finish _ state = List.rev !(state.issues)

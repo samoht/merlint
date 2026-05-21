@@ -252,7 +252,7 @@ let is_test_file filename =
   String.starts_with ~prefix:"test_" basename || basename = "test.ml"
 
 let check (ctx : Context.file) =
-  let filename = ctx.filename in
+  let filename = Context.filename ctx in
   if is_test_file filename then []
   else if
     Filename.check_suffix filename ".ml"

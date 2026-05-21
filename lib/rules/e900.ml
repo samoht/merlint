@@ -12,20 +12,24 @@ let file_uses_wire ctx path =
 let library_uses_wire ctx lib =
   Project_index.Library.files lib
   |> List.exists (fun fp ->
+      let file = Context.resolve ctx fp in
       let f = Fpath.to_string fp in
       Filename.check_suffix f ".ml"
       && (not (Filename.check_suffix f ".mli"))
-      && ctx.Context.in_analyze_set f
-      && file_uses_wire ctx f)
+      && ctx.Context.in_analyze_set file
+      && file_uses_wire ctx file)
 
 let has_c_dir pkg_dir =
   let c = Fpath.to_string (Fpath.add_seg pkg_dir "c") in
   try Fs.is_directory c with Sys_error _ -> false
 
+let is_wire_provider pkg = Project_index.Package.name pkg = "wire"
+
 let check_package ctx pkg =
   let name = Project_index.Package.name pkg in
   match Project_index.Package.source_dir pkg with
   | None -> []
+  | Some _ when is_wire_provider pkg -> []
   | Some pkg_dir when has_c_dir pkg_dir -> []
   | Some _ ->
       let libs = Project_index.package_libraries pkg in

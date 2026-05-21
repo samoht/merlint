@@ -56,7 +56,7 @@ let suggestion_for = function
 let scan_file ctx ~filename =
   let view = Context.file_view ctx filename in
   let display_filename =
-    Fpath.v filename |> Loc.current_dir_relative |> Fpath.to_string
+    Loc.current_dir_relative (Context.fpath_of_path filename) |> Fpath.to_string
   in
   let findings = ref [] in
   File_view.iter_applications view (fun call ->
@@ -94,7 +94,7 @@ let scan_file ctx ~filename =
 let library_ml_files lib =
   Project_index.Library.files lib
   |> List.filter (fun p -> Fpath.has_ext ".ml" p)
-  |> List.map Fpath.to_string
+  |> List.map (fun file -> Context.path (Fpath.to_string file))
 
 let check (ctx : Context.project) =
   let module P = Project_index.Package in

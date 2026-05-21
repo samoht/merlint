@@ -14,7 +14,7 @@ let check (ctx : Context.project) =
         Some
           (Issue.v
              {
-               path = d.path;
+               path = Interop.display d;
                reason =
                  Fmt.str
                    "directory named after language %S, should be named after \

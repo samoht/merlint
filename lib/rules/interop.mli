@@ -1,7 +1,8 @@
 (** Shared helpers for E8xx interop testing rules. *)
 
 type oracle_dir = {
-  path : string;
+  path : Context.path;
+  display : string;
   package : string;
   tool : string;
   has_scripts : bool;
@@ -10,6 +11,13 @@ type oracle_dir = {
   has_dune : bool;
 }
 (** [oracle_dir] describes one discovered interop oracle directory. *)
+
+val display : oracle_dir -> string
+(** [display dir] is [dir]'s path relative to the current directory when
+    possible, for diagnostics. *)
+
+val display_child : oracle_dir -> string -> string
+(** [display_child dir name] is [name] below [display dir]. *)
 
 val oracle_dirs : Project_index.t -> oracle_dir list
 (** [oracle_dirs index] returns discovered interop oracle directories under

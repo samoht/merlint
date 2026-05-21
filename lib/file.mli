@@ -10,9 +10,13 @@ val is_in_fuzz_dir : Fpath.t -> bool
 val is_in_test_dir : Fpath.t -> bool
 (** [is_in_test_dir file] returns [true] if [file] is in a test directory. *)
 
+val is_test_file_path : Fpath.t -> bool
+(** [is_test_file_path file] returns [true] if [file] names a test module or is
+    below a [test] or [tests] directory. The path should be relative to the
+    analyzed project root when checking project-local conventions. *)
+
 val is_test_file : string -> bool
-(** [is_test_file filename] returns [true] if [filename] names a test module or
-    is below a [test] or [tests] directory. *)
+(** [is_test_file filename] is [is_test_file_path (Fpath.v filename)]. *)
 
 val is_unit_companion_module : string -> bool
 (** [is_unit_companion_module basename] returns [true] when [basename] is a
@@ -23,6 +27,10 @@ val is_unit_companion_module : string -> bool
 val is_in_private_library : Project_index.t -> string -> bool
 (** [is_in_private_library index filename] returns [true] if [filename] belongs
     to a private library (no public_name). *)
+
+val is_in_private_library_path : Project_index.t -> Fpath.t -> bool
+(** [is_in_private_library_path index file] returns [true] if [file] belongs to
+    a private library (no public_name). *)
 
 val process_lines_with_location :
   string -> string -> (int -> string -> Location.t -> 'a option) -> 'a list
