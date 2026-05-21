@@ -1,0 +1,4 @@
+(lang dune 3.0)
+(name pkg-a)
+(package (name pkg-a))
+(package (name pkg-b))
