@@ -55,6 +55,18 @@ let check_lib ~package ~depends_set ~own lib =
               source_lib = lib_name;
             })
 
+let check_runtime_use ~package ~depends_set ~own used_lib =
+  match check_used_lib ~package ~depends_set ~own used_lib with
+  | `Skip -> None
+  | `Missing used_pkg ->
+      Some
+        {
+          package = P.name package;
+          missing_dep = used_pkg;
+          used_via = used_lib;
+          source_lib = "a public executable";
+        }
+
 let check_bin_use ~package ~depends_set ~build_set bin =
   match Project_index.package_of_binary (P.index package) bin with
   | None -> None
@@ -97,12 +109,28 @@ let check_package package =
   let lib_findings =
     List.concat_map (check_lib ~package ~depends_set:depends ~own) runtime_libs
   in
+  let libs_checked =
+    runtime_libs
+    |> List.concat_map Project_index.Library.deps
+    |> Dep_deps.String_set.of_list
+  in
+  let executable_findings =
+    P.executable_stanzas package
+    |> List.filter (fun (stanza : Project_index.source_stanza) ->
+        stanza.public_names <> [])
+    |> List.concat_map (fun (stanza : Project_index.source_stanza) ->
+        stanza.libraries)
+    |> List.sort_uniq String.compare
+    |> List.filter (fun used_lib ->
+        not (Dep_deps.String_set.mem used_lib libs_checked))
+    |> List.filter_map (check_runtime_use ~package ~depends_set:depends ~own)
+  in
   let bin_findings =
     P.bin_uses package
     |> List.filter_map
          (check_bin_use ~package ~depends_set:depends ~build_set:build_depends)
   in
-  lib_findings @ bin_findings
+  lib_findings @ executable_findings @ bin_findings
 
 let check (ctx : Context.project) =
   Dep_deps.run_per_package ~check_package (Context.index ctx)
@@ -118,15 +146,16 @@ let rule =
     ~category:Rule.Project_structure
     ~hint:
       "When a library in your package's [(libraries L)] resolves to opam \
-       package P, P must appear in your package's [depends:]. Otherwise [opam \
-       install] from a fresh switch fails for downstream users -- your local \
-       build only works because P happens to be in the active switch. The fix \
-       depends on how you author opam metadata: if you hand-write \
-       [<pkg>.opam], add the package to its [depends:]; if you let dune \
-       generate [<pkg>.opam] from [dune-project], add it to the [(package \
-       (depends ...))] stanza (use [<pkg>.opam.template] only for fields dune \
-       can't generate). Builtin libraries (unix, str, threads, ...), \
-       build-tool packages dune resolves separately (ocaml, dune, \
-       js_of_ocaml), [conf-*] system-library wrappers, and libraries owned by \
-       the package itself are exempt."
+       package P, P must appear in your package's [depends:]. This includes \
+       libraries linked by public executables, since [opam install] builds \
+       those through [@install]. Otherwise [opam install] from a fresh switch \
+       fails for downstream users -- your local build only works because P \
+       happens to be in the active switch. The fix depends on how you author \
+       opam metadata: if you hand-write [<pkg>.opam], add the package to its \
+       [depends:]; if you let dune generate [<pkg>.opam] from [dune-project], \
+       add it to the [(package (depends ...))] stanza (use \
+       [<pkg>.opam.template] only for fields dune can't generate). Builtin \
+       libraries (unix, str, threads, ...), build-tool packages dune resolves \
+       separately (ocaml, dune, js_of_ocaml), [conf-*] system-library \
+       wrappers, and libraries owned by the package itself are exempt."
     ~examples:[] ~pp (Project check)

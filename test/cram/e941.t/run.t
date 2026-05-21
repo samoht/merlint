@@ -17,15 +17,17 @@ Build bad fixture project:
   ✗ Project Structure (1 total issues)
     [E941] Missing runtime dependency (1 issue)
     When a library in your package's [(libraries L)] resolves to opam package P, P
-    must appear in your package's [depends:]. Otherwise [opam install] from a
-    fresh switch fails for downstream users -- your local build only works because
-    P happens to be in the active switch. The fix depends on how you author opam
-    metadata: if you hand-write [<pkg>.opam], add the package to its [depends:];
-    if you let dune generate [<pkg>.opam] from [dune-project], add it to the
-    [(package (depends ...))] stanza (use [<pkg>.opam.template] only for fields
-    dune can't generate). Builtin libraries (unix, str, threads, ...), build-tool
-    packages dune resolves separately (ocaml, dune, js_of_ocaml), [conf-*]
-    system-library wrappers, and libraries owned by the package itself are exempt.
+    must appear in your package's [depends:]. This includes libraries linked by
+    public executables, since [opam install] builds those through [@install].
+    Otherwise [opam install] from a fresh switch fails for downstream users --
+    your local build only works because P happens to be in the active switch. The
+    fix depends on how you author opam metadata: if you hand-write [<pkg>.opam],
+    add the package to its [depends:]; if you let dune generate [<pkg>.opam] from
+    [dune-project], add it to the [(package (depends ...))] stanza (use
+    [<pkg>.opam.template] only for fields dune can't generate). Builtin libraries
+    (unix, str, threads, ...), build-tool packages dune resolves separately
+    (ocaml, dune, js_of_ocaml), [conf-*] system-library wrappers, and libraries
+    owned by the package itself are exempt.
     - bad/pkg-b/pkg-b.opam:1:0: pkg-b uses library pkg-a.helper (from package pkg-a) via the (libraries ...) of pkg-b, but pkg-a is missing from pkg-b.opam's [depends:]. Add it.
   ✓ Test Quality (0 total issues)
   ✓ Interop Testing (0 total issues)
@@ -64,4 +66,19 @@ Build good fixture project:
   ✓ Code Generation (0 total issues)
   
   Summary: ✓ 0 total issues (applied 1 rule)
+  ✓ All checks passed!
+
+Public executables are install targets too: pkg-b installs an executable that
+links pkg-a.helper, so pkg-b still needs a runtime dependency on pkg-a.
+
+Build bad executable fixture project:
+  $ (cd bad-exe && dune build @check)
+
+  $ merlint --build -r E941 bad-exe/ | grep 'pkg-b uses library'
+    - bad-exe/pkg-b/pkg-b.opam:1:0: pkg-b uses library pkg-a.helper (from package pkg-a) via the (libraries ...) of a public executable, but pkg-a is missing from pkg-b.opam's [depends:]. Add it.
+
+Build good executable fixture project:
+  $ (cd good-exe && dune build @check)
+
+  $ merlint --build -r E941 good-exe/ | grep 'All checks passed'
   ✓ All checks passed!
