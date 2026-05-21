@@ -27,9 +27,13 @@ let check (ctx : Context.project) =
         else
           List.filter_map
             (fun file ->
-              let dir = Fpath.parent file |> Fpath.to_string in
+              let file = Context.resolve ctx file in
+              let dir = Context.Path.parent file in
+              let rel_dir =
+                Context.project_relative_path ctx dir |> Fpath.to_string
+              in
               (* Skip if this is already a test directory *)
-              if is_test_directory dir then None else Some (dir, name))
+              if is_test_directory rel_dir then None else Some (dir, name))
             (Project_index.Library.files lib))
       (Project.Query.source_libraries (Context.index ctx))
   in
@@ -40,19 +44,23 @@ let check (ctx : Context.project) =
       let test_name = test.name in
       List.filter_map
         (fun file ->
-          let test_dir = Fpath.parent file |> Fpath.to_string in
+          let file = Context.resolve ctx file in
+          let test_dir = Context.Path.parent file in
           (* Find any library in the same directory *)
           match
-            List.find_opt (fun (lib_dir, _) -> lib_dir = test_dir) lib_dirs
+            List.find_opt
+              (fun (lib_dir, _) -> Context.Path.compare lib_dir test_dir = 0)
+              lib_dirs
           with
           | Some (dir, lib_name) ->
+              let directory = Context.Path.dir_display_string dir in
               let loc =
-                Location.v ~file:(Fpath.to_string file) ~start_line:1
-                  ~start_col:0 ~end_line:1 ~end_col:0
+                Location.v
+                  ~file:(Context.string_of_path file)
+                  ~start_line:1 ~start_col:0 ~end_line:1 ~end_col:0
               in
               Some
-                (Issue.v ~loc
-                   { directory = dir; library_name = lib_name; test_name })
+                (Issue.v ~loc { directory; library_name = lib_name; test_name })
           | None -> None)
         test.files)
     (Context.test_stanzas ctx)

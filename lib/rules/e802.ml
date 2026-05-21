@@ -2,9 +2,10 @@
 
 type payload = { dir : string; reason : string }
 
-let dune_file ctx dir =
-  let path = Filename.concat dir "dune" in
-  try Context.file_content ctx path |> Dune.File.of_string |> Result.to_option
+let dune_file ctx (dir : Interop.oracle_dir) =
+  try
+    Context.file_content ctx Context.Path.(dir.path / "dune")
+    |> Dune.File.of_string |> Result.to_option
   with File_view.Analysis_error _ -> None
 
 let check (ctx : Context.project) =
@@ -15,17 +16,17 @@ let check (ctx : Context.project) =
         Some
           (Issue.v
              {
-               dir = d.path;
+               dir = Interop.display d;
                reason = "missing traces/ directory — traces must be committed";
              })
       else if d.has_dune then
-        match dune_file ctx d.path with
+        match dune_file ctx d with
         | Some dune when Dune.File.has_source_tree_dep dune "traces" -> None
         | _ ->
             Some
               (Issue.v
                  {
-                   dir = d.path;
+                   dir = Interop.display d;
                    reason =
                      "dune test stanza missing (source_tree traces) dep — test \
                       must run from committed traces";

@@ -155,7 +155,7 @@ let pp ppf { name; kind; group } =
      its siblings: %s"
     name suggestion
 
-let init ctx = { filename = ctx.Context.filename; issues = ref [] }
+let init ctx = { filename = Context.filename ctx; issues = ref [] }
 
 let finish _ state =
   List.rev !(state.issues)

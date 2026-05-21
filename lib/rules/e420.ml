@@ -182,7 +182,7 @@ let check_item target_map item =
   | Some doc -> check_doc target_map item doc
 
 let check (ctx : Context.file) =
-  if not (File_kind.is_mli ctx.filename) then []
+  if not (File_kind.is_mli (Context.filename ctx)) then []
   else
     let items = File_view.all_items (Context.view ctx) in
     let target_map = targets items in

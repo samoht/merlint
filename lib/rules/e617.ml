@@ -91,10 +91,10 @@ let visit_structure_item state (item : T.structure_item) =
             bindings
     | _ -> ()
 
-let select ctx = is_test_module_file ctx.Context.filename
+let select ctx = is_test_module_file (Context.filename ctx)
 
 let init ctx =
-  let filename = ctx.Context.filename in
+  let filename = Context.filename ctx in
   { filename; enabled = true; suite_name = ref None }
 
 let finish _ state =

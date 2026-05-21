@@ -48,8 +48,8 @@ let check_package pkg =
               match Project_index.Package.source_dir pkg with
               | None -> Location.in_file (Filename.concat name "dune-project")
               | Some dir ->
-                  Fpath.(dir / "dune-project")
-                  |> Loc.current_dir_relative |> Loc.in_file
+                  Loc.in_file
+                    (Loc.current_dir_relative Fpath.(dir / "dune-project"))
             in
             issue_of_setting name loc
               (Dune.Project.implicit_transitive_deps project))

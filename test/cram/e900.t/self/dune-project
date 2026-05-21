@@ -1,0 +1,4 @@
+(lang dune 3.21)
+
+(package
+ (name wire))

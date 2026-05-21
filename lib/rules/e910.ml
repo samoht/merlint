@@ -78,10 +78,9 @@ let package_findings policy detected =
   in
   missing @ undeclared
 
-let loc_in_project ~root path =
-  Loc.relative_to ~root:(Fpath.v root) path |> Loc.in_file
+let loc_in_project path = Loc.current_dir_relative path |> Loc.in_file
 
-let check_package ~root pkg =
+let check_package pkg =
   match
     (Project_index.Package.source_dir pkg, Project_index.Package.raw_opam pkg)
   with
@@ -96,12 +95,12 @@ let check_package ~root pkg =
         match package_findings policy detected with
         | [] -> None
         | findings ->
-            let loc = loc_in_project ~root Fpath.(dir / "dune-project") in
+            let loc = loc_in_project Fpath.(dir / "dune-project") in
             Some (Issue.v ~loc { package = name; findings }))
 
 let check (ctx : Context.project) =
   Context.index ctx |> Project_index.source_package_list
-  |> List.filter_map (check_package ~root:ctx.project_root)
+  |> List.filter_map check_package
 
 let pp ppf { package; findings } =
   Fmt.pf ppf "%s: %s" package

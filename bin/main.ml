@@ -7,6 +7,45 @@ module Log = (val Logs.src_log logs_src : Logs.LOG)
 let wrap_text ?(indent = 2) text =
   Tty.Width.wrap ~indent (Tty.Width.terminal_width ()) text
 
+let normalize_fpath path = Fpath.(path |> normalize |> rem_empty_seg)
+
+let relativize_rendered_issue text =
+  let root = normalize_fpath (Fpath.v (Sys.getcwd ())) in
+  let root_s = Fpath.to_string root in
+  let root_len = String.length root_s in
+  let text_len = String.length text in
+  let buf = Buffer.create text_len in
+  let path_delim = function
+    | ' ' | '\t' | '\n' | '\r' | ':' | ',' | ';' | ')' | ']' | '}' | '\'' | '"'
+      ->
+        true
+    | _ -> false
+  in
+  let rec path_end i =
+    if i >= text_len || path_delim text.[i] then i else path_end (i + 1)
+  in
+  let relativize_path raw =
+    let path = normalize_fpath (Fpath.v raw) in
+    match Fpath.relativize ~root path with
+    | Some rel -> Fpath.to_string rel
+    | None -> raw
+  in
+  let starts_with_root i =
+    i + root_len <= text_len && String.sub text i root_len = root_s
+  in
+  let rec loop i =
+    if i >= text_len then ()
+    else if starts_with_root i then (
+      let j = path_end i in
+      Buffer.add_string buf (relativize_path (String.sub text i (j - i)));
+      loop j)
+    else (
+      Buffer.add_char buf text.[i];
+      loop (i + 1))
+  in
+  loop 0;
+  Buffer.contents buf
+
 let print_issue_group (error_code, issues) =
   (* Sort issues within each group by location *)
   let sorted_issues = List.sort Merlint.Rule.Run.compare issues in
@@ -43,8 +82,10 @@ let print_issue_group (error_code, issues) =
       if List.length sorted_issues > 0 then
         List.iter
           (fun issue ->
-            (* Print the issue using its pretty-printer, which already includes location *)
-            Fmt.pr "  - %a@." Merlint.Rule.Run.pp issue)
+            let text =
+              Fmt.kstr relativize_rendered_issue "%a" Merlint.Rule.Run.pp issue
+            in
+            Fmt.pr "  - %s@." text)
           sorted_issues
 
 (** Group issues by error code *)
@@ -165,7 +206,10 @@ module Json_report = struct
     position pos.line pos.col
 
   let location_of_merlint (loc : Merlint.Location.t) =
-    location loc.file
+    let file =
+      Fpath.v loc.file |> Merlint.Loc.current_dir_relative |> Fpath.to_string
+    in
+    location file
       (position_of_location loc.start)
       (position_of_location loc.end_)
 
@@ -412,6 +456,7 @@ let run_analysis ?domain_mgr ~load_file ~json_output project_root analyze_set
     let issues_by_category = group_issues_by_category all_issues in
 
     (* Process each category *)
+    ignore project_root;
     print_categorized_issues issues_by_category;
 
     (* Print summary table *)
@@ -455,6 +500,11 @@ let classify_path path =
   else if is_ocaml_source path then `File
   else `Other
 
+let resolve_cli_path raw =
+  let p = Fpath.v raw in
+  if Fpath.is_abs p then Fpath.normalize p
+  else Fpath.normalize Fpath.(v (Sys.getcwd ()) // p)
+
 (* Narrow [analyze_set] from CLI arguments. Bare-file arguments enumerate
    the files to analyse directly; directory and no-arg invocations leave
    [analyze_set = None], and the engine walks [Project_index.source_files]
@@ -467,7 +517,7 @@ let analyze_set_of_files files =
         List.filter_map
           (fun p ->
             match classify_path p with
-            | `File -> Some (Fpath.v p)
+            | `File -> Some (resolve_cli_path p)
             | `Dir | `Other -> None
             | `Missing ->
                 Fmt.epr "Warning: %s does not exist@." p;
@@ -481,7 +531,7 @@ let analyze_roots_of_files files =
     List.filter_map
       (fun p ->
         match classify_path p with
-        | `Dir -> Some (Fpath.v p)
+        | `Dir -> Some (resolve_cli_path p)
         | `File | `Other | `Missing -> None)
       files
   with
@@ -512,12 +562,7 @@ let maybe_build_project mgr ~project_root ~analyze_set ~analyze_roots ~index
     Log.info (fun m -> m "Build done."))
 
 let monorepo_for_index project_root =
-  let cwd = Fpath.(v (Sys.getcwd ()) |> normalize) in
-  let root = Fpath.(v project_root |> normalize) in
-  match Fpath.rem_prefix cwd root with
-  | Some rel when Fpath.to_string rel <> "" -> rel
-  | Some _ -> Fpath.v "."
-  | None -> root
+  Fpath.(v project_root |> normalize |> rem_empty_seg)
 
 let resolve_index_root raw =
   let p = Fpath.v raw in

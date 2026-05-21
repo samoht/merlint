@@ -6,7 +6,7 @@
 type payload = { package : string }
 
 let check (ctx : Context.project) =
-  let root = ctx.project_root in
+  let root = Context.project_root_path ctx in
   let try_readdir d =
     try Fs.readdir d |> Array.to_list with Sys_error _ -> []
   in

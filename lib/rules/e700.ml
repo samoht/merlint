@@ -15,13 +15,15 @@ let check ctx =
   let files = Context.analyze_set ctx in
   List.concat_map
     (fun filename ->
-      let fp = Fpath.v filename in
+      let fp = Context.fpath_of_path filename in
       if
-        Fpath.has_ext ".ml" fp && File.is_in_fuzz_dir fp
+        Context.Path.has_ext ".ml" filename
+        && File.is_in_fuzz_dir fp
         && Fpath.(fp |> rem_ext |> basename) = "fuzz"
       then
         try
           let view = Context.file_view ctx filename in
+          let filename = Context.string_of_path filename in
           if defines_own_tests view && not (uses_fuzz_module_suites view) then
             [
               Issue.v

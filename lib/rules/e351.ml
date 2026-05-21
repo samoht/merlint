@@ -26,7 +26,7 @@ let is_stdlib_mutable path =
   | _ -> None
 
 let check (ctx : Context.file) =
-  if not (File_kind.is_mli ctx.filename) then []
+  if not (File_kind.is_mli (Context.filename ctx)) then []
   else
     let view = Context.view ctx in
     List.filter_map

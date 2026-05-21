@@ -151,7 +151,7 @@ let visit_expr state (expr : T.expression) =
           :: !(state.issues)
 
 let init ctx =
-  { filename = ctx.Context.filename; helper_locs = ref []; issues = ref [] }
+  { filename = Context.filename ctx; helper_locs = ref []; issues = ref [] }
 
 let finish _ state = List.rev !(state.issues)
 

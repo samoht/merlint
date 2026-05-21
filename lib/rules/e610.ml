@@ -47,10 +47,12 @@ let expected_lib_path test_file =
         Some (String.sub basename 5 (String.length basename - 5) ^ ".ml")
       else None
 
-let library_module_path file =
-  if not (Fpath.has_ext ".ml" file) then None
+let library_module_path ctx file =
+  let file = Context.resolve ctx file in
+  let rel_file = Context.project_relative_path ctx file in
+  if not (Fpath.has_ext ".ml" rel_file) then None
   else
-    let path = Fpath.to_string file in
+    let path = Fpath.to_string rel_file in
     match lib_prefix path with
     | Some idx ->
         let result = String.sub path idx (String.length path - idx) in
@@ -60,19 +62,20 @@ let library_module_path file =
         Log.debug (fun m -> m "E610: lib path %s (no lib/ prefix)" path);
         Some path
 
-let library_module_paths libraries =
+let library_module_paths ctx libraries =
   List.concat_map
     (fun lib ->
-      List.filter_map library_module_path (Project_index.Library.files lib))
+      List.filter_map (library_module_path ctx)
+        (Project_index.Library.files lib))
     libraries
 
-let library_source_files libraries =
+let library_source_files ctx libraries =
   List.concat_map
     (fun lib ->
       List.filter_map
         (fun file ->
           if Fpath.has_ext ".ml" file || Fpath.has_ext ".mli" file then
-            Some (Fpath.to_string file)
+            Some (Context.resolve ctx file)
           else None)
         (Project_index.Library.files lib))
     libraries
@@ -82,7 +85,7 @@ type env = {
   referenced_modules : String_set.t;
 }
 
-type work = { env : env; file : Fpath.t }
+type work = { env : env; file : Context.path; rel_file : Fpath.t }
 
 let module_path_matches ~expected_path lib_path =
   let expected_lc = String.lowercase_ascii expected_path in
@@ -103,15 +106,16 @@ let module_path_matches ~expected_path lib_path =
 
 let missing_library_issue file expected_path =
   let loc =
-    Issue_location.v ~file:(Fpath.to_string file) ~start_line:1 ~start_col:0
-      ~end_line:1 ~end_col:0
+    Issue_location.v
+      ~file:(Context.string_of_path file)
+      ~start_line:1 ~start_col:0 ~end_line:1 ~end_col:0
   in
   Issue.v ~loc { expected_module = expected_path }
 
 let referenced_modules ctx library_source_files =
   List.fold_left
     (fun acc path ->
-      if Filename.check_suffix path ".ml" || Filename.check_suffix path ".mli"
+      if Context.Path.has_ext ".ml" path || Context.Path.has_ext ".mli" path
       then
         try
           Context.file_view ctx path |> File_view.referenced_module_names
@@ -120,20 +124,19 @@ let referenced_modules ctx library_source_files =
       else acc)
     String_set.empty library_source_files
 
-let check_test_file ~library_module_paths ~referenced_modules file =
-  let test_module = Fpath.(file |> rem_ext |> basename) in
+let check_test_file ~library_module_paths ~referenced_modules ~file ~rel_file =
+  let test_module = Fpath.(rel_file |> rem_ext |> basename) in
   if
-    (not (Fpath.has_ext ".ml" file))
+    (not (Fpath.has_ext ".ml" rel_file))
     || (not (String.starts_with ~prefix:"test_" test_module))
-    || File.is_in_examples (Fpath.to_string file)
+    || File.is_in_examples (Fpath.to_string rel_file)
   then None
   else
-    match expected_lib_path file with
+    match expected_lib_path rel_file with
     | None -> None
     | Some expected_path ->
         Log.debug (fun m ->
-            m "E610: test %s expects lib %s" (Fpath.to_string file)
-              expected_path);
+            m "E610: test %a expects lib %s" Context.Path.pp file expected_path);
         let found =
           List.exists (module_path_matches ~expected_path) library_module_paths
         in
@@ -152,32 +155,38 @@ let selected_test_files ctx =
   Context.test_stanzas ctx
   |> List.concat_map (fun (stanza : Project_index.source_stanza) ->
       stanza.files)
-  |> List.filter (fun file ->
-      let path = Fpath.to_string file in
-      ctx.Context.in_analyze_set path
-      && File_kind.is_ml path
-      && String.starts_with ~prefix:"test_" Fpath.(file |> rem_ext |> basename)
-      && not (File.is_in_examples path))
+  |> List.filter_map (fun file ->
+      let file = Context.resolve ctx file in
+      let rel_file = Context.project_relative_path ctx file in
+      let path = Fpath.to_string rel_file in
+      if
+        ctx.Context.in_analyze_set file
+        && File_kind.is_ml path
+        && String.starts_with ~prefix:"test_"
+             Fpath.(rel_file |> rem_ext |> basename)
+        && not (File.is_in_examples path)
+      then Some (file, rel_file)
+      else None)
 
 let enumerate ctx =
   match selected_test_files ctx with
   | [] -> []
   | files ->
       let libraries = Project.Query.source_libraries (Context.index ctx) in
-      let library_module_paths = library_module_paths libraries in
-      let library_source_files = library_source_files libraries in
+      let library_module_paths = library_module_paths ctx libraries in
+      let library_source_files = library_source_files ctx libraries in
       let referenced_modules = referenced_modules ctx library_source_files in
       let env = { library_module_paths; referenced_modules } in
       Log.debug (fun m ->
           m "E610: library_module_paths = %a"
             Fmt.(list ~sep:comma string)
             library_module_paths);
-      List.map (fun file -> { env; file }) files
+      List.map (fun (file, rel_file) -> { env; file; rel_file }) files
 
-let check_unit { env; file } =
+let check_unit { env; file; rel_file } =
   match
     check_test_file ~library_module_paths:env.library_module_paths
-      ~referenced_modules:env.referenced_modules file
+      ~referenced_modules:env.referenced_modules ~file ~rel_file
   with
   | None -> []
   | Some issue -> [ issue ]

@@ -40,7 +40,7 @@ let check_doc item =
   | None -> None
 
 let check (ctx : Context.file) =
-  if not (File_kind.is_mli ctx.filename) then []
+  if not (File_kind.is_mli (Context.filename ctx)) then []
   else Context.view ctx |> File_view.value_items |> List.filter_map check_doc
 
 let pp ppf { value_name; location = _; issue } =

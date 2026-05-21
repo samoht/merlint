@@ -5,6 +5,11 @@ type payload = { fuzz_dir : string }
 let path_segments s =
   String.split_on_char '/' s |> List.filter (fun s -> s <> "")
 
+let dir_of_stanza_file ctx file =
+  let file = Context.resolve ctx file in
+  let dir = Context.Path.parent file in
+  (dir, Context.project_relative_path ctx dir |> Fpath.to_string)
+
 (** Check if a fuzz/ directory is nested under a test/ directory. *)
 let check (ctx : Context.project) =
   let all_dirs =
@@ -12,7 +17,7 @@ let check (ctx : Context.project) =
       List.filter_map
         (fun (t : Project_index.source_stanza) ->
           match t.files with
-          | f :: _ -> Some (Fpath.parent f |> Fpath.to_string)
+          | f :: _ -> Some (dir_of_stanza_file ctx f)
           | [] -> None)
         (Context.test_stanzas ctx)
     in
@@ -20,24 +25,26 @@ let check (ctx : Context.project) =
       List.filter_map
         (fun (exe : Project_index.source_stanza) ->
           match exe.files with
-          | f :: _ -> Some (Fpath.parent f |> Fpath.to_string)
+          | f :: _ -> Some (dir_of_stanza_file ctx f)
           | [] -> None)
         (Context.executable_stanzas ctx)
     in
-    List.sort_uniq String.compare (test_dirs @ exec_dirs)
+    List.sort_uniq
+      (fun (a, _) (b, _) -> Context.Path.compare a b)
+      (test_dirs @ exec_dirs)
   in
   List.filter_map
-    (fun dir ->
-      let segments = path_segments dir in
+    (fun (dir, rel_dir) ->
+      let segments = path_segments rel_dir in
       let has_fuzz = List.mem "fuzz" segments in
       let has_test = List.mem "test" segments in
       if has_fuzz && has_test then
         let loc =
           Location.v
-            ~file:(Filename.concat dir "dune")
+            ~file:(Context.string_of_path Context.Path.(dir / "dune"))
             ~start_line:1 ~start_col:0 ~end_line:1 ~end_col:0
         in
-        Some (Issue.v ~loc { fuzz_dir = dir })
+        Some (Issue.v ~loc { fuzz_dir = Context.Path.dir_display_string dir })
       else None)
     all_dirs
 

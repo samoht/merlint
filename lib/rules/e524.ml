@@ -42,18 +42,18 @@ let count_cmd_v_surface view =
   !count
 
 let check (ctx : Context.file) =
-  if not (Filename.check_suffix ctx.filename ".ml") then []
+  if not (Filename.check_suffix (Context.filename ctx) ".ml") then []
   else
     match File_view.resolved_identifiers (Context.view ctx) with
     | None ->
         let count = count_cmd_v_surface (Context.view ctx) in
         if count >= 2 then
-          [ Issue.v ~loc:(Location.in_file ctx.filename) { count } ]
+          [ Issue.v ~loc:(Location.in_file (Context.filename ctx)) { count } ]
         else []
     | Some identifiers ->
         let count = count_cmd_v identifiers in
         if count >= 2 then
-          [ Issue.v ~loc:(Location.in_file ctx.filename) { count } ]
+          [ Issue.v ~loc:(Location.in_file (Context.filename ctx)) { count } ]
         else []
 
 let pp ppf { count } =

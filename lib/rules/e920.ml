@@ -27,21 +27,18 @@ let has_ocaml_code ctx path =
   match content ctx path with
   | None -> false
   | Some content ->
-      if Filename.check_suffix path ".md" then Re.execp md_ocaml_re content
+      if Context.Path.has_ext ".md" path then Re.execp md_ocaml_re content
       else Re.execp odoc_block_re content
 
 let issue_for ctx (doc : Project_index.doc_file) =
   if doc.mdx then None
   else
-    let path_s = Fpath.to_string doc.path in
-    if not (has_ocaml_code ctx path_s) then None
+    let path = Context.resolve ctx doc.path in
+    if not (has_ocaml_code ctx path) then None
     else
-      let display =
-        Fpath.v path_s |> Loc.current_dir_relative |> Fpath.to_string
-      in
+      let display = Loc.current_dir_relative doc.path |> Fpath.to_string in
       let dune_file =
-        doc.Project_index.dune_file |> Loc.current_dir_relative
-        |> Fpath.to_string
+        Loc.current_dir_relative doc.Project_index.dune_file |> Fpath.to_string
       in
       Some
         (Issue.v ~loc:(Location.in_file display)

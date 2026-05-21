@@ -8,6 +8,52 @@ exception Analysis_error = File_view.Analysis_error
 
 let fail_analysis_error fmt = Fmt.kstr (fun s -> raise (Analysis_error s)) fmt
 
+type path = Fpath.t
+
+let normalize_path path = Fpath.(path |> normalize |> rem_empty_seg)
+let path s = normalize_path (Fpath.v s)
+let fpath_of_path p = p
+let string_of_path = Fpath.to_string
+
+let relative_to ~root p =
+  match Fpath.relativize ~root p with Some rel -> rel | None -> p
+
+module Path = struct
+  let v = path
+
+  let ( / ) p child =
+    let child = Fpath.v child in
+    if Fpath.is_abs child then
+      Fmt.invalid_arg "merlint: cannot append absolute child path %a" Fpath.pp
+        child;
+    normalize_path Fpath.(p // child)
+
+  let compare = Fpath.compare
+  let pp ppf p = Fmt.string ppf (Fpath.to_string p)
+  let to_display_string p = Loc.current_dir_relative p |> Fpath.to_string
+
+  let dir_display_string p =
+    Loc.current_dir_relative p |> Fpath.to_dir_path |> Fpath.to_string
+
+  let has_ext ext p = Fpath.has_ext ext p
+  let basename = Fpath.basename
+  let parent p = normalize_path (Fpath.parent p)
+  let rem_ext p = normalize_path (Fpath.rem_ext p)
+  let add_ext ext p = normalize_path (Fpath.add_ext ext p)
+end
+
+let path_is_under ~root path =
+  Fpath.equal root path || Fpath.is_prefix root path
+
+let path_under ~root s =
+  let p = Fpath.v s in
+  let p = if Fpath.is_abs p then p else Fpath.(root // p) in
+  let p = normalize_path p in
+  if not (path_is_under ~root p) then
+    Fmt.invalid_arg "merlint: source path %S escapes project root %S" s
+      (Fpath.to_string root);
+  p
+
 type 'a memo = { lock : Eio.Mutex.t; value : 'a Lazy.t }
 
 let memo f = { lock = Eio.Mutex.create (); value = lazy (f ()) }
@@ -19,11 +65,11 @@ let force_memo memo =
     (fun () -> Lazy.force memo.value)
 
 type file = {
-  filename : string;
+  filename : path;
   config : Config.t;
-  project_root : string;
-  analyze_set : string list;
-  selected_file : string -> bool;
+  project_root : path;
+  analyze_set : path list;
+  selected_file : path -> bool;
   project_index : Project_index.t option;
   view : File_view.t;
   content : string Lazy.t;
@@ -31,15 +77,15 @@ type file = {
 
 type project = {
   config : Config.t;
-  project_root : string;
-  analyze_set : string list;
-  in_analyze_set : string -> bool;
+  project_root : path;
+  analyze_set : path list;
+  in_analyze_set : path -> bool;
   executable_modules : string list memo;
   lib_modules : string list memo;
   test_modules : string list memo;
   index : Project_index.t memo;
-  file_view_cache : string -> File_view.t;
-  file_content_cache : string -> string;
+  file_view_cache : path -> File_view.t;
+  file_content_cache : path -> string;
 }
 
 let file ~analyze_set ~selected_file ~project_index ~filename ~config
@@ -51,7 +97,10 @@ let file ~analyze_set ~selected_file ~project_index ~filename ~config
     analyze_set;
     selected_file;
     project_index;
-    view = File_view.v ~filename ~typedtree:(fun () -> Ok None) ();
+    view =
+      File_view.v ~filename:(string_of_path filename)
+        ~typedtree:(fun () -> Ok None)
+        ();
     content = lazy (load_content ());
   }
 
@@ -81,29 +130,39 @@ let memoize_content make =
   let cache = Hashtbl.create 128 in
   let lock = Eio.Mutex.create () in
   fun filename ->
-    let filename = Fpath.to_string (Fpath.normalize (Fpath.v filename)) in
+    let key = string_of_path filename in
     Eio.Mutex.lock lock;
     Fun.protect ~finally:(fun () -> Eio.Mutex.unlock lock) @@ fun () ->
-    match Hashtbl.find_opt cache filename with
+    match Hashtbl.find_opt cache key with
     | Some content -> content
     | None ->
         let content = make filename in
-        Hashtbl.add cache filename content;
+        Hashtbl.add cache key content;
         content
 
 let memoize_file_view make =
   let cache = Hashtbl.create 128 in
   let lock = Eio.Mutex.create () in
   fun filename ->
-    let filename = Fpath.to_string (Fpath.normalize (Fpath.v filename)) in
+    let key = string_of_path filename in
     Eio.Mutex.lock lock;
     Fun.protect ~finally:(fun () -> Eio.Mutex.unlock lock) @@ fun () ->
-    match Hashtbl.find_opt cache filename with
+    match Hashtbl.find_opt cache key with
     | Some view -> view
     | None ->
         let view = make filename in
-        Hashtbl.add cache filename view;
+        Hashtbl.add cache key view;
         view
+
+let resolve (ctx : project) filename =
+  path_under ~root:ctx.project_root (Fpath.to_string filename)
+
+let resolve_path ctx filename = string_of_path (resolve ctx filename)
+
+let resolve_file (ctx : file) filename =
+  path_under ~root:ctx.project_root (Fpath.to_string filename)
+
+let resolve_file_path ctx filename = string_of_path (resolve_file ctx filename)
 
 let test_module_of_file f =
   if File_kind.is_ml f then
@@ -178,24 +237,26 @@ let project ?file_view ?file_content ~config ~project_root ~analyze_set ~index
     () =
   let index_memo = memo (fun () -> Lazy.force index) in
   let analyze_set_tbl = Hashtbl.create (List.length analyze_set) in
-  let project_root_path = Fpath.v project_root in
   let add_analyze_file file =
-    Hashtbl.replace analyze_set_tbl file ();
-    let path = Fpath.v file in
-    if not (Fpath.is_abs path) then
-      Hashtbl.replace analyze_set_tbl
-        Fpath.(project_root_path // path |> normalize |> to_string)
-        ()
+    if not (Fpath.is_abs file) then
+      Fmt.invalid_arg "merlint: analyze_set path %S is not absolute"
+        (Fpath.to_string file);
+    Hashtbl.replace analyze_set_tbl file ()
   in
   List.iter add_analyze_file analyze_set;
   let in_analyze_set file = Hashtbl.mem analyze_set_tbl file in
   let file_view_cache =
-    memoize_file_view (Option.value file_view ~default:default_file_view)
+    let make =
+      Option.value file_view ~default:(fun filename ->
+          default_file_view (string_of_path filename))
+    in
+    memoize_file_view make
   in
   let file_content_cache =
-    memoize_content
-      (Option.value file_content ~default:(fun filename ->
-           default_load_content filename ()))
+    memoize_content (fun filename ->
+        match file_content with
+        | Some make -> make filename
+        | None -> default_load_content (string_of_path filename) ())
   in
   {
     config;
@@ -220,10 +281,21 @@ let index ctx = force_memo ctx.index
 let view ctx = ctx.view
 let content ctx = Lazy.force ctx.content
 let values ctx = File_view.values ctx.view
+let file_path ctx = ctx.filename
+let filename ctx = string_of_path ctx.filename
+let project_root_string (ctx : file) = string_of_path ctx.project_root
+
+let project_relative_file (ctx : file) =
+  relative_to ~root:ctx.project_root ctx.filename
 
 (* Project context accessors *)
 let analyze_set ctx = ctx.analyze_set
 let project_root ctx = ctx.project_root
+let project_root_path (ctx : project) = string_of_path ctx.project_root
+
+let project_relative_path (ctx : project) path =
+  relative_to ~root:ctx.project_root path
+
 let executable_modules ctx = force_memo ctx.executable_modules
 let lib_modules ctx = force_memo ctx.lib_modules
 let test_modules ctx = force_memo ctx.test_modules

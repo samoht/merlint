@@ -22,10 +22,16 @@ let is_test_module_basename basename =
   String.starts_with ~prefix:"test_" basename
   && not (File.is_unit_companion_module basename)
 
-let is_library_file index filename =
-  let file = Fpath.v filename in
+let is_library_file ctx index filename =
+  let file =
+    Context.fpath_of_path (Context.resolve_file ctx (Fpath.v filename))
+  in
   Project_index.libraries_of_file index file <> []
   || Project_index.has_library_stanza_in_dir index (Fpath.parent file)
+
+let is_in_private_library ctx index filename =
+  File.is_in_private_library_path index
+    (Context.fpath_of_path (Context.resolve_file ctx (Fpath.v filename)))
 
 let rec is_list_expr (expr : T.expression) =
   match expr.exp_desc with
@@ -53,27 +59,27 @@ let test_mli_needs_issue view =
         (Suite.is_compliant_view
            ~expected:"string * unit Alcotest.test_case list" view)
 
-let test_mli_target index filename =
+let test_mli_target ctx index filename =
   let basename = Filename.basename filename in
   File_kind.is_mli basename
   && is_test_module_basename (Filename.remove_extension basename)
   && basename <> "test.mli"
-  && (not (is_library_file index filename))
-  && (not (File.is_in_private_library index filename))
+  && (not (is_library_file ctx index filename))
+  && (not (is_in_private_library ctx index filename))
   && not (File.is_in_examples filename)
 
-let runner_in_wrong_file_target index filename =
+let runner_in_wrong_file_target ctx index filename =
   let basename = Filename.basename filename in
   File_kind.is_ml basename
   && is_test_module_basename (Filename.remove_extension basename)
   && basename <> "test.ml"
-  && (not (is_library_file index filename))
+  && (not (is_library_file ctx index filename))
   && not (File.is_in_examples filename)
 
 (** Check if a test_*.mli file exports only suite with correct type. Skips files
     that belong to private libraries. *)
-let check_test_mli_file index filename view =
-  if test_mli_target index filename then
+let check_test_mli_file ctx index filename view =
+  if test_mli_target ctx index filename then
     if test_mli_needs_issue view then
       [
         Issue.v
@@ -85,23 +91,24 @@ let check_test_mli_file index filename view =
     else []
   else []
 
-let content_target index filename =
+let content_target ctx index filename =
   is_test_file filename
-  || runner_in_wrong_file_target index filename
-  || test_mli_target index filename
+  || runner_in_wrong_file_target ctx index filename
+  || test_mli_target ctx index filename
 
-let test_ml_target index ml_file =
+let test_ml_target ctx index ml_file =
   let basename = Filename.basename ml_file in
   File_kind.is_ml ml_file
   && is_test_module_basename (Filename.remove_extension basename)
   && basename <> "test.ml"
-  && (not (is_library_file index ml_file))
-  && (not (File.is_in_private_library index ml_file))
+  && (not (is_library_file ctx index ml_file))
+  && (not (is_in_private_library ctx index ml_file))
   && not (File.is_in_examples ml_file)
 
-let missing_test_mli_issue files ml_file =
+let missing_test_mli_issue ctx ml_file =
   let mli_path = Filename.remove_extension ml_file ^ ".mli" in
-  if files mli_path then None
+  if ctx.Context.selected_file (Context.resolve_file ctx (Fpath.v mli_path))
+  then None
   else
     let loc =
       Location.v ~file:ml_file ~start_line:1 ~start_col:0 ~end_line:1 ~end_col:0
@@ -112,8 +119,8 @@ let missing_test_mli_issue files ml_file =
     contain Alcotest.run since they shouldn't be test modules, and files that
     belong to private libraries. *)
 let check_missing_test_mli ctx index ml_file ~has_runner =
-  if test_ml_target index ml_file && not has_runner then
-    missing_test_mli_issue ctx.Context.selected_file ml_file
+  if test_ml_target ctx index ml_file && not has_runner then
+    missing_test_mli_issue ctx ml_file
   else None
 
 let path_ends_with path suffix =
@@ -173,7 +180,7 @@ let content_issues ctx index state =
     else []
   in
   let wrong_file_issue =
-    if runner_in_wrong_file_target index filename && state.has_runner then
+    if runner_in_wrong_file_target ctx index filename && state.has_runner then
       [
         Issue.v
           ~loc:
@@ -184,15 +191,15 @@ let content_issues ctx index state =
     else []
   in
   let bad_mli_issue =
-    if test_mli_target index filename then
-      check_test_mli_file index filename (Context.view ctx)
+    if test_mli_target ctx index filename then
+      check_test_mli_file ctx index filename (Context.view ctx)
     else []
   in
   runner_issue @ wrong_file_issue @ bad_mli_issue
 
 let init ctx =
   {
-    filename = ctx.Context.filename;
+    filename = Context.filename ctx;
     index = ctx.Context.project_index;
     has_runner = false;
     defines_own = false;
@@ -203,15 +210,16 @@ let select ctx =
   match ctx.Context.project_index with
   | None -> false
   | Some index ->
-      let filename = ctx.filename in
-      test_ml_target index filename || content_target index filename
+      let filename = Context.filename ctx in
+      test_ml_target ctx index filename || content_target ctx index filename
 
 let finish ctx state =
   match state.index with
   | None -> []
   | Some index ->
       let filename = state.filename in
-      if test_ml_target index filename || content_target index filename then
+      if test_ml_target ctx index filename || content_target ctx index filename
+      then
         Option.to_list
           (check_missing_test_mli ctx index filename
              ~has_runner:state.has_runner)

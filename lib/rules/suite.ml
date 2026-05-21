@@ -47,7 +47,7 @@ let empty ~filename view =
       if binding.empty then Some binding.loc else None)
 
 let check_empty ~prefix ~mk_payload (ctx : Context.file) =
-  let filename = ctx.filename in
+  let filename = Context.filename ctx in
   let basename = Filename.basename filename in
   let prefix_us = prefix ^ "_" in
   if

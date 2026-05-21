@@ -34,7 +34,7 @@ let dune_warning_status ctx dune_path =
    root: the actual project root for single-project repos, every subtree
    for monopam-managed monorepos. *)
 let build_roots ctx =
-  let project_root = Fpath.v ctx.Context.project_root in
+  let project_root = Fpath.v (Context.project_root_path ctx) in
   let roots =
     Context.index ctx |> Project_index.source_package_list
     |> List.filter (fun pkg -> not (Project_index.Package.is_anonymous pkg))
@@ -47,10 +47,12 @@ let check (ctx : Context.project) =
   Log.debug (fun m -> m "E940: %d build root(s)" (List.length roots));
   List.filter_map
     (fun root ->
-      let dune_path = Fpath.(root / "dune") |> Fpath.to_string in
+      let dune_path = Context.resolve ctx Fpath.(root / "dune") in
       Option.map
         (fun kind ->
-          let display = Fpath.v dune_path |> Loc.current_dir_relative in
+          let display =
+            Loc.current_dir_relative (Context.fpath_of_path dune_path)
+          in
           let loc = Loc.in_file display in
           Issue.v ~loc { dune_path = Fpath.to_string display; kind })
         (dune_warning_status ctx dune_path))

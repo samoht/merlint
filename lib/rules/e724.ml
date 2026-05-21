@@ -24,11 +24,11 @@ let fuzz_dirs ctx =
               (fun f -> Fpath.has_ext ".ml" f && File.is_in_fuzz_dir f)
               exe.files
           with
-          | Some f -> Some (Fpath.parent f |> Fpath.to_string)
+          | Some f -> Some (Context.Path.parent (Context.resolve ctx f))
           | None -> None)
       (Context.executable_stanzas ctx)
   in
-  List.sort_uniq String.compare dirs
+  List.sort_uniq Context.Path.compare dirs
 
 let issue ~loc dir kind = Issue.v ~loc { directory = dir; kind }
 
@@ -89,20 +89,22 @@ let fuzz_content_issues ~loc dir dune =
       if present then None else Some (issue ~loc dir kind))
 
 let check_dir ctx dir =
-  let dune_file = Filename.concat dir "dune" in
   try
-    let content = Context.file_content ctx dune_file in
+    let content = Context.file_content ctx Context.Path.(dir / "dune") in
     match Dune.File.of_string content with
     | Error _ -> []
     | Ok dune ->
         let has_runtest = Dune.File.has_rule_alias dune "runtest" in
         let has_fuzz = Dune.File.has_rule_alias dune "fuzz" in
         let loc =
-          Location.v ~file:dune_file ~start_line:1 ~start_col:0 ~end_line:1
-            ~end_col:0
+          Location.v
+            ~file:(Context.string_of_path Context.Path.(dir / "dune"))
+            ~start_line:1 ~start_col:0 ~end_line:1 ~end_col:0
         in
-        let issues = presence_issues ~loc dir ~has_runtest ~has_fuzz in
-        if has_fuzz then issues @ fuzz_content_issues ~loc dir dune else issues
+        let display_dir = Context.Path.dir_display_string dir in
+        let issues = presence_issues ~loc display_dir ~has_runtest ~has_fuzz in
+        if has_fuzz then issues @ fuzz_content_issues ~loc display_dir dune
+        else issues
   with File_view.Analysis_error _ -> []
 
 (** Check that fuzz dune files contain required rule aliases with proper

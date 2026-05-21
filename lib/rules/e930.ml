@@ -50,9 +50,9 @@ let kind_of_tags tags =
 module P = Project_index.Package
 module L = Project_index.Library
 
-let opam_path ~root pkg =
+let opam_path pkg =
   match P.opam_path pkg with
-  | Some path -> Fpath.to_string (Loc.relative_to ~root:(Fpath.v root) path)
+  | Some path -> Fpath.to_string (Loc.current_dir_relative path)
   | None -> P.name pkg ^ ".opam"
 
 let dune_file lib =
@@ -70,7 +70,7 @@ let is_test_library ~package lib =
       |> List.exists (function "test" | "tests" -> true | _ -> false)
   | _ -> false
 
-let check_package ~root pkg =
+let check_package pkg =
   let name = P.name pkg in
   let kind = kind_of_tags (P.tags pkg) in
   if kind = Non_codec then []
@@ -96,13 +96,13 @@ let check_package ~root pkg =
     match List.rev !findings with
     | [] -> []
     | findings ->
-        let opam = opam_path ~root pkg in
+        let opam = opam_path pkg in
         let loc = Location.in_file opam in
         [ Issue.v ~loc { package = name; opam; findings } ]
 
 let check (ctx : Context.project) =
   Context.index ctx |> Project_index.source_package_list
-  |> List.concat_map (check_package ~root:ctx.project_root)
+  |> List.concat_map check_package
 
 let pp_finding ppf = function
   | Banned_in_depends { dep } -> Fmt.pf ppf "depends: %s" dep

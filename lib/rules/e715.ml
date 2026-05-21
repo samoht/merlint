@@ -42,7 +42,7 @@ let check_stanza ctx stanza_name files =
   | None -> []
   | Some runner_file -> (
       try
-        let view = Context.file_view ctx (Fpath.to_string runner_file) in
+        let view = Context.file_view ctx (Context.resolve ctx runner_file) in
         let modules = fuzz_modules runner_file fuzz_files in
         Log.debug (fun m ->
             m "E715: stanza '%s' has %d fuzz modules" stanza_name

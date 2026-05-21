@@ -16,7 +16,7 @@ let fuzz_stanzas_by_dir ctx =
               (fun f -> Fpath.has_ext ".ml" f && File.is_in_fuzz_dir f)
               stanza.files
           with
-          | Some f -> Some (Fpath.parent f |> Fpath.to_string, name)
+          | Some f -> Some (Context.Path.parent (Context.resolve ctx f), name)
           | None -> None)
       stanzas
   in
@@ -25,21 +25,28 @@ let fuzz_stanzas_by_dir ctx =
 
 let check (ctx : Context.project) =
   let by_dir = fuzz_stanzas_by_dir ctx in
-  let dirs = List.sort_uniq String.compare (List.map fst by_dir) in
+  let dirs = List.sort_uniq Context.Path.compare (List.map fst by_dir) in
   List.concat_map
     (fun dir ->
       let stanzas =
         List.filter_map
-          (fun (d, name) -> if d = dir then Some name else None)
+          (fun (d, name) ->
+            if Context.Path.compare d dir = 0 then Some name else None)
           by_dir
       in
       if List.length stanzas > 1 then
         let loc =
           Location.v
-            ~file:(Filename.concat dir "dune")
+            ~file:(Context.string_of_path Context.Path.(dir / "dune"))
             ~start_line:1 ~start_col:0 ~end_line:1 ~end_col:0
         in
-        [ Issue.v ~loc { directory = dir; stanza_names = stanzas } ]
+        [
+          Issue.v ~loc
+            {
+              directory = Context.Path.dir_display_string dir;
+              stanza_names = stanzas;
+            };
+        ]
       else [])
     dirs
 

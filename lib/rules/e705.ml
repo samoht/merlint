@@ -3,14 +3,20 @@
 type payload = { filename : string; module_name : string }
 
 (** Check if a fuzz_*.mli file exports only suite with correct type. *)
-let check_fuzz_mli_file index filename view =
-  let basename = Filename.basename filename in
+let is_in_private_library ctx index filename =
+  ignore ctx;
+  File.is_in_private_library_path index (Context.fpath_of_path filename)
+
+let check_fuzz_mli_file ctx index filename view =
+  let fp = Context.fpath_of_path filename in
+  let filename_s = Context.string_of_path filename in
+  let basename = Context.Path.basename filename in
   if
-    File_kind.is_mli basename
+    Context.Path.has_ext ".mli" filename
     && String.starts_with ~prefix:"fuzz_" basename
-    && File.is_in_fuzz_dir (Fpath.v filename)
-    && (not (File.is_in_private_library index filename))
-    && not (File.is_in_examples filename)
+    && File.is_in_fuzz_dir fp
+    && (not (is_in_private_library ctx index filename))
+    && not (File.is_in_examples filename_s)
   then
     if Suite.is_compliant_view ~expected:"string * Alcobar.test_case list" view
     then []
@@ -18,36 +24,39 @@ let check_fuzz_mli_file index filename view =
       [
         Issue.v
           ~loc:
-            (Location.v ~file:filename ~start_line:1 ~start_col:0 ~end_line:1
+            (Location.v ~file:filename_s ~start_line:1 ~start_col:0 ~end_line:1
                ~end_col:0)
-          { filename; module_name = basename |> Filename.chop_extension };
+          {
+            filename = filename_s;
+            module_name = basename |> Filename.chop_extension;
+          };
       ]
   else []
 
 (** Check if fuzz_*.ml files have corresponding .mli files. *)
-let check_missing_fuzz_mli index files =
+let check_missing_fuzz_mli ctx index files =
   List.filter_map
     (fun ml_file ->
-      if File_kind.is_ml ml_file then
-        let fp = Fpath.v ml_file in
-        let basename = Filename.basename ml_file in
+      let fp = Context.fpath_of_path ml_file in
+      let ml_file_s = Context.string_of_path ml_file in
+      if Context.Path.has_ext ".ml" ml_file then
+        let basename = Context.Path.basename ml_file in
         if
           String.starts_with ~prefix:"fuzz_" basename
           && File.is_in_fuzz_dir fp
-          && (not (File.is_in_private_library index ml_file))
-          && not (File.is_in_examples ml_file)
+          && (not (is_in_private_library ctx index ml_file))
+          && not (File.is_in_examples ml_file_s)
         then
-          let base_name = Filename.remove_extension ml_file in
-          let mli_path = base_name ^ ".mli" in
+          let mli_path = Context.Path.(ml_file |> rem_ext |> add_ext ".mli") in
           if not (List.mem mli_path files) then
             let loc =
-              Location.v ~file:ml_file ~start_line:1 ~start_col:0 ~end_line:1
+              Location.v ~file:ml_file_s ~start_line:1 ~start_col:0 ~end_line:1
                 ~end_col:0
             in
             Some
               (Issue.v ~loc
                  {
-                   filename = ml_file;
+                   filename = ml_file_s;
                    module_name = basename |> Filename.chop_extension;
                  })
           else None
@@ -58,15 +67,17 @@ let check_missing_fuzz_mli index files =
 let check ctx =
   let files = Context.analyze_set ctx in
   let index = Context.index ctx in
-  let missing_mli_issues = check_missing_fuzz_mli index files in
+  let missing_mli_issues = check_missing_fuzz_mli ctx index files in
   let content_issues =
     List.concat_map
       (fun filename ->
-        if File_kind.is_mli filename then
+        if Context.Path.has_ext ".mli" filename then
           try
             let view = Context.file_view ctx filename in
-            check_fuzz_mli_file index filename view
-          with File_view.Analysis_error _ -> []
+            check_fuzz_mli_file ctx index filename view
+          with
+          | File_view.Analysis_error _ -> []
+          | CamlinternalLazy.Undefined -> []
         else [])
       files
   in

@@ -27,7 +27,7 @@ let redundant_name_issue item_name module_name location item_type =
     { item_name; module_name = String.capitalize_ascii module_name; item_type }
 
 let check (ctx : Context.file) =
-  let filename = ctx.filename in
+  let filename = Context.filename ctx in
   let module_name =
     Filename.basename filename |> Filename.remove_extension
     |> String.lowercase_ascii

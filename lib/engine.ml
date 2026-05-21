@@ -51,14 +51,14 @@ let log_backend_stats backend =
 
 let run_file_rule ?profiling ctx rule =
   let code = Rule.code rule in
-  Log.debug (fun m -> m "Running rule %s on %s" code ctx.Context.filename);
+  let filename = Context.filename ctx in
+  Log.debug (fun m -> m "Running rule %s on %s" code filename);
   let start_time = Unix.gettimeofday () in
   let res =
     try Rule.Run.file rule ctx
     with exn ->
       Log.err (fun m ->
-          m "Rule %s failed on %s: %s" code ctx.Context.filename
-            (Printexc.to_string exn));
+          m "Rule %s failed on %s: %s" code filename (Printexc.to_string exn));
       []
   in
   let duration = Unix.gettimeofday () -. start_time in
@@ -66,9 +66,7 @@ let run_file_rule ?profiling ctx rule =
   | Some prof ->
       Profiling.add_timing prof
         {
-          operation =
-            Profiling.File_rule
-              { rule_code = code; filename = ctx.Context.filename };
+          operation = Profiling.File_rule { rule_code = code; filename };
           duration;
         }
   | None -> ());
@@ -104,34 +102,29 @@ let merlin_op ?profiling filename f =
   | None -> ());
   r
 
-let source_filename filename =
-  let file = Fpath.v filename in
-  if Fpath.is_abs file then Fpath.to_string (Fpath.normalize file)
-  else Fpath.(v (Sys.getcwd ()) // file |> normalize |> to_string)
-
 let file_view ?profiling ~load_file ~backend filename =
-  let source_filename = source_filename filename in
+  let source_filename = Context.string_of_path filename in
   let content = lazy (load_file source_filename) in
   let source = Merlin.Source.v ~file:source_filename ~content in
   let typedtree () =
-    merlin_op ?profiling filename (fun () -> Merlin.typedtree backend ~source)
+    merlin_op ?profiling source_filename (fun () ->
+        Merlin.typedtree backend ~source)
   in
-  File_view.v ~filename ~typedtree ()
+  File_view.v ~filename:source_filename ~typedtree ()
 
 let setup_analysis ~filter ~analyze_set ~index ~file_view project_root =
-  let project_root =
-    Fpath.(v project_root |> normalize |> rem_empty_seg |> to_string)
-  in
-  let project_root_path = Fpath.v project_root in
+  let project_root_path = Context.path project_root in
+  let project_root = Context.string_of_path project_root_path in
   let config = Config.load project_root in
   let analyze_set =
     List.map
       (fun file ->
-        Loc.relative_to ~root:project_root_path file |> Fpath.to_string)
+        Context.path_under ~root:project_root_path (Fpath.to_string file))
       analyze_set
   in
   let project_ctx =
-    Context.project ~config ~project_root ~analyze_set ~index ~file_view ()
+    Context.project ~config ~project_root:project_root_path ~analyze_set ~index
+      ~file_view ()
   in
   let enabled_rules =
     Data.all_rules
@@ -252,17 +245,20 @@ let run_project_rules ?pool ?profiling enabled_rules project_ctx =
   let excluded = List.concat_map snd results in
   (issues, excluded)
 
-let analyze_single_file ?profiling ~project_ctx ~config_for ~project_root
+let analyze_single_file ?profiling ~project_ctx ~config_for ~project_root:_
     ~file_rules ~pass_rules filepath =
-  let filename = Fpath.to_string filepath in
-  let config = config_for filename in
+  let filename = Context.resolve project_ctx filepath in
+  let filename_s = Context.string_of_path filename in
+  let config = config_for filename_s in
   let excluded_acc = ref [] in
   let issues =
     try
       ignore profiling;
       let view = Context.file_view project_ctx filename in
       let file_ctx =
-        Context.file_with_view ~filename ~config ~project_root ~view
+        Context.file_with_view ~filename ~config
+          ~project_root:(Context.project_root project_ctx)
+          ~view
           ~analyze_set:(Context.analyze_set project_ctx)
           ~selected_file:project_ctx.Context.in_analyze_set
           ~project_index:(Some (Context.index project_ctx))
@@ -281,15 +277,15 @@ let analyze_single_file ?profiling ~project_ctx ~config_for ~project_root
           let code = Rule.Run.code r in
           let skip =
             Rule_config.should_exclude config.exclusions ~rule:code
-              ~file:filename
+              ~file:filename_s
           in
           if skip then
-            excluded_acc := { rule = code; file = filename } :: !excluded_acc;
+            excluded_acc := { rule = code; file = filename_s } :: !excluded_acc;
           not skip)
         all_results
     with exn ->
       Log.err (fun m ->
-          m "Failed to analyze %s: %s" filename (Printexc.to_string exn));
+          m "Failed to analyze %s: %s" filename_s (Printexc.to_string exn));
       []
   in
   (issues, List.rev !excluded_acc)

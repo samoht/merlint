@@ -35,7 +35,7 @@ let min_major = 3
 let min_minor = 21
 
 let content ctx path =
-  try Some (Context.file_content ctx path)
+  try Some (Context.file_content ctx (Context.resolve ctx (Fpath.v path)))
   with Sys_error _ | File_view.Analysis_error _ -> None
 
 let version_too_old v =
@@ -47,7 +47,7 @@ let version_too_old v =
   | _ -> false
 
 let dune_issue ctx name dune_path =
-  let loc = Fpath.v dune_path |> Loc.current_dir_relative |> Loc.in_file in
+  let loc = Loc.in_file (Loc.current_dir_relative (Fpath.v dune_path)) in
   if not (Fs.file_exists dune_path) then
     [ Issue.v ~loc { package = name; kind = Missing_dune } ]
   else
@@ -71,7 +71,7 @@ let lang_issue ctx name dp_path =
               [
                 Issue.v
                   ~loc:
-                    (Fpath.v dp_path |> Loc.current_dir_relative |> Loc.in_file)
+                    (Loc.in_file (Loc.current_dir_relative (Fpath.v dp_path)))
                   { package = name; kind = Lang_too_old { version } };
               ]
           | _ -> []))

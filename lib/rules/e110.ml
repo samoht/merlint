@@ -57,7 +57,7 @@ let visit_attribute state attr =
         let loc = Loc.of_typed ~filename:state.filename attr.P.attr_loc in
         state.issues := Issue.v ~loc { warning_number } :: !(state.issues)
 
-let init ctx = { filename = ctx.Context.filename; issues = ref [] }
+let init ctx = { filename = Context.filename ctx; issues = ref [] }
 let finish _ctx state = List.rev !(state.issues)
 
 let pp ppf { warning_number } =

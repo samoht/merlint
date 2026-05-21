@@ -11,14 +11,13 @@ Build bad fixture project:
   ✓ Code Style (0 total issues)
   ✓ Naming Conventions (0 total issues)
   ✓ Documentation (0 total issues)
-  ✗ Project Structure (2 total issues)
-    [E940] Dune warnings flag (2 issues)
+  ✗ Project Structure (1 total issues)
+    [E940] Dune warnings flag (1 issue)
     Every project (or subtree) should enable [%{dune-warnings}] on the dev profile
     so warnings are uniform across builds. Add the stanza [(env (dev (flags
     :standard %{dune-warnings})))] to the top-level [dune] file. Note
     [%{dune-warnings}] requires [(lang dune 3.21)] or newer in the corresponding
     [dune-project].
-    - bad/dune:1:0: bad/dune does not enable %{dune-warnings}; add [(env (dev (flags :standard %{dune-warnings})))] so standalone opam builds fail on warnings
     - bad/dune:1:0: bad/dune does not enable %{dune-warnings}; add [(env (dev (flags :standard %{dune-warnings})))] so standalone opam builds fail on warnings
   ✓ Test Quality (0 total issues)
   ✓ Interop Testing (0 total issues)
@@ -27,11 +26,11 @@ Build bad fixture project:
   ╭───────────────────┬──────────────────────────╮
   │ Category          │ Issues                   │
   ├───────────────────┼──────────────────────────┤
-  │ Project Structure │ 2 (2 dune warnings flag) │
+  │ Project Structure │ 1 (1 dune warnings flag) │
   ╰───────────────────┴──────────────────────────╯
   
   
-  Summary: ✗ 2 total issues (applied 1 rule)
+  Summary: ✗ 1 total issue (applied 1 rule)
   ✗ Some checks failed. See details above.
     Run `merlint help E940` for the rule's description, hint, and good/bad examples.
   [1]
