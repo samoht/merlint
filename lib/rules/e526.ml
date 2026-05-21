@@ -32,6 +32,10 @@ let issue_of_setting name loc = function
 
 let check_package pkg =
   if Project_index.Package.is_anonymous pkg then []
+  else if Project_index.Package.library_names pkg = [] then
+    (* A package that ships no dune library can't leak transitive deps
+       through META requires -- [implicit_transitive_deps] is irrelevant. *)
+    []
   else
     match Project_index.Package.raw_dune_project pkg with
     | None -> []
