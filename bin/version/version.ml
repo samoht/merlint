@@ -1,5 +1,5 @@
 let string =
-  match Git_hash.hash with
+  match Project_version.env with
   | "dev" -> (
       match Build_info.V1.version () with
       | Some v -> Build_info.V1.Version.to_string v
