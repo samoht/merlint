@@ -3,10 +3,10 @@
  (libraries dune-build-info))
 
 (rule
- (target git_hash.ml)
+ (target project_version.ml)
  (deps
   (env_var PROJECT_VERSION))
  (action
   (with-stdout-to
    %{target}
-   (bash "printf 'let hash = \"%s\"\\n' \"${PROJECT_VERSION:-dev}\""))))
+   (bash "printf 'let env = \"%s\"\\n' \"${PROJECT_VERSION:-dev}\""))))
