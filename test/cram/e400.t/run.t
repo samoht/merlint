@@ -15,7 +15,7 @@ Test bad example - should find missing module documentation:
     [E400] Missing MLI Documentation (1 issue)
     MLI files should start with a documentation comment (** ... *) that describes
     the module's purpose and API. This helps users understand how to use the
-    module. Test modules (test_*) are excluded from this check.
+    module.
     - bad.mli:1:0: Module bad (bad.mli) is missing documentation comment
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
@@ -36,6 +36,58 @@ Test bad example - should find missing module documentation:
 
 Test good example - should find no issues:
   $ merlint --build -r E400 good.mli
+  Dune root: $TESTCASE_ROOT/
+  Running merlint analysis...
+  
+  Analyzing 1 files
+  
+  ✓ Code Quality (0 total issues)
+  ✓ Code Style (0 total issues)
+  ✓ Naming Conventions (0 total issues)
+  ✓ Documentation (0 total issues)
+  ✓ Project Structure (0 total issues)
+  ✓ Test Quality (0 total issues)
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
+  
+  Summary: ✓ 0 total issues (applied 1 rule)
+  ✓ All checks passed!
+
+Test non-empty test interface without header - should find issue:
+  $ merlint --build -r E400 test_no_header.mli
+  Dune root: $TESTCASE_ROOT/
+  Running merlint analysis...
+  
+  Analyzing 1 files
+  
+  ✓ Code Quality (0 total issues)
+  ✓ Code Style (0 total issues)
+  ✓ Naming Conventions (0 total issues)
+  ✗ Documentation (1 total issues)
+    [E400] Missing MLI Documentation (1 issue)
+    MLI files should start with a documentation comment (** ... *) that describes
+    the module's purpose and API. This helps users understand how to use the
+    module.
+    - test_no_header.mli:1:0: Module test_no_header (test_no_header.mli) is missing documentation comment
+  ✓ Project Structure (0 total issues)
+  ✓ Test Quality (0 total issues)
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
+  
+  ╭───────────────┬─────────────────────────────────╮
+  │ Category      │ Issues                          │
+  ├───────────────┼─────────────────────────────────┤
+  │ Documentation │ 1 (1 missing mli documentation) │
+  ╰───────────────┴─────────────────────────────────╯
+  
+  
+  Summary: ✗ 1 total issue (applied 1 rule)
+  ✗ Some checks failed. See details above.
+    Run `merlint help E400` for the rule's description, hint, and good/bad examples.
+  [1]
+
+Test empty interface - should find no issues:
+  $ merlint --build -r E400 empty.mli
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
@@ -74,6 +126,5 @@ Test file with license comment followed by doc comment - should find no issues:
   
   Summary: ✓ 0 total issues (applied 1 rule)
   ✓ All checks passed!
-
 
 
