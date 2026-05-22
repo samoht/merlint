@@ -25,9 +25,7 @@ val oracle_dirs : Project_index.t -> oracle_dir list
     process. *)
 
 val oracle_dirs_for : Context.project -> oracle_dir list
-(** [oracle_dirs_for ctx] returns the in-scope package interop directories. For
-    focused projects that have interop scaffolding but no indexed package, it
-    also inspects [test/interop/*] under the project root. *)
+(** [oracle_dirs_for ctx] returns the in-scope package interop directories. *)
 
 val script_contains : dir:string -> file:string -> affix:string -> bool
 (** [script_contains ~dir ~file ~affix] is [true] when [dir/file] is a script

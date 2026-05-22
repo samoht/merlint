@@ -97,12 +97,31 @@ $ merlint
 $ # Analyse specific files or directories
 $ merlint src/ lib/
 
-$ # Exclude directories
-$ merlint --exclude test/
+$ # Dune (vendored_dirs ...) subtrees are skipped automatically
+
+$ # Exclude vendored or generated code
+$ merlint --exclude 'vendor/**'
 
 $ # Filter rules (e.g., run all rules except E110)
 $ merlint --rules A-E110
+
+$ # Stop at the first issue, in normal report order (fast fail)
+$ merlint --bail
+
+$ # Emit a machine-readable JSON report instead of the formatted tables
+$ merlint --json
 ```
+
+`--bail` reports only the first issue it finds and skips the rest --
+useful when you only want a quick pass/fail signal and don't need the
+full list.
+
+`--json` prints a single JSON object -- file/rule counts, a `passed`
+boolean, and the `issues` (each with its location) and `excluded`
+arrays -- and suppresses the human `Dune root:` banner and summary
+tables. The exit code is unchanged -- `1` when any issue is found, `0`
+otherwise -- so it stays usable as a gate. This is the format to
+consume from editors, CI, and git hooks.
 
 Every issue is tagged with an error code (e.g. `E100`). To see what a
 rule means and how to fix it, ask `merlint help`:
@@ -159,15 +178,20 @@ documentation](https://samoht.github.io/merlint/)**.
 ## Integration
 
 ### Git Pre-commit Hook
+
+Prefer `--json` in hooks: the output is stable and machine-readable
+(no banner or formatted tables), and the exit code still signals
+success or failure, so the `$?` check below works unchanged.
+
 <!-- $MDX non-deterministic=command -->
 ```sh
 $ # Add to .git/hooks/pre-commit
 $ #!/bin/bash
 $ echo "Running merlint analysis..."
 $ if command -v merlint >/dev/null 2>&1; then
-$     merlint --exclude test/
+$     merlint --json > merlint-report.json
 $     if [ $? -ne 0 ]; then
-$         echo "❌ Merlint found issues. Please fix them before committing."
+$         echo "❌ Merlint found issues. See merlint-report.json before committing."
 $         exit 1
 $     fi
 $ else
@@ -179,7 +203,7 @@ $ fi
 ```yaml
 - name: Lint OCaml code
   run: |
-    merlint --exclude test/
+    merlint --json
     # Exit code 1 if issues found, 0 if clean
 ```
 

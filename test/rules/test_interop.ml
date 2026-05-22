@@ -20,6 +20,13 @@ let write_file path content =
 
 let mkdir path = if not (Sys.file_exists path) then Unix.mkdir path 0o700
 
+let rec mkdir_p path =
+  if Sys.file_exists path then ()
+  else begin
+    mkdir_p (Filename.dirname path);
+    Unix.mkdir path 0o700
+  end
+
 let test_script_contains () =
   with_temp_dir "merlint-interop-" @@ fun root ->
   write_file
@@ -67,9 +74,44 @@ let test_oracle_dirs () =
       Alcotest.(check bool) "has test.ml" true dir.has_test_ml
   | dirs -> Alcotest.failf "expected one oracle dir, got %d" (List.length dirs)
 
+let test_oracle_dirs_exclude_vendored_packages () =
+  with_temp_dir "merlint-interop-" @@ fun root ->
+  write_file (Filename.concat root "dune-project") "(lang dune 3.0)\n";
+  write_file (Filename.concat root "dune") "(vendored_dirs vendor)\n";
+  let oracle_dir package_dir tool =
+    let dir = Filename.concat package_dir ("test/interop/" ^ tool) in
+    mkdir_p dir;
+    mkdir_p (Filename.concat dir "scripts");
+    mkdir_p (Filename.concat dir "traces");
+    write_file (Filename.concat dir "dune") "(test (name test))\n";
+    write_file (Filename.concat dir "test.ml") "let () = ()\n"
+  in
+  let pkg = Filename.concat root "pkg" in
+  mkdir_p pkg;
+  write_file (Filename.concat pkg "pkg.opam") "opam-version: \"2.0\"\n";
+  oracle_dir pkg "opa";
+  let vendored = Filename.concat root "vendor/vpkg" in
+  mkdir_p vendored;
+  write_file (Filename.concat vendored "vpkg.opam") "opam-version: \"2.0\"\n";
+  oracle_dir vendored "hidden";
+  let index =
+    Eio_main.run @@ fun env ->
+    let fs = Eio.Stdenv.fs env in
+    Project_index.build ~fs ~monorepo:(Fpath.v root) ()
+  in
+  match Merlint.Interop.oracle_dirs index with
+  | [ dir ] ->
+      Alcotest.(check string) "package" "pkg" dir.package;
+      Alcotest.(check string) "tool" "opa" dir.tool
+  | dirs ->
+      Alcotest.failf "expected one non-vendored oracle dir, got %d"
+        (List.length dirs)
+
 let suite =
   ( "interop",
     [
       Alcotest.test_case "script text query" `Quick test_script_contains;
       Alcotest.test_case "oracle discovery" `Quick test_oracle_dirs;
+      Alcotest.test_case "oracle discovery excludes vendored packages" `Quick
+        test_oracle_dirs_exclude_vendored_packages;
     ] )

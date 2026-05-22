@@ -30,6 +30,10 @@ val should_exclude : t -> rule:string -> file:string -> bool
 (** [should_exclude exclusions ~rule ~file] returns true if the rule should be
     excluded for the given file path. *)
 
+val matches_pattern : string -> string -> bool
+(** [matches_pattern pattern file] is [true] when [file] matches the glob
+    [pattern]. [*] matches within a path segment, [**] across segments. *)
+
 val pp : t Fmt.t
 (** [pp] is a pretty-printer for exclusions. *)
 

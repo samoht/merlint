@@ -331,6 +331,30 @@ let analysis_files ?analyze_set ?analyze_roots index =
   in
   drop_vendored_files index raw
 
+(* CLI [--exclude PATTERN] drops files matching any glob from the analysis,
+   using the same matcher as [merlint.toml] exclusions. Patterns are matched
+   against both the file's path relative to [project_root] (so [vendor/**]
+   works regardless of cwd) and the raw path. *)
+let drop_excluded_files ~project_root ~exclude files =
+  match exclude with
+  | [] -> files
+  | patterns ->
+      let root = Fpath.v project_root in
+      let excluded file =
+        let raw = Fpath.to_string file in
+        let rel =
+          match Fpath.relativize ~root file with
+          | Some r -> Fpath.to_string r
+          | None -> raw
+        in
+        List.exists
+          (fun p ->
+            Rule_config.matches_pattern p rel
+            || Rule_config.matches_pattern p raw)
+          patterns
+      in
+      List.filter (fun f -> not (excluded f)) files
+
 let run_enabled_rules ?pool ?profiling ~project_ctx ~project_root ~enabled_rules
     analyze_set =
   let file_rules = List.filter Rule.is_direct_file_scoped enabled_rules in
@@ -359,13 +383,16 @@ let build_result ?(bail = false) (project_issues, project_excluded) file_results
   { issues; excluded = project_excluded @ file_excluded; files_analyzed }
 
 let run ?domain_mgr ~load_file ~filter ?analyze_set ?analyze_roots ~index
-    ?profiling ?(bail = false) project_root =
+    ?profiling ?(bail = false) ?(exclude = []) project_root =
   Log.info (fun m -> m "Starting analysis of %s" project_root);
   let backend = Merlin.v ~root_dir:project_root () in
   let run_with_pool ?pool () =
     let idx = lazy (index ?pool ()) in
     let idx_value = Lazy.force idx in
-    let analyze_set = analysis_files ?analyze_set ?analyze_roots idx_value in
+    let analyze_set =
+      analysis_files ?analyze_set ?analyze_roots idx_value
+      |> drop_excluded_files ~project_root ~exclude
+    in
     let file_view = file_view ?profiling ~load_file ~backend in
     let _config, project_ctx, enabled_rules =
       setup_analysis ~filter ~analyze_set ~index:idx ~file_view project_root
