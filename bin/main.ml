@@ -390,17 +390,18 @@ let print_summary all_issues enabled_rule_count =
       sample
   end
 
-let run_engine ?domain_mgr ~load_file ?profiling ~bail rule_filter analyze_set
-    analyze_roots build_index project_root =
+let run_engine ?domain_mgr ~load_file ?profiling ~bail ~exclude rule_filter
+    analyze_set analyze_roots build_index project_root =
   match rule_filter with
   | Some filter ->
       Merlint.Engine.run ?domain_mgr ~load_file ~filter ?analyze_set
-        ?analyze_roots ~index:build_index ?profiling ~bail project_root
+        ?analyze_roots ~index:build_index ?profiling ~bail ~exclude project_root
   | None -> (
       match Merlint.Filter.parse "all" with
       | Ok filter ->
           Merlint.Engine.run ?domain_mgr ~load_file ~filter ?analyze_set
-            ?analyze_roots ~index:build_index ?profiling ~bail project_root
+            ?analyze_roots ~index:build_index ?profiling ~bail ~exclude
+            project_root
       | Error _ ->
           { Merlint.Engine.issues = []; excluded = []; files_analyzed = 0 })
 
@@ -425,7 +426,7 @@ let print_exclusion_stats all_excluded =
 let run_analysis ?domain_mgr ~load_file ~json_output project_root analyze_set
     analyze_roots
     (build_index : ?pool:Eio.Executor_pool.t -> unit -> Project_index.t)
-    rule_filter show_profile ~bail =
+    rule_filter show_profile ~bail ~exclude =
   let profiling_state =
     if show_profile then Some (Merlint.Profiling.v ()) else None
   in
@@ -439,7 +440,7 @@ let run_analysis ?domain_mgr ~load_file ~json_output project_root analyze_set
     files_analyzed;
   } =
     run_engine ?domain_mgr ~load_file ?profiling:profiling_state rule_filter
-      ~bail analyze_set analyze_roots build_index project_root
+      ~bail ~exclude analyze_set analyze_roots build_index project_root
   in
   let enabled_rules = enabled_rules rule_filter in
   let enabled_rule_count = List.length enabled_rules in
@@ -588,7 +589,6 @@ let analyze_files mgr fs domain_mgr ?(exclude_patterns = []) ?rule_filter
   Log.info (fun m -> m "Dune root: %s (cwd: %s)" project_root (Sys.getcwd ()));
   if not json_output then Fmt.pr "Dune root: %s@." project_root;
   Log.info (fun m -> m "Scanning project structure...");
-  ignore exclude_patterns;
   let analyze_set = analyze_set_of_files files in
   let analyze_roots = analyze_roots_of_files files in
   let monorepo = monorepo_for_index project_root in
@@ -601,6 +601,7 @@ let analyze_files mgr fs domain_mgr ?(exclude_patterns = []) ?rule_filter
     ~index:lazy_index ~build;
   run_analysis ~domain_mgr ~load_file ~json_output project_root analyze_set
     analyze_roots build_index rule_filter show_profile ~bail
+    ~exclude:exclude_patterns
 
 let files =
   let doc =
@@ -730,6 +731,9 @@ let scan =
         "If no files or directories are specified, it scans all .ml and .mli \
          files in the current dune project (searching upward for \
          dune-project).";
+      `P
+        "$(tname) respects Dune's $(b,(vendored_dirs ...)) stanzas and skips \
+         those vendored source subtrees automatically.";
       `P "Run $(b,merlint help config) for the configuration file format.";
     ]
   in
@@ -745,6 +749,9 @@ let cmd =
         "$(mname) scans OCaml source files and reports issues with modern \
          coding conventions: complexity, naming, documentation, style, project \
          structure, and test discipline.";
+      `P
+        "$(mname) respects Dune's $(b,(vendored_dirs ...)) stanzas and skips \
+         those vendored source subtrees automatically.";
       `S "RULES";
       `P
         "Each issue is tagged with an error code such as $(b,E100). To see the \

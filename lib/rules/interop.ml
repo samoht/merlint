@@ -39,15 +39,6 @@ let package_oracles pkg pkg_dir =
   else
     Fs.readdir_or_empty interop |> List.filter_map (oracle_of_tool pkg interop)
 
-let path_has_interop path =
-  let parts = Fpath.segs path in
-  let rec aux = function
-    | "test" :: "interop" :: _ -> true
-    | _ :: rest -> aux rest
-    | [] -> false
-  in
-  aux parts
-
 (* Reach for the in-scope packages via [Project_index] instead of walking the
    monorepo root: many rules call [oracle_dirs] per run, and scoping cuts the
    FS walk from "every package" down to "the analyse-set". *)
@@ -62,26 +53,7 @@ let oracle_dirs_uncached index =
   let package_oracles =
     List.concat_map (fun (name, dir) -> package_oracles name dir) package_dirs
   in
-  let dune_oracles =
-    Project_index.dune_dirs index
-    |> List.filter path_has_interop
-    |> List.map (fun dir ->
-        let path = Fpath.to_string dir in
-        let tool = Filename.basename path in
-        {
-          path = Context.Path.v (Fpath.to_string dir);
-          display = Loc.current_dir_relative dir |> Fpath.to_string;
-          package = "";
-          tool;
-          has_scripts = Fs.file_exists (Filename.concat path "scripts");
-          has_traces = Fs.file_exists (Filename.concat path "traces");
-          has_test_ml = Fs.file_exists (Filename.concat path "test.ml");
-          has_dune = true;
-        })
-  in
-  List.sort_uniq
-    (fun a b -> Context.Path.compare a.path b.path)
-    (package_oracles @ dune_oracles)
+  List.sort_uniq (fun a b -> Context.Path.compare a.path b.path) package_oracles
 
 (* Cache the walk by index identity -- 10+ E8xx rules call this per run and
    the FS layout doesn't change between rule invocations. *)

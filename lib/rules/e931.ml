@@ -91,10 +91,10 @@ let scan_file ctx ~filename =
 (* Source [.ml] files for a library, exactly as dune sees them: the
    [(modules ...)] spec from the [dune] stanza, expanded against the
    library's source directory by [Project_index.Library.files]. *)
-let library_ml_files lib =
+let library_ml_files ctx lib =
   Project_index.Library.files lib
-  |> List.filter (fun p -> Fpath.has_ext ".ml" p)
-  |> List.map (fun file -> Context.path (Fpath.to_string file))
+  |> List.filter (Fpath.has_ext ".ml")
+  |> List.map (Context.resolve ctx)
 
 let check (ctx : Context.project) =
   let module P = Project_index.Package in
@@ -105,7 +105,7 @@ let check (ctx : Context.project) =
       else
         let mls =
           Project_index.package_libraries pkg
-          |> List.concat_map library_ml_files
+          |> List.concat_map (library_ml_files ctx)
         in
         let findings =
           List.concat_map (fun filename -> scan_file ctx ~filename) mls
@@ -120,7 +120,7 @@ let check (ctx : Context.project) =
             in
             let loc = Issue_location.in_file opam_path in
             [ Issue.v ~loc { package = P.name pkg; findings } ])
-    (Project_index.package_list index)
+    (Project_index.source_package_list index)
 
 let pp_finding ppf { file; line; col; ident; suggestion } =
   Fmt.pf ppf "%s:%d:%d ambient clock [%s] in lib code: %s" file line col ident
