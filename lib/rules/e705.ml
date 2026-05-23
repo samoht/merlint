@@ -35,6 +35,7 @@ let check_fuzz_mli_file ctx index filename view =
 
 (** Check if fuzz_*.ml files have corresponding .mli files. *)
 let check_missing_fuzz_mli ctx index files =
+  let root = Context.project_root_path ctx in
   List.filter_map
     (fun ml_file ->
       let fp = Context.fpath_of_path ml_file in
@@ -48,7 +49,10 @@ let check_missing_fuzz_mli ctx index files =
           && not (File.is_in_examples ml_file_s)
         then
           let mli_path = Context.Path.(ml_file |> rem_ext |> add_ext ".mli") in
-          if not (List.mem mli_path files) then
+          if
+            Build.source_status ~root ~index (Context.fpath_of_path mli_path)
+            = Build.Missing
+          then
             let loc =
               Location.v ~file:ml_file_s ~start_line:1 ~start_col:0 ~end_line:1
                 ~end_col:0
