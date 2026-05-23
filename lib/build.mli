@@ -24,3 +24,19 @@ val refresh_stale_cmt_targets :
     already fresh, or whose [.cmt] cannot be located in [_build/default], are
     skipped. Returns [Ok ()] when the (possibly empty) target list builds
     cleanly. *)
+
+type source_status =
+  | Compiled  (** Source exists and its [.cmt] / [.cmti] is up to date. *)
+  | Not_compiled
+      (** Source exists but has no fresh [.cmt] / [.cmti] artefact, so
+          typedtree-backed analysis cannot run on it yet. *)
+  | Missing  (** No such source file is known to the project. *)
+
+val source_status :
+  root:string -> index:Project_index.t -> Fpath.t -> source_status
+(** [source_status ~root ~index file] classifies [file] for typedtree-backed
+    analysis. Existence comes from [index] ({!Project_index.mem_source_file}),
+    not a filesystem stat; compilation freshness compares the [.cmt] / [.cmti]
+    under [root]'s [_build] against the source mtime. Rules use this to tell a
+    genuinely absent interface ({!constructor-Missing}) from one that merely
+    lacks a fresh artefact ({!constructor-Not_compiled}). *)

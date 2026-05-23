@@ -105,22 +105,27 @@ let test_ml_target ctx index ml_file =
   && (not (is_in_private_library ctx index ml_file))
   && not (File.is_in_examples ml_file)
 
-let missing_test_mli_issue ctx ml_file =
+let missing_test_mli_issue ctx index ml_file =
   let mli_path = Filename.remove_extension ml_file ^ ".mli" in
-  if ctx.Context.selected_file (Context.resolve_file ctx (Fpath.v mli_path))
-  then None
-  else
-    let loc =
-      Location.v ~file:ml_file ~start_line:1 ~start_col:0 ~end_line:1 ~end_col:0
-    in
-    Some (Issue.v ~loc { filename = ml_file; reason = Missing_interface })
+  let mli_fpath =
+    Context.fpath_of_path (Context.resolve_file ctx (Fpath.v mli_path))
+  in
+  let root = Context.project_root_string ctx in
+  match Build.source_status ~root ~index mli_fpath with
+  | Build.Compiled | Build.Not_compiled -> None
+  | Build.Missing ->
+      let loc =
+        Location.v ~file:ml_file ~start_line:1 ~start_col:0 ~end_line:1
+          ~end_col:0
+      in
+      Some (Issue.v ~loc { filename = ml_file; reason = Missing_interface })
 
 (** Check if test_*.ml files have corresponding .mli files. Skip files that
     contain Alcotest.run since they shouldn't be test modules, and files that
     belong to private libraries. *)
 let check_missing_test_mli ctx index ml_file ~has_runner =
   if test_ml_target ctx index ml_file && not has_runner then
-    missing_test_mli_issue ctx ml_file
+    missing_test_mli_issue ctx index ml_file
   else None
 
 let path_ends_with path suffix =

@@ -32,7 +32,8 @@ let dune_target_of_cmt ~root cmt =
   let cmt = Fpath.(v cmt |> normalize) in
   Fpath.rem_prefix build_root cmt
 
-let maybe_cmt_target ~root file =
+(* [.cmt]/[.cmti] for [file] with [true] when at least as new as the source. *)
+let cmt_artefact ~root file =
   match Merlin.Project.cmt ~root_dir:root (Fpath.to_string file) with
   | None -> None
   | Some cmt when not (Sys.file_exists cmt) -> None
@@ -40,8 +41,22 @@ let maybe_cmt_target ~root file =
       try
         let source_mtime = (Unix.stat (Fpath.to_string file)).st_mtime in
         let cmt_mtime = (Unix.stat cmt).st_mtime in
-        if cmt_mtime >= source_mtime then None else dune_target_of_cmt ~root cmt
+        Some (cmt, cmt_mtime >= source_mtime)
       with Unix.Unix_error _ -> None)
+
+let maybe_cmt_target ~root file =
+  match cmt_artefact ~root file with
+  | None | Some (_, true) -> None
+  | Some (cmt, false) -> dune_target_of_cmt ~root cmt
+
+type source_status = Compiled | Not_compiled | Missing
+
+let source_status ~root ~index file =
+  if not (Project_index.mem_source_file index file) then Missing
+  else
+    match cmt_artefact ~root file with
+    | Some (_, true) -> Compiled
+    | None | Some (_, false) -> Not_compiled
 
 let refresh_stale_cmt_targets ~path ~files mgr =
   let targets = List.filter_map (maybe_cmt_target ~root:path) files in
