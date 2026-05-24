@@ -18,9 +18,6 @@ let fuzz_modules runner_file fuzz_files =
         else None)
     fuzz_files
 
-let module_in_runner view fuzz_mod =
-  Suite.references view (String.capitalize_ascii fuzz_mod)
-
 let missing_include_issue runner_file fuzz_mod =
   let loc =
     Issue_location.v
@@ -47,9 +44,16 @@ let check_stanza ctx stanza_name files =
         Log.debug (fun m ->
             m "E715: stanza '%s' has %d fuzz modules" stanza_name
               (List.length modules));
-        modules
-        |> List.filter (fun fuzz_mod -> not (module_in_runner view fuzz_mod))
-        |> List.map (missing_include_issue runner_file)
+        List.filter_map
+          (fun fuzz_mod ->
+            match Suite.references view (String.capitalize_ascii fuzz_mod) with
+            | Suite.Unresolved | Suite.Resolved true ->
+                (* Unresolved: the runner's typedtree is not built, so we cannot
+                   see its references -- skip rather than flag every module. *)
+                None
+            | Suite.Resolved false ->
+                Some (missing_include_issue runner_file fuzz_mod))
+          modules
       with File_view.Analysis_error _ -> [])
 
 (** Check if fuzz.ml includes all fuzz modules via Fuzz_*.suite *)
