@@ -111,22 +111,28 @@ let references_in callers module_name =
        (fun actual -> String.ends_with ~suffix:("__" ^ module_name) actual)
        callers.wrapped
 
+type 'a resolved = Unresolved | Resolved of 'a
+
 let references view module_name =
   match callers view with
-  | None -> false
-  | Some c -> references_in c module_name
+  | None -> Unresolved
+  | Some c -> Resolved (references_in c module_name)
 
 let references_with_prefix view ~prefix =
   match callers view with
-  | None -> false
+  | None -> Unresolved
   | Some c ->
-      Hashtbl.fold
-        (fun name () acc -> acc || String.starts_with ~prefix name)
-        c.exact false
+      Resolved
+        (Hashtbl.fold
+           (fun name () acc -> acc || String.starts_with ~prefix name)
+           c.exact false)
 
 let calls_test_case view =
-  File_view.calls_path view [ "Alcobar"; "test_case" ]
-  || File_view.calls_path view [ "Alcotest"; "test_case" ]
+  if not (File_view.is_resolved view) then Unresolved
+  else
+    Resolved
+      (File_view.calls_path view [ "Alcobar"; "test_case" ]
+      || File_view.calls_path view [ "Alcotest"; "test_case" ])
 
 let expected_of_string = function
   | "string * unit Alcotest.test_case list" -> Some Alcotest

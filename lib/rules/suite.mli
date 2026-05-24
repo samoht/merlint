@@ -28,17 +28,28 @@ val references_in : callers -> string -> bool
 (** [references_in callers module_name] checks whether precomputed [callers]
     contains [module_name].suite. *)
 
-val references : File_view.t -> string -> bool
-(** [references view module_name] checks whether [view] references
-    [module_name].suite. *)
+(** The result of a typedtree-backed query. Returning this instead of a bare
+    [bool] stops callers from reading [Unresolved] as a negative answer, which
+    is how an absence check ("module X is not referenced") turns into a false
+    positive when artefacts are missing. *)
+type 'a resolved =
+  | Unresolved
+      (** No fresh typedtree was available (the [.cmt]/[.cmti] is not built), so
+          the query could not run. *)
+  | Resolved of 'a  (** The query ran against a loaded typedtree. *)
 
-val references_with_prefix : File_view.t -> prefix:string -> bool
-(** [references_with_prefix view ~prefix] checks whether [view] references a
-    module whose name starts with [prefix] and exposes [suite]. *)
+val references : File_view.t -> string -> bool resolved
+(** [references view module_name] is whether [view] references
+    [module_name].suite, or [Unresolved] when the typedtree is not built. *)
 
-val calls_test_case : File_view.t -> bool
-(** [calls_test_case view] checks whether [view] calls an Alcotest test-case
-    constructor. *)
+val references_with_prefix : File_view.t -> prefix:string -> bool resolved
+(** [references_with_prefix view ~prefix] is whether [view] references a module
+    whose name starts with [prefix] and exposes [suite], or [Unresolved] when
+    the typedtree is not built. *)
+
+val calls_test_case : File_view.t -> bool resolved
+(** [calls_test_case view] is whether [view] calls an Alcotest test-case
+    constructor, or [Unresolved] when the typedtree is not built. *)
 
 val is_compliant_view : expected:string -> File_view.t -> bool
 (** [is_compliant_view ~expected view] checks that an interface exposes exactly

@@ -26,14 +26,15 @@ let test_unresolved_skips () =
     (Merlint.Suite.is_compliant_view
        ~expected:"string * unit Alcotest.test_case list" view);
   Alcotest.(check bool)
-    "no references" false
-    (Merlint.Suite.references view "Test_foo");
+    "references unresolved" true
+    (Merlint.Suite.references view "Test_foo" = Merlint.Suite.Unresolved);
   Alcotest.(check bool)
-    "no prefixed references" false
-    (Merlint.Suite.references_with_prefix view ~prefix:"Test_");
+    "prefixed references unresolved" true
+    (Merlint.Suite.references_with_prefix view ~prefix:"Test_"
+    = Merlint.Suite.Unresolved);
   Alcotest.(check bool)
-    "no test cases" false
-    (Merlint.Suite.calls_test_case view)
+    "test cases unresolved" true
+    (Merlint.Suite.calls_test_case view = Merlint.Suite.Unresolved)
 
 let suite =
   ( "suite",

@@ -9,6 +9,14 @@ let uses_fuzz_module_suites view =
 
 let defines_own_tests = Suite.calls_test_case
 
+(* Only flag when we know the runner defines its own tests and know it does not
+   delegate. An unbuilt typedtree ([Unresolved]) means we cannot tell, so skip
+   rather than report. *)
+let inline_tests_without_delegation view =
+  match (defines_own_tests view, uses_fuzz_module_suites view) with
+  | Suite.Resolved true, Suite.Resolved false -> true
+  | _ -> false
+
 (** Check if fuzz.ml properly delegates to fuzz modules via Fuzz_*.suite instead
     of defining its own tests inline. *)
 let check ctx =
@@ -24,7 +32,7 @@ let check ctx =
         try
           let view = Context.file_view ctx filename in
           let filename = Context.string_of_path filename in
-          if defines_own_tests view && not (uses_fuzz_module_suites view) then
+          if inline_tests_without_delegation view then
             [
               Issue.v
                 ~loc:
