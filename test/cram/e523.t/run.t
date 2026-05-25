@@ -48,8 +48,9 @@ Build bad fixture project:
 
 Good examples exercise every dune construct that can add modules beyond
 the source directory: select branches, generate_sites_module, rule targets,
-ocamllex, copy_files, and include_subdirs (which suppresses the rule
-because subdirectory modules merge into the stanza):
+ocamllex, copy_files, include_subdirs (which suppresses the rule because
+subdirectory modules merge into the stanza), and an enabled_if-gated stanza
+(whose module is still claimed -- merlint must not drop gated stanzas):
 
 Build good fixture project:
   $ (cd good && dune build @check)
@@ -58,7 +59,7 @@ Build good fixture project:
   Dune root: $TESTCASE_ROOT/good/
   Running merlint analysis...
   
-  Analyzing 14 files
+  Analyzing 16 files
   
   ✓ Code Quality (0 total issues)
   ✓ Code Style (0 total issues)

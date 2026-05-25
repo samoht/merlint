@@ -1,0 +1,12 @@
+; A stanza gated on an environment variable still claims its module: merlint
+; must treat [gated] as covered, not silently dropped.
+
+(executable
+ (name main_a)
+ (modules main_a))
+
+(executable
+ (name gated)
+ (modules gated)
+ (enabled_if
+  (= %{env:E523_GATED=} "1")))
