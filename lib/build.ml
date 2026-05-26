@@ -49,14 +49,16 @@ let maybe_cmt_target ~root file =
   | None | Some (_, true) -> None
   | Some (cmt, false) -> dune_target_of_cmt ~root cmt
 
-type source_status = Compiled | Not_compiled | Missing
+type source_status = Compiled | Not_compiled | Skipped | Missing
 
 let source_status ~root ~index file =
-  if not (Project_index.mem_source_file index file) then Missing
-  else
-    match cmt_artefact ~root file with
-    | Some (_, true) -> Compiled
-    | None | Some (_, false) -> Not_compiled
+  match Project_index.source_presence index file with
+  | Project_index.Absent -> Missing
+  | Project_index.Unindexed -> Skipped
+  | Project_index.Indexed -> (
+      match cmt_artefact ~root file with
+      | Some (_, true) -> Compiled
+      | None | Some (_, false) -> Not_compiled)
 
 let refresh_stale_cmt_targets ~path ~files mgr =
   let targets = List.filter_map (maybe_cmt_target ~root:path) files in
