@@ -112,7 +112,7 @@ let missing_test_mli_issue ctx index ml_file =
   in
   let root = Context.project_root_string ctx in
   match Build.source_status ~root ~index mli_fpath with
-  | Build.Compiled | Build.Not_compiled -> None
+  | Build.Compiled | Build.Not_compiled | Build.Skipped -> None
   | Build.Missing ->
       let loc =
         Location.v ~file:ml_file ~start_line:1 ~start_col:0 ~end_line:1

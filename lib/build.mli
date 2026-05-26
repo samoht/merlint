@@ -30,13 +30,20 @@ type source_status =
   | Not_compiled
       (** Source exists but has no fresh [.cmt] / [.cmti] artefact, so
           typedtree-backed analysis cannot run on it yet. *)
-  | Missing  (** No such source file is known to the project. *)
+  | Skipped
+      (** Source exists on disk but the project index did not capture it (e.g. a
+          roots-scoped scan that dropped a sibling), so a [.mli]/[.ml] check
+          must not treat it as absent. Distinct from {!constructor-Missing}. *)
+  | Missing  (** No such source file exists on disk. *)
 
 val source_status :
   root:string -> index:Project_index.t -> Fpath.t -> source_status
 (** [source_status ~root ~index file] classifies [file] for typedtree-backed
-    analysis. Existence comes from [index] ({!Project_index.mem_source_file}),
-    not a filesystem stat; compilation freshness compares the [.cmt] / [.cmti]
-    under [root]'s [_build] against the source mtime. Rules use this to tell a
-    genuinely absent interface ({!constructor-Missing}) from one that merely
-    lacks a fresh artefact ({!constructor-Not_compiled}). *)
+    analysis. Presence comes from {!Project_index.source_presence}, which
+    distinguishes an indexed source, one merely {!constructor-Skipped} (on disk
+    but not indexed), and a genuinely {!constructor-Missing} one; compilation
+    freshness compares the [.cmt] / [.cmti] under [root]'s [_build] against the
+    source mtime. Rules use this to tell a genuinely absent interface
+    ({!constructor-Missing}) from one that merely lacks a fresh artefact
+    ({!constructor-Not_compiled}) or escaped indexing ({!constructor-Skipped}).
+*)
