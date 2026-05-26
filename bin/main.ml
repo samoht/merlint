@@ -635,7 +635,7 @@ let bail_flag =
 
 let show_config_flag =
   let doc =
-    "Show the loaded configuration and exit (useful for debugging .merlint \
+    "Show the loaded configuration and exit (useful for debugging merlint.toml \
      files)"
   in
   Arg.(value & flag & info [ "show-config" ] ~doc)
@@ -709,12 +709,16 @@ let main exclude_patterns rules_spec ~show_profile ~show_config ~build ~bail
       ~build ~bail ~json_output files
 
 let analyze_term =
+  let json_log_reporter ~app:_ ~base:_ () = Vlog.reporter () in
   Term.(
     const (fun e r p bail c b () f u ->
         main e r ~show_profile:p ~show_config:c ~build:b ~bail f u)
     $ exclude_flag $ rules_flag $ profile_flag $ bail_flag $ show_config_flag
     $ build_flag $ no_build_flag $ files
-    $ Term.(const (fun () () -> ()) $ Vlog.setup "merlint" $ Memtrace.term))
+    $ Term.(
+        const (fun () () -> ())
+        $ Vlog.setup ~json_reporter:(Some json_log_reporter) "merlint"
+        $ Memtrace.term))
 
 let scan =
   let doc = "Scan OCaml code for style issues" in
