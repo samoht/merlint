@@ -1,4 +1,4 @@
-; A stanza gated on an environment variable still claims its module: merlint
+; A stanza gated on an enabled_if predicate still claims its module: merlint
 ; must treat [gated] as covered, not silently dropped.
 
 (executable
@@ -9,4 +9,4 @@
  (name gated)
  (modules gated)
  (enabled_if
-  (= %{env:E523_GATED=} "1")))
+  (= %{profile} e523_gated)))
