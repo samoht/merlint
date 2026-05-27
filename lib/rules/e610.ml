@@ -12,15 +12,15 @@ module String_set = Set.Make (String)
 (** Find "test/" in path, handling both absolute (/test/) and relative (test/)
     paths. Returns the index after "test/" if found. *)
 let test_prefix path =
-  match Astring.String.find_sub ~sub:"/test/" path with
-  | Some idx -> Some (idx + 6)
+  match Re.exec_opt Re.(compile (str "/test/")) path with
+  | Some g -> Some (Re.Group.start g 0 + 6)
   | None -> if String.starts_with ~prefix:"test/" path then Some 5 else None
 
 (** Find "lib/" in path, handling both absolute (/lib/) and relative (lib/)
     paths. Returns the index after "lib/" if found. *)
 let lib_prefix path =
-  match Astring.String.find_sub ~sub:"/lib/" path with
-  | Some idx -> Some (idx + 5)
+  match Re.exec_opt Re.(compile (str "/lib/")) path with
+  | Some g -> Some (Re.Group.start g 0 + 5)
   | None -> if String.starts_with ~prefix:"lib/" path then Some 4 else None
 
 (** Extract the relative path from test/ directory. e.g., "test/foo/test_x.ml"

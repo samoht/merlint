@@ -125,24 +125,10 @@ let test_parse_allowed_words_multiline () =
   let value = List.assoc "allowed_words" config.settings in
   Alcotest.(check bool)
     "value preserves create_table" true
-    (let needle = "create_table" in
-     let n = String.length value and k = String.length needle in
-     let rec loop i =
-       if i + k > n then false
-       else if String.sub value i k = needle then true
-       else loop (i + 1)
-     in
-     loop 0);
+    (Re.execp Re.(compile (str "create_table")) value);
   Alcotest.(check bool)
     "value preserves cipher name" true
-    (let needle = "TLS_DHE_RSA_WITH_AES_256_GCM_SHA384" in
-     let n = String.length value and k = String.length needle in
-     let rec loop i =
-       if i + k > n then false
-       else if String.sub value i k = needle then true
-       else loop (i + 1)
-     in
-     loop 0)
+    (Re.execp Re.(compile (str "TLS_DHE_RSA_WITH_AES_256_GCM_SHA384")) value)
 
 let test_parse_files_list () =
   (* [files] accepts either a single string or a list of strings; the
@@ -159,15 +145,7 @@ exclude = ["E330"]
     "list form parses to non-empty exclusions" false
     (config.exclusions = Rule_config.empty);
   let pp = Fmt.str "%a" Rule_config.pp config.exclusions in
-  let contains needle =
-    let n = String.length pp and k = String.length needle in
-    let rec loop i =
-      if i + k > n then false
-      else if String.sub pp i k = needle then true
-      else loop (i + 1)
-    in
-    loop 0
-  in
+  let contains needle = Re.execp Re.(compile (str needle)) pp in
   Alcotest.(check bool) "first file expanded" true (contains "lib/color.ml*");
   Alcotest.(check bool) "second file expanded" true (contains "lib/margin.ml*");
   Alcotest.(check bool) "third file expanded" true (contains "lib/padding.ml*")
@@ -181,14 +159,7 @@ exclude = ["E100"]
   | exception Failure msg ->
       Alcotest.(check bool)
         "error mentions missing files" true
-        (let needle = "missing 'files'" in
-         let n = String.length msg and k = String.length needle in
-         let rec loop i =
-           if i + k > n then false
-           else if String.sub msg i k = needle then true
-           else loop (i + 1)
-         in
-         loop 0)
+        (Re.execp Re.(compile (str "missing 'files'")) msg)
 
 let test_parse_files_wrong_type () =
   let input = {|[[rules]]

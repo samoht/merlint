@@ -185,34 +185,60 @@ let is_bad_test line bad_test_re = Re.execp bad_test_re line
 let is_good_test line good_test_re = Re.execp good_test_re line
 
 let contains_substring ~needle haystack =
-  let needle_len = String.length needle in
-  let haystack_len = String.length haystack in
-  let rec loop i =
-    if i + needle_len > haystack_len then false
-    else if String.sub haystack i needle_len = needle then true
-    else loop (i + 1)
-  in
-  needle_len = 0 || loop 0
+  Re.execp Re.(compile (str needle)) haystack
 
-let forbidden_command_fragments =
+let command_words line =
+  let line =
+    if String.length line >= 4 then String.sub line 4 (String.length line - 4)
+    else line
+  in
+  let is_sep = function
+    | ' ' | '\t' | ';' | '&' | '(' | ')' | '<' | '>' | '|' -> true
+    | _ -> false
+  in
+  line |> String.split_on_char ' '
+  |> List.concat_map (fun part ->
+      part |> String.split_on_char '\t'
+      |> List.concat_map (fun part ->
+          let buf = Buffer.create (String.length part) in
+          let acc = ref [] in
+          let flush () =
+            if Buffer.length buf > 0 then (
+              acc := Buffer.contents buf :: !acc;
+              Buffer.clear buf)
+          in
+          String.iter
+            (fun c -> if is_sep c then flush () else Buffer.add_char buf c)
+            part;
+          flush ();
+          List.rev !acc))
+
+let command_uses_word word line = List.exists (( = ) word) (command_words line)
+
+let forbidden_command_checks =
   [
-    ("grep", "uses grep in a cram command");
-    ("head", "uses head in a cram command");
-    ("tail", "uses tail in a cram command");
-    ("sed", "uses sed in a cram command");
-    ("awk", "uses awk in a cram command");
-    ("|", "uses a shell pipe in a cram command");
-    (">/dev/null", "hides command output with >/dev/null");
-    ("2>/dev/null", "hides command stderr with 2>/dev/null");
-    ("dune promote", "uses dune promote from inside a cram test");
+    (`Word "grep", "uses grep in a cram command");
+    (`Word "head", "uses head in a cram command");
+    (`Word "tail", "uses tail in a cram command");
+    (`Word "sed", "uses sed in a cram command");
+    (`Word "awk", "uses awk in a cram command");
+    (`Fragment "|", "uses a shell pipe in a cram command");
+    (`Fragment ">/dev/null", "hides command output with >/dev/null");
+    (`Fragment "2>/dev/null", "hides command stderr with 2>/dev/null");
+    (`Fragment "dune promote", "uses dune promote from inside a cram test");
   ]
 
 let forbidden_command_issues line =
   if not (Re.execp re_cram_cmd line) then []
   else
-    forbidden_command_fragments
-    |> List.filter_map (fun (fragment, message) ->
-        if contains_substring ~needle:fragment line then Some message else None)
+    forbidden_command_checks
+    |> List.filter_map (fun (check, message) ->
+        let found =
+          match check with
+          | `Word word -> command_uses_word word line
+          | `Fragment fragment -> contains_substring ~needle:fragment line
+        in
+        if found then Some message else None)
 
 (* State for tracking test format checking *)
 type format_check_state = {

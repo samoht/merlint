@@ -15,6 +15,7 @@
   unix
   logs.fmt
   fmt
+  re
   fmt.tty))
 
 ; TODO: Re-enable merlint self-check after fixing all issues

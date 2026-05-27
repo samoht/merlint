@@ -1,7 +1,7 @@
 (executable
  (name generate_examples_ml)
  (modules generate_examples_ml)
- (libraries unix fmt))
+ (libraries unix fmt re))
 
 (executable
  (name check_test_integrity)
@@ -9,5 +9,5 @@
  (libraries merlint unix re fmt))
 
 (mdx
- (libraries merlint)
+ (libraries merlint re)
  (files README.md))
