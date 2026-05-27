@@ -1,3 +1,5 @@
+(** Tests for the Helpers module. *)
+
 val rule_code : Merlint.Rule.t -> string
 (** [rule_code rule] returns the lower-case identifier used to map [rule] to its
     cram fixture directory, for example [E505] becomes [e505]. *)
