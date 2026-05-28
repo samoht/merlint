@@ -56,19 +56,20 @@ let module_name_of_path file =
 let skipped_by_dir file_path =
   File.is_in_test_dir (Fpath.v file_path) || File.is_in_examples file_path
 
+let test_scope_libraries idx =
+  Project_index.unattributed_stanza_groups idx
+  |> List.concat_map (fun (group : Project_index.unattributed_stanza_group) ->
+      List.concat_map
+        (fun (stanza : Project_index.unattributed_stanza) ->
+          match stanza.kind with
+          | Project_index.Test | Project_index.Fuzz -> stanza.libraries
+          | Project_index.Mdx -> [])
+        group.stanzas)
+  |> String_set.of_list
+
 let check (ctx : Context.project) =
   let idx = Context.index ctx in
-  let unattributed_test_scope_libraries =
-    Project_index.unattributed_stanza_groups idx
-    |> List.concat_map (fun (group : Project_index.unattributed_stanza_group) ->
-        List.concat_map
-          (fun (stanza : Project_index.unattributed_stanza) ->
-            match stanza.kind with
-            | Project_index.Test | Project_index.Fuzz -> stanza.libraries
-            | Project_index.Mdx -> [])
-          group.stanzas)
-    |> String_set.of_list
-  in
+  let unattributed_test_scope_libraries = test_scope_libraries idx in
   let covered_by_unattributed_test_scope file =
     Project_index.libraries_of_file idx file
     |> List.exists (fun lib ->
@@ -99,8 +100,15 @@ let check (ctx : Context.project) =
       else if skipped_by_dir path then None
       else if String_set.mem ("test_" ^ m) test_modules then None
       else if covered_by_unattributed_test_scope file then None
-      else if Sys.file_exists (expected_test_path path) then None
-      else Some (missing_test_issue m path)
+      else
+        (* Ask the index whether the expected test file exists, rather than
+           stat-ing it: [Unindexed] (present on disk but not captured by a
+           file-scoped scan) counts as present, only [Absent] is missing. *)
+        match
+          Project_index.source_presence idx (Fpath.v (expected_test_path path))
+        with
+        | Project_index.Indexed | Project_index.Unindexed -> None
+        | Project_index.Absent -> Some (missing_test_issue m path)
   in
   Project_index.public_library_source_files idx |> List.filter_map needs_test
 
