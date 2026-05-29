@@ -1,0 +1,9 @@
+(library
+ (name pkg_b_bench)
+ (modules bench_lib)
+ (libraries pkg-a.helper))
+
+(executable
+ (name bench)
+ (modules bench)
+ (libraries pkg_b_bench))
