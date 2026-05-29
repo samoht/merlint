@@ -78,3 +78,29 @@ Build good fixture project:
   
   Summary: ✓ 0 total issues (applied 1 rule)
   ✓ All checks passed!
+
+Generated modules count as library modules: lexer.mll (ocamllex) and parser.mly
+(ocamlyacc/menhir) produce lexer/parser modules at build time, so test_lexer.ml
+and test_parser.ml have corresponding library modules even though no lexer.ml or
+parser.ml exists in the source tree.
+
+Build good-generated fixture project:
+  $ (cd good-generated && dune build @check)
+
+  $ merlint --build -r E610 good-generated/
+  Dune root: $TESTCASE_ROOT/good-generated/
+  Running merlint analysis...
+  
+  Analyzing 4 files
+  
+  ✓ Code Quality (0 total issues)
+  ✓ Code Style (0 total issues)
+  ✓ Naming Conventions (0 total issues)
+  ✓ Documentation (0 total issues)
+  ✓ Project Structure (0 total issues)
+  ✓ Test Quality (0 total issues)
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
+  
+  Summary: ✓ 0 total issues (applied 1 rule)
+  ✓ All checks passed!

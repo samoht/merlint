@@ -1,0 +1,2 @@
+rule token = parse
+  | eof { () }

@@ -50,8 +50,18 @@ let expected_lib_path test_file =
 let library_module_path ctx file =
   let file = Context.resolve ctx file in
   let rel_file = Context.project_relative_path ctx file in
-  if not (Fpath.has_ext ".ml" rel_file) then None
+  (* [.mll] (ocamllex) and [.mly] (ocamlyacc/menhir) generate a [.ml] module of
+     the same name at build time, so they provide the library module a test
+     exercises just as a [.ml] source does. Normalise them to [.ml] so the
+     test<->module pairing matches. *)
+  let provides_module =
+    Fpath.has_ext ".ml" rel_file
+    || Fpath.has_ext ".mll" rel_file
+    || Fpath.has_ext ".mly" rel_file
+  in
+  if not provides_module then None
   else
+    let rel_file = Fpath.set_ext ".ml" rel_file in
     let path = Fpath.to_string rel_file in
     match lib_prefix path with
     | Some idx ->
