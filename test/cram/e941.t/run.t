@@ -135,3 +135,30 @@ Build good executable fixture project:
   
   Summary: ✓ 0 total issues (applied 1 rule)
   ✓ All checks passed!
+
+Private benches are not install targets. pkg-b has a private bench library that
+links pkg-a.helper, used only by a private executable -- nothing public depends
+on it, so it is not install-reachable. [opam install pkg-b] never builds it, so
+pkg-a belongs in {with-test}, not [depends:]. E941 stays silent even though
+pkg-b.opam does not depend on pkg-a.
+
+Build good bench fixture project:
+  $ (cd good-bench && dune build @check)
+
+  $ merlint --build -r E941 good-bench/
+  Dune root: $TESTCASE_ROOT/good-bench/
+  Running merlint analysis...
+  
+  Analyzing 4 files
+  
+  ✓ Code Quality (0 total issues)
+  ✓ Code Style (0 total issues)
+  ✓ Naming Conventions (0 total issues)
+  ✓ Documentation (0 total issues)
+  ✓ Project Structure (0 total issues)
+  ✓ Test Quality (0 total issues)
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
+  
+  Summary: ✓ 0 total issues (applied 1 rule)
+  ✓ All checks passed!

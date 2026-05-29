@@ -85,27 +85,57 @@ let check_bin_use ~package ~depends_set ~build_set bin =
           source_lib = "(rule)";
         }
 
+(* E941 should fire only for libraries that [opam install] actually builds,
+   i.e. those reachable from a public (installed) artifact. A stanza is
+   install-reachable iff it has a [public_name], or it is linked (via
+   [(libraries ...)]) by an install-reachable stanza. Seed the set with the
+   package's public libraries and the libraries linked directly by its public
+   executables, then close over [(libraries ...)] edges within the package. A
+   private library reached only from private executables (e.g.
+   [enabled_if]-gated benches) is never installed, so its deps belong in
+   [{with-test}] and stay out of this set; E943 covers their (libraries). *)
+let install_reachable_libs package =
+  let libs = Project_index.package_libraries package in
+  let name = Project_index.Library.name in
+  let own_names = List.rev_map name libs |> Dep_deps.String_set.of_list in
+  let deps_within =
+    let tbl = Hashtbl.create 32 in
+    List.iter
+      (fun lib ->
+        Hashtbl.replace tbl (name lib)
+          (Project_index.Library.deps lib
+          |> List.filter (fun d -> Dep_deps.String_set.mem d own_names)))
+      libs;
+    fun n -> try Hashtbl.find tbl n with Not_found -> []
+  in
+  let public_libs =
+    List.filter_map
+      (fun lib ->
+        Option.map (fun _ -> name lib) (Project_index.Library.public_name lib))
+      libs
+  in
+  let public_exe_libs =
+    P.executable_stanzas package
+    |> List.filter (fun (s : Project_index.source_stanza) ->
+        s.public_names <> [])
+    |> List.concat_map (fun (s : Project_index.source_stanza) -> s.libraries)
+    |> List.filter (fun l -> Dep_deps.String_set.mem l own_names)
+  in
+  let reachable = ref Dep_deps.String_set.empty in
+  let rec visit n =
+    if not (Dep_deps.String_set.mem n !reachable) then begin
+      reachable := Dep_deps.String_set.add n !reachable;
+      List.iter visit (deps_within n)
+    end
+  in
+  List.iter visit (public_libs @ public_exe_libs);
+  List.filter (fun lib -> Dep_deps.String_set.mem (name lib) !reachable) libs
+
 let check_package package =
   let depends = P.depends package |> Dep_deps.String_set.of_list in
   let build_depends = P.build_depends package |> Dep_deps.String_set.of_list in
   let own = Dep_deps.own_libs package in
-  (* A library with a [(public_name ...)] is meant to be consumed externally:
-     it is runtime by definition, regardless of which internal stanzas
-     happen to reference it. Filter out only the truly-private libraries
-     (no public name) whose internal callers are all test-scope; those are
-     test helpers and E943 covers their (libraries ...) field. *)
-  let test_only = Dep_deps.test_only_libs package in
-  let runtime_libs =
-    Project_index.package_libraries package
-    |> List.filter (fun lib ->
-        match Project_index.Library.public_name lib with
-        | Some _ -> true
-        | None ->
-            not
-              (Dep_deps.String_set.mem
-                 (Project_index.Library.name lib)
-                 test_only))
-  in
+  let runtime_libs = install_reachable_libs package in
   let lib_findings =
     List.concat_map (check_lib ~package ~depends_set:depends ~own) runtime_libs
   in

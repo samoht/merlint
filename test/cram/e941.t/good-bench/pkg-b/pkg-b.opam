@@ -1,0 +1,3 @@
+opam-version: "2.0"
+synopsis: "Has a private bench that links pkg-a.helper; not installed"
+depends: [ "ocaml" "dune" ]
