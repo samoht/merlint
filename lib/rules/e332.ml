@@ -2,32 +2,51 @@
 
 type payload = {
   function_name : string;
-  module_context : string option; (* Some "Module" or None for top-level *)
+  module_context : string option;
+      (* dotted path of enclosing modules, [None] at top level *)
 }
 (** Payload for constructor naming issues *)
 
 let check (ctx : Context.file) =
-  List.filter_map
-    (fun item ->
-      let module Item = File_view.Item in
-      let name = Item.name item in
-      let name_lower = String.lowercase_ascii name in
-      let location = Some (Item.loc item) in
+  let module Item = File_view.Item in
+  let rec walk ~module_context items =
+    List.concat_map
+      (fun item ->
+        match Item.kind item with
+        | Item.Value ->
+            let name = Item.name item in
+            let name_lower = String.lowercase_ascii name in
+            (* Check for create/make functions that should be 'v' *)
+            if name_lower = "create" || name_lower = "make" then
+              [
+                Issue.v ~loc:(Item.loc item)
+                  { function_name = name; module_context };
+              ]
+            else []
+        | Item.Module ->
+            (* Descend, tracking the enclosing module path so the message can
+               point at the qualified name to rename (e.g. 'Header.make'). *)
+            let module_context =
+              match module_context with
+              | None -> Some (Item.name item)
+              | Some path -> Some (path ^ "." ^ Item.name item)
+            in
+            walk ~module_context (Item.children item)
+        | _ -> [])
+      items
+  in
+  walk ~module_context:None (File_view.items (Context.view ctx))
 
-      match (Item.kind item, location) with
-      | Item.Value, Some loc ->
-          (* Check for create/make functions that should be 'v' *)
-          if name_lower = "create" || name_lower = "make" then
-            Some (Issue.v ~loc { function_name = name; module_context = None })
-          else None
-      | _ -> None)
-    (File_view.items (Context.view ctx))
-
-let pp ppf { function_name; module_context = _ } =
+let pp ppf { function_name; module_context } =
+  let qualified =
+    match module_context with
+    | Some path -> path ^ "." ^ function_name
+    | None -> function_name
+  in
   Fmt.pf ppf
     "Function '%s' should be named 'v' - this is the idiomatic constructor \
      name in OCaml modules"
-    function_name
+    qualified
 
 let rule =
   Rule.v ~code:"E332" ~title:"Prefer 'v' Constructor"

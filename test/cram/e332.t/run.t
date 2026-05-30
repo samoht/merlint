@@ -10,12 +10,15 @@ Test bad example - should find create/make that should be 'v':
   
   ✓ Code Quality (0 total issues)
   ✓ Code Style (0 total issues)
-  ✗ Naming Conventions (2 total issues)
-    [E332] Prefer 'v' Constructor (2 issues)
+  ✗ Naming Conventions (5 total issues)
+    [E332] Prefer 'v' Constructor (5 issues)
     In OCaml modules, the idiomatic name for the primary constructor is 'v' rather
     than 'create' or 'make'. This follows the convention used by many standard
     libraries. For example, 'Module.create' should be 'Module.v'. This makes the
     API more consistent and idiomatic.
+    - bad.ml:7:2: Function 'User.create' should be named 'v' - this is the idiomatic constructor name in OCaml modules
+    - bad.ml:14:2: Function 'Widget.make' should be named 'v' - this is the idiomatic constructor name in OCaml modules
+    - bad.ml:21:2: Function 'Config.create' should be named 'v' - this is the idiomatic constructor name in OCaml modules
     - bad.ml:31:0: Function 'create' should be named 'v' - this is the idiomatic constructor name in OCaml modules
     - bad.ml:32:0: Function 'make' should be named 'v' - this is the idiomatic constructor name in OCaml modules
   ✓ Documentation (0 total issues)
@@ -27,11 +30,11 @@ Test bad example - should find create/make that should be 'v':
   ╭────────────────────┬──────────────────────────────╮
   │ Category           │ Issues                       │
   ├────────────────────┼──────────────────────────────┤
-  │ Naming Conventions │ 2 (2 prefer 'v' constructor) │
+  │ Naming Conventions │ 5 (5 prefer 'v' constructor) │
   ╰────────────────────┴──────────────────────────────╯
   
   
-  Summary: ✗ 2 total issues (applied 1 rule)
+  Summary: ✗ 5 total issues (applied 1 rule)
   ✗ Some checks failed. See details above.
     Run `merlint help E332` for the rule's description, hint, and good/bad examples.
   [1]
