@@ -30,6 +30,3 @@ type connection = { socket : Unix.file_descr }
 
 let create socket = { socket }
 let make socket = { socket }
-
-(* Note: The rule currently only catches top-level create/make functions.
-   Module-level detection would require more context about module boundaries. *)
