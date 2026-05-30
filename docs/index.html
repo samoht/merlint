@@ -1134,10 +1134,7 @@ and replace each call site with [err_x &quot;...&quot; args] / [fail_x &quot;...
 <span class="kw">type</span> connection = { socket : <span class="cn">Unix</span>.file_descr }
 
 <span class="kw">let</span> create socket = { socket }
-<span class="kw">let</span> make socket = { socket }
-
-(* <span class="cn">Note</span>: <span class="cn">The</span> rule currently only catches top-level create/make functions.
-   <span class="cn">Module</span>-level detection would require more context about <span class="kw">module</span> boundaries. *)</code></pre>
+<span class="kw">let</span> make socket = { socket }</code></pre>
 </div>
 <div class="example good">
   <h4>GOOD</h4>

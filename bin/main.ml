@@ -224,7 +224,7 @@ module Json_report = struct
   let exclusion_of_engine (e : Merlint.Engine.exclusion_stats) =
     exclusion e.rule e.file
 
-  let make ~project_root ~files_analyzed ~enabled_rule_count ~excluded issues =
+  let v ~project_root ~files_analyzed ~enabled_rule_count ~excluded issues =
     let issues =
       issues |> List.sort Merlint.Rule.Run.compare |> List.map issue_of_run
     in
@@ -238,7 +238,7 @@ end
 
 let print_json_report ~project_root ~files_analyzed ~enabled_rule_count
     ~excluded issues =
-  Json_report.make ~project_root ~files_analyzed ~enabled_rule_count ~excluded
+  Json_report.v ~project_root ~files_analyzed ~enabled_rule_count ~excluded
     issues
   |> Json_report.print
 
