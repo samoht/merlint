@@ -171,6 +171,29 @@ let run_one_project_job ?profiling ~config_for job =
   let issues = run_project_job ?profiling job in
   split_excluded ~config_for ~code issues
 
+let pass_iterator passes =
+  let on_attribute = List.filter_map Rule.Run.pass_attribute passes in
+  let on_expr = List.filter_map Rule.Run.pass_expr passes in
+  let on_value_binding = List.filter_map Rule.Run.pass_value_binding passes in
+  let dispatch_attribute attr = List.iter (fun f -> f attr) on_attribute in
+  let dispatch_expr expr = List.iter (fun f -> f expr) on_expr in
+  let dispatch_value_binding vb = List.iter (fun f -> f vb) on_value_binding in
+  {
+    Tast_iterator.default_iterator with
+    attribute =
+      (fun this attr ->
+        dispatch_attribute attr;
+        Tast_iterator.default_iterator.attribute this attr);
+    expr =
+      (fun this expr ->
+        dispatch_expr expr;
+        Tast_iterator.default_iterator.expr this expr);
+    value_binding =
+      (fun this value_binding ->
+        dispatch_value_binding value_binding;
+        Tast_iterator.default_iterator.value_binding this value_binding);
+  }
+
 let run_passes passes ctx =
   match passes with
   | [] -> []
@@ -178,20 +201,11 @@ let run_passes passes ctx =
       match File_view.typedtree (Context.view ctx) with
       | None -> []
       | Some tree ->
-          let on_attribute = List.filter_map Rule.Run.pass_attribute passes in
-          let on_expr = List.filter_map Rule.Run.pass_expr passes in
-          let on_value_binding =
-            List.filter_map Rule.Run.pass_value_binding passes
-          in
           let on_structure_item =
             List.filter_map Rule.Run.pass_structure_item passes
           in
           let on_signature_item =
             List.filter_map Rule.Run.pass_signature_item passes
-          in
-          let dispatch_expr expr = List.iter (fun f -> f expr) on_expr in
-          let dispatch_value_binding value_binding =
-            List.iter (fun f -> f value_binding) on_value_binding
           in
           let dispatch_structure_item item =
             List.iter (fun f -> f item) on_structure_item
@@ -199,27 +213,7 @@ let run_passes passes ctx =
           let dispatch_signature_item item =
             List.iter (fun f -> f item) on_signature_item
           in
-          let dispatch_attribute attr =
-            List.iter (fun f -> f attr) on_attribute
-          in
-          let iterator =
-            {
-              Tast_iterator.default_iterator with
-              attribute =
-                (fun this attr ->
-                  dispatch_attribute attr;
-                  Tast_iterator.default_iterator.attribute this attr);
-              expr =
-                (fun this expr ->
-                  dispatch_expr expr;
-                  Tast_iterator.default_iterator.expr this expr);
-              value_binding =
-                (fun this value_binding ->
-                  dispatch_value_binding value_binding;
-                  Tast_iterator.default_iterator.value_binding this
-                    value_binding);
-            }
-          in
+          let iterator = pass_iterator passes in
           (match tree with
           | `Implementation structure ->
               List.iter dispatch_structure_item structure.T.str_items;

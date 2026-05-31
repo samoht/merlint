@@ -87,19 +87,22 @@ let check (ctx : Context.project) =
     Project_index.test_module_names idx |> String_set.of_list
   in
   let selected = ctx.Context.in_analyze_set in
+  let exempt_module file path m =
+    String.starts_with ~prefix:"test_" m
+    || File.is_unit_companion_module m
+    || Project_index.is_generated_source_file idx file
+    || String_set.mem m private_modules
+    || skipped_by_dir path
+    || String_set.mem ("test_" ^ m) test_modules
+    || covered_by_unattributed_test_scope file
+  in
   let needs_test file =
     let path = Fpath.to_string file in
     if not (File_kind.is_ml path) then None
     else if not (selected (Context.resolve ctx file)) then None
     else
       let m = module_name_of_path file in
-      if String.starts_with ~prefix:"test_" m then None
-      else if File.is_unit_companion_module m then None
-      else if Project_index.is_generated_source_file idx file then None
-      else if String_set.mem m private_modules then None
-      else if skipped_by_dir path then None
-      else if String_set.mem ("test_" ^ m) test_modules then None
-      else if covered_by_unattributed_test_scope file then None
+      if exempt_module file path m then None
       else
         (* Ask the index whether the expected test file exists, rather than
            stat-ing it: [Unindexed] (present on disk but not captured by a
