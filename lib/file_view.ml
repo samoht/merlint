@@ -693,6 +693,19 @@ and typed_structure_item (item : Typedtree.structure_item) =
 and typed_signature_items (signature : Typedtree.signature) =
   List.concat_map typed_signature_item signature.sig_items
 
+and typed_recmodule_item (md : Typedtree.module_declaration) =
+  Option.map
+    (fun name ->
+      typed_item ~name ~kind:Item_module
+        ~children:
+          (match md.md_type.mty_desc with
+          | Tmty_signature s -> typed_signature_items s
+          | _ -> [])
+        ?doc:(typed_doc md.md_attributes)
+        ~deprecated:(typed_has_deprecated md.md_attributes)
+        md.md_loc)
+    md.md_name.txt
+
 and typed_signature_item (item : Typedtree.signature_item) =
   match item.sig_desc with
   | Tsig_value vd ->
@@ -717,21 +730,7 @@ and typed_signature_item (item : Typedtree.signature_item) =
               ~deprecated:(typed_has_deprecated md.md_attributes)
               md.md_loc;
           ])
-  | Tsig_recmodule mods ->
-      List.filter_map
-        (fun (md : Typedtree.module_declaration) ->
-          Option.map
-            (fun name ->
-              typed_item ~name ~kind:Item_module
-                ~children:
-                  (match md.md_type.mty_desc with
-                  | Tmty_signature s -> typed_signature_items s
-                  | _ -> [])
-                ?doc:(typed_doc md.md_attributes)
-                ~deprecated:(typed_has_deprecated md.md_attributes)
-                md.md_loc)
-            md.md_name.txt)
-        mods
+  | Tsig_recmodule mods -> List.filter_map typed_recmodule_item mods
   | Tsig_modtype mtd ->
       [
         typed_item ~name:mtd.mtd_name.txt ~kind:Item_module_type
