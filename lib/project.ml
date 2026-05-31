@@ -49,13 +49,7 @@ module Query = struct
          []
 
   let resolve_library index name =
-    match
-      source_libraries index
-      |> List.find_opt (fun lib ->
-          Project_index.Library.public_name lib = Some name)
-    with
-    | Some lib -> Project_index.Library.local_name lib
-    | None -> name
+    Project_index.resolve_public_library index name
 
   let test_file_library module_map basename =
     if String.starts_with ~prefix:"test_" basename then
