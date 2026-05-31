@@ -49,6 +49,18 @@ let log_backend_stats backend =
         s.cmt_hits s.cmt_misses s.cmt_reads s.source_parses);
   warn_missing_cmts s
 
+(* The whole-repo index builders are meant to run a handful of times per
+   analysis (roughly once per project rule). A count orders of magnitude higher
+   means one is being recomputed inside a per-file or per-stanza loop. *)
+let log_index_stats index =
+  match Project_index.scan_stats index with
+  | [] -> ()
+  | stats ->
+      Log.info (fun m ->
+          m "Project-index scans: %a"
+            Fmt.(list ~sep:(any ", ") (pair ~sep:(any "=") string int))
+            stats)
+
 let run_file_rule ?profiling ctx rule =
   let code = Rule.code rule in
   let filename = Context.filename ctx in
@@ -397,6 +409,7 @@ let run ?domain_mgr ~load_file ~filter ?analyze_set ?analyze_roots ~index
       run_enabled_rules ?pool ?profiling ~project_ctx ~project_root
         ~enabled_rules analyze_set
     in
+    log_index_stats idx_value;
     (project_results, file_results, files_analyzed)
   in
   Fun.protect
