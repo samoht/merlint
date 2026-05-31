@@ -126,32 +126,41 @@ let default_load_content filename () =
 let default_file_view filename =
   File_view.v ~filename ~typedtree:(fun () -> Ok None) ()
 
+(* Memoise [make] keyed by file path. The lock guards only the cache table, not
+   [make] itself: [make] reads (and parses) a file, and holding the lock across
+   that I/O serialised every reader across the executor pool's domains. Two
+   domains racing on the same fresh key may both run [make] -- wasteful but
+   rare and harmless, since the result is value-equal. *)
 let memoize_content make =
   let cache = Hashtbl.create 128 in
   let lock = Eio.Mutex.create () in
+  let find key = Eio.Mutex.use_ro lock (fun () -> Hashtbl.find_opt cache key) in
+  let store key v =
+    Eio.Mutex.use_rw ~protect:false lock (fun () -> Hashtbl.replace cache key v)
+  in
   fun filename ->
     let key = string_of_path filename in
-    Eio.Mutex.lock lock;
-    Fun.protect ~finally:(fun () -> Eio.Mutex.unlock lock) @@ fun () ->
-    match Hashtbl.find_opt cache key with
+    match find key with
     | Some content -> content
     | None ->
         let content = make filename in
-        Hashtbl.add cache key content;
+        store key content;
         content
 
 let memoize_file_view make =
   let cache = Hashtbl.create 128 in
   let lock = Eio.Mutex.create () in
+  let find key = Eio.Mutex.use_ro lock (fun () -> Hashtbl.find_opt cache key) in
+  let store key v =
+    Eio.Mutex.use_rw ~protect:false lock (fun () -> Hashtbl.replace cache key v)
+  in
   fun filename ->
     let key = string_of_path filename in
-    Eio.Mutex.lock lock;
-    Fun.protect ~finally:(fun () -> Eio.Mutex.unlock lock) @@ fun () ->
-    match Hashtbl.find_opt cache key with
+    match find key with
     | Some view -> view
     | None ->
         let view = make filename in
-        Hashtbl.add cache key view;
+        store key view;
         view
 
 let resolve (ctx : project) filename =
