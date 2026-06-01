@@ -1,4 +1,4 @@
-Test bad example - pure sans-IO package depends on Unix:
+Test bad example - pure I/O-free package depends on Unix:
 Build bad fixture project:
   $ (cd bad && dune build @check)
 
@@ -13,21 +13,21 @@ Build bad fixture project:
   ✓ Naming Conventions (0 total issues)
   ✓ Documentation (0 total issues)
   ✗ Project Structure (1 total issues)
-    [E930] Sans-IO policy (1 issue)
-    Any package tagged codec.* or protocol must follow the sans-IO contract. The
+    [E930] I/O-free policy (1 issue)
+    Any package tagged codec.* or protocol must follow the I/O-free contract. The
     org standardises on Eio: no package may depend on lwt, miou, or mirage
-    runtimes. Pure sans-IO packages (codec.* / protocol without an eio tag) must
+    runtimes. Pure I/O-free packages (codec.* / protocol without an eio tag) must
     additionally not depend on eio*, unix, or ambient clocks.
-    - bad/pkg/pkg.opam:1:0: bad/pkg/pkg.opam: sans-io policy violated by depends: unix; bad/pkg/lib/dune libraries: unix
+    - bad/pkg/pkg.opam:1:0: bad/pkg/pkg.opam: I/O-free policy violated by depends: unix; bad/pkg/lib/dune libraries: unix
   ✓ Test Quality (0 total issues)
   ✓ Interop Testing (0 total issues)
   ✓ Code Generation (0 total issues)
   
-  ╭───────────────────┬──────────────────────╮
-  │ Category          │ Issues               │
-  ├───────────────────┼──────────────────────┤
-  │ Project Structure │ 1 (1 sans-io policy) │
-  ╰───────────────────┴──────────────────────╯
+  ╭───────────────────┬───────────────────────╮
+  │ Category          │ Issues                │
+  ├───────────────────┼───────────────────────┤
+  │ Project Structure │ 1 (1 i/o-free policy) │
+  ╰───────────────────┴───────────────────────╯
   
   
   Summary: ✗ 1 total issue (applied 1 rule)
@@ -35,7 +35,7 @@ Build bad fixture project:
     Run `merlint help E930` for the rule's description, hint, and good/bad examples.
   [1]
 
-Test good example - pure sans-IO package avoids runtime IO dependencies:
+Test good example - pure I/O-free package avoids runtime IO dependencies:
 Build good fixture project:
   $ (cd good && dune build @check)
 

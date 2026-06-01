@@ -1,4 +1,4 @@
-Test bad example - sans-IO library reads the wall clock:
+Test bad example - I/O-free library reads the wall clock:
 Build bad fixture project:
   $ (cd bad && dune build @check)
 
@@ -13,24 +13,24 @@ Build bad fixture project:
   ✓ Naming Conventions (0 total issues)
   ✓ Documentation (0 total issues)
   ✗ Project Structure (1 total issues)
-    [E931] Ambient clock in sans-IO library code (1 issue)
-    Sans-IO packages (tagged [codec.*] or [protocol]) must not read the wall clock
-    or monotonic clock from library code. Time is an input, not a side effect:
-    take [~now] as a parameter, let the caller's adapter or CLI [bin/] call
-    [Mtime_clock.now] / [Ptime_clock.now] / [Unix.gettimeofday] / [Sys.time] and
-    pass the value in. Library attribution follows dune's [(public_name P.X)] via
-    [Project_index] so a sibling adapter package is scanned against its own tags,
-    not its sans-IO sister's.
-    - bad/pkg/pkg.opam:1:0: pkg: ambient clock in sans-IO lib code: bad/pkg/lib/pkg.ml:1:19 ambient clock [Unix.gettimeofday] in lib code: take [~now] as a parameter; the caller's adapter is the right place to read the wall clock
+    [E931] Ambient clock in I/O-free library code (1 issue)
+    I/O-free packages (tagged [codec.*] or [protocol]) must not read the wall
+    clock or monotonic clock from library code. Time is an input, not a side
+    effect: take [~now] as a parameter, let the caller's adapter or CLI [bin/]
+    call [Mtime_clock.now] / [Ptime_clock.now] / [Unix.gettimeofday] / [Sys.time]
+    and pass the value in. Library attribution follows dune's [(public_name P.X)]
+    via [Project_index] so a sibling adapter package is scanned against its own
+    tags, not its I/O-free sister's.
+    - bad/pkg/pkg.opam:1:0: pkg: ambient clock in I/O-free lib code: bad/pkg/lib/pkg.ml:1:19 ambient clock [Unix.gettimeofday] in lib code: take [~now] as a parameter; the caller's adapter is the right place to read the wall clock
   ✓ Test Quality (0 total issues)
   ✓ Interop Testing (0 total issues)
   ✓ Code Generation (0 total issues)
   
-  ╭───────────────────┬─────────────────────────────────────────────╮
-  │ Category          │ Issues                                      │
-  ├───────────────────┼─────────────────────────────────────────────┤
-  │ Project Structure │ 1 (1 ambient clock in sans-io library code) │
-  ╰───────────────────┴─────────────────────────────────────────────╯
+  ╭───────────────────┬──────────────────────────────────────────────╮
+  │ Category          │ Issues                                       │
+  ├───────────────────┼──────────────────────────────────────────────┤
+  │ Project Structure │ 1 (1 ambient clock in i/o-free library code) │
+  ╰───────────────────┴──────────────────────────────────────────────╯
   
   
   Summary: ✗ 1 total issue (applied 1 rule)
@@ -38,7 +38,7 @@ Build bad fixture project:
     Run `merlint help E931` for the rule's description, hint, and good/bad examples.
   [1]
 
-Test good example - sans-IO library takes time as input:
+Test good example - I/O-free library takes time as input:
 Build good fixture project:
   $ (cd good && dune build @check)
 

@@ -2096,16 +2096,16 @@ and replace each call site with [err_x &quot;...&quot; args] / [fail_x &quot;...
 <div class="error-card" id="E930">
     <div>
         <span class="error-code">E930</span>
-        <span class="error-title">Sans-IO policy</span>
+        <span class="error-title">I/O-free policy</span>
     </div>
-    <div class="error-hint"><p>Any package tagged codec.* or protocol must follow the sans-IO contract. The org standardises on Eio: no package may depend on lwt, miou, or mirage runtimes. Pure sans-IO packages (codec.* / protocol without an eio tag) must additionally not depend on eio*, unix, or ambient clocks.</p></div>
+    <div class="error-hint"><p>Any package tagged codec.* or protocol must follow the I/O-free contract. The org standardises on Eio: no package may depend on lwt, miou, or mirage runtimes. Pure I/O-free packages (codec.* / protocol without an eio tag) must additionally not depend on eio*, unix, or ambient clocks.</p></div>
 </div>
 <div class="error-card" id="E931">
     <div>
         <span class="error-code">E931</span>
-        <span class="error-title">Ambient clock in sans-IO library code</span>
+        <span class="error-title">Ambient clock in I/O-free library code</span>
     </div>
-    <div class="error-hint"><p>Sans-IO packages (tagged [codec.*] or [protocol]) must not read the wall clock or monotonic clock from library code. Time is an input, not a side effect: take [~now] as a parameter, let the caller's adapter or CLI [bin/] call [Mtime_clock.now] / [Ptime_clock.now] / [Unix.gettimeofday] / [Sys.time] and pass the value in. Library attribution follows dune's [(public_name P.X)] via [Project_index] so a sibling adapter package is scanned against its own tags, not its sans-IO sister's.</p></div>
+    <div class="error-hint"><p>I/O-free packages (tagged [codec.*] or [protocol]) must not read the wall clock or monotonic clock from library code. Time is an input, not a side effect: take [~now] as a parameter, let the caller's adapter or CLI [bin/] call [Mtime_clock.now] / [Ptime_clock.now] / [Unix.gettimeofday] / [Sys.time] and pass the value in. Library attribution follows dune's [(public_name P.X)] via [Project_index] so a sibling adapter package is scanned against its own tags, not its I/O-free sister's.</p></div>
 </div>
 <div class="error-card" id="E940">
     <div>

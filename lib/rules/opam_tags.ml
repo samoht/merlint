@@ -19,7 +19,7 @@ let read_opt opam_path =
 (** Like {!read_opt} but folds an absent field into the empty list. *)
 let read opam_path = Option.value (read_opt opam_path) ~default:[]
 
-(** A package declares the sans-IO contract when its tags include the top-level
+(** A package declares the I/O-free contract when its tags include the top-level
     [protocol] tag (a state machine over a wire codec) or any [codec] /
     [codec.*] topic (an encoding kind). *)
 let is_sans_io = function

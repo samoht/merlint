@@ -1,16 +1,16 @@
-(** E931: Ambient clock in sans-IO library code.
+(** E931: Ambient clock in I/O-free library code.
 
-    Companion to {!E930}. E930 bans clock-source opam dependencies in sans-IO
+    Companion to {!E930}. E930 bans clock-source opam dependencies in I/O-free
     packages; E931 bans the {b call sites} themselves ([Mtime_clock.now],
     [Ptime_clock.now], [Unix.gettimeofday], [Unix.time], [Sys.time]) inside
-    library code that the package's tags advertise as sans-IO.
+    library code that the package's tags advertise as I/O-free.
 
-    A package is sans-IO iff its opam [tags:] include any [codec.*] topic or the
-    top-level [protocol] tag. Eligibility is read from [Project_index.tags].
+    A package is I/O-free iff its opam [tags:] include any [codec.*] topic or
+    the top-level [protocol] tag. Eligibility is read from [Project_index.tags].
     Library-to-package attribution and per-library source directories come from
     [Project_index.library_source_dir] — sibling adapter packages (e.g.
     [nox-tls-eio] alongside [nox-tls]) are therefore scanned against their own
-    tags, not their sans-IO sister's. *)
+    tags, not their I/O-free sister's. *)
 
 module Issue_location = Location
 
@@ -127,20 +127,20 @@ let pp_finding ppf { file; line; col; ident; suggestion } =
     suggestion
 
 let pp ppf { package; findings } =
-  Fmt.pf ppf "%s: ambient clock in sans-IO lib code: %a" package
+  Fmt.pf ppf "%s: ambient clock in I/O-free lib code: %a" package
     Fmt.(list ~sep:(any "; ") pp_finding)
     findings
 
 let rule =
-  Rule.v ~code:"E931" ~title:"Ambient clock in sans-IO library code"
+  Rule.v ~code:"E931" ~title:"Ambient clock in I/O-free library code"
     ~category:Rule.Project_structure
     ~hint:
-      "Sans-IO packages (tagged [codec.*] or [protocol]) must not read the \
+      "I/O-free packages (tagged [codec.*] or [protocol]) must not read the \
        wall clock or monotonic clock from library code. Time is an input, not \
        a side effect: take [~now] as a parameter, let the caller's adapter or \
        CLI [bin/] call [Mtime_clock.now] / [Ptime_clock.now] / \
        [Unix.gettimeofday] / [Sys.time] and pass the value in. Library \
        attribution follows dune's [(public_name P.X)] via [Project_index] so a \
        sibling adapter package is scanned against its own tags, not its \
-       sans-IO sister's."
+       I/O-free sister's."
     ~examples:[] ~pp (Project check)

@@ -1,11 +1,11 @@
-(** E930: Sans-IO policy.
+(** E930: I/O-free policy.
 
     Any package whose tags include any [codec.*] topic (the encoding kind) or
     the top-level [protocol] tag (a state machine wrapping a wire codec)
-    declares the {e sans-io} contract. The rule enforces it by checking the
+    declares the {e I/O-free} contract. The rule enforces it by checking the
     package's [depends:] and every dune [(library ...)] in the package:
 
-    - {b Pure sans-IO} (no [eio] tag): bans every IO runtime ([eio*], [lwt*],
+    - {b Pure I/O-free} (no [eio] tag): bans every IO runtime ([eio*], [lwt*],
       [miou*], [mirage*], [unix], [threads.posix]) and ambient-clock deps.
     - {b Eio adapter} ([codec.*]/[protocol] paired with [eio] tag): allows
       [eio*], still bans [lwt*], [miou*], [mirage*] -- the org standardises on
@@ -113,16 +113,16 @@ let pp ppf { package; opam; findings } =
   let subject =
     if Filename.basename opam = opam then Filename.concat package opam else opam
   in
-  Fmt.pf ppf "%s: sans-io policy violated by %a" subject
+  Fmt.pf ppf "%s: I/O-free policy violated by %a" subject
     Fmt.(list ~sep:(any "; ") pp_finding)
     findings
 
 let rule =
-  Rule.v ~code:"E930" ~title:"Sans-IO policy"
+  Rule.v ~code:"E930" ~title:"I/O-free policy"
     ~hint:
-      "Any package tagged codec.* or protocol must follow the sans-IO \
+      "Any package tagged codec.* or protocol must follow the I/O-free \
        contract. The org standardises on Eio: no package may depend on lwt, \
-       miou, or mirage runtimes. Pure sans-IO packages (codec.* / protocol \
+       miou, or mirage runtimes. Pure I/O-free packages (codec.* / protocol \
        without an eio tag) must additionally not depend on eio*, unix, or \
        ambient clocks."
     ~category:Rule.Project_structure ~examples:[] ~pp (Project check)
