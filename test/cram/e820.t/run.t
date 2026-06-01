@@ -37,7 +37,7 @@ Test good example - test.ml uses csv library:
   Dune root: $TESTCASE_ROOT/good/
   Running merlint analysis...
   
-  Analyzing 2 files
+  Analyzing 1 files
   
   ✓ Code Quality (0 total issues)
   ✓ Code Style (0 total issues)

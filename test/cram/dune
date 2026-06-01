@@ -1,5 +1,7 @@
 (cram
- (deps %{bin:merlint})
+ (deps
+  %{bin:merlint}
+  (package nox-csv))
  (locks merlint-cram-dune))
 
 (rule
