@@ -1,3 +1,8 @@
-(executable
+(library
+ (name csv)
+ (modules csv))
+
+(test
  (name test)
- (libraries nox-csv))
+ (modules test)
+ (libraries csv))
