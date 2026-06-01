@@ -107,10 +107,10 @@ let test_is_sans_io_predicate () =
 
 let test_has_sans_io () =
   Alcotest.(check bool)
-    "any sans-io tag in the list" true
+    "any I/O-free tag in the list" true
     (Opam_tags.has_sans_io [ "org:blacksun"; "codec.cbor" ]);
   Alcotest.(check bool)
-    "no sans-io tag" false
+    "no I/O-free tag" false
     (Opam_tags.has_sans_io [ "org:blacksun"; "eio" ]);
   Alcotest.(check bool) "empty list" false (Opam_tags.has_sans_io [])
 
