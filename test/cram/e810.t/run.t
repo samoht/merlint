@@ -15,17 +15,18 @@ Build bad fixture project:
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   ✗ Interop Testing (1 total issues)
-    [E810] Missing regen-traces alias (1 issue)
-    Every interop test dune file must define a regen-traces alias as the single
-    trigger for refreshing traces: `(rule (alias regen-traces) ...)`.
-    - bad/foo/test/interop/oracle/dune:1:0: Interop test bad/foo/test/interop/oracle/dune missing regen-traces alias
+    [E810] Missing regen alias (1 issue)
+    traces/dune must define the trace-regeneration rule as `(rule (alias regen)
+    (mode promote) (enabled_if (= %{env:REGEN=0} 1)) ...)`, the single trigger for
+    refreshing traces: `REGEN=1 dune build @regen`.
+    - bad/foo/test/interop/oracle/traces/dune:1:0: Interop test bad/foo/test/interop/oracle/traces/dune missing regen alias
   ✓ Code Generation (0 total issues)
   
-  ╭─────────────────┬──────────────────────────────────╮
-  │ Category        │ Issues                           │
-  ├─────────────────┼──────────────────────────────────┤
-  │ Interop Testing │ 1 (1 missing regen-traces alias) │
-  ╰─────────────────┴──────────────────────────────────╯
+  ╭─────────────────┬───────────────────────────╮
+  │ Category        │ Issues                    │
+  ├─────────────────┼───────────────────────────┤
+  │ Interop Testing │ 1 (1 missing regen alias) │
+  ╰─────────────────┴───────────────────────────╯
   
   
   Summary: ✗ 1 total issue (applied 1 rule)
