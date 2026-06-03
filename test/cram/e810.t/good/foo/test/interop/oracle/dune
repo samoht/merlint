@@ -1,6 +1,4 @@
 (test
- (name test))
-
-(rule
- (alias regen-traces)
- (action (run sh scripts/generate.sh)))
+ (name test)
+ (deps
+  (source_tree traces)))

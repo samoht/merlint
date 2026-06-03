@@ -1,4 +1,1 @@
-(rule
- (alias regen-traces)
- (enabled_if (= %{env:REGEN_TRACES=0} 1))
- (action (run sh scripts/generate.sh)))
+

@@ -1,3 +1,10 @@
+; GOOD: the regen rule runs generate.sh only under REGEN=1, so a normal
+; dune test leaves the traces as committed source and never runs the oracle.
 (rule
- (alias regen-traces)
- (action (run sh scripts/generate.sh)))
+ (alias regen)
+ (mode promote)
+ (enabled_if
+  (= %{env:REGEN=0} 1))
+ (targets out.csv)
+ (action
+  (run sh scripts/generate.sh)))

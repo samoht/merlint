@@ -87,6 +87,7 @@ let () =
       Test_e807.suite;
       Test_e810.suite;
       Test_e815.suite;
+      Test_e816.suite;
       Test_e820.suite;
       Test_e825.suite;
       Test_e830.suite;

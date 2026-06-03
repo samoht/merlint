@@ -82,6 +82,7 @@ let all_rules =
     E807.rule;
     E810.rule;
     E815.rule;
+    E816.rule;
     E820.rule;
     E825.rule;
     E830.rule;

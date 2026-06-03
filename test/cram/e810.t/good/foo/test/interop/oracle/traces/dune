@@ -1,0 +1,10 @@
+(rule
+ (alias regen)
+ (mode promote)
+ (enabled_if
+  (= %{env:REGEN=0} 1))
+ (targets out.csv)
+ (action
+  (with-stdout-to
+   out.csv
+   (echo "x"))))
