@@ -119,8 +119,13 @@ let file_view ?profiling ~load_file ~backend filename =
   let content = lazy (load_file source_filename) in
   let source = Merlin.Source.v ~file:source_filename ~content in
   let typedtree () =
-    merlin_op ?profiling source_filename (fun () ->
-        Merlin.typedtree backend ~source)
+    (* Only OCaml units have a typedtree. A grammar/lexer source (.mly/.mll) or
+       any other non-.ml/.mli file has no .cmt of its own -- the generated .ml
+       does -- so don't probe for one (which would be a spurious cmt miss). *)
+    if not (File_kind.is_ml_or_mli source_filename) then Ok None
+    else
+      merlin_op ?profiling source_filename (fun () ->
+          Merlin.typedtree backend ~source)
   in
   File_view.v ~filename:source_filename ~typedtree ()
 
