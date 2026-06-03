@@ -37,16 +37,17 @@ module Query = struct
       | None -> (module_name, [ lib_name ]) :: acc
     else acc
 
-  let library_module_map index =
-    source_libraries index
-    |> List.fold_left
-         (fun acc lib ->
-           let lib_name = Project_index.Library.local_name lib in
-           List.fold_left
-             (fun acc file -> add_module_lib acc lib_name file)
-             acc
-             (Project_index.Library.files lib))
-         []
+  let library_module_map_of libs =
+    List.fold_left
+      (fun acc lib ->
+        let lib_name = Project_index.Library.local_name lib in
+        List.fold_left
+          (fun acc file -> add_module_lib acc lib_name file)
+          acc
+          (Project_index.Library.files lib))
+      [] libs
+
+  let library_module_map index = library_module_map_of (source_libraries index)
 
   let resolve_library index name =
     Project_index.resolve_public_library index name

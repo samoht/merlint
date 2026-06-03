@@ -29,6 +29,13 @@ module Query : sig
   (** [library_module_map index] maps each [.ml] module basename to the local
       names of source libraries that own it. *)
 
+  val library_module_map_of :
+    Project_index.Library.t list -> (string * string list) list
+  (** [library_module_map_of libs] is {!library_module_map} restricted to
+      [libs], for callers that resolve modules within a single package rather
+      than across the whole workspace (bare module names collide between
+      unrelated packages). *)
+
   val resolve_library : Project_index.t -> string -> string
   (** [resolve_library index name] maps a public library reference back to the
       local stanza name when the referenced library is in the source tree.

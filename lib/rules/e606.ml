@@ -27,11 +27,20 @@ let check_test_info index mod_to_libs
     let resolved = List.map (Project.Query.resolve_library index) libraries in
     test_stanza.files |> List.filter_map (issue_for_file mod_to_libs resolved)
 
+(* Resolve a test file's tested module against its own package's libraries
+   only: bare module names collide between unrelated packages (e.g. [Raw] in
+   both a sql and a dockerfile library), so a workspace-wide map would flag a
+   test as belonging to a foreign package that merely shares the name. *)
 let check (ctx : Context.project) =
   let index = Context.index ctx in
-  let mod_to_libs = Project.Query.library_module_map index in
-  Context.test_stanzas ctx
-  |> List.concat_map (check_test_info index mod_to_libs)
+  Project_index.source_package_list index
+  |> List.concat_map (fun pkg ->
+      let mod_to_libs =
+        Project.Query.library_module_map_of
+          (Project_index.package_libraries pkg)
+      in
+      Project_index.Package.test_stanzas pkg
+      |> List.concat_map (check_test_info index mod_to_libs))
 
 let pp ppf { test_module; library_name } =
   Fmt.pf ppf
