@@ -22,6 +22,7 @@ val run :
   ?profiling:Profiling.t ->
   ?bail:bool ->
   ?exclude:string list ->
+  ?include_vendored:bool ->
   string ->
   result
 (** [run ?domain_mgr ~load_file ~filter ?analyze_set ?analyze_roots ~index
@@ -40,6 +41,10 @@ val run :
     [analyze_roots] adds every indexed source file below those directories. If
     both are omitted, iteration defaults to every source file the project index
     knows about.
+
+    [include_vendored] keeps files under Dune [(vendored_dirs ...)] subtrees in
+    the analysis set. They are dropped by default (the index scans them only so
+    dependency edges resolve).
 
     [domain_mgr] enables parallelism. When given, [run] opens a single
     [Eio.Executor_pool] and shares it across the project-index build and every

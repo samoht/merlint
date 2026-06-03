@@ -330,17 +330,18 @@ let file_is_vendored index file =
 let drop_vendored_files index files =
   List.filter (fun f -> not (file_is_vendored index f)) files
 
-let analysis_files ?analyze_set ?analyze_roots index =
+let analysis_files ?analyze_set ?analyze_roots ?(include_vendored = false) index
+    =
   let raw =
     match (analyze_set, analyze_roots) with
     | Some files, None -> files
-    | None, roots -> Project_index.source_files ?roots index
+    | None, roots -> Project_index.source_files ~include_vendored ?roots index
     | Some files, Some roots ->
-        Project_index.source_files ~roots index
+        Project_index.source_files ~include_vendored ~roots index
         |> List.rev_append files
         |> List.sort_uniq Fpath.compare
   in
-  drop_vendored_files index raw
+  if include_vendored then raw else drop_vendored_files index raw
 
 (* CLI [--exclude PATTERN] drops files matching any glob from the analysis,
    using the same matcher as [merlint.toml] exclusions. Patterns are matched
@@ -394,14 +395,15 @@ let build_result ?(bail = false) (project_issues, project_excluded) file_results
   { issues; excluded = project_excluded @ file_excluded; files_analyzed }
 
 let run ?domain_mgr ~load_file ~filter ?analyze_set ?analyze_roots ~index
-    ?profiling ?(bail = false) ?(exclude = []) project_root =
+    ?profiling ?(bail = false) ?(exclude = []) ?(include_vendored = false)
+    project_root =
   Log.info (fun m -> m "Starting analysis of %s" project_root);
   let backend = Merlin.v ~root_dir:project_root () in
   let run_with_pool ?pool () =
     let idx = lazy (index ?pool ()) in
     let idx_value = Lazy.force idx in
     let analyze_set =
-      analysis_files ?analyze_set ?analyze_roots idx_value
+      analysis_files ?analyze_set ?analyze_roots ~include_vendored idx_value
       |> drop_excluded_files ~project_root ~exclude
     in
     let file_view = file_view ?profiling ~load_file ~backend in
