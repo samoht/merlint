@@ -19,3 +19,9 @@ boundary.
   
   Summary: ✓ 0 total issues (applied 96 rules)
   ✓ All checks passed!
+
+Passing --include-vendored opts the vendored subtree back in: the bait file now
+enters the analysis set (the default run above analysed none).
+
+  $ merlint --build --include-vendored . 2>/dev/null | grep Analyzing
+  Analyzing 1 files
