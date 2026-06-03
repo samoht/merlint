@@ -1,1 +1,8 @@
-
+; BAD: the regen rule runs generate.sh with no REGEN gate, so a normal dune
+; test would rebuild the (mode promote) target and run the external oracle.
+(rule
+ (alias regen)
+ (mode promote)
+ (targets out.csv)
+ (action
+  (run sh scripts/generate.sh)))
