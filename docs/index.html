@@ -2005,16 +2005,23 @@ and replace each call site with [err_x &quot;...&quot; args] / [fail_x &quot;...
 <div class="error-card" id="E810">
     <div>
         <span class="error-code">E810</span>
-        <span class="error-title">Missing regen-traces alias</span>
+        <span class="error-title">Missing regen alias</span>
     </div>
-    <div class="error-hint"><p>Every interop test dune file must define a regen-traces alias as the single trigger for refreshing traces: `(rule (alias regen-traces) ...)`.</p></div>
+    <div class="error-hint"><p>traces/dune must define the trace-regeneration rule as `(rule (alias regen) (mode promote) (enabled_if (= %{env:REGEN=0} 1)) ...)`, the single trigger for refreshing traces: `REGEN=1 dune build @regen`.</p></div>
 </div>
 <div class="error-card" id="E815">
     <div>
         <span class="error-code">E815</span>
-        <span class="error-title">REGEN_TRACES sentinel in dune</span>
+        <span class="error-title">Interop regen rule not REGEN-gated</span>
     </div>
-    <div class="error-hint"><p>The regen-traces alias should be the single entry point — no REGEN_TRACES=1 env var sentinel. Remove the (enabled_if ...) guard so `dune build @regen-traces` works directly.</p></div>
+    <div class="error-hint"><p>The rule that regenerates traces must use (mode promote) guarded by (enabled_if (= %{env:REGEN=0} 1)), living in traces/dune under (alias regen), so a normal `dune test` leaves the traces as committed source and never runs the external oracle. Regenerate with `REGEN=1 dune build @regen`.</p></div>
+</div>
+<div class="error-card" id="E816">
+    <div>
+        <span class="error-code">E816</span>
+        <span class="error-title">generate.sh ignores output-dir argument</span>
+    </div>
+    <div class="error-hint"><p>scripts/generate.sh must take the output directory as its first argument, e.g. `TRACE_DIR=&quot;$(cd &quot;${1:-$SCRIPT_DIR/../traces}&quot; &amp;&amp; pwd)&quot;`. The traces/dune regen rule runs it with the build trace dir as $1; a script that hardcodes ../traces writes to the wrong place.</p></div>
 </div>
 <div class="error-card" id="E820">
     <div>
