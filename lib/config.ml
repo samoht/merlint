@@ -45,6 +45,9 @@ let default =
     exclusions = Rule_config.empty;
   }
 
+let allows t ~bare ~qualified =
+  List.mem bare t.allowed_words || List.mem qualified t.allowed_words
+
 let file path =
   match Project.config_files path with [] -> None | first :: _ -> Some first
 

@@ -12,12 +12,8 @@ let qualify module_context name =
 
 let check (ctx : Context.file) =
   let module Item = File_view.Item in
-  let allowed = ctx.config.allowed_words in
-  (* The allowlist may name the function bare ([create]) or qualified by its
-     enclosing module path ([Container.create]); a qualified entry exempts only
-     that one binding. *)
   let is_allowed module_context name =
-    List.mem name allowed || List.mem (qualify module_context name) allowed
+    Config.allows ctx.config ~bare:name ~qualified:(qualify module_context name)
   in
   let rec walk ~module_context items =
     List.concat_map

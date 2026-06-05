@@ -67,3 +67,40 @@ Test good example - should find no issues:
   
   Summary: ✓ 0 total issues (applied 1 rule)
   ✓ All checks passed!
+
+A qualified allowed_words entry (Allowed.create_table) exempts only that
+binding; create_widget is still flagged:
+  $ merlint --build -r E331 allowed.ml
+  Dune root: $TESTCASE_ROOT/
+  Running merlint analysis...
+  
+  Analyzing 1 files
+  
+  ✓ Code Quality (0 total issues)
+  ✓ Code Style (0 total issues)
+  ✗ Naming Conventions (1 total issues)
+    [E331] Redundant Function Prefixes (1 issue)
+    Functions prefixed with 'create_', 'make_', 'get_', or 'find_' can often omit
+    the prefix when the remaining name is descriptive enough. For example,
+    'create_user' can be just 'user', 'make_widget' can be 'widget', 'get_name'
+    can be 'name', and 'find_user' can be 'user' (returning option). Keep the
+    prefix only when it adds meaningful distinction or when the bare name would be
+    ambiguous. In modules, 'Module.create_module' should be 'Module.v'.
+    - allowed.ml:2:0: Function 'create_widget' has redundant 'create_' prefix - consider 'widget' instead. Create_ functions can often omit the prefix when the function name alone is descriptive.
+  ✓ Documentation (0 total issues)
+  ✓ Project Structure (0 total issues)
+  ✓ Test Quality (0 total issues)
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
+  
+  ╭────────────────────┬───────────────────────────────────╮
+  │ Category           │ Issues                            │
+  ├────────────────────┼───────────────────────────────────┤
+  │ Naming Conventions │ 1 (1 redundant function prefixes) │
+  ╰────────────────────┴───────────────────────────────────╯
+  
+  
+  Summary: ✗ 1 total issue (applied 1 rule)
+  ✗ Some checks failed. See details above.
+    Run `merlint help E331` for the rule's description, hint, and good/bad examples.
+  [1]
