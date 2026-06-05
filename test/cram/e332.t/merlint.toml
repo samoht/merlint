@@ -1,0 +1,3 @@
+# A qualified entry exempts only Container.create; a bare top-level create
+# stays flagged.
+allowed_words = ["Container.create"]

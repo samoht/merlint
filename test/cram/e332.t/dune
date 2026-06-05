@@ -8,3 +8,8 @@
  (name good)
  (modules good)
  (flags -w -32-69))
+
+(executable
+ (name allowed)
+ (modules allowed)
+ (flags -w -32-69))
