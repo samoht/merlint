@@ -52,11 +52,15 @@ let module_create_prefix ~module_name name =
 let redundant_prefix_issue ~loc ~name ~suggested_name ~prefix_type ~context =
   Issue.v ~loc { function_name = name; suggested_name; prefix_type; context }
 
-let item_issue ~allowed ~module_name item =
+let item_issue ~config ~module_name item =
   let name = File_view.Item.name item in
+  (* A top-level binding is qualified by its file module ([Sqlite.create_table]);
+     a qualified allowlist entry exempts only that one binding. *)
+  let qualified = String.capitalize_ascii module_name ^ "." ^ name in
   match File_view.Item.kind item with
   | File_view.Item.Value
-    when (not (List.mem name allowed)) && not (is_stdlib_find_alias name) -> (
+    when (not (Config.allows config ~bare:name ~qualified))
+         && not (is_stdlib_find_alias name) -> (
       let loc = File_view.Item.loc item in
       match prefixed_name name with
       | Some (prefix_type, suggested_name) ->
@@ -74,13 +78,12 @@ let item_issue ~allowed ~module_name item =
   | _ -> None
 
 let check (ctx : Context.file) =
-  let allowed = ctx.config.allowed_words in
   let module_name =
     Filename.basename (Context.filename ctx)
     |> Filename.remove_extension |> String.lowercase_ascii
   in
   List.filter_map
-    (item_issue ~allowed ~module_name)
+    (item_issue ~config:ctx.config ~module_name)
     (File_view.items (Context.view ctx))
 
 let pp ppf { function_name = _; suggested_name; prefix_type; context } =

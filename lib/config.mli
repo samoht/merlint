@@ -30,6 +30,11 @@ type t = {
 val default : t
 (** [default] configuration with recommended settings. *)
 
+val allows : t -> bare:string -> qualified:string -> bool
+(** [allows t ~bare ~qualified] is whether {!allowed_words} exempts a name,
+    matching either its bare form ([create]) or its module-qualified form
+    ([Container.create]). A qualified entry exempts only that one binding. *)
+
 val equal : t -> t -> bool
 (** [equal a b] returns true if [a] and [b] are equal. *)
 

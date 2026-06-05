@@ -1,0 +1,3 @@
+# A qualified entry exempts only Allowed.create_table; create_widget stays
+# flagged.
+allowed_words = ["Allowed.create_table"]
