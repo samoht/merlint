@@ -233,10 +233,14 @@ let to_prefix_issue ~loc ~aliases ~name ~ct =
    way the rename isn't safe — leave these alone. *)
 let is_underscore_prefixed name = String.length name > 0 && name.[0] = '_'
 
-let check_item ~allowed ~aliases item =
+let check_item ~config ~module_name ~aliases item =
   let name = File_view.Item.name item in
+  (* A top-level binding is qualified by its file module
+     ([Requests.download_to_path]); a qualified allowlist entry exempts only
+     that one binding. *)
+  let qualified = String.capitalize_ascii module_name ^ "." ^ name in
   if File_view.Item.kind item <> File_view.Item.Value then None
-  else if List.mem name allowed then None
+  else if Config.allows config ~bare:name ~qualified then None
   else if is_underscore_prefixed name then None
   else
     match File_view.Item.type_sig item with
@@ -259,9 +263,16 @@ let check (ctx : Context.file) =
     || Filename.check_suffix filename ".mli"
   then
     let items = File_view.items (Context.view ctx) in
-    let allowed = ctx.config.allowed_words in
+    let module_name =
+      Filename.basename filename |> Filename.remove_extension
+      |> String.lowercase_ascii
+    in
     let aliases = t_aliases (Context.view ctx) in
-    let outline_issues = List.filter_map (check_item ~allowed ~aliases) items in
+    let outline_issues =
+      List.filter_map
+        (check_item ~config:ctx.config ~module_name ~aliases)
+        items
+    in
     outline_issues
   else []
 

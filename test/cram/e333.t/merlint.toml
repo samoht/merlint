@@ -1,0 +1,3 @@
+# A qualified entry exempts only Allowed.download_to_path; path_to_uri stays
+# flagged.
+allowed_words = ["Allowed.download_to_path"]
