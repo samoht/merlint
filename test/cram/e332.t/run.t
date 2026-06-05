@@ -57,3 +57,38 @@ Test good example - should find no issues:
   
   Summary: ✓ 0 total issues (applied 1 rule)
   ✓ All checks passed!
+
+A qualified allowed_words entry (Container.create) exempts only that binding;
+a bare top-level create is still flagged:
+  $ merlint --build -r E332 allowed.ml
+  Dune root: $TESTCASE_ROOT/
+  Running merlint analysis...
+  
+  Analyzing 1 files
+  
+  ✓ Code Quality (0 total issues)
+  ✓ Code Style (0 total issues)
+  ✗ Naming Conventions (1 total issues)
+    [E332] Prefer 'v' Constructor (1 issue)
+    In OCaml modules, the idiomatic name for the primary constructor is 'v' rather
+    than 'create' or 'make'. This follows the convention used by many standard
+    libraries. For example, 'Module.create' should be 'Module.v'. This makes the
+    API more consistent and idiomatic.
+    - allowed.ml:5:0: Function 'create' should be named 'v' - this is the idiomatic constructor name in OCaml modules
+  ✓ Documentation (0 total issues)
+  ✓ Project Structure (0 total issues)
+  ✓ Test Quality (0 total issues)
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
+  
+  ╭────────────────────┬──────────────────────────────╮
+  │ Category           │ Issues                       │
+  ├────────────────────┼──────────────────────────────┤
+  │ Naming Conventions │ 1 (1 prefer 'v' constructor) │
+  ╰────────────────────┴──────────────────────────────╯
+  
+  
+  Summary: ✗ 1 total issue (applied 1 rule)
+  ✗ Some checks failed. See details above.
+    Run `merlint help E332` for the rule's description, hint, and good/bad examples.
+  [1]

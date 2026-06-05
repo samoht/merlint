@@ -7,8 +7,18 @@ type payload = {
 }
 (** Payload for constructor naming issues *)
 
+let qualify module_context name =
+  match module_context with Some path -> path ^ "." ^ name | None -> name
+
 let check (ctx : Context.file) =
   let module Item = File_view.Item in
+  let allowed = ctx.config.allowed_words in
+  (* The allowlist may name the function bare ([create]) or qualified by its
+     enclosing module path ([Container.create]); a qualified entry exempts only
+     that one binding. *)
+  let is_allowed module_context name =
+    List.mem name allowed || List.mem (qualify module_context name) allowed
+  in
   let rec walk ~module_context items =
     List.concat_map
       (fun item ->
@@ -17,7 +27,10 @@ let check (ctx : Context.file) =
             let name = Item.name item in
             let name_lower = String.lowercase_ascii name in
             (* Check for create/make functions that should be 'v' *)
-            if name_lower = "create" || name_lower = "make" then
+            if
+              (name_lower = "create" || name_lower = "make")
+              && not (is_allowed module_context name)
+            then
               [
                 Issue.v ~loc:(Item.loc item)
                   { function_name = name; module_context };
@@ -38,11 +51,7 @@ let check (ctx : Context.file) =
   walk ~module_context:None (File_view.items (Context.view ctx))
 
 let pp ppf { function_name; module_context } =
-  let qualified =
-    match module_context with
-    | Some path -> path ^ "." ^ function_name
-    | None -> function_name
-  in
+  let qualified = qualify module_context function_name in
   Fmt.pf ppf
     "Function '%s' should be named 'v' - this is the idiomatic constructor \
      name in OCaml modules"
