@@ -235,9 +235,8 @@ let is_underscore_prefixed name = String.length name > 0 && name.[0] = '_'
 
 let check_item ~config ~module_name ~aliases item =
   let name = File_view.Item.name item in
-  (* A top-level binding is qualified by its file module
-     ([Requests.download_to_path]); a qualified allowlist entry exempts only
-     that one binding. *)
+  (* A top-level binding is qualified by its file module; a qualified allowlist
+     entry exempts only that one binding. *)
   let qualified = String.capitalize_ascii module_name ^ "." ^ name in
   if File_view.Item.kind item <> File_view.Item.Value then None
   else if Config.allows config ~bare:name ~qualified then None
