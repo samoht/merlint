@@ -1306,6 +1306,62 @@ and replace each call site with [err_x &quot;...&quot; args] / [fail_x &quot;...
 </div>
 </div></div>
 </div>
+<div class="error-card" id="E334">
+    <div>
+        <span class="error-code">E334</span>
+        <span class="error-title">Redundant Variant/Field Prefixes</span>
+    </div>
+    <div class="error-hint"><p>When every constructor of a variant, or every field of a record, starts with the same prefix, that prefix is redundant: the type already names the concept and OCaml's type-directed disambiguation resolves the bare name at call sites. Drop the shared prefix (type foo = Bar | Baz, not Foo_bar | Foo_baz; { bar; baz }, not { foo_bar; foo_baz }). When a bare field would be an OCaml keyword the convention is a trailing underscore (entity_type -&gt; type_). Keep a prefix only when a bare case would be a spec-mandated name listed in allowed_words.</p><div class="examples-grid">
+<div class="example bad">
+  <h4>BAD</h4>
+  <pre><code><span class="cm">(* Bad examples - variants and records whose cases share a redundant prefix. *)</span>
+
+<span class="cm">(* Every constructor repeats the type name as a prefix. *)</span>
+<span class="kw">type</span> status =
+  | <span class="cn">Status_pending</span>
+  | <span class="cn">Status_running</span>
+  | <span class="cn">Status_done</span>
+
+<span class="cm">(* Every field repeats the type name as a prefix. *)</span>
+<span class="kw">type</span> point = { point_x : int; point_y : int }
+
+<span class="cm">(* allowed_words exempts Token_eof; Token_word is still flagged. *)</span>
+<span class="kw">type</span> token =
+  | <span class="cn">Token_word</span>
+  | <span class="cn">Token_eof</span>
+
+(* 'entity_type' would strip <span class="kw">to</span> the reserved keyword '<span class="kw">type</span>'; the convention is a
+   trailing underscore, so the suggestion is 'type_'. *)
+<span class="kw">type</span> entity = { entity_id : int; entity_type : string }
+</code></pre>
+</div>
+<div class="example good">
+  <h4>GOOD</h4>
+  <pre><code><span class="cm">(* Good examples - cases carry no redundant shared prefix. *)</span>
+
+<span class="cm">(* Bare constructors; the type name supplies the context. *)</span>
+<span class="kw">type</span> status =
+  | <span class="cn">Pending</span>
+  | <span class="cn">Running</span>
+  | <span class="cn">Done</span>
+
+<span class="cm">(* Bare fields. *)</span>
+<span class="kw">type</span> point = { x : int; y : int }
+
+<span class="cm">(* Shared leading letters but no underscore-delimited word in common. *)</span>
+<span class="kw">type</span> fruit =
+  | <span class="cn">Apple</span>
+  | <span class="cn">Apricot</span>
+
+<span class="cm">(* &quot;start&quot; and &quot;end&quot; are not shared by every field, so nothing is redundant. *)</span>
+<span class="kw">type</span> span = { start_line : int; start_col : int; end_line : int; end_col : int }
+
+<span class="cm">(* A single constructor cannot share a prefix with anything. *)</span>
+<span class="kw">type</span> wrapper = <span class="cn">Wrapped</span> <span class="kw">of</span> int
+</code></pre>
+</div>
+</div></div>
+</div>
 <div class="error-card" id="E335">
     <div>
         <span class="error-code">E335</span>

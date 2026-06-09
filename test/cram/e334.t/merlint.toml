@@ -1,0 +1,3 @@
+# Token_eof is a spec-mandated case name; allowed_words exempts it while its
+# sibling Token_word stays flagged.
+allowed_words = ["Token_eof"]
