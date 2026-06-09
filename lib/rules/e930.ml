@@ -17,8 +17,8 @@
 type kind = Non_codec | Pure_codec | Eio_codec
 
 type finding =
-  | Banned_in_depends of { dep : string }
-  | Banned_in_libraries of { dune_file : string; lib : string }
+  | Depends of { dep : string }
+  | Libraries of { dune_file : string; lib : string }
 
 type payload = { package : string; opam : string; findings : finding list }
 
@@ -79,8 +79,7 @@ let check_package pkg =
     let findings = ref [] in
     List.iter
       (fun dep ->
-        if lib_matches ~banned dep then
-          findings := Banned_in_depends { dep } :: !findings)
+        if lib_matches ~banned dep then findings := Depends { dep } :: !findings)
       (P.depends pkg);
     List.iter
       (fun lib ->
@@ -88,8 +87,7 @@ let check_package pkg =
         List.iter
           (fun dep ->
             if lib_matches ~banned dep then
-              findings :=
-                Banned_in_libraries { dune_file; lib = dep } :: !findings)
+              findings := Libraries { dune_file; lib = dep } :: !findings)
           (L.deps lib))
       (Project_index.package_libraries pkg
       |> List.filter (fun lib -> not (is_test_library ~package:pkg lib)));
@@ -105,9 +103,8 @@ let check (ctx : Context.project) =
   |> List.concat_map check_package
 
 let pp_finding ppf = function
-  | Banned_in_depends { dep } -> Fmt.pf ppf "depends: %s" dep
-  | Banned_in_libraries { dune_file; lib } ->
-      Fmt.pf ppf "%s libraries: %s" dune_file lib
+  | Depends { dep } -> Fmt.pf ppf "depends: %s" dep
+  | Libraries { dune_file; lib } -> Fmt.pf ppf "%s libraries: %s" dune_file lib
 
 let pp ppf { package; opam; findings } =
   let subject =

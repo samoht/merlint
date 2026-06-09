@@ -13,7 +13,7 @@
     Either way, leaving the dep in unconditional [depends:] forces every
     downstream [opam install <pkg>] to pull machinery it doesn't need. *)
 
-type suggestion = With_test | With_dev_setup
+type suggestion = Test | Dev_setup
 
 type payload = {
   package : string;
@@ -63,7 +63,7 @@ let check_package package =
             package = pkg_name;
             misclassified_dep = dep;
             used_via;
-            suggest = With_test;
+            suggest = Test;
           }
       else if Dep_deps.String_set.mem dep dev_pkgs then
         let used_via = example_lib_for dev_uses ~package ~dep in
@@ -72,7 +72,7 @@ let check_package package =
             package = pkg_name;
             misclassified_dep = dep;
             used_via;
-            suggest = With_dev_setup;
+            suggest = Dev_setup;
           }
       else None)
     runtime_depends
@@ -81,12 +81,12 @@ let check (ctx : Context.project) =
   Dep_deps.run_per_package ~check_package (Context.index ctx)
 
 let suggest_str = function
-  | With_test -> "{with-test}"
-  | With_dev_setup -> "{with-dev-setup}"
+  | Test -> "{with-test}"
+  | Dev_setup -> "{with-dev-setup}"
 
 let scope_str = function
-  | With_test -> "test-scope stanzas (tests or runtest-attached executables)"
-  | With_dev_setup ->
+  | Test -> "test-scope stanzas (tests or runtest-attached executables)"
+  | Dev_setup ->
       "dev-scope stanzas (private executables not attached to runtest)"
 
 let pp ppf p =

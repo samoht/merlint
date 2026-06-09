@@ -2,7 +2,7 @@
 
 module Issue_location = Location
 
-type payload = { fuzz_module : string; fuzz_runner_file : string }
+type payload = { module_ : string; runner_file : string }
 
 let log_src = Logs.Src.create "merlint.rules.e715" ~doc:"E715 rule diagnostics"
 
@@ -24,8 +24,7 @@ let missing_include_issue runner_file fuzz_mod =
       ~file:(Fpath.to_string runner_file)
       ~start_line:1 ~start_col:0 ~end_line:1 ~end_col:0
   in
-  Issue.v ~loc
-    { fuzz_module = fuzz_mod; fuzz_runner_file = Fpath.to_string runner_file }
+  Issue.v ~loc { module_ = fuzz_mod; runner_file = Fpath.to_string runner_file }
 
 let check_stanza ctx stanza_name files =
   let fuzz_files =
@@ -70,8 +69,8 @@ let check (ctx : Context.project) =
   in
   test_issues @ executable_issues
 
-let pp ppf { fuzz_module; fuzz_runner_file } =
-  Fmt.pf ppf "Fuzz module %s is not included in %s" fuzz_module fuzz_runner_file
+let pp ppf { module_; runner_file } =
+  Fmt.pf ppf "Fuzz module %s is not included in %s" module_ runner_file
 
 let rule =
   Rule.v ~code:"E715" ~title:"Fuzz Module Not Included" ~category:Testing
