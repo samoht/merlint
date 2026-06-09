@@ -10,7 +10,7 @@ let log_src = Logs.Src.create "merlint.rules.e940" ~doc:"E940 rule diagnostics"
 
 module Log = (val Logs.src_log log_src : Logs.LOG)
 
-type kind = Missing_file | Missing_flags
+type kind = File | Flags
 type payload = { dune_path : string; kind : kind }
 
 let parse_dune_file ctx path =
@@ -26,9 +26,8 @@ let parse_dune_file ctx path =
 
 let dune_warning_status ctx dune_path =
   match parse_dune_file ctx dune_path with
-  | None -> Some Missing_file
-  | Some file ->
-      if Dune.File.has_dune_warnings file then None else Some Missing_flags
+  | None -> Some File
+  | Some file -> if Dune.File.has_dune_warnings file then None else Some Flags
 
 (* Every directory that ships its own [dune-project] is treated as a build
    root: the actual project root for single-project repos, every subtree
@@ -60,12 +59,12 @@ let check (ctx : Context.project) =
 
 let pp ppf { dune_path; kind } =
   match kind with
-  | Missing_file ->
+  | File ->
       Fmt.pf ppf
         "%s missing -- create it with [(env (dev (flags :standard \
          %%{dune-warnings})))] so this project uses the canonical warning set"
         dune_path
-  | Missing_flags ->
+  | Flags ->
       Fmt.pf ppf
         "%s does not enable %%{dune-warnings}; add [(env (dev (flags :standard \
          %%{dune-warnings})))] so standalone opam builds fail on warnings"

@@ -2,7 +2,7 @@
 
 module Issue_location = Location
 
-type payload = { test_module : string; test_runner_file : string }
+type payload = { module_ : string; runner_file : string }
 
 let log_src = Logs.Src.create "merlint.rules.e615" ~doc:"E615 rule diagnostics"
 
@@ -68,8 +68,7 @@ let missing_issue test_file test_mod =
       ~file:(Fpath.to_string test_file)
       ~start_line:1 ~start_col:0 ~end_line:1 ~end_col:0
   in
-  Issue.v ~loc
-    { test_module = test_mod; test_runner_file = Fpath.to_string test_file }
+  Issue.v ~loc { module_ = test_mod; runner_file = Fpath.to_string test_file }
 
 let check_test_info ctx env (test_stanza : Project_index.source_stanza) =
   let name = test_stanza.name in
@@ -114,8 +113,8 @@ let enumerate ctx =
 
 let check_unit ctx (env, test_stanza) = check_test_info ctx env test_stanza
 
-let pp ppf { test_module; test_runner_file } =
-  Fmt.pf ppf "Test module %s is not included in %s" test_module test_runner_file
+let pp ppf { module_; runner_file } =
+  Fmt.pf ppf "Test module %s is not included in %s" module_ runner_file
 
 let rule =
   Rule.v ~code:"E615" ~title:"Test Suite Not Included" ~category:Testing

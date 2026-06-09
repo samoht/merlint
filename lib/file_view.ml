@@ -277,15 +277,12 @@ let iter_typed_value_binding ~filename acc this (vb : Typedtree.value_binding) =
   List.iter (push acc.values) (pattern_value_names ~filename vb.vb_pat);
   Tast_iterator.default_iterator.value_binding this vb
 
-type application_arg = {
-  arg_callee : Merlin.Refs.name option;
-  arg_loc : Location.t;
-}
+type application_arg = { callee : Merlin.Refs.name option; loc : Location.t }
 
 type application_site = {
-  call_callee : Merlin.Refs.name;
-  call_loc : Location.t;
-  call_args : application_arg list;
+  callee : Merlin.Refs.name;
+  loc : Location.t;
+  args : application_arg list;
 }
 
 let typed_expr_callee_name (expr : Typedtree.expression) =
@@ -304,24 +301,19 @@ let application_args args =
     (function
       | _, Typedtree.Omitted _ -> None
       | _, Typedtree.Arg (expr : Typedtree.expression) ->
-          Some
-            { arg_callee = typed_expr_callee_name expr; arg_loc = expr.exp_loc })
+          Some { callee = typed_expr_callee_name expr; loc = expr.exp_loc })
     args
 
 let push_application calls expr fn args =
   Option.iter
-    (fun call_callee ->
+    (fun callee ->
       push calls
-        {
-          call_callee;
-          call_loc = expr.Typedtree.exp_loc;
-          call_args = application_args args;
-        })
+        { callee; loc = expr.Typedtree.exp_loc; args = application_args args })
     (typed_expr_callee_name fn)
 
 type walk_result = {
-  walk_refs : collected_refs;
-  walk_applications : application_site list;
+  refs : collected_refs;
+  applications : application_site list;
 }
 
 (* Single Tast_iterator pass that populates the resolved-references
@@ -366,33 +358,33 @@ let collect_walk ~filename (tree : Merlin.typedtree) =
   (match tree with
   | `Implementation structure -> iterator.structure iterator structure
   | `Interface signature -> iterator.signature iterator signature);
-  { walk_refs = collected_refs_of_acc acc; walk_applications = List.rev !calls }
+  { refs = collected_refs_of_acc acc; applications = List.rev !calls }
 
-type item_kind =
-  | Item_value
-  | Item_type
-  | Item_module
-  | Item_module_type
-  | Item_class
-  | Item_class_type
-  | Item_constructor
-  | Item_exception
-  | Item_extension
-  | Item_field
-  | Item_method
-  | Item_instance_variable
+type file_item_kind =
+  | Value
+  | Type
+  | Module
+  | Module_type
+  | Class
+  | Class_type
+  | Constructor
+  | Exception
+  | Extension
+  | Field
+  | Method
+  | Instance_variable
 
-type doc = { doc_text : string; doc_loc : Location.t }
+type doc = { text : string; loc : Location.t }
 
 type file_item = {
-  item_name : string;
-  item_kind : item_kind;
-  item_loc : Location.t;
-  item_deprecated : bool;
-  item_doc : doc option;
-  item_deriving : string list;
-  item_type : Typed_types.type_expr option;
-  item_children : file_item list;
+  name : string;
+  kind : file_item_kind;
+  loc : Location.t;
+  deprecated : bool;
+  doc : doc option;
+  deriving : string list;
+  type_ : Typed_types.type_expr option;
+  children : file_item list;
 }
 
 type t = {
@@ -439,19 +431,19 @@ let lazy_walk ~filename ~typedtree =
 let lazy_reference_outline walk =
   lazy
     (match Lazy.force walk with
-    | Some (walk : walk_result) -> walk.walk_refs
+    | Some (walk : walk_result) -> walk.refs
     | None -> empty_refs)
 
 let lazy_resolved walk =
   lazy
     (match Lazy.force walk with
-    | Some (walk : walk_result) -> Some walk.walk_refs
+    | Some (walk : walk_result) -> Some walk.refs
     | None -> None)
 
 let lazy_applications walk =
   lazy
     (match Lazy.force walk with
-    | Some (walk : walk_result) -> walk.walk_applications
+    | Some (walk : walk_result) -> walk.applications
     | None -> [])
 
 let typed_has_deprecated attrs =
@@ -486,10 +478,10 @@ let typed_doc attrs =
       if attr.attr_name.txt = "ocaml.doc" then
         Some
           {
-            doc_text =
+            text =
               Option.value ~default:"" (doc_payload_string attr.attr_payload)
               |> String.trim;
-            doc_loc = attr.attr_loc;
+            loc = attr.attr_loc;
           }
       else None)
     attrs
@@ -510,43 +502,30 @@ let deriving_names attrs =
       | _ -> [])
     attrs
 
-let typed_item ~name ~kind ?item_type ?doc ?(children = []) ?(deriving = [])
+let typed_item ~name ~kind ?type_ ?doc ?(children = []) ?(deriving = [])
     ?(deprecated = false) loc =
-  {
-    item_name = name;
-    item_kind = kind;
-    item_loc = loc;
-    item_deprecated = deprecated;
-    item_doc = doc;
-    item_deriving = deriving;
-    item_type;
-    item_children = children;
-  }
+  { name; kind; loc; deprecated; doc; deriving; type_; children }
 
 let rec typed_pattern_items ?loc (pat : Typedtree.pattern) =
-  let item_loc = Option.value loc ~default:pat.pat_loc in
+  let loc = Option.value loc ~default:pat.pat_loc in
   match pat.pat_desc with
   | Tpat_var (_ident, name, _) ->
-      [
-        typed_item ~name:name.txt ~kind:Item_value ~item_type:pat.pat_type
-          item_loc;
-      ]
+      [ typed_item ~name:name.txt ~kind:Value ~type_:pat.pat_type loc ]
   | Tpat_alias (p, _ident, name, _, _) ->
-      typed_item ~name:name.txt ~kind:Item_value ~item_type:pat.pat_type
-        item_loc
-      :: typed_pattern_items ?loc p
+      typed_item ~name:name.txt ~kind:Value ~type_:pat.pat_type loc
+      :: typed_pattern_items ~loc p
   | Tpat_tuple fields ->
-      List.concat_map (fun (_, p) -> typed_pattern_items ?loc p) fields
+      List.concat_map (fun (_, p) -> typed_pattern_items ~loc p) fields
   | Tpat_construct (_, _, args, _) ->
-      List.concat_map (typed_pattern_items ?loc) args
+      List.concat_map (typed_pattern_items ~loc) args
   | Tpat_variant (_, arg, _) -> (
-      match arg with None -> [] | Some p -> typed_pattern_items ?loc p)
+      match arg with None -> [] | Some p -> typed_pattern_items ~loc p)
   | Tpat_record (fields, _) ->
-      List.concat_map (fun (_, _, p) -> typed_pattern_items ?loc p) fields
-  | Tpat_array (_, pats) -> List.concat_map (typed_pattern_items ?loc) pats
+      List.concat_map (fun (_, _, p) -> typed_pattern_items ~loc p) fields
+  | Tpat_array (_, pats) -> List.concat_map (typed_pattern_items ~loc) pats
   | Tpat_or (lhs, rhs, _) ->
-      typed_pattern_items ?loc lhs @ typed_pattern_items ?loc rhs
-  | Tpat_lazy p -> typed_pattern_items ?loc p
+      typed_pattern_items ~loc lhs @ typed_pattern_items ~loc rhs
+  | Tpat_lazy p -> typed_pattern_items ~loc p
   | Tpat_any | Tpat_constant _ -> []
 
 let typed_type_children (decl : Typedtree.type_declaration) =
@@ -554,23 +533,23 @@ let typed_type_children (decl : Typedtree.type_declaration) =
   | Ttype_record labels ->
       List.map
         (fun (ld : Typedtree.label_declaration) ->
-          typed_item ~name:ld.ld_name.txt ~kind:Item_field
-            ~item_type:ld.ld_type.ctyp_type
+          typed_item ~name:ld.ld_name.txt ~kind:Field
+            ~type_:ld.ld_type.ctyp_type
             ~deprecated:(typed_has_deprecated ld.ld_attributes)
             ld.ld_loc)
         labels
   | Ttype_variant constructors ->
       List.map
         (fun (cd : Typedtree.constructor_declaration) ->
-          typed_item ~name:cd.cd_name.txt ~kind:Item_constructor
+          typed_item ~name:cd.cd_name.txt ~kind:Constructor
             ~deprecated:(typed_has_deprecated cd.cd_attributes)
             cd.cd_loc)
         constructors
   | Ttype_abstract | Ttype_open -> []
 
 let typed_type_item (decl : Typedtree.type_declaration) =
-  typed_item ~name:decl.typ_name.txt ~kind:Item_type
-    ?item_type:
+  typed_item ~name:decl.typ_name.txt ~kind:Type
+    ?type_:
       (Option.map
          (fun (ct : Typedtree.core_type) -> ct.ctyp_type)
          decl.typ_manifest)
@@ -581,14 +560,14 @@ let typed_type_item (decl : Typedtree.type_declaration) =
     decl.typ_loc
 
 let typed_extension_item (ext : Typedtree.extension_constructor) =
-  typed_item ~name:ext.ext_name.txt ~kind:Item_extension
+  typed_item ~name:ext.ext_name.txt ~kind:Extension
     ?doc:(typed_doc ext.ext_attributes)
     ~deprecated:(typed_has_deprecated ext.ext_attributes)
     ext.ext_loc
 
 let typed_exception_item (exn : Typedtree.type_exception) =
   let ext = exn.tyexn_constructor in
-  typed_item ~name:ext.ext_name.txt ~kind:Item_exception
+  typed_item ~name:ext.ext_name.txt ~kind:Exception
     ?doc:(typed_doc ext.ext_attributes)
     ~deprecated:(typed_has_deprecated ext.ext_attributes)
     ext.ext_loc
@@ -597,13 +576,13 @@ let typed_class_type_field_item (field : Typedtree.class_type_field) =
   match field.ctf_desc with
   | Tctf_val (name, _mutable, _virtual, typ) ->
       Some
-        (typed_item ~name ~kind:Item_instance_variable ~item_type:typ.ctyp_type
+        (typed_item ~name ~kind:Instance_variable ~type_:typ.ctyp_type
            ?doc:(typed_doc field.ctf_attributes)
            ~deprecated:(typed_has_deprecated field.ctf_attributes)
            field.ctf_loc)
   | Tctf_method (name, _private, _virtual, typ) ->
       Some
-        (typed_item ~name ~kind:Item_method ~item_type:typ.ctyp_type
+        (typed_item ~name ~kind:Method ~type_:typ.ctyp_type
            ?doc:(typed_doc field.ctf_attributes)
            ~deprecated:(typed_has_deprecated field.ctf_attributes)
            field.ctf_loc)
@@ -629,7 +608,7 @@ and typed_module_binding_item (mb : Typedtree.module_binding) =
         | Tmod_structure s -> typed_structure_items s
         | _ -> []
       in
-      typed_item ~name ~kind:Item_module ~children
+      typed_item ~name ~kind:Module ~children
         ?doc:(typed_doc mb.mb_attributes)
         ~deprecated:(typed_has_deprecated mb.mb_attributes)
         mb.mb_loc)
@@ -644,8 +623,8 @@ and typed_structure_item (item : Typedtree.structure_item) =
         bindings
   | Tstr_primitive vd ->
       [
-        typed_item ~name:vd.val_name.txt ~kind:Item_value
-          ~item_type:vd.val_desc.ctyp_type
+        typed_item ~name:vd.val_name.txt ~kind:Value
+          ~type_:vd.val_desc.ctyp_type
           ?doc:(typed_doc vd.val_attributes)
           ~deprecated:(typed_has_deprecated vd.val_attributes)
           vd.val_loc;
@@ -657,7 +636,7 @@ and typed_structure_item (item : Typedtree.structure_item) =
   | Tstr_recmodule mods -> List.filter_map typed_module_binding_item mods
   | Tstr_modtype mtd ->
       [
-        typed_item ~name:mtd.mtd_name.txt ~kind:Item_module_type
+        typed_item ~name:mtd.mtd_name.txt ~kind:Module_type
           ~children:
             (match mtd.mtd_type with
             | Some { mty_desc = Tmty_signature s; _ } -> typed_signature_items s
@@ -671,7 +650,7 @@ and typed_structure_item (item : Typedtree.structure_item) =
   | Tstr_class classes ->
       List.map
         (fun ((cd, _) : Typedtree.class_declaration * string list) ->
-          typed_item ~name:cd.ci_id_name.txt ~kind:Item_class
+          typed_item ~name:cd.ci_id_name.txt ~kind:Class
             ?doc:(typed_doc cd.ci_attributes)
             ~deprecated:(typed_has_deprecated cd.ci_attributes)
             cd.ci_loc)
@@ -682,7 +661,7 @@ and typed_structure_item (item : Typedtree.structure_item) =
                Typed_ident.t
                * string Ocaml_parsing.Asttypes.loc
                * Typedtree.class_type_declaration) ->
-          typed_item ~name:name.txt ~kind:Item_class_type
+          typed_item ~name:name.txt ~kind:Class_type
             ~children:(typed_class_type_children cd.ci_expr)
             ?doc:(typed_doc cd.ci_attributes)
             ~deprecated:(typed_has_deprecated cd.ci_attributes)
@@ -696,7 +675,7 @@ and typed_signature_items (signature : Typedtree.signature) =
 and typed_recmodule_item (md : Typedtree.module_declaration) =
   Option.map
     (fun name ->
-      typed_item ~name ~kind:Item_module
+      typed_item ~name ~kind:Module
         ~children:
           (match md.md_type.mty_desc with
           | Tmty_signature s -> typed_signature_items s
@@ -710,8 +689,8 @@ and typed_signature_item (item : Typedtree.signature_item) =
   match item.sig_desc with
   | Tsig_value vd ->
       [
-        typed_item ~name:vd.val_name.txt ~kind:Item_value
-          ~item_type:vd.val_desc.ctyp_type
+        typed_item ~name:vd.val_name.txt ~kind:Value
+          ~type_:vd.val_desc.ctyp_type
           ?doc:(typed_doc vd.val_attributes)
           ~deprecated:(typed_has_deprecated vd.val_attributes)
           vd.val_loc;
@@ -721,7 +700,7 @@ and typed_signature_item (item : Typedtree.signature_item) =
   | Tsig_module md ->
       Option.fold md.md_name.txt ~none:[] ~some:(fun name ->
           [
-            typed_item ~name ~kind:Item_module
+            typed_item ~name ~kind:Module
               ~children:
                 (match md.md_type.mty_desc with
                 | Tmty_signature s -> typed_signature_items s
@@ -733,7 +712,7 @@ and typed_signature_item (item : Typedtree.signature_item) =
   | Tsig_recmodule mods -> List.filter_map typed_recmodule_item mods
   | Tsig_modtype mtd ->
       [
-        typed_item ~name:mtd.mtd_name.txt ~kind:Item_module_type
+        typed_item ~name:mtd.mtd_name.txt ~kind:Module_type
           ~children:
             (match mtd.mtd_type with
             | Some { mty_desc = Tmty_signature s; _ } -> typed_signature_items s
@@ -747,7 +726,7 @@ and typed_signature_item (item : Typedtree.signature_item) =
   | Tsig_class classes ->
       List.map
         (fun (cd : Typedtree.class_description) ->
-          typed_item ~name:cd.ci_id_name.txt ~kind:Item_class
+          typed_item ~name:cd.ci_id_name.txt ~kind:Class
             ~children:(typed_class_type_children cd.ci_expr)
             ?doc:(typed_doc cd.ci_attributes)
             ~deprecated:(typed_has_deprecated cd.ci_attributes)
@@ -756,7 +735,7 @@ and typed_signature_item (item : Typedtree.signature_item) =
   | Tsig_class_type classes ->
       List.map
         (fun (cd : Typedtree.class_type_declaration) ->
-          typed_item ~name:cd.ci_id_name.txt ~kind:Item_class_type
+          typed_item ~name:cd.ci_id_name.txt ~kind:Class_type
             ~children:(typed_class_type_children cd.ci_expr)
             ?doc:(typed_doc cd.ci_attributes)
             ~deprecated:(typed_has_deprecated cd.ci_attributes)
@@ -971,8 +950,8 @@ end
 module Doc = struct
   type t = { doc : doc; filename : string }
 
-  let text t = t.doc.doc_text
-  let loc t = Loc.of_typed ~filename:t.filename t.doc.doc_loc
+  let text t = t.doc.text
+  let loc t = Loc.of_typed ~filename:t.filename t.doc.loc
 end
 
 module Item = struct
@@ -992,33 +971,33 @@ module Item = struct
 
   type t = { item : file_item; filename : string }
 
-  let kind_of_item = function
-    | Item_value -> Value
-    | Item_type -> Type
-    | Item_module -> Module
-    | Item_module_type -> Module_type
-    | Item_class -> Class
-    | Item_class_type -> Class_type
-    | Item_constructor -> Constructor
-    | Item_exception -> Exception
-    | Item_extension -> Extension
-    | Item_field -> Field
-    | Item_method -> Method
-    | Item_instance_variable -> Instance_variable
+  let kind_of_item : file_item_kind -> kind = function
+    | Value -> Value
+    | Type -> Type
+    | Module -> Module
+    | Module_type -> Module_type
+    | Class -> Class
+    | Class_type -> Class_type
+    | Constructor -> Constructor
+    | Exception -> Exception
+    | Extension -> Extension
+    | Field -> Field
+    | Method -> Method
+    | Instance_variable -> Instance_variable
 
-  let name (t : t) = t.item.item_name
-  let kind (t : t) = kind_of_item t.item.item_kind
-  let deprecated (t : t) = t.item.item_deprecated
-  let loc (t : t) = Loc.of_typed ~filename:t.filename t.item.item_loc
+  let name (t : t) = t.item.name
+  let kind (t : t) = kind_of_item t.item.kind
+  let deprecated (t : t) = t.item.deprecated
+  let loc (t : t) = Loc.of_typed ~filename:t.filename t.item.loc
 
   let doc (t : t) =
-    Option.map (fun doc -> { Doc.doc; filename = t.filename }) t.item.item_doc
+    Option.map (fun doc -> { Doc.doc; filename = t.filename }) t.item.doc
 
-  let derives (t : t) name = List.mem name t.item.item_deriving
-  let type_sig (t : t) = t.item.item_type
+  let derives (t : t) name = List.mem name t.item.deriving
+  let type_sig (t : t) = t.item.type_
 
   let children (t : t) =
-    List.map (fun item -> { item; filename = t.filename }) t.item.item_children
+    List.map (fun item -> { item; filename = t.filename }) t.item.children
 end
 
 (* {2 Reference} *)
@@ -1047,9 +1026,9 @@ end
 
 module Call = struct
   type arg = {
-    arg_callee : Merlin.Refs.name option;
-    arg_loc : Location.t;
-    arg_filename : string;
+    callee : Merlin.Refs.name option;
+    loc : Location.t;
+    filename : string;
   }
 
   type t = {
@@ -1063,10 +1042,10 @@ module Call = struct
   let loc t = t.loc
 
   module Arg = struct
-    let loc a = Loc.of_typed ~filename:a.arg_filename a.arg_loc
+    let loc a = Loc.of_typed ~filename:a.filename a.loc
 
-    let is_call a ~path =
-      match a.arg_callee with
+    let is_call (a : arg) ~path =
+      match a.callee with
       | None -> false
       | Some name -> Name.equals_path name path
   end
@@ -1104,42 +1083,48 @@ let outline_exceptions t = (outline_refs t).exceptions
 let outline_values t = (outline_refs t).values
 
 let resolved_identifiers t =
-  Option.map (fun d -> d.refs.Merlin.Refs.identifiers) (force t t.resolved)
+  Option.map
+    (fun (d : collected_refs) -> d.refs.identifiers)
+    (force t t.resolved)
 
 let resolved_patterns t =
-  Option.map (fun d -> d.refs.Merlin.Refs.patterns) (force t t.resolved)
+  Option.map (fun (d : collected_refs) -> d.refs.patterns) (force t t.resolved)
 
 let resolved_variants t =
-  Option.map (fun d -> d.refs.Merlin.Refs.variants) (force t t.resolved)
+  Option.map (fun (d : collected_refs) -> d.refs.variants) (force t t.resolved)
 
 let resolved_modules t =
-  Option.map (fun d -> d.refs.Merlin.Refs.modules) (force t t.resolved)
+  Option.map (fun (d : collected_refs) -> d.refs.modules) (force t t.resolved)
 
 let resolved_types t =
-  Option.map (fun d -> d.refs.Merlin.Refs.types) (force t t.resolved)
+  Option.map (fun (d : collected_refs) -> d.refs.types) (force t t.resolved)
 
 let resolved_exceptions t =
-  Option.map (fun d -> d.refs.Merlin.Refs.exceptions) (force t t.resolved)
+  Option.map
+    (fun (d : collected_refs) -> d.refs.exceptions)
+    (force t t.resolved)
 
 let resolved_values t =
-  Option.map (fun d -> d.refs.Merlin.Refs.values) (force t t.resolved)
+  Option.map (fun (d : collected_refs) -> d.refs.values) (force t t.resolved)
 
 let resolved_signatures t =
-  Option.map (fun d -> d.refs.Merlin.Refs.value_sigs) (force t t.resolved)
+  Option.map
+    (fun (d : collected_refs) -> d.refs.value_sigs)
+    (force t t.resolved)
 
 let referenced_module_names t = force t t.module_names
 
 let iter_applications t f =
   force t t.applications
-  |> List.iter (fun { call_callee; call_loc; call_args } ->
-      let loc = Loc.of_typed ~filename:t.filename call_loc in
+  |> List.iter (fun { callee; loc; args } ->
+      let loc = Loc.of_typed ~filename:t.filename loc in
       let args =
-        List.map
-          (fun { arg_callee; arg_loc } ->
-            { Call.arg_callee; arg_loc; arg_filename = t.filename })
-          call_args
+        let arg (arg : application_arg) : Call.arg =
+          { callee = arg.callee; loc = arg.loc; filename = t.filename }
+        in
+        List.map arg args
       in
-      let call = { Call.callee = call_callee; args; loc } in
+      let call = { Call.callee; args; loc } in
       f call)
 
 let calls_path t path =

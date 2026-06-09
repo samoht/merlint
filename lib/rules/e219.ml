@@ -10,9 +10,8 @@ module T = Ocaml_typing.Typedtree
 module Tast_iterator = Ocaml_typing.Tast_iterator
 
 type kind =
-  | Standalone_nonrec
-      (** No references to siblings or self: [let name = ...]. *)
-  | Standalone_rec  (** Self-recursive only: [let rec name = ...]. *)
+  | Nonrec  (** No references to siblings or self: [let name = ...]. *)
+  | Rec  (** Self-recursive only: [let rec name = ...]. *)
 
 type payload = { name : string; kind : kind; group : string list }
 
@@ -79,9 +78,7 @@ let scc_of_node ~graph ~siblings node =
     siblings
 
 let classify_binding ~scc ~self_loop =
-  if scc <> [] then `Mutually_recursive
-  else if self_loop then `Standalone_rec
-  else `Standalone_nonrec
+  if scc <> [] then `Mutually_recursive else if self_loop then `Rec else `Nonrec
 
 let graph_of_named_bindings named =
   let names = List.map snd named in
@@ -110,13 +107,12 @@ let classify_group issues bindings =
         (fun ((vb : T.value_binding), name) ->
           match classify_named_binding ~graph ~siblings name with
           | `Mutually_recursive -> ()
-          | `Standalone_rec ->
+          | `Rec ->
               issues :=
-                (vb.vb_loc, { name; kind = Standalone_rec; group = siblings })
-                :: !issues
-          | `Standalone_nonrec ->
+                (vb.vb_loc, { name; kind = Rec; group = siblings }) :: !issues
+          | `Nonrec ->
               issues :=
-                (vb.vb_loc, { name; kind = Standalone_nonrec; group = siblings })
+                (vb.vb_loc, { name; kind = Nonrec; group = siblings })
                 :: !issues)
         named
 
@@ -143,10 +139,10 @@ let pp ppf { name; kind; group } =
   let group_str = String.concat ", " group in
   let suggestion =
     match kind with
-    | Standalone_rec ->
+    | Rec ->
         Fmt.str "extract [%s] from the [let rec %s] group as its own [let rec]"
           name group_str
-    | Standalone_nonrec ->
+    | Nonrec ->
         Fmt.str "extract [%s] from the [let rec %s] group as a plain [let]" name
           group_str
   in
