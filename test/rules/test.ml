@@ -33,6 +33,7 @@ let () =
       Test_e331.suite;
       Test_e332.suite;
       Test_e333.suite;
+      Test_e334.suite;
       Test_e335.suite;
       Test_e336.suite;
       Test_e340.suite;

@@ -28,6 +28,7 @@ let all_rules =
     E331.rule;
     E332.rule;
     E333.rule;
+    E334.rule;
     E335.rule;
     E336.rule;
     E340.rule;
