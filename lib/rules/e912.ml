@@ -3,12 +3,12 @@
     OCaml code in an opam package lives in a fixed set of top-level component
     directories under the package root: [lib/] for libraries, [bin/] for
     executables, [test/] for tests and [fuzz/] for fuzzers, plus the auxiliary
-    [bench/], [c/], [examples/], [config/] directories and the IO-adapter
-    directories [eio/], [lwt/], [mirage/]. A [scripts/] directory may hold
-    private helper executables (codegen, repo tooling); anything with a
-    [public_name] belongs in [bin/]. Sub-components nest under those roots
-    ([lib/git/], [test/interop/]); they never introduce new top-level
-    directories ([foo/lib/], [foo/test/]).
+    [bench/], [c/] and [examples/] directories. A [scripts/] directory may hold
+    private helper executables (codegen, dune-configurator probes, repo
+    tooling); anything with a [public_name] belongs in [bin/]. Sub-components
+    nest under those roots ([lib/git/], [lib/eio/] for IO adapters,
+    [test/interop/]); they never introduce new top-level directories
+    ([foo/lib/], [foo/test/]).
 
     A finding is a dune file with a code stanza (library, executable or test)
     whose top-level directory under the package source root is not in the
@@ -20,20 +20,7 @@ type payload = { package : string; dir : string; problem : problem }
 
 module P = Project_index.Package
 
-let allowed_dirs =
-  [
-    "lib";
-    "bin";
-    "test";
-    "fuzz";
-    "bench";
-    "c";
-    "eio";
-    "lwt";
-    "mirage";
-    "examples";
-    "config";
-  ]
+let allowed_dirs = [ "lib"; "bin"; "test"; "fuzz"; "bench"; "c"; "examples" ]
 
 let segments ~root dir =
   match Fpath.relativize ~root dir with
@@ -128,10 +115,10 @@ let rule =
     ~hint:
       "Organise each opam package into the standard top-level component \
        directories: lib/ for libraries, bin/ for executables, test/ for tests, \
-       fuzz/ for fuzzers, bench/ for benchmarks, c/ for C codegen, examples/ \
-       for example programs, config/ for dune-configurator probes, and eio/, \
-       lwt/, mirage/ for IO adapters. A scripts/ directory may hold private \
-       helper executables; anything with a public_name belongs in bin/. \
-       Sub-components nest under those roots (lib/<name>/ with test/<name>/), \
-       never as new top-level directories (foo/lib/, foo/test/)."
+       fuzz/ for fuzzers, bench/ for benchmarks, c/ for C codegen and \
+       examples/ for example programs. A scripts/ directory may hold private \
+       helper executables (codegen, dune-configurator probes); anything with a \
+       public_name belongs in bin/. Sub-components nest under those roots \
+       (lib/<name>/ with test/<name>/, IO adapters in lib/eio/), never as new \
+       top-level directories (foo/lib/, foo/test/)."
     ~category:Rule.Project_structure ~examples:[] ~pp (Project check)
