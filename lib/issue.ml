@@ -7,6 +7,7 @@ type 'a t = {
 }
 
 let v ?loc ?(severity = 0) data = { location = loc; data; severity }
+let payload t = t.data
 let location t = t.location
 let severity t = t.severity
 

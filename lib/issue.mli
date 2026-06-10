@@ -7,6 +7,9 @@ val v : ?loc:Location.t -> ?severity:int -> 'a -> 'a t
 (** [v ?loc ?severity payload] creates a new issue. Severity defaults to 0;
     higher values indicate more severe issues. *)
 
+val payload : 'a t -> 'a
+(** [payload issue] returns the payload of an issue. *)
+
 val pp : 'a Fmt.t -> 'a t Fmt.t
 (** [pp payload_pp] creates a pretty-printer. *)
 

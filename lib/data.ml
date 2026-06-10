@@ -91,6 +91,7 @@ let all_rules =
     E900.rule;
     E905.rule;
     E910.rule;
+    E912.rule;
     E915.rule;
     E920.rule;
     E921.rule;
