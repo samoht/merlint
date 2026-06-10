@@ -259,6 +259,12 @@ val name : t -> string
 ```
 
 
+**Directory Layout**: Organise each opam package into the standard top-level component directories: `lib/` for libraries, `bin/` for executables, `test/` for tests and `fuzz/` for fuzzers. A `scripts/` directory may hold private helper executables. Sub-components nest under those roots (`lib/<name>/` with `test/<name>/`), never as new top-level directories (`foo/lib/`, `foo/test/`).
+
+### [E912] Package directory layout
+
+Organise each opam package into the standard top-level component directories: lib/ for libraries, bin/ for executables, test/ for tests, fuzz/ for fuzzers, bench/ for benchmarks, c/ for C codegen, examples/ for example programs, config/ for dune-configurator probes, and eio/, lwt/, mirage/ for IO adapters. A scripts/ directory may hold private helper executables; anything with a public_name belongs in bin/. Sub-components nest under those roots (lib/<name>/ with test/<name>/), never as new top-level directories (foo/lib/, foo/test/).
+
 **Opam Metadata**: Every package's opam file must declare `tags:` with an `org:*` marker and one or more topics from the canonical vocabulary configured in `merlint.toml`. The tag vocabulary powers topic-grouped indexes across the monorepo, so consistency matters.
 
 ### [E915] Opam tag metadata

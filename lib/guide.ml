@@ -127,6 +127,15 @@ let content =
              to define clear interfaces and hide implementation details.";
           Rule "E505";
           Paragraph
+            "**Directory Layout**: Organise each opam package into the \
+             standard top-level component directories: `lib/` for libraries, \
+             `bin/` for executables, `test/` for tests and `fuzz/` for \
+             fuzzers. A `scripts/` directory may hold private helper \
+             executables. Sub-components nest under those roots (`lib/<name>/` \
+             with `test/<name>/`), never as new top-level directories \
+             (`foo/lib/`, `foo/test/`).";
+          Rule "E912";
+          Paragraph
             "**Opam Metadata**: Every package's opam file must declare `tags:` \
              with an `org:*` marker and one or more topics from the canonical \
              vocabulary configured in `merlint.toml`. The tag vocabulary \

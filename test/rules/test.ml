@@ -96,6 +96,7 @@ let () =
       Test_e900.suite;
       Test_e905.suite;
       Test_e910.suite;
+      Test_e912.suite;
       Test_e915.suite;
       Test_e920.suite;
       Test_e921.suite;
