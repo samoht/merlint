@@ -16,11 +16,11 @@ Build bad fixture project:
     [E912] Package directory layout (3 issues)
     Organise each opam package into the standard top-level component directories:
     lib/ for libraries, bin/ for executables, test/ for tests, fuzz/ for fuzzers,
-    bench/ for benchmarks, c/ for C codegen, examples/ for example programs,
-    config/ for dune-configurator probes, and eio/, lwt/, mirage/ for IO adapters.
-    A scripts/ directory may hold private helper executables; anything with a
-    public_name belongs in bin/. Sub-components nest under those roots
-    (lib/<name>/ with test/<name>/), never as new top-level directories (foo/lib/,
+    bench/ for benchmarks, c/ for C codegen and examples/ for example programs. A
+    scripts/ directory may hold private helper executables (codegen,
+    dune-configurator probes); anything with a public_name belongs in bin/.
+    Sub-components nest under those roots (lib/<name>/ with test/<name>/, IO
+    adapters in lib/eio/), never as new top-level directories (foo/lib/,
     foo/test/).
     - bad/pkg/foo/lib/dune:1:0: pkg: code in foo/lib/ is outside the standard package layout; move libraries under lib/, executables under bin/, tests under test/, fuzzers under fuzz/
     - bad/pkg/foo/test/dune:1:0: pkg: code in foo/test/ is outside the standard package layout; move libraries under lib/, executables under bin/, tests under test/, fuzzers under fuzz/
