@@ -36,7 +36,6 @@ depends: [
   "dune-build-info"
   "alcotest" {with-test}
   "mdx" {with-test}
-  "nox-loc"
   "odoc" {with-doc}
 ]
 build: [

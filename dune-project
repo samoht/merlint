@@ -42,5 +42,4 @@
   ocaml-project-index
   dune-build-info
   (alcotest :with-test)
-  (mdx :with-test)
-  nox-loc))
+  (mdx :with-test)))

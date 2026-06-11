@@ -2189,7 +2189,7 @@ and replace each call site with [err_x &quot;...&quot; args] / [fail_x &quot;...
         <span class="error-code">E932</span>
         <span class="error-title">Protocol probe dependency</span>
     </div>
-    <div class="error-hint"><p>Every package tagged [protocol] must depend on [ocaml-probe]. Protocol libraries should declare a closed [Event.t] vocabulary and expose [Event.emit_probe] so adapters can publish typed Runtime_events probes without owning an in-process subscription API.</p></div>
+    <div class="error-hint"><p>Every package tagged [protocol] must depend on [ocaml-probe], and each public protocol library in that package must link [ocaml-probe] in its [(libraries ...)] stanza. Protocol libraries should declare a closed [Event.t] vocabulary and expose [Event.emit_probe] so adapters can publish typed Runtime_events probes without owning an in-process subscription API.</p></div>
 </div>
 <div class="error-card" id="E940">
     <div>
@@ -2208,9 +2208,9 @@ and replace each call site with [err_x &quot;...&quot; args] / [fail_x &quot;...
 <div class="error-card" id="E943">
     <div>
         <span class="error-code">E943</span>
-        <span class="error-title">Misclassified test / dev dependency</span>
+        <span class="error-title">Misclassified runtime dependency</span>
     </div>
-    <div class="error-hint"><p>A dep used only from [(test ...)] / [(tests ...)] or a runtest-attached private executable belongs in [:with-test]. A dep used only from a private executable that's not attached to [runtest] (generator, benchmark, dev tool) belongs in [:with-dev-setup]. Add the appropriate filter: in a hand-written [&lt;pkg&gt;.opam], wrap the entry as [&quot;alcotest&quot; {with-test}] or [&quot;bench&quot; {with-dev-setup}]; in a [dune-project] [(package (depends ...))] stanza, write [(alcotest :with-test)] or [(bench :with-dev-setup)]. Build-tool packages dune resolves separately (dune, dune-configurator, js_of_ocaml, ocaml) and [conf-*] system wrappers are exempt.</p></div>
+    <div class="error-hint"><p>A dep used only from [(test ...)] / [(tests ...)] or a runtest-attached private executable belongs in [:with-test]. A dep used only from a private executable that's not attached to [runtest] (generator, benchmark, dev tool) belongs in [:with-dev-setup]. Add the appropriate filter: in a hand-written [&lt;pkg&gt;.opam], wrap the entry as [&quot;alcotest&quot; {with-test}] or [&quot;bench&quot; {with-dev-setup}]; in a [dune-project] [(package (depends ...))] stanza, write [(alcotest :with-test)] or [(bench :with-dev-setup)]. A dep not reached by any stanza in this package should be removed from this package; a sibling executable must declare its own dependency. Build-tool packages dune resolves separately (dune, dune-configurator, js_of_ocaml, ocaml) and [conf-*] system wrappers are exempt.</p></div>
 </div>
 <div class="error-card" id="E944">
     <div>

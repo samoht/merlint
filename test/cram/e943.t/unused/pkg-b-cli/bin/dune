@@ -1,0 +1,5 @@
+(executable
+ (name main)
+ (public_name pkg-b-cli)
+ (package pkg-b-cli)
+ (libraries pkg-a))
