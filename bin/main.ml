@@ -714,22 +714,19 @@ let main exclude_patterns rules_spec ~show_profile ~show_config ~build ~bail
     let mgr = Eio.Stdenv.process_mgr env in
     let fs = Eio.Stdenv.fs env in
     let domain_mgr = Eio.Stdenv.domain_mgr env in
-    let json_output = Vlog.json_enabled () in
+    let json_output = Observe.json_enabled () in
     analyze_files mgr fs domain_mgr ~exclude_patterns ?rule_filter ~show_profile
       ~build ~bail ~include_vendored ~json_output files
 
 let analyze_term =
-  let json_log_reporter ~app:_ ~base:_ () = Vlog.reporter () in
+  let json_log_reporter ~app:_ ~base:_ () = Observe.reporter () in
   Term.(
     const (fun e r p bail c b vendored () f u ->
         main e r ~show_profile:p ~show_config:c ~build:b ~bail
           ~include_vendored:vendored f u)
     $ exclude_flag $ rules_flag $ profile_flag $ bail_flag $ show_config_flag
     $ build_flag $ include_vendored_flag $ no_build_flag $ files
-    $ Term.(
-        const (fun () () -> ())
-        $ Vlog.setup ~json_reporter:(Some json_log_reporter) "merlint"
-        $ Memtrace.term))
+    $ Observe.setup ~json_reporter:(Some json_log_reporter) "merlint")
 
 let scan =
   let doc = "Scan OCaml code for style issues" in

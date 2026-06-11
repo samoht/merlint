@@ -36,9 +36,9 @@
   nox-toml
   nox-json
   nox-tty
-  vlog
+  ocaml-probe
+  ocaml-observe
   eio_main
-  nox-memtrace
   ocaml-project-index
   dune-build-info
   (alcotest :with-test)

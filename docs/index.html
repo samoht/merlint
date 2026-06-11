@@ -2163,6 +2163,13 @@ and replace each call site with [err_x &quot;...&quot; args] / [fail_x &quot;...
     </div>
     <div class="error-hint"><p>In a multi-package dune project, MDX stanzas must say which package owns the documentation check with [(package PKG)]. Dune attaches MDX to runtest automatically; the package field is for ownership and package-filtering, not alias plumbing.</p></div>
 </div>
+<div class="error-card" id="E923">
+    <div>
+        <span class="error-code">E923</span>
+        <span class="error-title">Skipped OCaml documentation example</span>
+    </div>
+    <div class="error-hint"><p>Do not use [$MDX skip] on OCaml or ML examples in README.md, .mld, or .mli files. These snippets are user-facing copy/paste material. Fix the setup, split hidden support code into earlier MDX blocks, or make the example smaller, but keep it type-checked.</p></div>
+</div>
 <div class="error-card" id="E930">
     <div>
         <span class="error-code">E930</span>
@@ -2176,6 +2183,13 @@ and replace each call site with [err_x &quot;...&quot; args] / [fail_x &quot;...
         <span class="error-title">Ambient clock in I/O-free library code</span>
     </div>
     <div class="error-hint"><p>I/O-free packages (tagged [codec.*] or [protocol]) must not read the wall clock or monotonic clock from library code. Time is an input, not a side effect: take [~now] as a parameter, let the caller's adapter or CLI [bin/] call [Mtime_clock.now] / [Ptime_clock.now] / [Unix.gettimeofday] / [Sys.time] and pass the value in. Library attribution follows dune's [(public_name P.X)] via [Project_index] so a sibling adapter package is scanned against its own tags, not its I/O-free sister's.</p></div>
+</div>
+<div class="error-card" id="E932">
+    <div>
+        <span class="error-code">E932</span>
+        <span class="error-title">Protocol probe dependency</span>
+    </div>
+    <div class="error-hint"><p>Every package tagged [protocol] must depend on [ocaml-probe]. Protocol libraries should declare a closed [Event.t] vocabulary and expose [Event.emit_probe] so adapters can publish typed Runtime_events probes without owning an in-process subscription API.</p></div>
 </div>
 <div class="error-card" id="E940">
     <div>
