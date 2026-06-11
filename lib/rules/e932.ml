@@ -2,31 +2,56 @@
 
     Protocol packages expose their event vocabulary through [ocaml-probe]. The
     opam [protocol] tag is the package-level contract; this rule makes the
-    contract mechanically visible by requiring [ocaml-probe] in [depends:]. *)
+    contract mechanically visible by requiring [ocaml-probe] in [depends:] and
+    in the public protocol library's [(libraries ...)] stanza. *)
 
-type payload = { package : string }
+type payload =
+  | Package_dep of { package : string }
+  | Library_dep of { package : string; library : string }
 
 module P = Project_index.Package
 
 let has_protocol_tag tags = List.exists (String.equal "protocol") tags
 let has_probe_dep pkg = List.exists (String.equal "ocaml-probe") (P.depends pkg)
 
+let library_has_probe lib =
+  List.exists (String.equal "ocaml-probe") (Project_index.Library.deps lib)
+
+let public_libraries pkg =
+  Project_index.package_libraries pkg
+  |> List.filter (fun lib ->
+      Project_index.Library.public_name lib |> Option.is_some)
+
 let check_package pkg =
-  if has_protocol_tag (P.tags pkg) && not (has_probe_dep pkg) then
-    [ { package = P.name pkg } ]
-  else []
+  if not (has_protocol_tag (P.tags pkg)) then []
+  else
+    let package = P.name pkg in
+    if not (has_probe_dep pkg) then [ Package_dep { package } ]
+    else
+      public_libraries pkg
+      |> List.filter (fun lib -> not (library_has_probe lib))
+      |> List.map (fun lib ->
+          Library_dep { package; library = Project_index.Library.name lib })
 
 let check ctx = Context.index ctx |> Dep_deps.run_per_package ~check_package
 
-let pp ppf { package } =
-  Fmt.pf ppf "%s is tagged [protocol] but does not depend on ocaml-probe"
-    package
+let pp ppf = function
+  | Package_dep { package } ->
+      Fmt.pf ppf "%s is tagged [protocol] but does not depend on ocaml-probe"
+        package
+  | Library_dep { package; library } ->
+      Fmt.pf ppf
+        "%s is tagged [protocol], but public library %s does not link \
+         ocaml-probe in its (libraries ...) stanza"
+        package library
 
 let rule =
   Rule.v ~code:"E932" ~title:"Protocol probe dependency"
     ~hint:
-      "Every package tagged [protocol] must depend on [ocaml-probe]. Protocol \
-       libraries should declare a closed [Event.t] vocabulary and expose \
-       [Event.emit_probe] so adapters can publish typed Runtime_events probes \
-       without owning an in-process subscription API."
+      "Every package tagged [protocol] must depend on [ocaml-probe], and each \
+       public protocol library in that package must link [ocaml-probe] in its \
+       [(libraries ...)] stanza. Protocol libraries should declare a closed \
+       [Event.t] vocabulary and expose [Event.emit_probe] so adapters can \
+       publish typed Runtime_events probes without owning an in-process \
+       subscription API."
     ~category:Rule.Project_structure ~examples:[] ~pp (Project check)

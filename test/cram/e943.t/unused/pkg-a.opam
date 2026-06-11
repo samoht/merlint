@@ -1,0 +1,3 @@
+opam-version: "2.0"
+synopsis: "Provides a library used by a different package executable"
+depends: [ "ocaml" "dune" ]

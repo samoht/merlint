@@ -1,0 +1,3 @@
+opam-version: "2.0"
+synopsis: "Declares pkg-a even though only pkg-b-cli uses it"
+depends: [ "ocaml" "dune" "pkg-a" ]
