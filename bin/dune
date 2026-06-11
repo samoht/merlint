@@ -11,9 +11,8 @@
   fpath
   fmt
   logs
-  vlog
+  ocaml-observe
   nox-json
   nox-tty
   version
-  ocaml-project-index
-  nox-memtrace))
+  ocaml-project-index))

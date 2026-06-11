@@ -67,7 +67,9 @@ let run_file_rule ?profiling ctx rule =
   Log.debug (fun m -> m "Running rule %s on %s" code filename);
   let start_time = Unix.gettimeofday () in
   let res =
-    try Rule.Run.file rule ctx
+    try
+      Probe_events.file_rule ~rule:code ~file:filename (fun () ->
+          Rule.Run.file rule ctx)
     with exn ->
       Log.err (fun m ->
           m "Rule %s failed on %s: %s" code filename (Printexc.to_string exn));
@@ -89,7 +91,8 @@ let run_project_job ?profiling job =
   Log.debug (fun m -> m "Running project rule job %s" code);
   let start_time = Unix.gettimeofday () in
   let res =
-    try Rule.Run.project_job job
+    try
+      Probe_events.project_rule ~rule:code (fun () -> Rule.Run.project_job job)
     with exn ->
       Log.err (fun m ->
           m "Project rule job %s failed: %s" code (Printexc.to_string exn));
@@ -247,6 +250,8 @@ let run_project_rules ?pool ?profiling enabled_rules project_ctx =
     List.concat_map (fun rule -> Rule.Run.project_jobs rule project_ctx) rules
   in
   let run = run_one_project_job ?profiling ~config_for in
+  Probe_events.project_rules ~rules:(List.length rules) ~jobs:(List.length jobs)
+  @@ fun () ->
   let results =
     match pool with
     | None -> List.map run jobs
@@ -263,6 +268,9 @@ let analyze_single_file ?profiling ~project_ctx ~config_for ~project_root:_
   let config = config_for filename_s in
   let excluded_acc = ref [] in
   let issues =
+    Probe_events.file_analysis ~file:filename_s
+      ~file_rules:(List.length file_rules) ~pass_rules:(List.length pass_rules)
+    @@ fun () ->
     try
       ignore profiling;
       let view = Context.file_view project_ctx filename in
@@ -309,14 +317,17 @@ let analyze_single_file ?profiling ~project_ctx ~config_for ~project_root:_
     concurrently from any domain. *)
 let analyze_files ?pool ~project_ctx ~project_root ~file_rules ~pass_rules
     ?profiling files =
-  let config_for = config_lookup () in
-  let analyse filepath =
-    analyze_single_file ?profiling ~project_ctx ~config_for ~project_root
-      ~file_rules ~pass_rules filepath
-  in
-  match pool with
-  | None -> List.map analyse files
-  | Some pool -> Fs.parallel_map pool files analyse
+  match (file_rules, pass_rules) with
+  | [], [] -> []
+  | _ -> (
+      let config_for = config_lookup () in
+      let analyse filepath =
+        analyze_single_file ?profiling ~project_ctx ~config_for ~project_root
+          ~file_rules ~pass_rules filepath
+      in
+      match pool with
+      | None -> List.map analyse files
+      | Some pool -> Fs.parallel_map pool files analyse)
 
 (* Vendored paths come from the root dune metadata. The library-owner check
    keeps the package-level query useful for files resolved through the index. *)
@@ -413,6 +424,9 @@ let run ?domain_mgr ~load_file ~filter ?analyze_set ?analyze_roots ~index
     Fs.reset_stats ();
     let files_analyzed = List.length analyze_set in
     let project_results, file_results =
+      Probe_events.analysis ~project_root ~files:files_analyzed
+        ~rules:(List.length enabled_rules)
+      @@ fun () ->
       run_enabled_rules ?pool ?profiling ~project_ctx ~project_root
         ~enabled_rules analyze_set
     in

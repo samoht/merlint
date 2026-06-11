@@ -1,0 +1,6 @@
+(library
+ (name foo)
+ (modules_without_implementation foo))
+
+(mdx
+ (files foo.mli))

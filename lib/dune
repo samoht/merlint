@@ -20,6 +20,7 @@
   nox-toml
   bytesrw
   nox-sexp
+  ocaml-probe
   ocaml-project-index
   unix))
 

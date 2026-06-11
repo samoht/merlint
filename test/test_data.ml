@@ -4,7 +4,7 @@ let test_all_rules_count () =
   (* Test that we have the expected number of rules *)
   let rule_count = List.length Merlint.Data.all_rules in
   Alcotest.(check bool) "has rules" true (rule_count > 0);
-  Alcotest.(check bool) "reasonable count" true (rule_count < 100)
+  Alcotest.(check bool) "reasonable count" true (rule_count < 200)
 
 let test_rule_codes_unique () =
   (* Test that all rule codes are unique *)
