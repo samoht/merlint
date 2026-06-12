@@ -1,0 +1,9 @@
+(library
+ (name store)
+ (modules store)
+ (flags :standard -w -32))
+
+(library
+ (name store_eio)
+ (modules store_eio)
+ (flags :standard -w -32))
