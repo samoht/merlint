@@ -21,15 +21,18 @@ This document outlines the coding and testing conventions for this project. The 
 
 7. **NEVER USE Obj.magic**: The `Obj` module is not part of the OCaml language and breaks type safety. There is always a better, type-safe solution.
 
-### [E100] No Obj.magic
+### [E100] No Obj usage
 
-Obj.magic completely bypasses OCaml's type system and is extremely dangerous. It can lead to segmentation faults, data corruption, and unpredictable behavior. Instead, use proper type definitions, GADTs, or polymorphic variants. If you absolutely must use unsafe features, document why and isolate the usage.
+The Obj module bypasses OCaml's type system and is not part of the language. Any use (Obj.magic, Obj.repr, Obj.obj, Obj.tag, ...) can cause segmentation faults, data corruption, and unpredictable behavior. Use proper type definitions, GADTs, or polymorphic variants instead. If an unsafe boundary is truly unavoidable, isolate it in one module and document why.
 
 **Examples:**
 
 **Bad:**
 ```ocaml
 let coerce x = Obj.magic x
+let erased x = Obj.repr x
+let recovered o : int = Obj.obj o
+let tag_of x = Obj.tag (Obj.repr x)
 
 ```
 

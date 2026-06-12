@@ -497,12 +497,15 @@ pre code {
 <div class="error-card" id="E100">
     <div>
         <span class="error-code">E100</span>
-        <span class="error-title">No Obj.magic</span>
+        <span class="error-title">No Obj usage</span>
     </div>
-    <div class="error-hint"><p>Obj.magic completely bypasses OCaml's type system and is extremely dangerous. It can lead to segmentation faults, data corruption, and unpredictable behavior. Instead, use proper type definitions, GADTs, or polymorphic variants. If you absolutely must use unsafe features, document why and isolate the usage.</p><div class="examples-grid">
+    <div class="error-hint"><p>The Obj module bypasses OCaml's type system and is not part of the language. Any use (Obj.magic, Obj.repr, Obj.obj, Obj.tag, ...) can cause segmentation faults, data corruption, and unpredictable behavior. Use proper type definitions, GADTs, or polymorphic variants instead. If an unsafe boundary is truly unavoidable, isolate it in one module and document why.</p><div class="examples-grid">
 <div class="example bad">
   <h4>BAD</h4>
   <pre><code><span class="kw">let</span> coerce x = <span class="cn">Obj</span>.magic x
+<span class="kw">let</span> erased x = <span class="cn">Obj</span>.repr x
+<span class="kw">let</span> recovered o : int = <span class="cn">Obj</span>.obj o
+<span class="kw">let</span> tag_of x = <span class="cn">Obj</span>.tag (<span class="cn">Obj</span>.repr x)
 </code></pre>
 </div>
 <div class="example good">
