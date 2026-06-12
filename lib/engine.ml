@@ -133,7 +133,14 @@ let file_view ?profiling ~load_file ~backend filename =
   File_view.v ~filename:source_filename ~typedtree ()
 
 let setup_analysis ~filter ~analyze_set ~index ~file_view project_root =
-  let project_root_path = Context.path project_root in
+  (* Resolve a relative root (e.g. ".") against the cwd: the analyze_set paths
+     derive from it via [Context.path_under], and [Context.project] requires
+     those to be absolute so the file-view cache keys canonicalize. *)
+  let project_root_path =
+    if Filename.is_relative project_root then
+      Context.path (Filename.concat (Sys.getcwd ()) project_root)
+    else Context.path project_root
+  in
   let project_root = Context.string_of_path project_root_path in
   let config = Config.load project_root in
   let analyze_set =

@@ -43,7 +43,16 @@ module Path = struct
 end
 
 let path_is_under ~root path =
-  Fpath.equal root path || Fpath.is_prefix root path
+  Fpath.equal root path
+  || Fpath.is_prefix root path
+  ||
+  (* [Fpath.is_prefix] is a textual segment check, so a "." root is not a
+     prefix of a relative path like "bottler/x.ml" even though that path is
+     under it. Fall back to relativizing: a path is under [root] when it
+     relativizes without an initial ".." segment escaping above the root. *)
+  match Fpath.relativize ~root path with
+  | Some rel -> ( match Fpath.segs rel with ".." :: _ -> false | _ -> true)
+  | None -> false
 
 let path_under ~root s =
   let p = Fpath.v s in
