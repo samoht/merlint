@@ -112,7 +112,12 @@ let module_path_matches ~expected_path lib_path =
         || (expected_dir = "" && lib_lc = lib_base)
         || Astring.String.is_infix
              ~affix:("/" ^ expected_dir ^ "/" ^ expected_base)
-             lib_lc)
+             lib_lc
+        (* A flat library module (no subdirectory) matches a same-named test
+           however deep its directory: a sub-library whose test executable
+           needs extra deps lives in test/<x>/ while the module stays at lib
+           root. *)
+        || lib_lc = lib_base)
 
 let missing_library_issue file expected_path =
   let loc =
