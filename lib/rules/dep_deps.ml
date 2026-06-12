@@ -5,21 +5,7 @@ module String_set = Set.Make (String)
 
 (** Top-level libraries shipped by the OCaml distribution -- no opam dep
     required to use them. *)
-let ocaml_builtins =
-  String_set.of_list
-    [
-      "unix";
-      "threads";
-      "str";
-      "dynlink";
-      "bigarray";
-      "stdlib";
-      "runtime_events";
-      "compiler-libs";
-      "ocamlfind";
-      "findlib";
-      "bytes";
-    ]
+let ocaml_builtins = String_set.of_list Opam.Package.ocaml_builtins
 
 (** Build-time tools rather than runtime libraries: the OCaml compiler, the dune
     build system, and the [js_of_ocaml] binary used to compile bytecode to
