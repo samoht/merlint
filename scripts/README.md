@@ -1,36 +1,19 @@
-# Git Hook Setup Scripts
+# Scripts
 
-This directory contains scripts to set up git hooks for OCaml projects.
+Build- and maintenance-time scripts for the merlint project.
 
-## setup-hooks.sh
+## Git hooks
 
-This script installs pre-commit and commit-msg hooks that ensure code quality before commits.
+Install the pre-commit (auto-format + merlint) and commit-msg hooks with the
+`precommit` tool rather than a bespoke script:
 
-### What the hooks do:
-
-**Pre-commit hook:**
-1. **Dune build** - Ensures the project builds successfully
-2. **Dune fmt** - Checks and enforces code formatting
-3. **Dune test** - Runs all tests
-4. **Merlint** - Runs the project's own merlint linter (if available)
-5. **Prune** - Checks for unused code in lib/ and bin/ directories (if prune is installed)
-
-**Commit-msg hook:**
-- Checks for AI attributions in commit messages and rejects them
-
-### Installation
-
-Run from the project root:
-
-<!-- $MDX non-deterministic=command -->
+<!-- $MDX skip -->
 ```sh
-$ ./scripts/setup-hooks.sh
+$ opam install precommit
+$ precommit init
 ```
 
-### Notes
-
-- The hooks are installed in `.git/hooks/` which is not tracked by git
-- You need to run the setup script on each clone of the repository
-- To bypass the pre-commit hook in emergencies: `git commit --no-verify`
-- The script uses the project's own merlint via `dune exec -- merlint`
-- For the merlint project itself: Use `--no-verify` until we migrate from Printf to Fmt
+The pre-commit hook runs `dune fmt` (auto-fixing the whole tree) and
+`merlint -B .`, and works for both `git commit` and `git-x commit`. Pass
+`--hooks fmt,ai` to install without the merlint check. Bypass in emergencies
+with `git commit --no-verify` (or `git-x commit create --no-verify`).
