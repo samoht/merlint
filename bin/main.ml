@@ -577,12 +577,22 @@ let index_roots_of_files = function
   | [] -> None
   | xs -> Some (List.map resolve_index_root xs)
 
-let build_project_index ~fs ~monorepo ?roots ?pool () =
+let build_project_index ~fs ~monorepo ?roots ?pool ?installed () =
   let t0 = Unix.gettimeofday () in
-  let idx = Project_index.build ?pool ?roots ~fs ~monorepo () in
+  let idx = Project_index.build ?pool ?roots ?installed ~fs ~monorepo () in
   Log.info (fun m ->
       m "Project_index.build: %.0f ms" ((Unix.gettimeofday () -. t0) *. 1000.0));
   idx
+
+(* The installed-package roots ([_opam/lib], [_build/install]) are scanned only
+   to resolve external library uses to their providing package, which only the
+   dependency-hygiene rules need. Skip that scan otherwise. *)
+let installed_index_needed = function
+  | None -> true
+  | Some filter ->
+      List.exists
+        (Merlint.Filter.is_enabled_by_code filter)
+        [ "E941"; "E943"; "E944" ]
 
 let analyze_files mgr fs domain_mgr ?(exclude_patterns = []) ?rule_filter
     ?(show_profile = false) ?(build = false) ?(bail = false)
@@ -596,8 +606,9 @@ let analyze_files mgr fs domain_mgr ?(exclude_patterns = []) ?rule_filter
   let analyze_roots = analyze_roots_of_files files in
   let monorepo = monorepo_for_index project_root in
   let index_roots = index_roots_of_files files in
+  let installed = installed_index_needed rule_filter in
   let build_index ?pool () =
-    build_project_index ~fs ~monorepo ?roots:index_roots ?pool ()
+    build_project_index ~fs ~monorepo ?roots:index_roots ~installed ?pool ()
   in
   let lazy_index = lazy (build_index ()) in
   maybe_build_project mgr ~project_root ~analyze_set ~analyze_roots
