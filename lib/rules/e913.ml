@@ -8,7 +8,9 @@
     a license.
 
     A finding is a source package whose root is missing one or more of the
-    required metadata files. *)
+    required metadata files. A package that builds no library and no executable
+    -- a pure dependency-pinning aggregator like a monorepo root package -- has
+    no code to document or license and is exempt. *)
 
 type kind = Readme | License
 type payload = { package : string; missing : kind list }
@@ -62,9 +64,15 @@ let dedup pkgs =
           end)
     pkgs
 
+(* A package that builds no library and no executable -- a pure
+   dependency-pinning aggregator, such as a monorepo root package -- ships no
+   code of its own, so there is nothing to document or license. *)
+let builds_code pkg =
+  Project_index.package_libraries pkg <> [] || P.executable_stanzas pkg <> []
+
 let check (ctx : Context.project) =
   Context.index ctx |> Project_index.source_package_list
-  |> List.filter (fun pkg -> not (P.is_anonymous pkg))
+  |> List.filter (fun pkg -> (not (P.is_anonymous pkg)) && builds_code pkg)
   |> dedup
   |> List.filter_map check_package
 
