@@ -586,13 +586,18 @@ let build_project_index ~fs ~monorepo ?roots ?pool ?installed () =
 
 (* The installed-package roots ([_opam/lib], [_build/install]) are scanned only
    to resolve external library uses to their providing package, which only the
-   dependency-hygiene rules need. Skip that scan otherwise. *)
-let installed_index_needed = function
-  | None -> true
-  | Some filter ->
-      List.exists
-        (Merlint.Filter.is_enabled_by_code filter)
-        [ "E941"; "E943"; "E944" ]
+   dependency-hygiene rules need. When one of them runs, scan just the installed
+   packages those uses reference; otherwise skip the roots entirely. *)
+let installed_index_mode rule_filter =
+  let dep_rule_enabled =
+    match rule_filter with
+    | None -> true
+    | Some filter ->
+        List.exists
+          (Merlint.Filter.is_enabled_by_code filter)
+          [ "E941"; "E943"; "E944" ]
+  in
+  if dep_rule_enabled then Project_index.Referenced else Project_index.Skip
 
 let analyze_files mgr fs domain_mgr ?(exclude_patterns = []) ?rule_filter
     ?(show_profile = false) ?(build = false) ?(bail = false)
@@ -606,7 +611,7 @@ let analyze_files mgr fs domain_mgr ?(exclude_patterns = []) ?rule_filter
   let analyze_roots = analyze_roots_of_files files in
   let monorepo = monorepo_for_index project_root in
   let index_roots = index_roots_of_files files in
-  let installed = installed_index_needed rule_filter in
+  let installed = installed_index_mode rule_filter in
   let build_index ?pool () =
     build_project_index ~fs ~monorepo ?roots:index_roots ~installed ?pool ()
   in
