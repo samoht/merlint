@@ -6,6 +6,7 @@
   ocaml-merlin
   ocaml-project-index
   alcotest
+  alcotest.engine
   compiler-libs.common
   eio
   eio_main

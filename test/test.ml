@@ -1,7 +1,13 @@
 let setup_log log_level =
   Fmt_tty.setup_std_outputs ();
   Logs.set_level log_level;
-  Logs.set_reporter (Logs_fmt.reporter ~dst:Fmt.stderr ~app:Fmt.stdout ())
+  let report src level ~over k msgf =
+    let app = (Alcotest_engine.Formatters.get_stdout () :> Format.formatter) in
+    let dst = (Alcotest_engine.Formatters.get_stderr () :> Format.formatter) in
+    let reporter = Logs_fmt.reporter ~app ~dst () in
+    reporter.Logs.report src level ~over k msgf
+  in
+  Logs.set_reporter { Logs.report }
 
 let () = setup_log (Some Debug)
 
