@@ -44,7 +44,7 @@ let check (ctx : Context.project) =
   List.filter_map
     (fun (d : Interop.oracle_dir) ->
       if d.has_test_ml then
-        let path = Context.Path.(d.path / "test.ml") in
+        let path = Path.(d.path / "test.ml") in
         let found =
           try shell_call (Context.file_view ctx path)
           with File_view.Analysis_error _ -> None

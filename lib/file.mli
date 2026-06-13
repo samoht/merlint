@@ -10,13 +10,13 @@ val is_in_fuzz_dir : Fpath.t -> bool
 val is_in_test_dir : Fpath.t -> bool
 (** [is_in_test_dir file] returns [true] if [file] is in a test directory. *)
 
-val is_test_file_path : Fpath.t -> bool
-(** [is_test_file_path file] returns [true] if [file] names a test module or is
-    below a [test] or [tests] directory. The path should be relative to the
-    analyzed project root when checking project-local conventions. *)
+val is_test_path : Fpath.t -> bool
+(** [is_test_path file] returns [true] if [file] names a test module or is below
+    a [test] or [tests] directory. The path should be relative to the analyzed
+    project root when checking project-local conventions. *)
 
-val is_test_file : string -> bool
-(** [is_test_file filename] is [is_test_file_path (Fpath.v filename)]. *)
+val is_test : string -> bool
+(** [is_test filename] is [is_test_path (Fpath.v filename)]. *)
 
 val is_unit_companion_module : string -> bool
 (** [is_unit_companion_module basename] returns [true] when [basename] is a

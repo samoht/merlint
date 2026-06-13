@@ -20,9 +20,9 @@ let test_empty_file () =
   in
   Alcotest.(check int) "no results" 0 (List.length results)
 
-let test_is_test_file () =
+let test_is_test () =
   let check name expected filename =
-    Alcotest.(check bool) name expected (Merlint.File.is_test_file filename)
+    Alcotest.(check bool) name expected (Merlint.File.is_test filename)
   in
   check "test runner" true "foo/test.ml";
   check "test module" true "foo/test_user.ml";
@@ -34,7 +34,7 @@ let tests =
   [
     ("process_lines_with_location", `Quick, test_process_lines_with_location);
     ("empty_file", `Quick, test_empty_file);
-    ("is_test_file", `Quick, test_is_test_file);
+    ("is_test", `Quick, test_is_test);
   ]
 
 let suite = ("file", tests)

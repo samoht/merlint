@@ -49,7 +49,7 @@ let expected_lib_path test_file =
 
 let library_module_path ctx file =
   let file = Context.resolve ctx file in
-  let rel_file = Context.project_relative_path ctx file in
+  let rel_file = Fpath.v (Context.project_relative_path ctx file) in
   (* [.mll] (ocamllex) and [.mly] (ocamlyacc/menhir) generate a [.ml] module of
      the same name at build time, so they provide the library module a test
      exercises just as a [.ml] source does. Normalise them to [.ml] so the
@@ -130,8 +130,7 @@ let missing_library_issue file expected_path =
 let referenced_modules ctx library_source_files =
   List.fold_left
     (fun acc path ->
-      if Context.Path.has_ext ".ml" path || Context.Path.has_ext ".mli" path
-      then
+      if Path.has_ext ".ml" path || Path.has_ext ".mli" path then
         try
           Context.file_view ctx path |> File_view.referenced_module_names
           |> List.fold_left (fun acc name -> String_set.add name acc) acc
@@ -151,7 +150,7 @@ let check_test_file ~library_module_paths ~referenced_modules ~file ~rel_file =
     | None -> None
     | Some expected_path ->
         Log.debug (fun m ->
-            m "E610: test %a expects lib %s" Context.Path.pp file expected_path);
+            m "E610: test %a expects lib %s" Path.pp file expected_path);
         let found =
           List.exists (module_path_matches ~expected_path) library_module_paths
         in
@@ -172,7 +171,7 @@ let selected_test_files ctx =
       stanza.files)
   |> List.filter_map (fun file ->
       let file = Context.resolve ctx file in
-      let rel_file = Context.project_relative_path ctx file in
+      let rel_file = Fpath.v (Context.project_relative_path ctx file) in
       let path = Fpath.to_string rel_file in
       if
         ctx.Context.in_analyze_set file

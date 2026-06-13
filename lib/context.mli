@@ -5,66 +5,27 @@ exception Analysis_error of string
 (** Raised when analysis fails (e.g., Merlint_backend error, file read error).
 *)
 
-type path
-(** Normalized merlint path. Values are constructed through {!path} or
-    {!path_under}; internally this is an {!Fpath.t}. *)
+type path = Path.t
+(** A canonical merlint path; an alias of {!Path.t}. Use the {!Path} module's
+    operations on values of this type. *)
 
 val path : string -> path
-(** [path s] normalizes [s]. *)
+(** [path s] is the canonical path for [s]. *)
 
 val path_under : root:path -> string -> path
-(** [path_under ~root s] normalizes [s] under [root]. Relative paths are
-    interpreted relative to [root]; paths escaping [root] raise
-    [Invalid_argument]. *)
+(** [path_under ~root s] resolves [s] under [root], raising [Invalid_argument]
+    if it escapes [root]. *)
 
 val fpath_of_path : path -> Fpath.t
 (** [fpath_of_path p] returns [p] as an {!Fpath.t}. *)
 
 val string_of_path : path -> string
-(** [string_of_path p] returns [p] as a string for external APIs and
+(** [string_of_path p] returns [p]'s canonical string for external APIs and
     diagnostics. *)
 
-val relative_to : root:path -> path -> Fpath.t
-(** [relative_to ~root p] is [p] relative to [root], when [p] is below [root],
-    and [p] unchanged otherwise. *)
-
-module Path : sig
-  val v : string -> path
-  (** [v s] is [path s]. *)
-
-  val ( / ) : path -> string -> path
-  (** [p / segment] is [segment] below [p], normalized. *)
-
-  val compare : path -> path -> int
-  (** [compare a b] orders paths by their normalized {!Fpath.t} representation.
-  *)
-
-  val pp : path Fmt.t
-  (** [pp] formats a path. *)
-
-  val to_display_string : path -> string
-  (** [to_display_string p] returns [p] relative to the current directory when
-      possible. *)
-
-  val dir_display_string : path -> string
-  (** [dir_display_string p] is [to_display_string p] with a trailing slash, for
-      directory diagnostics. *)
-
-  val has_ext : string -> path -> bool
-  (** [has_ext ext p] is [true] if [p] has extension [ext]. *)
-
-  val basename : path -> string
-  (** [basename p] returns the final path segment of [p]. *)
-
-  val parent : path -> path
-  (** [parent p] returns [p]'s normalized parent directory. *)
-
-  val rem_ext : path -> path
-  (** [rem_ext p] removes [p]'s extension. *)
-
-  val add_ext : string -> path -> path
-  (** [add_ext ext p] adds extension [ext] to [p]. *)
-end
+val relative_to : root:path -> path -> string
+(** [relative_to ~root p] is [p] relative to [root] for display, or its absolute
+    string when [p] is not below [root]. *)
 
 type 'a memo
 (** Opaque project memo. Values are forced only through Context accessors, so
@@ -177,7 +138,7 @@ val project_root_string : file -> string
 val file_path : file -> path
 (** [file_path f] returns the normalized current file path. *)
 
-val project_relative_file : file -> Fpath.t
+val project_relative_file : file -> string
 (** [project_relative_file f] returns [f]'s file path relative to its project
     root when possible. Use this for project-local classification such as
     [test/] and [examples/] checks. *)
@@ -201,7 +162,7 @@ val project_root : project -> path
 val project_root_path : project -> string
 (** [project_root_path p] returns [project_root p] as a string. *)
 
-val project_relative_path : project -> path -> Fpath.t
+val project_relative_path : project -> path -> string
 (** [project_relative_path p file] returns [file] relative to [p]'s project root
     when possible. *)
 

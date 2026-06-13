@@ -8,59 +8,13 @@ exception Analysis_error = File_view.Analysis_error
 
 let fail_analysis_error fmt = Fmt.kstr (fun s -> raise (Analysis_error s)) fmt
 
-type path = Fpath.t
+type path = Path.t
 
-let normalize_path path = Fpath.(path |> normalize |> rem_empty_seg)
-let path s = normalize_path (Fpath.v s)
-let fpath_of_path p = p
-let string_of_path = Fpath.to_string
-
-let relative_to ~root p =
-  match Fpath.relativize ~root p with Some rel -> rel | None -> p
-
-module Path = struct
-  let v = path
-
-  let ( / ) p child =
-    let child = Fpath.v child in
-    if Fpath.is_abs child then
-      Fmt.invalid_arg "merlint: cannot append absolute child path %a" Fpath.pp
-        child;
-    normalize_path Fpath.(p // child)
-
-  let compare = Fpath.compare
-  let pp ppf p = Fmt.string ppf (Fpath.to_string p)
-  let to_display_string p = Loc.current_dir_relative p |> Fpath.to_string
-
-  let dir_display_string p =
-    Loc.current_dir_relative p |> Fpath.to_dir_path |> Fpath.to_string
-
-  let has_ext ext p = Fpath.has_ext ext p
-  let basename = Fpath.basename
-  let parent p = normalize_path (Fpath.parent p)
-  let rem_ext p = normalize_path (Fpath.rem_ext p)
-  let add_ext ext p = normalize_path (Fpath.add_ext ext p)
-end
-
-let path_is_under ~root path =
-  Fpath.equal root path || Fpath.is_prefix root path
-  ||
-  (* [Fpath.is_prefix] is a textual segment check, so a "." root is not a
-     prefix of a relative path like "bottler/x.ml" even though that path is
-     under it. Fall back to relativizing: a path is under [root] when it
-     relativizes without an initial ".." segment escaping above the root. *)
-  match Fpath.relativize ~root path with
-  | Some rel -> ( match Fpath.segs rel with ".." :: _ -> false | _ -> true)
-  | None -> false
-
-let path_under ~root s =
-  let p = Fpath.v s in
-  let p = if Fpath.is_abs p then p else Fpath.(root // p) in
-  let p = normalize_path p in
-  if not (path_is_under ~root p) then
-    Fmt.invalid_arg "merlint: source path %S escapes project root %S" s
-      (Fpath.to_string root);
-  p
+let path = Path.v
+let fpath_of_path = Path.fpath
+let string_of_path = Path.to_string
+let relative_to ~root p = Path.relative_to ~root p
+let path_under = Path.under
 
 type 'a memo = { lock : Eio.Mutex.t; value : 'a Lazy.t }
 
@@ -254,13 +208,7 @@ let project ?file_view ?file_content ~config ~project_root ~analyze_set ~index
     () =
   let index_memo = memo (fun () -> Lazy.force index) in
   let analyze_set_tbl = Hashtbl.create (List.length analyze_set) in
-  let add_analyze_file file =
-    if not (Fpath.is_abs file) then
-      Fmt.invalid_arg "merlint: analyze_set path %S is not absolute"
-        (Fpath.to_string file);
-    Hashtbl.replace analyze_set_tbl file ()
-  in
-  List.iter add_analyze_file analyze_set;
+  List.iter (fun file -> Hashtbl.replace analyze_set_tbl file ()) analyze_set;
   let in_analyze_set file = Hashtbl.mem analyze_set_tbl file in
   let file_view_cache =
     let make =

@@ -6,9 +6,7 @@ let check (ctx : Context.project) =
   let dirs = Interop.oracle_dirs_for ctx in
   List.filter_map
     (fun (d : Interop.oracle_dir) ->
-      let scripts =
-        Context.Path.(d.path / "scripts") |> Context.string_of_path
-      in
+      let scripts = Path.(d.path / "scripts") |> Context.string_of_path in
       let has_rust =
         try
           let files = Fs.readdir scripts |> Array.to_list in

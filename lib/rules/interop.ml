@@ -23,7 +23,7 @@ let oracle_of_tool pkg interop tool =
     in
     Some
       {
-        path = Context.Path.v path;
+        path = Path.v path;
         display = display_path;
         package = pkg;
         tool;
@@ -53,7 +53,7 @@ let oracle_dirs_uncached index =
   let package_oracles =
     List.concat_map (fun (name, dir) -> package_oracles name dir) package_dirs
   in
-  List.sort_uniq (fun a b -> Context.Path.compare a.path b.path) package_oracles
+  List.sort_uniq (fun a b -> Path.compare a.path b.path) package_oracles
 
 (* Cache the walk by index identity -- 10+ E8xx rules call this per run and
    the FS layout doesn't change between rule invocations. *)

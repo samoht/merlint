@@ -12,7 +12,7 @@ let is_in_test_dir file =
   let dir = Fpath.parent file |> Fpath.basename in
   String.equal dir "test"
 
-let is_test_file_path path =
+let is_test_path path =
   let path = Fpath.normalize path in
   let basename = Fpath.basename path in
   let module_name =
@@ -25,7 +25,7 @@ let is_test_file_path path =
        (fun part -> String.equal part "test" || String.equal part "tests")
        (Fpath.segs path)
 
-let is_test_file filename = is_test_file_path (Fpath.v filename)
+let is_test filename = is_test_path (Fpath.v filename)
 
 let is_unit_companion_module basename =
   String.ends_with ~suffix:"_intf" basename

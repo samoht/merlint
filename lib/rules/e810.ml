@@ -4,7 +4,7 @@ type payload = { dir : string }
 
 let traces_dune ctx (dir : Interop.oracle_dir) =
   try
-    Context.file_content ctx Context.Path.(dir.path / "traces" / "dune")
+    Context.file_content ctx Path.(dir.path / "traces" / "dune")
     |> Dune.File.of_string |> Result.to_option
   with File_view.Analysis_error _ -> None
 

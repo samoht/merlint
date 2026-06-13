@@ -250,13 +250,13 @@ let check_item ~config ~module_name ~aliases item =
         | None -> to_prefix_issue ~loc ~aliases ~name ~ct:typ)
     | None -> None
 
-let is_test_file filename =
+let is_test filename =
   let basename = Filename.basename filename in
   String.starts_with ~prefix:"test_" basename || basename = "test.ml"
 
 let check (ctx : Context.file) =
   let filename = Context.filename ctx in
-  if is_test_file filename then []
+  if is_test filename then []
   else if
     Filename.check_suffix filename ".ml"
     || Filename.check_suffix filename ".mli"

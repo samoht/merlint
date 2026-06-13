@@ -24,17 +24,20 @@ let test_create_project () =
     (Merlint.Context.analyze_set ctx |> List.map Merlint.Context.string_of_path)
 
 (* path_under accepts a relative path under a relative "." root (the project
-   root the engine uses when invoked as "."), and still rejects a path that
-   escapes the root. *)
+   root the engine uses when invoked as "."), canonicalises it to an absolute
+   path, and still rejects a path that escapes the root. *)
 let test_path_under_relative_root () =
   let root = Merlint.Context.path "." in
   let p = Merlint.Context.path_under ~root "bottler/bin/cmd_build.ml" in
   Alcotest.(check string)
-    "under-root path normalized" "bottler/bin/cmd_build.ml"
+    "under-root path is canonical absolute"
+    (Merlint.Context.string_of_path
+       (Merlint.Context.path "bottler/bin/cmd_build.ml"))
     (Merlint.Context.string_of_path p);
   Alcotest.check_raises "escaping path rejected"
     (Invalid_argument
-       "merlint: source path \"../escape.ml\" escapes project root \".\"")
+       (Fmt.str "Path: %S escapes %S" "../escape.ml"
+          (Merlint.Context.string_of_path root)))
     (fun () -> ignore (Merlint.Context.path_under ~root "../escape.ml"))
 
 let test_analysis_error () =

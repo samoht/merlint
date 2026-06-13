@@ -14,7 +14,7 @@ let log_src = Logs.Src.create "merlint.rules.e600" ~doc:"E600 rule diagnostics"
 
 module Log = (val Logs.src_log log_src : Logs.LOG)
 
-let is_test_file filename =
+let is_test filename =
   (* Only test executables named test.ml should follow this convention *)
   Filename.basename filename = "test.ml"
 
@@ -92,7 +92,7 @@ let check_test_mli_file ctx index filename view =
   else []
 
 let content_target ctx index filename =
-  is_test_file filename
+  is_test filename
   || runner_in_wrong_file_target ctx index filename
   || test_mli_target ctx index filename
 
@@ -165,14 +165,14 @@ let visit_expr state (expr : T.expression) =
     state.uses_test_suite <- expr_references_test_suite expr
 
 let visit_structure_item state item =
-  if is_test_file state.filename && not state.defines_own then
+  if is_test state.filename && not state.defines_own then
     state.defines_own <- item_defines_tests item
 
 let content_issues ctx index state =
   let filename = state.filename in
   let runner_issue =
     if
-      is_test_file filename && state.has_runner && state.defines_own
+      is_test filename && state.has_runner && state.defines_own
       && not state.uses_test_suite
     then
       [

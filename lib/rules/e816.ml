@@ -10,7 +10,7 @@ let takes_output_dir scripts =
   || Interop.script_contains ~dir:scripts ~file:"generate.sh" ~affix:"${1"
 
 let issue_for_oracle (d : Interop.oracle_dir) =
-  let scripts = Context.Path.(d.path / "scripts") |> Context.string_of_path in
+  let scripts = Path.(d.path / "scripts") |> Context.string_of_path in
   let gen = Filename.concat scripts "generate.sh" in
   if (not (Fs.file_exists gen)) || takes_output_dir scripts then None
   else
