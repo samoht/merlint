@@ -17,7 +17,7 @@ boundary.
   ✓ Interop Testing (0 total issues)
   ✓ Code Generation (0 total issues)
   
-  Summary: ✓ 0 total issues (applied 101 rules)
+  Summary: ✓ 0 total issues (applied 102 rules)
   ✓ All checks passed!
 
 Passing --include-vendored opts the vendored subtree back in: the bait file now

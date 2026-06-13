@@ -2138,6 +2138,13 @@ and replace each call site with [err_x &quot;...&quot; args] / [fail_x &quot;...
     </div>
     <div class="error-hint"><p>Organise each opam package into the standard top-level component directories: lib/ for libraries, bin/ for executables, test/ for tests, fuzz/ for fuzzers, bench/ for benchmarks, c/ for C codegen and examples/ for example programs. A scripts/ directory may hold private helper executables (codegen, dune-configurator probes); anything with a public_name belongs in bin/. Sub-components nest under those roots (lib/&lt;name&gt;/ with test/&lt;name&gt;/, IO adapters in lib/eio/), never as new top-level directories (foo/lib/, foo/test/).</p></div>
 </div>
+<div class="error-card" id="E913">
+    <div>
+        <span class="error-code">E913</span>
+        <span class="error-title">Missing package metadata</span>
+    </div>
+    <div class="error-hint"><p>Add the human-facing metadata files every opam package ships at its source root: a README.md describing the package and a license file (LICENSE.md). These travel with the package when it is split out to its own repository.</p></div>
+</div>
 <div class="error-card" id="E915">
     <div>
         <span class="error-code">E915</span>

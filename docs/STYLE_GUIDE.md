@@ -268,6 +268,12 @@ val name : t -> string
 
 Organise each opam package into the standard top-level component directories: lib/ for libraries, bin/ for executables, test/ for tests, fuzz/ for fuzzers, bench/ for benchmarks, c/ for C codegen and examples/ for example programs. A scripts/ directory may hold private helper executables (codegen, dune-configurator probes); anything with a public_name belongs in bin/. Sub-components nest under those roots (lib/<name>/ with test/<name>/, IO adapters in lib/eio/), never as new top-level directories (foo/lib/, foo/test/).
 
+**Metadata Files**: Every package ships human-facing metadata at its source root: a `README.md` describing the package and a license file (`LICENSE.md`). These travel with the package when it is split out to its own repository.
+
+### [E913] Missing package metadata
+
+Add the human-facing metadata files every opam package ships at its source root: a README.md describing the package and a license file (LICENSE.md). These travel with the package when it is split out to its own repository.
+
 **Opam Metadata**: Every package's opam file must declare `tags:` with an `org:*` marker and one or more topics from the canonical vocabulary configured in `merlint.toml`. The tag vocabulary powers topic-grouped indexes across the monorepo, so consistency matters.
 
 ### [E915] Opam tag metadata
