@@ -136,6 +136,12 @@ let content =
              (`foo/lib/`, `foo/test/`).";
           Rule "E912";
           Paragraph
+            "**Metadata Files**: Every package ships human-facing metadata at \
+             its source root: a `README.md` describing the package and a \
+             license file (`LICENSE.md`). These travel with the package when \
+             it is split out to its own repository.";
+          Rule "E913";
+          Paragraph
             "**Opam Metadata**: Every package's opam file must declare `tags:` \
              with an `org:*` marker and one or more topics from the canonical \
              vocabulary configured in `merlint.toml`. The tag vocabulary \
