@@ -53,8 +53,8 @@ dune build @test/cram/e001
 # Install dependencies
 opam install . --deps-only
 
-# Set up git hooks (runs tests/formatting on commit)
-./scripts/setup-hooks.sh
+# Set up git hooks (auto-format + merlint on commit)
+precommit init
 ```
 
 ## Architecture
