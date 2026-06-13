@@ -18,8 +18,7 @@ let scan_file ctx path =
   | None -> []
   | Some content ->
       let re =
-        if Context.Path.has_ext ".md" path then md_mdx_error_re
-        else odoc_mdx_error_re
+        if Path.has_ext ".md" path then md_mdx_error_re else odoc_mdx_error_re
       in
       let line_of_offset off =
         let count = ref 1 in

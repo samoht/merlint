@@ -4,7 +4,7 @@ type payload = { dir : string }
 
 let dune_file ctx (dir : Interop.oracle_dir) =
   try
-    Context.file_content ctx Context.Path.(dir.path / "dune")
+    Context.file_content ctx Path.(dir.path / "dune")
     |> Dune.File.of_string |> Result.to_option
   with File_view.Analysis_error _ -> None
 
@@ -24,9 +24,7 @@ let check (ctx : Context.project) =
   List.filter_map
     (fun (d : Interop.oracle_dir) ->
       if d.has_traces && d.has_dune then
-        let traces =
-          Context.Path.(d.path / "traces") |> Context.string_of_path
-        in
+        let traces = Path.(d.path / "traces") |> Context.string_of_path in
         let has_csv =
           try
             Fs.readdir traces |> Array.to_list

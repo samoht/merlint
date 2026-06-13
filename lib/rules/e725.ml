@@ -40,7 +40,7 @@ let issue_for_suite file expected suite =
 
 let check_file ctx filename =
   let fp = Context.fpath_of_path filename in
-  if not (Context.Path.has_ext ".ml" filename && File.is_in_fuzz_dir fp) then []
+  if not (Path.has_ext ".ml" filename && File.is_in_fuzz_dir fp) then []
   else
     match expected_suite fp with
     | None -> []

@@ -10,8 +10,7 @@ let is_valid basename =
   String.starts_with ~prefix:"fuzz_" basename || String.equal basename "fuzz"
 
 let is_ml_fuzz_file file =
-  Context.Path.has_ext ".ml" file
-  && File.is_in_fuzz_dir (Context.fpath_of_path file)
+  Path.has_ext ".ml" file && File.is_in_fuzz_dir (Context.fpath_of_path file)
 
 (** Collect all stanzas with files in fuzz/ directories from both test and
     executable stanzas. *)
@@ -26,10 +25,10 @@ let fuzz_stanzas ctx =
       match fuzz_files with [] -> None | _ -> Some (stanza.name, fuzz_files))
 
 let naming_issue stanza_name file =
-  let basename = Context.Path.(file |> rem_ext |> basename) in
+  let basename = Path.(file |> rem_ext |> basename) in
   if is_valid basename then None
   else
-    let dir = Context.Path.parent file in
+    let dir = Path.parent file in
     let loc =
       Location.v
         ~file:(Context.string_of_path file)
@@ -38,7 +37,7 @@ let naming_issue stanza_name file =
     Some
       (Issue.v ~loc
          {
-           directory = Context.Path.dir_display_string dir;
+           directory = Path.dir_display dir;
            kind = `naming (stanza_name, Context.string_of_path file);
          })
 
@@ -49,22 +48,20 @@ let naming_issues stanzas =
     stanzas
 
 let dir_files all_files dir =
-  List.filter
-    (fun f -> Context.Path.compare (Context.Path.parent f) dir = 0)
-    all_files
+  List.filter (fun f -> Path.compare (Path.parent f) dir = 0) all_files
 
 let has_module name files =
-  List.exists (fun f -> Context.Path.(f |> rem_ext |> basename) = name) files
+  List.exists (fun f -> Path.(f |> rem_ext |> basename) = name) files
 
 let has_fuzz_modules files =
   List.exists
     (fun f ->
-      String.starts_with ~prefix:"fuzz_" Context.Path.(f |> rem_ext |> basename))
+      String.starts_with ~prefix:"fuzz_" Path.(f |> rem_ext |> basename))
     files
 
 let dune_has_gen_corpus ctx dir =
   try
-    let content = Context.file_content ctx Context.Path.(dir / "dune") in
+    let content = Context.file_content ctx Path.(dir / "dune") in
     match Dune.File.of_string content with
     | Error _ -> false
     | Ok dune ->
@@ -77,10 +74,10 @@ let dune_has_gen_corpus ctx dir =
 let dir_issue dir kind =
   let loc =
     Location.v
-      ~file:(Context.string_of_path Context.Path.(dir / "dune"))
+      ~file:(Context.string_of_path Path.(dir / "dune"))
       ~start_line:1 ~start_col:0 ~end_line:1 ~end_col:0
   in
-  Issue.v ~loc { directory = Context.Path.dir_display_string dir; kind }
+  Issue.v ~loc { directory = Path.dir_display dir; kind }
 
 let missing_issues_for_dir ctx all_files dir =
   let files = dir_files all_files dir in
@@ -98,9 +95,8 @@ let missing_issues_for_dir ctx all_files dir =
 
 let missing_issues ctx stanzas =
   let all_files = List.concat_map snd stanzas in
-  all_files
-  |> List.map Context.Path.parent
-  |> List.sort_uniq Context.Path.compare
+  all_files |> List.map Path.parent
+  |> List.sort_uniq Path.compare
   |> List.concat_map (missing_issues_for_dir ctx all_files)
 
 let check (ctx : Context.project) =

@@ -68,9 +68,7 @@ let check (ctx : Context.project) =
   let dirs = Interop.oracle_dirs_for ctx in
   List.filter_map
     (fun (d : Interop.oracle_dir) ->
-      let scripts =
-        Context.Path.(d.path / "scripts") |> Context.string_of_path
-      in
+      let scripts = Path.(d.path / "scripts") |> Context.string_of_path in
       if not (Fs.file_exists scripts) then None
       else
         let files =
@@ -89,7 +87,7 @@ let check (ctx : Context.project) =
         let inlined =
           List.filter_map
             (fun f ->
-              let path = Context.Path.(d.path / "scripts" / f) in
+              let path = Path.(d.path / "scripts" / f) in
               if scan_file ctx path then Some f else None)
             generator_files
         in

@@ -10,7 +10,7 @@ module String_set = Set.Make (String)
 module Path_set = Set.Make (struct
   type t = Context.path
 
-  let compare = Context.Path.compare
+  let compare = Path.compare
 end)
 
 type env = {
@@ -46,15 +46,13 @@ let should_skip_module ~executable_modules ~test_modules ml_file =
   let is_companion = File.is_unit_companion_module module_name in
   if is_exe then
     Log.debug (fun m ->
-        m "File %a is executable (module %s)" Context.Path.pp ml_file
+        m "File %a is executable (module %s)" Path.pp ml_file
           module_name_capitalized);
   if is_test then
     Log.debug (fun m ->
-        m "File %a is test module (module %s)" Context.Path.pp ml_file
-          module_name);
+        m "File %a is test module (module %s)" Path.pp ml_file module_name);
   if is_companion then
-    Log.debug (fun m ->
-        m "File %a is unit companion module" Context.Path.pp ml_file);
+    Log.debug (fun m -> m "File %a is unit companion module" Path.pp ml_file);
   is_exe || is_test || is_companion
 
 let is_library_file index file =
@@ -68,7 +66,7 @@ let is_virtual_impl_file index file =
   |> List.exists Project_index.Library.is_virtual_implementation
 
 let missing_mli_issue index ml_file =
-  let mli_path = Context.Path.(ml_file |> rem_ext |> add_ext ".mli") in
+  let mli_path = Path.(ml_file |> rem_ext |> add_ext ".mli") in
   (* Classify with the index rather than stat-ing the filesystem: [Unindexed]
      means the .mli is on disk but escaped indexing (e.g. a file-scoped scan
      under --no-build), so only [Absent] is a genuinely missing interface. *)
@@ -87,10 +85,10 @@ let missing_mli_issue index ml_file =
 
 let check_file ~library_files ~virtual_impl_files ~index ~executable_modules
     ~test_modules ml_file =
-  if not (Context.Path.has_ext ".ml" ml_file) then None
+  if not (Path.has_ext ".ml" ml_file) then None
   else if not (Path_set.mem ml_file library_files) then None
   else
-    let module_name = Context.Path.(ml_file |> rem_ext |> basename) in
+    let module_name = Path.(ml_file |> rem_ext |> basename) in
     let is_companion = File.is_unit_companion_module module_name in
     if is_companion then None
     else if should_skip_module ~executable_modules ~test_modules ml_file then
@@ -105,7 +103,7 @@ let check_file ~library_files ~virtual_impl_files ~index ~executable_modules
 
 let enumerate ctx =
   let files = Context.analyze_set ctx in
-  let ml_files = List.filter (Context.Path.has_ext ".ml") files in
+  let ml_files = List.filter (Path.has_ext ".ml") files in
   let executable_modules = Context.executable_modules ctx in
   let test_modules = Context.test_modules ctx in
   let index = Context.index ctx in

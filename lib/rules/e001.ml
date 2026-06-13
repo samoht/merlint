@@ -17,7 +17,7 @@ let check (ctx : Context.file) =
 
   Log.debug (fun m -> m "E001: Found %d functions" (List.length functions));
 
-  if File.is_test_file_path (Context.project_relative_file ctx) then []
+  if File.is_test (Context.project_relative_file ctx) then []
   else
     List.filter_map
       (fun ({ name; loc; complexity; complexity_breakdown; _ } :

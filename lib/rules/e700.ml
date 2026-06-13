@@ -25,7 +25,7 @@ let check ctx =
     (fun filename ->
       let fp = Context.fpath_of_path filename in
       if
-        Context.Path.has_ext ".ml" filename
+        Path.has_ext ".ml" filename
         && File.is_in_fuzz_dir fp
         && Fpath.(fp |> rem_ext |> basename) = "fuzz"
       then

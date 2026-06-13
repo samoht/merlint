@@ -69,7 +69,7 @@ let scan_file ctx path =
   with
   | None -> []
   | Some content ->
-      if Context.Path.has_ext ".mli" path then scan_mli path content
+      if Path.has_ext ".mli" path then scan_mli path content
       else scan_markdown path content
 
 let doc_path path =

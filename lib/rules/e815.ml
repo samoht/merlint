@@ -23,8 +23,8 @@ let check (ctx : Context.project) =
   Interop.oracle_dirs_for ctx
   |> List.concat_map (fun (d : Interop.oracle_dir) ->
       [
-        ("dune", Context.Path.(d.path / "dune"));
-        ("traces/dune", Context.Path.(d.path / "traces" / "dune"));
+        ("dune", Path.(d.path / "dune"));
+        ("traces/dune", Path.(d.path / "traces" / "dune"));
       ]
       |> List.concat_map (fun (rel, path) ->
           match parse ctx path with

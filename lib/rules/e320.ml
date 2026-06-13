@@ -30,7 +30,7 @@ let dedupe_issue ~seen ~max_underscores ~allowed ref_ =
     issue_of_ref ~max_underscores ~allowed ref_)
 
 let check (ctx : Context.file) =
-  if File.is_test_file_path (Context.project_relative_file ctx) then []
+  if File.is_test (Context.project_relative_file ctx) then []
   else if
     match ctx.project_index with
     | Some idx ->

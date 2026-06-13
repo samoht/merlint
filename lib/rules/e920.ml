@@ -27,7 +27,7 @@ let has_ocaml_code ctx path =
   match content ctx path with
   | None -> false
   | Some content ->
-      if Context.Path.has_ext ".md" path then Re.execp md_ocaml_re content
+      if Path.has_ext ".md" path then Re.execp md_ocaml_re content
       else Re.execp odoc_block_re content
 
 let issue_for ctx (doc : Project_index.doc_file) =

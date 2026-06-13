@@ -28,10 +28,8 @@ let check (ctx : Context.project) =
           List.filter_map
             (fun file ->
               let file = Context.resolve ctx file in
-              let dir = Context.Path.parent file in
-              let rel_dir =
-                Context.project_relative_path ctx dir |> Fpath.to_string
-              in
+              let dir = Path.parent file in
+              let rel_dir = Context.project_relative_path ctx dir in
               (* Skip if this is already a test directory *)
               if is_test_directory rel_dir then None else Some (dir, name))
             (Project_index.Library.files lib))
@@ -45,15 +43,15 @@ let check (ctx : Context.project) =
       List.filter_map
         (fun file ->
           let file = Context.resolve ctx file in
-          let test_dir = Context.Path.parent file in
+          let test_dir = Path.parent file in
           (* Find any library in the same directory *)
           match
             List.find_opt
-              (fun (lib_dir, _) -> Context.Path.compare lib_dir test_dir = 0)
+              (fun (lib_dir, _) -> Path.compare lib_dir test_dir = 0)
               lib_dirs
           with
           | Some (dir, lib_name) ->
-              let directory = Context.Path.dir_display_string dir in
+              let directory = Path.dir_display dir in
               let loc =
                 Location.v
                   ~file:(Context.string_of_path file)

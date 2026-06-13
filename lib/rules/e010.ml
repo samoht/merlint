@@ -19,7 +19,7 @@ let check (ctx : Context.file) =
               ~end_line:1 ~end_col:0)
   in
 
-  if File.is_test_file_path (Context.project_relative_file ctx) then []
+  if File.is_test (Context.project_relative_file ctx) then []
   else
     List.filter_map
       (fun ({ name; nesting = depth; is_function; _ } : Function_metrics.value)

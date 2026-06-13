@@ -10,9 +10,9 @@ let is_in_private_library ctx index filename =
 let check_fuzz_mli_file ctx index filename view =
   let fp = Context.fpath_of_path filename in
   let filename_s = Context.string_of_path filename in
-  let basename = Context.Path.basename filename in
+  let basename = Path.basename filename in
   if
-    Context.Path.has_ext ".mli" filename
+    Path.has_ext ".mli" filename
     && String.starts_with ~prefix:"fuzz_" basename
     && File.is_in_fuzz_dir fp
     && (not (is_in_private_library ctx index filename))
@@ -40,15 +40,15 @@ let check_missing_fuzz_mli ctx index files =
     (fun ml_file ->
       let fp = Context.fpath_of_path ml_file in
       let ml_file_s = Context.string_of_path ml_file in
-      if Context.Path.has_ext ".ml" ml_file then
-        let basename = Context.Path.basename ml_file in
+      if Path.has_ext ".ml" ml_file then
+        let basename = Path.basename ml_file in
         if
           String.starts_with ~prefix:"fuzz_" basename
           && File.is_in_fuzz_dir fp
           && (not (is_in_private_library ctx index ml_file))
           && not (File.is_in_examples ml_file_s)
         then
-          let mli_path = Context.Path.(ml_file |> rem_ext |> add_ext ".mli") in
+          let mli_path = Path.(ml_file |> rem_ext |> add_ext ".mli") in
           if
             Build.source_status ~root ~index (Context.fpath_of_path mli_path)
             = Build.Missing
@@ -75,7 +75,7 @@ let check ctx =
   let content_issues =
     List.concat_map
       (fun filename ->
-        if Context.Path.has_ext ".mli" filename then
+        if Path.has_ext ".mli" filename then
           try
             let view = Context.file_view ctx filename in
             check_fuzz_mli_file ctx index filename view

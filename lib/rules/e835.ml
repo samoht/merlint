@@ -12,7 +12,7 @@ let first_bad_script scripts =
   List.find_opt (script_has_break_system_packages scripts) entries
 
 let issue_for_oracle (d : Interop.oracle_dir) =
-  let scripts = Context.Path.(d.path / "scripts") |> Context.string_of_path in
+  let scripts = Path.(d.path / "scripts") |> Context.string_of_path in
   if not (Fs.file_exists scripts) then None
   else
     match first_bad_script scripts with
