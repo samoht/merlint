@@ -67,14 +67,19 @@ let check_runtime_use ~package ~depends_set ~own used_lib =
           source_lib = "a public executable";
         }
 
-let check_bin_use ~package ~depends_set ~build_set bin =
+(* A [%{bin:X}] reference is a tool dependency: the binary is run when a rule or
+   cram test fires (build or test time), not linked at runtime. So it is
+   satisfied by the providing package appearing in any dependency scope --
+   runtime [depends:], build, or [{with-test}] -- not only runtime. *)
+let check_bin_use ~package ~depends_set ~build_set ~test_set bin =
   match Project_index.package_of_binary (P.index package) bin with
   | None -> None
   | Some used_pkg
     when used_pkg = P.name package
          || Dep_deps.String_set.mem used_pkg Dep_deps.build_tools
          || Dep_deps.String_set.mem used_pkg depends_set
-         || Dep_deps.String_set.mem used_pkg build_set ->
+         || Dep_deps.String_set.mem used_pkg build_set
+         || Dep_deps.String_set.mem used_pkg test_set ->
       None
   | Some used_pkg ->
       Some
@@ -134,6 +139,7 @@ let install_reachable_libs package =
 let check_package package =
   let depends = P.depends package |> Dep_deps.String_set.of_list in
   let build_depends = P.build_depends package |> Dep_deps.String_set.of_list in
+  let test_depends = P.test_depends package |> Dep_deps.String_set.of_list in
   let own = Dep_deps.own_libs package in
   let runtime_libs = install_reachable_libs package in
   let lib_findings =
@@ -158,7 +164,8 @@ let check_package package =
   let bin_findings =
     P.bin_uses package
     |> List.filter_map
-         (check_bin_use ~package ~depends_set:depends ~build_set:build_depends)
+         (check_bin_use ~package ~depends_set:depends ~build_set:build_depends
+            ~test_set:test_depends)
   in
   lib_findings @ executable_findings @ bin_findings
 
