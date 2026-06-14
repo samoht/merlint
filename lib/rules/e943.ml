@@ -83,6 +83,18 @@ let has_public_artifact package =
      |> List.exists (fun (stanza : Project_index.source_stanza) ->
          stanza.public_names <> [])
 
+(* Packages providing a binary referenced via [%{bin:X}] in this package. Such
+   tools are build/test scope, never runtime-linked, so they are counted as
+   test-scope reaches: a plain runtime [depends:] entry whose only use is such a
+   tool is then flagged misclassified (suggest [{with-test}]) rather than unused
+   (remove). E941 accepts the same tool in any scope. *)
+let bin_use_packages package =
+  P.bin_uses package
+  |> List.filter_map (Project_index.package_of_binary (P.index package))
+  |> List.fold_left
+       (fun acc p -> Dep_deps.String_set.add p acc)
+       Dep_deps.String_set.empty
+
 let check_package package =
   let pkg_name = P.name package in
   let has_public_artifact = has_public_artifact package in
@@ -90,7 +102,11 @@ let check_package package =
   let test_uses = P.test_library_uses package in
   let dev_uses = P.dev_library_uses package in
   let runtime_pkgs = resolve_pkgs package runtime_uses in
-  let test_pkgs = resolve_pkgs package test_uses in
+  let test_pkgs =
+    Dep_deps.String_set.union
+      (resolve_pkgs package test_uses)
+      (bin_use_packages package)
+  in
   let dev_pkgs = resolve_pkgs package dev_uses in
   let runtime_depends = P.depends package in
   List.filter_map
