@@ -35,9 +35,10 @@ let test_path_under_relative_root () =
        (Merlint.Context.path "bottler/bin/cmd_build.ml"))
     (Merlint.Context.string_of_path p);
   Alcotest.check_raises "escaping path rejected"
-    (Invalid_argument
-       (Fmt.str "Path: %S escapes %S" "../escape.ml"
-          (Merlint.Context.string_of_path root)))
+    (Fmt.kstr
+       (fun msg -> Invalid_argument msg)
+       "Path: %S escapes %S" "../escape.ml"
+       (Merlint.Context.string_of_path root))
     (fun () -> ignore (Merlint.Context.path_under ~root "../escape.ml"))
 
 let test_analysis_error () =

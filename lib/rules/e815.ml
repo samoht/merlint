@@ -11,7 +11,7 @@ let parse ctx path =
    exist during a normal `dune test`: otherwise its (mode promote) target is
    rebuilt whenever the test depends on (source_tree traces), i.e. `dune test`
    (and CI) would run the external oracle. Regen is REGEN=1 dune build
-   @regen-traces. *)
+   @traces. *)
 let runs_generate_sh rule =
   List.exists
     (List.exists (fun arg -> Filename.basename arg = "generate.sh"))

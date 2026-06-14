@@ -15,7 +15,7 @@ Build bad fixture project:
   ✗ Interop Testing (1 total issues)
     [E800] Missing generate.sh (1 issue)
     Every interop test must have scripts/generate.sh as the single entry point for
-    trace regeneration via `dune build @regen-traces`.
+    trace regeneration via `dune build @traces`.
     - bad/foo/test/interop/oracle/scripts/generate.sh:1:0: Interop test bad/foo/test/interop/oracle/scripts/ is missing generate.sh
   ✓ Code Generation (0 total issues)
   
