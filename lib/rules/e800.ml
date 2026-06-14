@@ -25,5 +25,5 @@ let rule =
   Rule.v ~code:"E800" ~title:"Missing generate.sh" ~category:Interop_testing
     ~hint:
       "Every interop test must have scripts/generate.sh as the single entry \
-       point for trace regeneration via `dune build @regen-traces`."
+       point for trace regeneration via `dune build @traces`."
     ~examples:[] ~pp (Project check)

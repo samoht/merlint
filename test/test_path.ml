@@ -41,7 +41,9 @@ let test_under () =
   check "relative resolves under root" (abs "a/b/c.ml")
     (Merlint.Path.to_string (Merlint.Path.under ~root "c.ml"));
   Alcotest.check_raises "escaping root raises"
-    (Invalid_argument (Fmt.str "Path: %S escapes %S" "../x.ml" (abs "a/b")))
+    (Fmt.kstr
+       (fun msg -> Invalid_argument msg)
+       "Path: %S escapes %S" "../x.ml" (abs "a/b"))
     (fun () -> ignore (Merlint.Path.under ~root "../x.ml"))
 
 let tests =
