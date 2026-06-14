@@ -18,12 +18,22 @@
   re
   fmt.tty))
 
-; TODO: Re-enable merlint self-check after fixing all issues
-; (rule
-;  (alias runtest)
-;  (deps
-;   %{bin:merlint}
-;   (source_tree ../lib)
-;   (source_tree ../bin))
-;  (action
-;   (run merlint ../lib ../bin)))
+; Merlint lints its own sources: the linter must pass the rules it enforces.
+; Run from the package root (chdir ..) so merlint resolves the real project root
+; -- the one carrying dune-project, .ocamlformat and the dune-warnings env stanza
+; -- and the project-structure rules (E500, E940) see them instead of the test
+; sandbox. These root files are listed as deps so they are materialised there.
+
+(rule
+ (alias runtest)
+ (deps
+  %{bin:merlint}
+  (source_tree ../lib)
+  (source_tree ../bin)
+  ../.ocamlformat
+  ../dune
+  ../dune-project)
+ (action
+  (chdir
+   ..
+   (run merlint lib bin))))
