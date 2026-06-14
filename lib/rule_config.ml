@@ -106,6 +106,21 @@ let should_exclude exclusions ~rule ~file =
       pattern_matches && rule_matches)
     exclusions
 
+(* [true] when [file] is wholesale-excluded: matched by a rule whose exclude
+   list is the catch-all ["*"] (the vendored-tree pattern, e.g. [files =
+   "vendor/**/*.ml" exclude = ["*"]]). Such a rule says "do not lint these files
+   at all", so their skips are not suppressed findings and stay out of the
+   suppression stats. *)
+let is_wildcard_excluded exclusions ~file =
+  List.exists
+    (fun pattern ->
+      List.mem "*" pattern.rules
+      &&
+      let rel = config_relative_file ~config_dir:pattern.config_dir file in
+      matches_pattern pattern.pattern file
+      || matches_pattern pattern.pattern rel)
+    exclusions
+
 let pp ppf exclusions =
   let pp_pattern ppf p =
     Fmt.pf ppf "%s = %a" p.pattern

@@ -121,6 +121,22 @@ let test_equal () =
     "different exclusions are not equal" false
     (Rule_config.equal exclusions1 exclusions3)
 
+(* A catch-all ["*"] exclusion (the vendored-tree pattern) is reported as
+   wildcard-excluded so the engine keeps it out of the suppression stats; a
+   specific-rule exclusion is not. *)
+let test_is_wildcard_excluded () =
+  let vendor = add_pattern "vendor/**/*.ml" [ "*" ] Rule_config.empty in
+  Alcotest.(check bool)
+    "vendored file is wildcard-excluded" true
+    (Rule_config.is_wildcard_excluded vendor ~file:"vendor/lib/x.ml");
+  Alcotest.(check bool)
+    "non-vendored file is not wildcard-excluded" false
+    (Rule_config.is_wildcard_excluded vendor ~file:"lib/x.ml");
+  let specific = add_pattern "lib/legacy.ml" [ "E001" ] Rule_config.empty in
+  Alcotest.(check bool)
+    "specific-rule exclusion is not wildcard" false
+    (Rule_config.is_wildcard_excluded specific ~file:"lib/legacy.ml")
+
 let suite =
   ( "rule_config",
     [
@@ -131,6 +147,7 @@ let suite =
       ("exact match", `Quick, test_exact_match);
       ("prefix patterns", `Quick, test_prefix_patterns);
       ("config-dir relative patterns", `Quick, test_config_dir_relative_patterns);
+      ("is_wildcard_excluded", `Quick, test_is_wildcard_excluded);
       ("pp", `Quick, test_pp);
       ("equal", `Quick, test_equal);
     ] )
