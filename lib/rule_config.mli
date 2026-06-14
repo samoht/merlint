@@ -30,6 +30,13 @@ val should_exclude : t -> rule:string -> file:string -> bool
 (** [should_exclude exclusions ~rule ~file] returns true if the rule should be
     excluded for the given file path. *)
 
+val is_wildcard_excluded : t -> file:string -> bool
+(** [is_wildcard_excluded exclusions ~file] is [true] when [file] is matched by
+    a rule whose exclude list is the catch-all [["*"]] -- the vendored-tree
+    pattern ([files = "vendor/**/*.ml" exclude = ["*"]]). Such a rule means "do
+    not lint these files at all", so their skips are not suppressed findings and
+    are kept out of the suppression statistics. *)
+
 val matches_pattern : string -> string -> bool
 (** [matches_pattern pattern file] is [true] when [file] matches the glob
     [pattern]. [*] matches within a path segment, [**] across segments. *)

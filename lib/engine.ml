@@ -171,6 +171,15 @@ let config_lookup () =
         Hashtbl.add cache dir c;
         c
 
+(* Decide a finding's fate against the file's exclusions: [skip] drops it, and
+   [count] (only when skipped) marks it a suppressed finding for the stats. A
+   wholesale ["*"] (vendored-tree) exclusion is a "do not lint" directive, so it
+   skips but does not count. *)
+let exclusion_decision exclusions ~code ~file =
+  let skip = Rule_config.should_exclude exclusions ~rule:code ~file in
+  let count = skip && not (Rule_config.is_wildcard_excluded exclusions ~file) in
+  (skip, count)
+
 (* Per-rule excluded-accumulator pattern: each rule produces its own
    excluded list, and the caller flattens at the end. Avoids a shared ref
    when project rules run in parallel domains. *)
@@ -184,10 +193,8 @@ let split_excluded ~config_for ~code issues =
         | Some loc ->
             let file = loc.Location.file in
             let cfg : Config.t = config_for file in
-            let skip =
-              Rule_config.should_exclude cfg.exclusions ~rule:code ~file
-            in
-            if skip then excluded := { rule = code; file } :: !excluded;
+            let skip, count = exclusion_decision cfg.exclusions ~code ~file in
+            if count then excluded := { rule = code; file } :: !excluded;
             not skip)
       issues
   in
@@ -301,11 +308,10 @@ let analyze_single_file ?profiling ~project_ctx ~config_for ~project_root:_
       List.filter
         (fun r ->
           let code = Rule.Run.code r in
-          let skip =
-            Rule_config.should_exclude config.exclusions ~rule:code
-              ~file:filename_s
+          let skip, count =
+            exclusion_decision config.exclusions ~code ~file:filename_s
           in
-          if skip then
+          if count then
             excluded_acc := { rule = code; file = filename_s } :: !excluded_acc;
           not skip)
         all_results
