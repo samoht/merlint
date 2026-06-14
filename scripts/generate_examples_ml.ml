@@ -91,47 +91,68 @@ let sanitize_module_name dir =
       else '_')
     name
 
-let print_file_content indent filename full_path =
+(* Emit the implementation (examples.ml) or the matching interface
+   (examples.mli). Both are generated from the same fixture scan in the same
+   order, so the interface always matches the structure. *)
+type kind = Ml | Mli
+
+let kind () = match Sys.argv with [| _; "mli" |] -> Mli | _ -> Ml
+
+let print_file_content kind indent filename full_path =
   match read_file full_path with
-  | Some content ->
+  | Some content -> (
       let var_name = identifier_of_filename filename in
-      Fmt.pr "%s  let %s = {|%s|}\n" indent var_name content
+      match kind with
+      | Ml -> Fmt.pr "%s  let %s = {|%s|}\n" indent var_name content
+      | Mli ->
+          (* E405 wants every public value documented; E410 wants the doc to
+             open with [name] and close with a period. *)
+          Fmt.pr "%s  val %s : string\n" indent var_name;
+          Fmt.pr "%s  (** [%s] is the source of the [%s] fixture. *)\n\n" indent
+            var_name filename)
   | None -> ()
 
-let process_directory (dir, dir_files) =
+let print_module_open kind indent module_name =
+  match kind with
+  | Ml -> Fmt.pr "%smodule %s = struct\n" indent module_name
+  | Mli -> Fmt.pr "%smodule %s : sig\n" indent module_name
+
+let process_directory kind (dir, dir_files) =
   if dir = "." then
     (* Top-level files *)
     List.iter
-      (fun (filename, full_path) -> print_file_content "" filename full_path)
+      (fun (filename, full_path) ->
+        print_file_content kind "" filename full_path)
       (List.rev dir_files)
   else
     (* Subdirectory - create nested module *)
     let module_name = sanitize_module_name dir in
-    Fmt.pr "  module %s = struct\n" module_name;
+    print_module_open kind "  " module_name;
     List.iter
-      (fun (filename, full_path) -> print_file_content "  " filename full_path)
+      (fun (filename, full_path) ->
+        print_file_content kind "  " filename full_path)
       (List.rev dir_files);
     Fmt.pr "  end\n"
 
-let process_test_directory cram_dir dir_name =
+let process_test_directory kind cram_dir dir_name =
   let test_dir = Filename.concat cram_dir dir_name in
   match extract_error_code dir_name with
   | Some error_code ->
       let files = collect_files_recursively test_dir "" in
       if files <> [] then (
-        Fmt.pr "module %s = struct\n" error_code;
+        print_module_open kind "" error_code;
         let sorted_dirs = group_files_by_directory files in
-        List.iter process_directory sorted_dirs;
+        List.iter (process_directory kind) sorted_dirs;
         Fmt.pr "end\n\n")
   | None -> Fmt.epr "Warning: Invalid directory name %s\n" dir_name
 
-let generate () =
+let generate kind =
   let cram_dir = "test/cram" in
   let test_dirs = test_directories cram_dir in
 
   Fmt.pr "(** Auto-generated examples from test/cram/*.t/\n";
   Fmt.pr "    DO NOT EDIT - Run 'dune build @gen' to regenerate *)\n\n";
 
-  List.iter (process_test_directory cram_dir) test_dirs
+  List.iter (process_test_directory kind cram_dir) test_dirs
 
-let () = generate ()
+let () = generate (kind ())

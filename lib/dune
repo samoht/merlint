@@ -36,6 +36,18 @@
     lib/examples.ml
     (run scripts/generate_examples_ml.exe)))))
 
+(rule
+ (target examples.mli)
+ (deps
+  ../scripts/generate_examples_ml.exe
+  (source_tree ../test/cram))
+ (action
+  (chdir
+   ..
+   (with-stdout-to
+    lib/examples.mli
+    (run scripts/generate_examples_ml.exe mli)))))
+
 (alias
  (name gen)
- (deps examples.ml))
+ (deps examples.ml examples.mli))
