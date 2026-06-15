@@ -286,6 +286,10 @@ val iter_applications : t -> (Call.t -> unit) -> unit
 (** [iter_applications t f] applies [f] to every [Pexp_apply] site whose callee
     is a path identifier. *)
 
+val iter_asserts : t -> (Merlin.Location.t -> unit) -> unit
+(** [iter_asserts t f] applies [f] to the location of every [assert _]
+    expression. *)
+
 val calls_path : t -> string list -> bool
 (** [calls_path t path] is [true] when [t] contains a call to resolved [path].
 *)
