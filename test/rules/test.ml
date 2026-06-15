@@ -128,6 +128,8 @@ let () =
       Test_e950.suite;
       Test_e951.suite;
       Test_e952.suite;
+      Test_e953.suite;
+      Test_e955.suite;
       Test_dep_deps.suite;
       Test_interop.suite;
       Test_opam_tags.suite;
