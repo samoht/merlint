@@ -11,20 +11,22 @@ Bad: value.ml depends on its sibling Codec, inverting the encoding layering.
   ✓ Naming Conventions (0 total issues)
   ✓ Documentation (0 total issues)
   ✗ Project Structure (1 total issues)
-    [E945] Encoding layering (1 issue)
-    The ocaml-encodings layering is one-way codec -> value: codec.ml holds [type
-    value = Value.t]; value.ml is the base layer and must not depend on Codec.
-    Dependency order only -- a separate parser engine is fine.
-    - bad/lib/value.ml:1:0: value.ml depends on Codec, inverting the codec -> value layering. Keep value.ml the base layer and move parse entry points out of it.
+    [E945] AST/codec layering (1 issue)
+    One layering for codecs and protocols: the AST (Value for data, Message for a
+    protocol) is the base, and the typed Codec depends on it -- never the reverse.
+    An AST module that references its sibling Codec inverts the order. A protocol
+    is a codec plus a state machine, so message.ml follows the same rule.
+    Dependency order only -- which parser the codec uses is unconstrained.
+    - bad/lib/value.ml:1:0: the AST (value.ml / message.ml) depends on Codec, inverting the codec -> AST layering. The typed Codec depends on the AST, not the reverse; keep the AST a plain data type and move parse entry points out of it.
   ✓ Test Quality (0 total issues)
   ✓ Interop Testing (0 total issues)
   ✓ Code Generation (0 total issues)
   
-  ╭───────────────────┬─────────────────────────╮
-  │ Category          │ Issues                  │
-  ├───────────────────┼─────────────────────────┤
-  │ Project Structure │ 1 (1 encoding layering) │
-  ╰───────────────────┴─────────────────────────╯
+  ╭───────────────────┬──────────────────────────╮
+  │ Category          │ Issues                   │
+  ├───────────────────┼──────────────────────────┤
+  │ Project Structure │ 1 (1 ast/codec layering) │
+  ╰───────────────────┴──────────────────────────╯
   
   
   Summary: ✗ 1 total issue (applied 1 rule)

@@ -2232,16 +2232,16 @@ and replace each call site with [err_x &quot;...&quot; args] / [fail_x &quot;...
 <div class="error-card" id="E945">
     <div>
         <span class="error-code">E945</span>
-        <span class="error-title">Encoding layering</span>
+        <span class="error-title">AST/codec layering</span>
     </div>
-    <div class="error-hint"><p>The ocaml-encodings layering is one-way codec -&gt; value: codec.ml holds [type value = Value.t]; value.ml is the base layer and must not depend on Codec. Dependency order only -- a separate parser engine is fine.</p></div>
+    <div class="error-hint"><p>One layering for codecs and protocols: the AST (Value for data, Message for a protocol) is the base, and the typed Codec depends on it -- never the reverse. An AST module that references its sibling Codec inverts the order. A protocol is a codec plus a state machine, so message.ml follows the same rule. Dependency order only -- which parser the codec uses is unconstrained.</p></div>
 </div>
 <div class="error-card" id="E946">
     <div>
         <span class="error-code">E946</span>
-        <span class="error-title">Protocol layering</span>
+        <span class="error-title">Protocol state machine</span>
     </div>
-    <div class="error-hint"><p>The ocaml-protocols layering is one-way codec &lt;- message: codec.ml is the AST-free combinator base and message.ml builds its codecs from it. A codec.ml that references its sibling Message inverts that order. Mirror of E945 (encodings, value is the base). Dependency order only.</p></div>
+    <div class="error-hint"><p>A protocol package (tagged protocol) is a codec plus an I/O-free state machine. Expose that state machine as a Protocol module, or Client / Server for asymmetric protocols. Purity of the core is E930; AST/codec layering is E945.</p></div>
 </div>
 
     <a href="#top" class="back-to-top">↑ Top</a>

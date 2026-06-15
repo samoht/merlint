@@ -1,51 +1,78 @@
-(** E946: Protocol layering -- [codec.ml] must not depend on [Message].
+(** E946: Protocols expose a state machine.
 
-    The ocaml-protocols layering is one-way [codec <- message]: [codec.ml] is
-    the AST-free combinator base, and the message codecs are built from it in
-    [message.ml] ([type t] decoders that reference [Codec]). A [codec.ml] that
-    references its sibling [Message] inverts that order. This is the mirror of
-    E945 (encodings, where [value.ml] is the base): a protocol's base layer is
-    the Codec, an encoding's base layer is the Value/AST. Dependency order only;
-    a separate parser/lexer engine is fine. *)
+    A protocol package (tagged [protocol]) is a codec plus an I/O-free state
+    machine -- that state machine is the package's primary concern. It must live
+    in a named module: [Protocol], or [Client] / [Server] for asymmetric
+    protocols where who-initiates matters. A protocol package with no such
+    module is missing its defining layer (it is then only a codec, and should
+    drop the [protocol] tag, or it has hidden the state machine somewhere
+    unfindable).
 
-(* A reference to the sibling [Message] module, wrapped ([Lib__Message]) or
-   user-visible. *)
-let is_message_module m =
-  m = "Message"
-  ||
-  let suffix = "__Message" in
-  let lm = String.length m and ls = String.length suffix in
-  lm >= ls && String.sub m (lm - ls) ls = suffix
+    This checks the module is present; that it is *pure* (no eio/lwt/unix in the
+    core library) is E930, and that the AST does not depend on the codec is
+    E945. *)
 
-(* Only the protocol shape -- a [codec.ml] paired with a sibling [message.ml] --
-   is in scope; that pair is what makes Codec the AST-free base. An encoding's
-   [codec.ml] (paired with [value.ml]) legitimately depends on the AST and is
-   covered by E945 instead. *)
-let check (ctx : Context.file) =
-  let filename = Context.filename ctx in
-  let has_message_sibling () =
-    Sys.file_exists (Filename.concat (Filename.dirname filename) "message.ml")
-  in
-  if Filename.basename filename <> "codec.ml" || not (has_message_sibling ())
-  then []
-  else if
-    List.exists is_message_module
-      (File_view.referenced_module_names (Context.view ctx))
-  then [ Issue.v ~loc:(Location.in_file filename) () ]
-  else []
+module P = Project_index.Package
+module L = Project_index.Library
 
-let pp ppf () =
+(* The protocol core is I/O-free (E930); an [eio]-tagged sibling is the adapter
+   that wires the core's state machine into I/O and has none of its own, so it
+   is out of scope. *)
+let is_protocol_pkg pkg =
+  let tags = P.tags pkg in
+  List.mem "protocol" tags && not (List.mem "eio" tags)
+
+(* Source-file module basenames of a library (so it works on in-repo source
+   libraries, where the installed-metadata module list is empty). *)
+let module_basenames lib =
+  List.filter_map
+    (fun f ->
+      let b = Fpath.basename f in
+      if Filename.check_suffix b ".ml" then
+        Some (String.lowercase_ascii (Filename.chop_suffix b ".ml"))
+      else None)
+    (L.files lib)
+
+(* A protocol's state machine lives in [Protocol], or in [Client] + [Server] for
+   asymmetric protocols (the protocols skill's two shapes). *)
+let exposes_state_machine pkg =
+  List.exists
+    (fun lib ->
+      let ms = module_basenames lib in
+      let has m = List.mem m ms in
+      has "protocol" || (has "client" && has "server"))
+    (Project_index.package_libraries pkg)
+
+type payload = { package : string }
+
+let opam_path pkg =
+  match P.opam_path pkg with
+  | Some path -> Fpath.to_string (Loc.current_dir_relative path)
+  | None -> P.name pkg ^ ".opam"
+
+let check_package pkg =
+  if (not (is_protocol_pkg pkg)) || exposes_state_machine pkg then []
+  else
+    let opam = opam_path pkg in
+    [ Issue.v ~loc:(Location.in_file opam) { package = P.name pkg } ]
+
+let check (ctx : Context.project) =
+  Context.index ctx |> Project_index.source_package_list
+  |> List.concat_map check_package
+
+let pp ppf { package } =
   Fmt.pf ppf
-    "codec.ml depends on Message, inverting the codec <- message layering. \
-     Keep codec.ml the AST-free base and build the message codecs in \
-     message.ml."
+    "%s is tagged protocol but exposes no state-machine module. A protocol is \
+     a codec plus an I/O-free state machine; put it in a Protocol module (or \
+     Client / Server for asymmetric protocols)."
+    package
 
 let rule =
-  Rule.v ~code:"E946" ~title:"Protocol layering"
+  Rule.v ~code:"E946" ~title:"Protocol state machine"
     ~category:Rule.Project_structure
     ~hint:
-      "The ocaml-protocols layering is one-way codec <- message: codec.ml is \
-       the AST-free combinator base and message.ml builds its codecs from it. \
-       A codec.ml that references its sibling Message inverts that order. \
-       Mirror of E945 (encodings, value is the base). Dependency order only."
-    ~examples:[] ~pp (File check)
+      "A protocol package (tagged protocol) is a codec plus an I/O-free state \
+       machine. Expose that state machine as a Protocol module, or Client / \
+       Server for asymmetric protocols. Purity of the core is E930; AST/codec \
+       layering is E945."
+    ~examples:[] ~pp (Project check)
