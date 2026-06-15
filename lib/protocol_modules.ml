@@ -3,7 +3,13 @@
     A protocol's state machine lives in a module named from a closed vocabulary:
     [State] (symmetric, one role) or a role name (asymmetric). The same
     vocabulary is documented in the ocaml-protocols skill's "role vocabulary"
-    section; the two are kept in sync. *)
+    section; the two are kept in sync.
+
+    A package whose machines do not use this vocabulary lists their module
+    basenames in [allowed_states] in its [merlint.toml]. That list does not
+    extend the vocabulary -- it {e replaces} it: when set, the package's state
+    machines are exactly the declared modules, and [State] / [Client] / [Server]
+    / [Sender] / [Receiver] / ... are no longer recognised. *)
 
 module P = Project_index.Package
 
@@ -31,16 +37,23 @@ let is_state_machine_name b =
 
 (* A package whose state machines do not use the default role vocabulary
    declares their module basenames in [allowed_states] in its [merlint.toml].
-   Those are recognised as state machines in addition to the vocabulary. *)
+   When set, that list replaces the default vocabulary rather than extending it
+   (see [is_state_machine]). *)
 let declared_states pkg =
   match P.source_dir pkg with
   | Some dir ->
       List.map normalize (Config.load (Fpath.to_string dir)).allowed_states
   | None -> []
 
+(* [declared] is the package's [allowed_states]. When non-empty it is the
+   authoritative list: the state machines are exactly those modules, and the
+   default [state]/role vocabulary no longer applies. When empty the default
+   vocabulary is used. *)
 let is_state_machine ~declared b =
   let b = normalize b in
-  b = "state" || List.mem b roles || List.mem b declared
+  match declared with
+  | [] -> b = "state" || List.mem b roles
+  | _ :: _ -> List.mem b declared
 
 (* The protocol core is I/O-free (E930); an [eio]-tagged sibling is the adapter
    that wires the core's state machine into I/O, so it is out of scope. *)
@@ -59,9 +72,9 @@ let module_basenames pkg =
 let exposes_state_machine pkg =
   let bs = module_basenames pkg in
   let has m = List.mem m bs in
-  has "state"
-  || List.exists (fun (a, b) -> has a && has b) role_pairs
-  || List.exists has (declared_states pkg)
+  match declared_states pkg with
+  | [] -> has "state" || List.exists (fun (a, b) -> has a && has b) role_pairs
+  | declared -> List.exists has declared
 
 type machine_module = {
   package : string;

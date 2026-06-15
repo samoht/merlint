@@ -47,6 +47,7 @@ let content =
             {|7. **NEVER USE Obj.magic**: The `Obj` module is not part of the OCaml language and breaks type safety. There is always a better, type-safe solution.|};
           Rule "E100";
           Rule "E101";
+          Rule "E106";
         ] );
     Section
       ( "Dependencies and Tooling",

@@ -72,6 +72,61 @@ let of_string s = int_of_string_opt s
 ```
 
 
+### [E106] Polymorphic comparison
+
+OCaml's structural (=), (<>), (<), (>), (<=), (>=), compare, min, max and Hashtbl.hash compare values by walking their runtime representation. On a non-scalar type this is unsafe: it ignores abstraction boundaries (comparing the concrete representation behind an abstract type), raises Invalid_argument at runtime when a value contains a function, and gives wrong answers for types with a custom notion of equality. Call the type's own equal, compare or hash - every type module should expose them - and have a genuinely generic function take an ~equal or ~compare parameter. Comparing scalars (int, char, string, bytes, float, bool, unit, the fixed-width int types), transparent containers (list, array, option) and tuples of those is fine, and so is comparing against a nullary constructor ([], None, an enum tag), which is just a tag check.
+
+**Examples:**
+
+**Bad:**
+```ocaml
+type color = Red | Green | Blue
+type point = { x : int; y : int }
+
+(* Structural (=) comparing two variant values (not a tag check) *)
+let same_color (a : color) b = a = b
+
+(* compare on a variant type *)
+let ordered (a : color) b = compare a b
+
+(* (=) on a record *)
+let same_point (a : point) b = a = b
+
+(* (=) on a function: this also raises Invalid_argument at runtime *)
+let same_fn (a : int -> int) b = a = b
+
+(* Hashtbl.hash on a variant type *)
+let key (c : color) = Hashtbl.hash c
+
+```
+
+**Good:**
+```ocaml
+(* Comparing scalars with the polymorphic operators is fine *)
+let same_int (a : int) b = a = b
+let same_string s = s = "hello"
+let bigger (a : float) b = a > b
+
+(* Transparent containers and tuples of scalars are fine too *)
+let same_pair (a : int * int) b = a = b
+let same_path (a : string list) b = a = b
+let has_afl o = o = Some "afl"
+
+(* Comparing against a nullary constructor is a tag check, also fine *)
+type color = Red | Green | Blue
+
+let is_red c = c = Red
+let nonempty l = l <> []
+
+(* On a non-scalar, use the type's own equality *)
+let equal_color a b =
+  match (a, b) with
+  | Red, Red | Green, Green | Blue, Blue -> true
+  | (Red | Green | Blue), _ -> false
+
+```
+
+
 ## Dependencies and Tooling
 
 **Build System**: The project is built exclusively with `dune`.

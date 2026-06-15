@@ -17,13 +17,14 @@ type t = {
           When non-empty, E915 rejects any opam tag not in this list (plus the
           [org:*] namespace prefix which is always allowed). *)
   allowed_states : string list;
-      (** Extra state-machine module basenames for a protocol package whose
-          state machines do not use the default role vocabulary, parsed from
-          [allowed_states] in [merlint.toml]. The protocol rules (E946-E949)
-          treat these modules as state machines in addition to [State] and the
-          role names. A package with several deliberate machines (e.g. a CFDP
-          Class-1/Class-2 sender and receiver) splits them into one module per
-          machine and declares those module names here. *)
+      (** State-machine module basenames for a protocol package whose machines
+          do not use the default role vocabulary, parsed from [allowed_states]
+          in [merlint.toml]. When set, this list {e replaces} the default
+          vocabulary for the protocol rules (E946-E949): the package's state
+          machines are exactly these modules, and [State] and the role names are
+          no longer recognised. A package with several deliberate machines (e.g.
+          a CFDP Class-1/Class-2 sender and receiver) splits them into one
+          module per machine and declares those module names here. *)
   disallowed_modules : string list;
       (** Module paths whose use is banned in matching files, parsed from
           [disallowed_modules] in [merlint.toml] (e.g.

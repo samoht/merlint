@@ -316,36 +316,14 @@ let push_application calls expr fn args =
    shape). [loc] is the whole match expression. *)
 type message_match = { type_path : Merlin.Refs.name; loc : Location.t }
 
-(* The result position of [expr] is a CLEAR ACCEPT: an [Ok _] constructor, a
-   tuple, a record, a bare identifier/variable (returns a state value), or
-   [()]. Recurse through [let .. in], [if .. then .. else ..] (both branches
-   must accept), [match .. with ..] (all arms must accept), and sequences
-   (classify the last expression) to reach the result position(s). Any
-   function application, [raise]/[failwith], [assert], or an [Error _] arm is
-   NOT a clear accept (a value-level rejection is the correct pattern). *)
-let rec is_clear_accept (expr : Typedtree.expression) =
-  match expr.exp_desc with
-  | Texp_construct (lid, _, _) -> (
-      match (name_of_longident lid.txt).base with
-      | "Ok" | "()" -> true
-      | _ -> false)
-  | Texp_tuple _ | Texp_record _ -> true
-  | Texp_ident _ -> true
-  | Texp_let (_, _, body) -> is_clear_accept body
-  | Texp_open (_, body) -> is_clear_accept body
-  | Texp_sequence (_, e2) -> is_clear_accept e2
-  | Texp_ifthenelse (_, a, Some b) -> is_clear_accept a && is_clear_accept b
-  | Texp_ifthenelse (_, _, None) -> false
-  | Texp_match (_, computation_cases, value_cases, _) ->
-      let arm_accepts (case : _ Typedtree.case) = is_clear_accept case.c_rhs in
-      (computation_cases <> [] || value_cases <> [])
-      && List.for_all arm_accepts computation_cases
-      && List.for_all arm_accepts value_cases
-  | _ -> false
-
 (* [true] when [pat] is a catch-all wildcard arm: [_] or a plain variable. *)
-let is_wildcard_pattern (type k) (pat : k Typedtree.general_pattern) =
-  match pat.pat_desc with Tpat_any | Tpat_var _ -> true | _ -> false
+let rec is_wildcard_pattern : type k. k Typedtree.general_pattern -> bool =
+ fun pat ->
+  match pat.pat_desc with
+  | Tpat_any | Tpat_var _ -> true
+  | Tpat_value vp ->
+      is_wildcard_pattern (vp :> Typedtree.value Typedtree.general_pattern)
+  | _ -> false
 
 (* Split [s] on the [__] dune-mangling separator (e.g. [Ssh__Message] becomes
    [Ssh; Message]) so the [Message] component is visible whether the path is
@@ -379,23 +357,28 @@ type walk_result = {
   applications : application_site list;
   asserts : Location.t list;  (** [assert ...] expression locations. *)
   message_matches : message_match list;
-      (** [match] over the message type with a silent-accept wildcard arm. *)
+      (** [match] over the message type with a catch-all wildcard arm. *)
 }
 
 (* Single Tast_iterator pass that populates the resolved-references
    accumulator AND the application-site list. Replaces what used to be
    two separate iterator passes ([collect_resolved] + [lazy_applications])
    over the same typedtree. *)
-(* A [match] over the message type is flagged when one of its value arms is a
-   catch-all wildcard whose body is a clear accept. *)
+(* A [match] over the message type is flagged when it has a catch-all wildcard
+   arm: the wildcard defeats the compiler's exhaustiveness check, so a message
+   constructor added later silently falls through instead of forcing a review.
+   The arm body is irrelevant -- even [| _ -> Error _] is flagged; enumerate the
+   constructors instead. *)
 let message_match_of ~scrutinee value_cases =
   match message_type_path scrutinee with
   | None -> None
   | Some type_path ->
-      let silent_accept (case : _ Typedtree.case) =
-        is_wildcard_pattern case.c_lhs && is_clear_accept case.c_rhs
-      in
-      if List.exists silent_accept value_cases then Some type_path else None
+      List.find_map
+        (fun (case : _ Typedtree.case) ->
+          if is_wildcard_pattern case.c_lhs then
+            Some (type_path, case.c_lhs.pat_loc)
+          else None)
+        value_cases
 
 let collect_walk ~filename (tree : Merlin.typedtree) =
   let acc = refs_acc () in
@@ -410,11 +393,12 @@ let collect_walk ~filename (tree : Merlin.typedtree) =
           (match expr.exp_desc with
           | Texp_apply (fn, args) -> push_application calls expr fn args
           | Texp_assert _ -> asserts := expr.exp_loc :: !asserts
-          | Texp_match (scrutinee, _, value_cases, _) -> (
-              match message_match_of ~scrutinee value_cases with
-              | Some type_path ->
-                  message_matches :=
-                    { type_path; loc = expr.exp_loc } :: !message_matches
+          | Texp_match (scrutinee, cases, _, _) -> (
+              (* The 2nd field is the full case list; a pure value match leaves
+                 the 3rd (value-only) field empty, so read the cases here. *)
+              match message_match_of ~scrutinee cases with
+              | Some (type_path, loc) ->
+                  message_matches := { type_path; loc } :: !message_matches
               | None -> ())
           | _ -> ());
           iter_typed_expr ~filename acc this expr);
@@ -1258,11 +1242,7 @@ let iter_asserts t f =
 let iter_message_matches t f =
   force t t.message_matches
   |> List.iter (fun { type_path; loc } ->
-      f
-        {
-          Message_match.type_path;
-          loc = Loc.of_typed ~filename:t.filename loc;
-        })
+      f { Message_match.type_path; loc = Loc.of_typed ~filename:t.filename loc })
 
 let calls_path t path =
   let found = ref false in

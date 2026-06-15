@@ -9,6 +9,11 @@
     its defining layer (it is then only a codec, and should drop the [protocol]
     tag, or it has hidden the state machine somewhere unfindable).
 
+    A package whose machines use names outside this vocabulary lists their
+    module basenames in [allowed_states] in its [merlint.toml]. That list
+    replaces the default vocabulary: the state machines are then exactly the
+    declared modules, and exposing one of them satisfies this rule.
+
     This checks the module is present; that it is *pure* (no eio/lwt/unix in the
     core library) is E930, that the AST does not depend on the codec is E945,
     and the state-machine invariants are E947 (immutable state), E948 (verb
@@ -52,6 +57,8 @@ let rule =
       "A protocol package (tagged protocol) is a codec plus an I/O-free state \
        machine. Expose that state machine as a State module, or a role pair \
        (Client/Server, Sender/Receiver, Initiator/Responder, \
-       Requester/Responder) for asymmetric protocols. Purity of the core is \
-       E930; AST/codec layering is E945."
+       Requester/Responder) for asymmetric protocols. A package whose machines \
+       use other names lists them in allowed_states in merlint.toml, which \
+       replaces the default vocabulary. Purity of the core is E930; AST/codec \
+       layering is E945."
     ~examples:[] ~pp (Project check)

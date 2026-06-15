@@ -1,19 +1,22 @@
 (** E951: Exhaustive message match.
 
-    A protocol state machine dispatches on the message it just received. When
-    that [match] has a catch-all wildcard arm ([| _ -> ...] or [| m -> ...])
-    whose body returns a normal value -- [Ok _], a tuple, a record, a state
-    value, or [()] -- it silently ACCEPTS an unexpected message instead of
-    rejecting it. That is the nqsb-tls / "Messy State of the Union" (USENIX
-    2015) bug: the FREAK/SKIP-class flaws came from a state machine that fell
-    through to a normal transition on a message it had no business accepting.
+    A protocol state machine dispatches on the message it just received. The
+    OCaml-native way to keep that dispatch exhaustive is to enumerate every
+    message constructor: then adding a constructor to the message type is a
+    compile error at every match that does not handle it, forcing a review. A
+    catch-all [| _ -> ...] arm defeats that -- the new constructor silently
+    falls through the wildcard instead. That is the nqsb-tls / "Messy State of
+    the Union" (USENIX 2015) bug: the FREAK/SKIP-class flaws came from state
+    machines that mishandled messages they should have rejected.
 
     This rule flags, in a state-machine module (see {!Protocol_modules}), a
     [match] whose scrutinee's type is the protocol message type (its path has a
-    [Message] component, e.g. [Ssh.Message.t]) and whose wildcard arm is a clear
-    accept. Rejecting the message at the value level ([| _ -> Error _], or an
-    [err "..."] helper that returns an [Error]) is the correct pattern and is
-    not flagged; enumerating every constructor with no wildcard is better still.
+    [Message] component, e.g. [Ssh.Message.t]) and that has a catch-all wildcard
+    arm. The arm body is irrelevant: even [| _ -> Error _] is flagged, because
+    the wildcard still defeats the exhaustiveness check. Enumerate the
+    constructors instead (group them, [| Foo | Bar -> Error "unexpected"], to
+    share a rejection). This is the message-scoped sibling of OCaml's
+    fragile-match warning (warning 4), narrowed to the dispatch that matters.
     See E946-E950 and E952 for the rest of the protocol shape. *)
 
 module FV = File_view
@@ -36,20 +39,21 @@ let enumerate ctx = Protocol_modules.protocol_machine_modules ctx
 
 let pp ppf { module_ } =
   Fmt.pf ppf
-    "%s matches on the message type with a wildcard arm that silently accepts \
-     an unexpected message (it returns a normal value). A protocol transition \
-     rejects an unexpected message at the value level (Error _), or enumerates \
-     every message constructor with no catch-all."
+    "%s matches on the message type with a catch-all wildcard arm. The \
+     wildcard defeats the compiler's exhaustiveness check -- a message \
+     constructor added later silently falls through it. Enumerate every \
+     constructor (group them to share a rejection) so the type-checker flags \
+     every match when the message type grows."
     (String.capitalize_ascii module_)
 
 let rule =
   Rule.v ~code:"E951" ~title:"Exhaustive message match"
     ~category:Rule.Project_structure
     ~hint:
-      "A match over the protocol message type must not silently accept an \
-       unexpected message with a wildcard arm that returns a normal value (Ok \
-       _, a tuple, a record, a state value, unit). Reject it by returning an \
-       Error, or enumerate every message constructor. See E946-E950 and E952 \
-       for the rest of the protocol shape."
+      "A match over the protocol message type must not use a catch-all \
+       wildcard arm (| _ -> ...): it defeats the compiler's exhaustiveness \
+       check, so a new message constructor silently falls through instead of \
+       forcing a review. Enumerate every constructor (group them to share a \
+       rejection). See E946-E950 and E952 for the rest of the protocol shape."
     ~examples:[] ~pp
     (Project_units { enumerate; check })
