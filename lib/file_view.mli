@@ -168,6 +168,10 @@ module Item : sig
 
   val type_sig : t -> Type_view.t option
   (** [type_sig i] is the parsed type of [i] when one was declared. *)
+
+  val is_mutable_field : t -> bool
+  (** [is_mutable_field i] is [true] when [i] is a record field declared
+      [mutable]. *)
 end
 
 (** {2 References — use-sites of identifiers} *)

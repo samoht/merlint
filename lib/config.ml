@@ -11,6 +11,9 @@ type t = {
   min_name_length_underscore : int;
   allowed_words : string list;
   topics : string list;
+  allowed_states : string list;
+  (* Protocol state-machine module basenames declared by a package whose state
+     machines do not use the default role vocabulary (E946-E949). *)
   (* Style rules *)
   allow_obj_magic : bool;
   allow_str_module : bool;
@@ -34,6 +37,7 @@ let default =
     min_name_length_underscore = 5;
     allowed_words = [];
     topics = [];
+    allowed_states = [];
     (* Style defaults - all issues enabled *)
     allow_obj_magic = false;
     allow_str_module = false;
@@ -98,6 +102,9 @@ let apply_config config key value : t =
          outer allowlist rather than replacing it. *)
       { config with allowed_words = config.allowed_words @ parse_list value }
   | "topics" -> { config with topics = parse_list value }
+  | "allowed_states" ->
+      (* Accumulate across nested configs, like [allowed_words]. *)
+      { config with allowed_states = config.allowed_states @ parse_list value }
   (* Style rules *)
   | "allow_obj_magic" -> { config with allow_obj_magic = parse_bool value }
   | "allow_str_module" -> { config with allow_str_module = parse_bool value }
@@ -147,6 +154,7 @@ let equal a b =
       a.min_name_length_underscore = b.min_name_length_underscore;
       a.allowed_words = b.allowed_words;
       a.topics = b.topics;
+      a.allowed_states = b.allowed_states;
       a.allow_obj_magic = b.allow_obj_magic;
       a.allow_str_module = b.allow_str_module;
       a.allow_catch_all_exceptions = b.allow_catch_all_exceptions;
