@@ -1,4 +1,4 @@
-Bad: a protocol-tagged package with no Protocol / Client / Server module.
+Bad: a protocol-tagged package with no State / Client / Server module.
   $ (cd bad/proto && dune build @check)
   $ merlint --build -r E946 bad/
   Dune root: $TESTCASE_ROOT/bad/
@@ -13,10 +13,10 @@ Bad: a protocol-tagged package with no Protocol / Client / Server module.
   ✗ Project Structure (1 total issues)
     [E946] Protocol state machine (1 issue)
     A protocol package (tagged protocol) is a codec plus an I/O-free state
-    machine. Expose that state machine as a Protocol module, or Client / Server
-    for asymmetric protocols. Purity of the core is E930; AST/codec layering is
-    E945.
-    - bad/proto/proto.opam:1:0: proto is tagged protocol but exposes no state-machine module. A protocol is a codec plus an I/O-free state machine; put it in a Protocol module (or Client / Server for asymmetric protocols).
+    machine. Expose that state machine as a State module, or a role pair
+    (Client/Server, Sender/Receiver, Initiator/Responder, Requester/Responder) for
+    asymmetric protocols. Purity of the core is E930; AST/codec layering is E945.
+    - bad/proto/proto.opam:1:0: proto is tagged protocol but exposes no state-machine module. A protocol is a codec plus an I/O-free state machine; put it in a State module (or a role pair -- Client/Server, Sender/Receiver, ... -- for asymmetric protocols).
   ✓ Test Quality (0 total issues)
   ✓ Interop Testing (0 total issues)
   ✓ Code Generation (0 total issues)
@@ -33,13 +33,33 @@ Bad: a protocol-tagged package with no Protocol / Client / Server module.
     Run `merlint help E946` for the rule's description, hint, and good/bad examples.
   [1]
 
-Good: a protocol-tagged package exposing a Protocol state-machine module.
+Good: a protocol-tagged package exposing a State state-machine module.
   $ (cd good/proto && dune build @check)
   $ merlint --build -r E946 good/
   Dune root: $TESTCASE_ROOT/good/
   Running merlint analysis...
   
   Analyzing 2 files
+  
+  ✓ Code Quality (0 total issues)
+  ✓ Code Style (0 total issues)
+  ✓ Naming Conventions (0 total issues)
+  ✓ Documentation (0 total issues)
+  ✓ Project Structure (0 total issues)
+  ✓ Test Quality (0 total issues)
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
+  
+  Summary: ✓ 0 total issues (applied 1 rule)
+  ✓ All checks passed!
+
+Good: a non-vocabulary state module (engine.ml) declared via allowed_states.
+  $ (cd good-declared/proto && dune build @check)
+  $ merlint --build -r E946 good-declared/
+  Dune root: $TESTCASE_ROOT/good-declared/
+  Running merlint analysis...
+  
+  Analyzing 1 files
   
   ✓ Code Quality (0 total issues)
   ✓ Code Style (0 total issues)

@@ -385,6 +385,7 @@ type file_item = {
   deriving : string list;
   type_ : Typed_types.type_expr option;
   children : file_item list;
+  mutable_field : bool;  (** [true] for a [mutable] record field. *)
 }
 
 type t = {
@@ -503,8 +504,8 @@ let deriving_names attrs =
     attrs
 
 let typed_item ~name ~kind ?type_ ?doc ?(children = []) ?(deriving = [])
-    ?(deprecated = false) loc =
-  { name; kind; loc; deprecated; doc; deriving; type_; children }
+    ?(deprecated = false) ?(mutable_field = false) loc =
+  { name; kind; loc; deprecated; doc; deriving; type_; children; mutable_field }
 
 let rec typed_pattern_items ?loc (pat : Typedtree.pattern) =
   let loc = Option.value loc ~default:pat.pat_loc in
@@ -536,6 +537,8 @@ let typed_type_children (decl : Typedtree.type_declaration) =
           typed_item ~name:ld.ld_name.txt ~kind:Field
             ~type_:ld.ld_type.ctyp_type
             ~deprecated:(typed_has_deprecated ld.ld_attributes)
+            ~mutable_field:
+              (match ld.ld_mutable with Mutable -> true | Immutable -> false)
             ld.ld_loc)
         labels
   | Ttype_variant constructors ->
@@ -995,6 +998,7 @@ module Item = struct
 
   let derives (t : t) name = List.mem name t.item.deriving
   let type_sig (t : t) = t.item.type_
+  let is_mutable_field (t : t) = t.item.mutable_field
 
   let children (t : t) =
     List.map (fun item -> { item; filename = t.filename }) t.item.children
