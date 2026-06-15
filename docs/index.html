@@ -2229,6 +2229,13 @@ and replace each call site with [err_x &quot;...&quot; args] / [fail_x &quot;...
     </div>
     <div class="error-hint"><p>When you use [X.suffix] from package X, X's installation might have skipped that sub-library because the system dep it gates wasn't available at X's build time. The gating dep is one of X's opam [depopts:]. Declare it in your own [depends:] so opam-install picks it up in a fresh switch. The (parent, sub) → depopt mapping lives in [merlint/lib/rules/e944.ml]'s [gating_table]; extend it when you find a new case. Each entry is verified against X's actual depopts at run time; stale entries surface as findings too.</p></div>
 </div>
+<div class="error-card" id="E945">
+    <div>
+        <span class="error-code">E945</span>
+        <span class="error-title">Encoding layering</span>
+    </div>
+    <div class="error-hint"><p>The ocaml-encodings layering is one-way codec -&gt; value: codec.ml holds [type value = Value.t]; value.ml is the base layer and must not depend on Codec. Dependency order only -- a separate parser engine is fine.</p></div>
+</div>
 
     <a href="#top" class="back-to-top">↑ Top</a>
 </body>
