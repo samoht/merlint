@@ -14,6 +14,9 @@ type t = {
   allowed_states : string list;
   (* Protocol state-machine module basenames declared by a package whose state
      machines do not use the default role vocabulary (E946-E949). *)
+  allowed_names : string list;
+  (* Value names a package documents as exempt from the naming rules that would
+     otherwise flag them (e.g. E955's ban on the ' suffix). *)
   disallowed_modules : string list;
   (* Module paths banned from use in matching files (E221). *)
   disallowed_libraries : string list;
@@ -42,6 +45,7 @@ let default =
     allowed_words = [];
     topics = [];
     allowed_states = [];
+    allowed_names = [];
     disallowed_modules = [];
     disallowed_libraries = [];
     (* Style defaults - all issues enabled *)
@@ -111,6 +115,10 @@ let apply_config config key value : t =
   | "allowed_states" ->
       (* Accumulate across nested configs, like [allowed_words]. *)
       { config with allowed_states = config.allowed_states @ parse_list value }
+  | "allowed_names" ->
+      (* The config-file key is [allowed-names]; [normalize_key] maps the dash
+         to an underscore before this match. Accumulate like [allowed_words]. *)
+      { config with allowed_names = config.allowed_names @ parse_list value }
   | "disallowed_modules" ->
       (* Accumulate so a closer merlint.toml extends the ban list rather than
          replacing it. *)
@@ -173,6 +181,7 @@ let equal a b =
       a.allowed_words = b.allowed_words;
       a.topics = b.topics;
       a.allowed_states = b.allowed_states;
+      a.allowed_names = b.allowed_names;
       a.disallowed_modules = b.disallowed_modules;
       a.disallowed_libraries = b.disallowed_libraries;
       a.allow_obj_magic = b.allow_obj_magic;
