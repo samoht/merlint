@@ -2301,6 +2301,13 @@ and replace each call site with [err_x &quot;...&quot; args] / [fail_x &quot;...
     </div>
     <div class="error-hint"><p>A protocol's state machine is total: it returns errors as values, never raises. In a state-machine module, reject bad input with an Error rather than raise / failwith / invalid_arg. See E946-E949 for the rest of the protocol shape.</p></div>
 </div>
+<div class="error-card" id="E951">
+    <div>
+        <span class="error-code">E951</span>
+        <span class="error-title">Exhaustive message match</span>
+    </div>
+    <div class="error-hint"><p>A match over the protocol message type must not silently accept an unexpected message with a wildcard arm that returns a normal value (Ok _, a tuple, a record, a state value, unit). Reject it by returning an Error, or enumerate every message constructor. See E946-E950 and E952 for the rest of the protocol shape.</p></div>
+</div>
 <div class="error-card" id="E952">
     <div>
         <span class="error-code">E952</span>

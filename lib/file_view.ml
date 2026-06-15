@@ -311,20 +311,97 @@ let push_application calls expr fn args =
         { callee; loc = expr.Typedtree.exp_loc; args = application_args args })
     (typed_expr_callee_name fn)
 
+(* A [match] over the protocol message type whose wildcard arm silently
+   accepts an unexpected message (the nqsb-tls "Messy State of the Union"
+   shape). [loc] is the whole match expression. *)
+type message_match = { type_path : Merlin.Refs.name; loc : Location.t }
+
+(* The result position of [expr] is a CLEAR ACCEPT: an [Ok _] constructor, a
+   tuple, a record, a bare identifier/variable (returns a state value), or
+   [()]. Recurse through [let .. in], [if .. then .. else ..] (both branches
+   must accept), [match .. with ..] (all arms must accept), and sequences
+   (classify the last expression) to reach the result position(s). Any
+   function application, [raise]/[failwith], [assert], or an [Error _] arm is
+   NOT a clear accept (a value-level rejection is the correct pattern). *)
+let rec is_clear_accept (expr : Typedtree.expression) =
+  match expr.exp_desc with
+  | Texp_construct (lid, _, _) -> (
+      match (name_of_longident lid.txt).base with
+      | "Ok" | "()" -> true
+      | _ -> false)
+  | Texp_tuple _ | Texp_record _ -> true
+  | Texp_ident _ -> true
+  | Texp_let (_, _, body) -> is_clear_accept body
+  | Texp_open (_, body) -> is_clear_accept body
+  | Texp_sequence (_, e2) -> is_clear_accept e2
+  | Texp_ifthenelse (_, a, Some b) -> is_clear_accept a && is_clear_accept b
+  | Texp_ifthenelse (_, _, None) -> false
+  | Texp_match (_, computation_cases, value_cases, _) ->
+      let arm_accepts (case : _ Typedtree.case) = is_clear_accept case.c_rhs in
+      (computation_cases <> [] || value_cases <> [])
+      && List.for_all arm_accepts computation_cases
+      && List.for_all arm_accepts value_cases
+  | _ -> false
+
+(* [true] when [pat] is a catch-all wildcard arm: [_] or a plain variable. *)
+let is_wildcard_pattern (type k) (pat : k Typedtree.general_pattern) =
+  match pat.pat_desc with Tpat_any | Tpat_var _ -> true | _ -> false
+
+(* Split [s] on the [__] dune-mangling separator (e.g. [Ssh__Message] becomes
+   [Ssh; Message]) so the [Message] component is visible whether the path is
+   written [Ssh.Message.t] or [Ssh__Message.t]. *)
+let split_on_double_underscore s =
+  let rec aux acc start i =
+    if i + 1 >= String.length s then
+      List.rev (String.sub s start (String.length s - start) :: acc)
+    else if s.[i] = '_' && s.[i + 1] = '_' then
+      aux (String.sub s start (i - start) :: acc) (i + 2) (i + 2)
+    else aux acc start (i + 1)
+  in
+  if s = "" then [ "" ] else aux [] 0 0
+
+(* The scrutinee's type is the protocol message type when its [exp_type] is a
+   [Tconstr] whose path has a module component named [Message]
+   (e.g. [Ssh.Message.t], [Ssh__Message.t]). *)
+let message_type_path (expr : Typedtree.expression) =
+  match Typed_types.get_desc expr.exp_type with
+  | Typed_types.Tconstr (path, _, _) ->
+      let dotted = Typed_path.name path in
+      let components =
+        dotted |> String.split_on_char '.'
+        |> List.concat_map split_on_double_underscore
+      in
+      if List.mem "Message" components then Some (name_of_path path) else None
+  | _ -> None
+
 type walk_result = {
   refs : collected_refs;
   applications : application_site list;
   asserts : Location.t list;  (** [assert ...] expression locations. *)
+  message_matches : message_match list;
+      (** [match] over the message type with a silent-accept wildcard arm. *)
 }
 
 (* Single Tast_iterator pass that populates the resolved-references
    accumulator AND the application-site list. Replaces what used to be
    two separate iterator passes ([collect_resolved] + [lazy_applications])
    over the same typedtree. *)
+(* A [match] over the message type is flagged when one of its value arms is a
+   catch-all wildcard whose body is a clear accept. *)
+let message_match_of ~scrutinee value_cases =
+  match message_type_path scrutinee with
+  | None -> None
+  | Some type_path ->
+      let silent_accept (case : _ Typedtree.case) =
+        is_wildcard_pattern case.c_lhs && is_clear_accept case.c_rhs
+      in
+      if List.exists silent_accept value_cases then Some type_path else None
+
 let collect_walk ~filename (tree : Merlin.typedtree) =
   let acc = refs_acc () in
   let calls = ref [] in
   let asserts = ref [] in
+  let message_matches = ref [] in
   let iterator =
     {
       Tast_iterator.default_iterator with
@@ -333,6 +410,12 @@ let collect_walk ~filename (tree : Merlin.typedtree) =
           (match expr.exp_desc with
           | Texp_apply (fn, args) -> push_application calls expr fn args
           | Texp_assert _ -> asserts := expr.exp_loc :: !asserts
+          | Texp_match (scrutinee, _, value_cases, _) -> (
+              match message_match_of ~scrutinee value_cases with
+              | Some type_path ->
+                  message_matches :=
+                    { type_path; loc = expr.exp_loc } :: !message_matches
+              | None -> ())
           | _ -> ());
           iter_typed_expr ~filename acc this expr);
       pat =
@@ -365,6 +448,7 @@ let collect_walk ~filename (tree : Merlin.typedtree) =
     refs = collected_refs_of_acc acc;
     applications = List.rev !calls;
     asserts = List.rev !asserts;
+    message_matches = List.rev !message_matches;
   }
 
 type file_item_kind =
@@ -409,6 +493,9 @@ type t = {
       (** Cache of every typed application site whose head is a path identifier.
           One typedtree walk per file regardless of how many rules call
           {!iter_applications}. *)
+  message_matches : message_match list Lazy.t;
+      (** Cache of every message-type [match] with a silent-accept wildcard arm.
+      *)
 }
 
 let force t lazy_value =
@@ -459,6 +546,12 @@ let lazy_asserts walk =
   lazy
     (match Lazy.force walk with
     | Some (walk : walk_result) -> walk.asserts
+    | None -> [])
+
+let lazy_message_matches walk =
+  lazy
+    (match Lazy.force walk with
+    | Some (walk : walk_result) -> walk.message_matches
     | None -> [])
 
 let typed_has_deprecated attrs =
@@ -813,6 +906,7 @@ let v ~filename ~typedtree () =
   let module_names = lazy_module_names reference_outline in
   let applications = lazy_applications walk in
   let asserts = lazy_asserts walk in
+  let message_matches = lazy_message_matches walk in
   {
     filename;
     lock = Eio.Mutex.create ();
@@ -824,6 +918,7 @@ let v ~filename ~typedtree () =
     module_names;
     applications;
     asserts;
+    message_matches;
   }
 
 let filename t = t.filename
@@ -1071,6 +1166,15 @@ module Call = struct
   end
 end
 
+(* {2 Message_match} *)
+
+module Message_match = struct
+  type t = { type_path : Merlin.Refs.name; loc : Merlin.Location.t }
+
+  let type_path t = t.type_path
+  let loc t = t.loc
+end
+
 (* {2 Top-level accessors} *)
 
 let items t =
@@ -1150,6 +1254,15 @@ let iter_applications t f =
 let iter_asserts t f =
   force t t.asserts
   |> List.iter (fun loc -> f (Loc.of_typed ~filename:t.filename loc))
+
+let iter_message_matches t f =
+  force t t.message_matches
+  |> List.iter (fun { type_path; loc } ->
+      f
+        {
+          Message_match.type_path;
+          loc = Loc.of_typed ~filename:t.filename loc;
+        })
 
 let calls_path t path =
   let found = ref false in

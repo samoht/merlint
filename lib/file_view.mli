@@ -235,6 +235,21 @@ module Call : sig
   end
 end
 
+(** {2 Message matches — [match] over the protocol message type}
+
+    A {!Message_match.t} records a [match] whose scrutinee is the protocol
+    message type and whose wildcard arm silently accepts an unexpected message
+    (the nqsb-tls "Messy State of the Union" shape). E951 flags these. *)
+module Message_match : sig
+  type t
+
+  val type_path : t -> Name.t
+  (** [type_path m] is the message type's constructor path. *)
+
+  val loc : t -> Merlin.Location.t
+  (** [loc m] is the source location of the whole [match] expression. *)
+end
+
 (** {2 Top-level accessors}
 
     Outline accessors are always available. *)
@@ -289,6 +304,11 @@ val iter_applications : t -> (Call.t -> unit) -> unit
 val iter_asserts : t -> (Merlin.Location.t -> unit) -> unit
 (** [iter_asserts t f] applies [f] to the location of every [assert _]
     expression. *)
+
+val iter_message_matches : t -> (Message_match.t -> unit) -> unit
+(** [iter_message_matches t f] applies [f] to every [match] over the protocol
+    message type that has a wildcard arm whose body silently accepts an
+    unexpected message (returns a normal value rather than an [Error]). *)
 
 val calls_path : t -> string list -> bool
 (** [calls_path t path] is [true] when [t] contains a call to resolved [path].
