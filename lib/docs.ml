@@ -35,19 +35,78 @@ let count_signature_args signature =
   let optional = List.filter is_optional_arg args |> List.length in
   (max - optional, max)
 
-let count_doc_args bracket_content =
-  String.split_on_char ' ' bracket_content
-  |> List.filter (fun s -> String.trim s <> "")
-  |> List.length
-  |> fun n -> max 0 (n - 1)
+(* Split bracket content into top-level tokens, treating a string literal or
+   any parenthesised, bracketed, or braced group as a single token. A doc's
+   leading [name a b c] lists the function name followed by one token per
+   argument, so spaces inside "a b", (x, y), or [a; b] must not split a
+   token. *)
+let top_level_tokens content =
+  let len = String.length content in
+  let buf = Buffer.create 16 in
+  let tokens = ref [] in
+  let flush () =
+    if Buffer.length buf > 0 then begin
+      tokens := Buffer.contents buf :: !tokens;
+      Buffer.clear buf
+    end
+  in
+  let rec walk i depth in_string =
+    if i >= len then flush ()
+    else
+      let c = content.[i] in
+      if in_string then begin
+        Buffer.add_char buf c;
+        if c = '\\' && i + 1 < len then begin
+          Buffer.add_char buf content.[i + 1];
+          walk (i + 2) depth true
+        end
+        else walk (i + 1) depth (c <> '"')
+      end
+      else
+        match c with
+        | '"' ->
+            Buffer.add_char buf c;
+            walk (i + 1) depth true
+        | '(' | '[' | '{' ->
+            Buffer.add_char buf c;
+            walk (i + 1) (depth + 1) false
+        | ')' | ']' | '}' ->
+            Buffer.add_char buf c;
+            walk (i + 1) (max 0 (depth - 1)) false
+        | ' ' when depth = 0 ->
+            flush ();
+            walk (i + 1) depth false
+        | _ ->
+            Buffer.add_char buf c;
+            walk (i + 1) depth false
+  in
+  walk 0 0 false;
+  List.rev !tokens
 
 let initial_bracket_content doc =
   let doc = String.trim doc in
-  if String.length doc = 0 || doc.[0] <> '[' then None
+  let len = String.length doc in
+  if len = 0 || doc.[0] <> '[' then None
   else
-    match String.index_from_opt doc 1 ']' with
-    | None -> None
-    | Some stop -> Some (String.sub doc 1 (stop - 1))
+    (* Find the ']' that closes the leading '[', honouring nested brackets and
+       string literals rather than stopping at the first ']'. *)
+    let rec find i depth in_string =
+      if i >= len then None
+      else
+        let c = doc.[i] in
+        if in_string then
+          if c = '\\' then find (i + 2) depth in_string
+          else find (i + 1) depth (c <> '"')
+        else
+          match c with
+          | '"' -> find (i + 1) depth true
+          | '[' -> find (i + 1) (depth + 1) false
+          | ']' ->
+              if depth <= 1 then Some (String.sub doc 1 (i - 1))
+              else find (i + 1) (depth - 1) false
+          | _ -> find (i + 1) depth false
+    in
+    find 0 0 false
 
 let is_value_name s =
   let is_ident_char = function
@@ -79,13 +138,11 @@ let check_operator_bracket ~name ~doc issues =
     issues := Bad_operator_format :: !issues
 
 let check_function_bracket ~name ~signature ~bracket_content issues =
-  let parts =
-    String.split_on_char ' ' bracket_content
-    |> List.filter (fun s -> String.trim s <> "")
+  let parts = top_level_tokens bracket_content in
+  let doc_name, found_args =
+    match parts with [] -> ("", 0) | hd :: args -> (hd, List.length args)
   in
-  let doc_name = if List.length parts > 0 then List.hd parts else "" in
   if doc_name <> name then issues := Bad_function_format :: !issues;
-  let found_args = count_doc_args bracket_content in
   if found_args > 0 then
     let min_args, max_args = count_signature_args signature in
     if found_args < min_args || found_args > max_args then

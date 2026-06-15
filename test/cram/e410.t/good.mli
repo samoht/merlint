@@ -24,3 +24,12 @@ val create : ?debug:bool -> name:string -> t -> t
 
 (** [make ()] is a new value with defaults. *)
 val make : ?foo:int -> ?bar:string -> unit -> t
+
+(** [of_string "a b c"] parses a literal containing spaces. *)
+val of_string : string -> t
+
+(** [concat sep [a; b]] joins parts with a separator. *)
+val concat : string -> string list -> string
+
+(** [of_pair (x, y)] builds a value from a pair. *)
+val of_pair : int * int -> t
