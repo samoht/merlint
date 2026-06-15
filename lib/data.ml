@@ -7,6 +7,7 @@ let all_rules =
     E005.rule;
     E010.rule;
     E100.rule;
+    E101.rule;
     E105.rule;
     E110.rule;
     E200.rule;

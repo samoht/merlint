@@ -48,6 +48,30 @@ let to_int = function Int i -> Some i | _ -> None
 ```
 
 
+### [E101] No Marshal usage
+
+The Marshal module (and output_value/input_value) serializes values without their type. A marshalled value carries no type information, so Marshal.from_* can be read back at any type - including an abstract type - forging values that violate the invariants their module guarantees. Deserializing attacker-controlled data this way is also a code-execution risk. Use a typed codec (a wire or cbor encoder and decoder, or a hand-written printer and parser) instead. If a trusted in-process boundary truly needs it, isolate it in one module and document why.
+
+**Examples:**
+
+**Bad:**
+```ocaml
+let dump x = Marshal.to_string x []
+let load s : int = Marshal.from_string s 0
+let save oc x = output_value oc x
+let restore ic : int = input_value ic
+
+```
+
+**Good:**
+```ocaml
+(* Use a typed encoder and decoder instead of Marshal *)
+let to_string i = string_of_int i
+let of_string s = int_of_string_opt s
+
+```
+
+
 ## Dependencies and Tooling
 
 **Build System**: The project is built exclusively with `dune`.
