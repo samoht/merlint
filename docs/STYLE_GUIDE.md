@@ -74,29 +74,42 @@ let of_string s = int_of_string_opt s
 
 ### [E106] Polymorphic comparison
 
-OCaml's structural (=), (<>), (<), (>), (<=), (>=), compare, min, max and Hashtbl.hash compare values by walking their runtime representation. On a non-scalar type this is unsafe: it ignores abstraction boundaries (comparing the concrete representation behind an abstract type), raises Invalid_argument at runtime when a value contains a function, and gives wrong answers for types with a custom notion of equality. Call the type's own equal, compare or hash - every type module should expose them - and have a genuinely generic function take an ~equal or ~compare parameter. Comparing scalars (int, char, string, bytes, float, bool, unit, the fixed-width int types), transparent containers (list, array, option) and tuples of those is fine, and so is comparing against a nullary constructor ([], None, an enum tag), which is just a tag check.
+OCaml's structural (=), (<>), (<), (>), (<=), (>=), compare, min, max and Hashtbl.hash compare values by walking their runtime representation. That reaches through abstraction boundaries - ordering two values of an abstract type leaks their hidden contents - and raises Invalid_argument at runtime on functional values. Use the type's own equal, compare or hash instead (every type module should expose them), or pass an ~equal/~compare to a generic function. Comparing scalars, transparent containers (list, array, option) and tuples of those is fine, as is a tag check against a nullary constructor ([], None, an enum tag).
 
 **Examples:**
 
 **Bad:**
 ```ocaml
-type color = Red | Green | Blue
-type point = { x : int; y : int }
+(* An abstract type hides its representation *)
+module Id : sig
+  type t
 
-(* Structural (=) comparing two variant values (not a tag check) *)
-let same_color (a : color) b = a = b
+  val v : int -> t
+end = struct
+  type t = int
 
-(* compare on a variant type *)
-let ordered (a : color) b = compare a b
+  let v x = x
+end
 
-(* (=) on a record *)
-let same_point (a : point) b = a = b
+type handler = { name : string; run : unit -> unit }
 
-(* (=) on a function: this also raises Invalid_argument at runtime *)
+(* (=) on an abstract type reaches through the abstraction boundary *)
+let same_id (a : Id.t) b = a = b
+
+(* compare on an abstract type *)
+let order_id (a : Id.t) b = compare a b
+
+(* (=) on a function value: also raises Invalid_argument at runtime *)
 let same_fn (a : int -> int) b = a = b
 
-(* Hashtbl.hash on a variant type *)
-let key (c : color) = Hashtbl.hash c
+(* (=) on a record that contains a function *)
+let same_handler (a : handler) b = a = b
+
+(* Hashtbl.hash on a record that contains a function *)
+let key (h : handler) = Hashtbl.hash h
+
+(* (=) on an abstract type from another library (Re.t is a compiled regex) *)
+let same_re (a : Re.t) b = a = b
 
 ```
 
@@ -107,7 +120,7 @@ let same_int (a : int) b = a = b
 let same_string s = s = "hello"
 let bigger (a : float) b = a > b
 
-(* Transparent containers and tuples of scalars are fine too *)
+(* Transparent containers and tuples of safe types are fine too *)
 let same_pair (a : int * int) b = a = b
 let same_path (a : string list) b = a = b
 let has_afl o = o = Some "afl"
@@ -117,12 +130,7 @@ type color = Red | Green | Blue
 
 let is_red c = c = Red
 let nonempty l = l <> []
-
-(* On a non-scalar, use the type's own equality *)
-let equal_color a b =
-  match (a, b) with
-  | Red, Red | Green, Green | Blue, Blue -> true
-  | (Red | Green | Blue), _ -> false
+let absent o = o = None
 
 ```
 

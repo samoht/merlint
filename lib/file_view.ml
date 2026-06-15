@@ -325,6 +325,30 @@ let rec is_wildcard_pattern : type k. k Typedtree.general_pattern -> bool =
       is_wildcard_pattern (vp :> Typedtree.value Typedtree.general_pattern)
   | _ -> false
 
+(* A catch-all arm SILENTLY ACCEPTS when its result is a normal value -- an [Ok]
+   constructor, a tuple, a record, a bare identifier (the state itself), or [()]
+   -- so the machine keeps going on a message it should have rejected. Returning
+   an [Error] (including via an err-style helper call) or raising is a rejection,
+   the correct shape for a catch-all, and is not flagged. Recurse through
+   [let]/[open]/sequence/[if]/[match] to the result position(s); every result
+   must accept for the arm to count as a silent accept. *)
+let rec is_silent_accept (expr : Typedtree.expression) =
+  match expr.exp_desc with
+  | Texp_construct (lid, _, _) -> (
+      match (name_of_longident lid.txt).base with
+      | "Ok" | "()" -> true
+      | _ -> false)
+  | Texp_tuple _ | Texp_record _ | Texp_ident _ -> true
+  | Texp_let (_, _, body) | Texp_open (_, body) | Texp_sequence (_, body) ->
+      is_silent_accept body
+  | Texp_ifthenelse (_, a, Some b) -> is_silent_accept a && is_silent_accept b
+  | Texp_match (_, comp_cases, value_cases, _) ->
+      let accepts (case : _ Typedtree.case) = is_silent_accept case.c_rhs in
+      (comp_cases <> [] || value_cases <> [])
+      && List.for_all accepts comp_cases
+      && List.for_all accepts value_cases
+  | _ -> false
+
 (* Split [s] on the [__] dune-mangling separator (e.g. [Ssh__Message] becomes
    [Ssh; Message]) so the [Message] component is visible whether the path is
    written [Ssh.Message.t] or [Ssh__Message.t]. *)
@@ -357,25 +381,24 @@ type walk_result = {
   applications : application_site list;
   asserts : Location.t list;  (** [assert ...] expression locations. *)
   message_matches : message_match list;
-      (** [match] over the message type with a catch-all wildcard arm. *)
+      (** [match] over the message type with a silent-accept catch-all arm. *)
 }
 
 (* Single Tast_iterator pass that populates the resolved-references
    accumulator AND the application-site list. Replaces what used to be
    two separate iterator passes ([collect_resolved] + [lazy_applications])
    over the same typedtree. *)
-(* A [match] over the message type is flagged when it has a catch-all wildcard
-   arm: the wildcard defeats the compiler's exhaustiveness check, so a message
-   constructor added later silently falls through instead of forcing a review.
-   The arm body is irrelevant -- even [| _ -> Error _] is flagged; enumerate the
-   constructors instead. *)
+(* A [match] over the message type is flagged when a catch-all wildcard arm
+   silently accepts the unexpected message (its body returns a normal value
+   rather than rejecting it). A catch-all that rejects -- [| _ -> Error _],
+   [| s -> Error (`Unexpected s)] -- is the correct shape and is not flagged. *)
 let message_match_of ~scrutinee value_cases =
   match message_type_path scrutinee with
   | None -> None
   | Some type_path ->
       List.find_map
         (fun (case : _ Typedtree.case) ->
-          if is_wildcard_pattern case.c_lhs then
+          if is_wildcard_pattern case.c_lhs && is_silent_accept case.c_rhs then
             Some (type_path, case.c_lhs.pat_loc)
           else None)
         value_cases

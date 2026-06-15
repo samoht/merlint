@@ -1,23 +1,21 @@
-(** E951: Exhaustive message match.
+(** E951: Reject unexpected messages.
 
-    A protocol state machine dispatches on the message it just received. The
-    OCaml-native way to keep that dispatch exhaustive is to enumerate every
-    message constructor: then adding a constructor to the message type is a
-    compile error at every match that does not handle it, forcing a review. A
-    catch-all [| _ -> ...] arm defeats that -- the new constructor silently
-    falls through the wildcard instead. That is the nqsb-tls / "Messy State of
-    the Union" (USENIX 2015) bug: the FREAK/SKIP-class flaws came from state
-    machines that mishandled messages they should have rejected.
+    A protocol state machine dispatches on the message it just received. A
+    catch-all [| _ -> ...] arm over the message type is fine when it *rejects*
+    the unexpected message -- [| _ -> Error "unexpected"], or
+    [| s -> Error (`Unexpected s)] to name it. It is a bug when it *silently
+    accepts*: the body returns a normal value (an [Ok], a new state, [()]) and
+    the machine keeps going on a message it had no business handling. That is
+    the nqsb-tls / "Messy State of the Union" (USENIX 2015) flaw: the
+    FREAK/SKIP-class attacks came from state machines that fell through to a
+    normal transition on an unexpected message.
 
     This rule flags, in a state-machine module (see {!Protocol_modules}), a
     [match] whose scrutinee's type is the protocol message type (its path has a
-    [Message] component, e.g. [Ssh.Message.t]) and that has a catch-all wildcard
-    arm. The arm body is irrelevant: even [| _ -> Error _] is flagged, because
-    the wildcard still defeats the exhaustiveness check. Enumerate the
-    constructors instead (group them, [| Foo | Bar -> Error "unexpected"], to
-    share a rejection). This is the message-scoped sibling of OCaml's
-    fragile-match warning (warning 4), narrowed to the dispatch that matters.
-    See E946-E950 and E952 for the rest of the protocol shape. *)
+    [Message] component, e.g. [Ssh.Message.t]) and whose catch-all arm silently
+    accepts. Enumerating the message type instead is impractical when it has
+    many constructors; rejecting at the catch-all ([Error _]) is the idiom this
+    rule enforces. See E946-E950 and E952 for the rest of the protocol shape. *)
 
 module FV = File_view
 
@@ -39,21 +37,22 @@ let enumerate ctx = Protocol_modules.protocol_machine_modules ctx
 
 let pp ppf { module_ } =
   Fmt.pf ppf
-    "%s matches on the message type with a catch-all wildcard arm. The \
-     wildcard defeats the compiler's exhaustiveness check -- a message \
-     constructor added later silently falls through it. Enumerate every \
-     constructor (group them to share a rejection) so the type-checker flags \
-     every match when the message type grows."
+    "%s matches on the message type with a catch-all arm that silently accepts \
+     an unexpected message (it returns a normal value instead of rejecting). \
+     Reject it at the catch-all: %s.handle (m : Message.t) = match m with ... \
+     | _ -> Error \"unexpected\" (or | s -> Error (`Unexpected s))."
+    (String.capitalize_ascii module_)
     (String.capitalize_ascii module_)
 
 let rule =
-  Rule.v ~code:"E951" ~title:"Exhaustive message match"
+  Rule.v ~code:"E951" ~title:"Reject unexpected messages"
     ~category:Rule.Project_structure
     ~hint:
-      "A match over the protocol message type must not use a catch-all \
-       wildcard arm (| _ -> ...): it defeats the compiler's exhaustiveness \
-       check, so a new message constructor silently falls through instead of \
-       forcing a review. Enumerate every constructor (group them to share a \
-       rejection). See E946-E950 and E952 for the rest of the protocol shape."
+      "A catch-all arm over the protocol message type must reject the message \
+       (| _ -> Error _, or | s -> Error (`Unexpected s)), not silently accept \
+       it by returning a normal value (Ok / a state / unit). A silent accept \
+       is the FREAK/SKIP-class bug: the machine keeps going on a message it \
+       should have rejected. See E946-E950 and E952 for the rest of the \
+       protocol shape."
     ~examples:[] ~pp
     (Project_units { enumerate; check })
