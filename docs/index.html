@@ -601,6 +601,60 @@ pre code {
 </div>
 </div></div>
 </div>
+<div class="error-card" id="E106">
+    <div>
+        <span class="error-code">E106</span>
+        <span class="error-title">Polymorphic comparison</span>
+    </div>
+    <div class="error-hint"><p>OCaml's structural (=), (&lt;&gt;), (&lt;), (&gt;), (&lt;=), (&gt;=), compare, min, max and Hashtbl.hash compare values by walking their runtime representation. On a non-scalar type this is unsafe: it ignores abstraction boundaries (comparing the concrete representation behind an abstract type), raises Invalid_argument at runtime when a value contains a function, and gives wrong answers for types with a custom notion of equality. Call the type's own equal, compare or hash - every type module should expose them - and have a genuinely generic function take an ~equal or ~compare parameter. Comparing scalars (int, char, string, bytes, float, bool, unit, the fixed-width int types), transparent containers (list, array, option) and tuples of those is fine, and so is comparing against a nullary constructor ([], None, an enum tag), which is just a tag check.</p><div class="examples-grid">
+<div class="example bad">
+  <h4>BAD</h4>
+  <pre><code><span class="kw">type</span> color = <span class="cn">Red</span> | <span class="cn">Green</span> | <span class="cn">Blue</span>
+<span class="kw">type</span> point = { x : int; y : int }
+
+<span class="cm">(* Structural (=) comparing two variant values (not a tag check) *)</span>
+<span class="kw">let</span> same_color (a : color) b = a = b
+
+<span class="cm">(* compare on a variant type *)</span>
+<span class="kw">let</span> ordered (a : color) b = compare a b
+
+<span class="cm">(* (=) on a record *)</span>
+<span class="kw">let</span> same_point (a : point) b = a = b
+
+<span class="cm">(* (=) on a function: this also raises Invalid_argument at runtime *)</span>
+<span class="kw">let</span> same_fn (a : int -&gt; int) b = a = b
+
+<span class="cm">(* Hashtbl.hash on a variant type *)</span>
+<span class="kw">let</span> key (c : color) = <span class="cn">Hashtbl</span>.hash c
+</code></pre>
+</div>
+<div class="example good">
+  <h4>GOOD</h4>
+  <pre><code><span class="cm">(* Comparing scalars with the polymorphic operators is fine *)</span>
+<span class="kw">let</span> same_int (a : int) b = a = b
+<span class="kw">let</span> same_string s = s = &quot;hello&quot;
+<span class="kw">let</span> bigger (a : float) b = a &gt; b
+
+<span class="cm">(* Transparent containers and tuples of scalars are fine too *)</span>
+<span class="kw">let</span> same_pair (a : int * int) b = a = b
+<span class="kw">let</span> same_path (a : string list) b = a = b
+<span class="kw">let</span> has_afl o = o = <span class="cn">Some</span> &quot;afl&quot;
+
+<span class="cm">(* Comparing against a nullary constructor is a tag check, also fine *)</span>
+<span class="kw">type</span> color = <span class="cn">Red</span> | <span class="cn">Green</span> | <span class="cn">Blue</span>
+
+<span class="kw">let</span> is_red c = c = <span class="cn">Red</span>
+<span class="kw">let</span> nonempty l = l &lt;&gt; []
+
+<span class="cm">(* On a non-scalar, use the type's own equality *)</span>
+<span class="kw">let</span> equal_color a b =
+  <span class="kw">match</span> (a, b) <span class="kw">with</span>
+  | <span class="cn">Red</span>, <span class="cn">Red</span> | <span class="cn">Green</span>, <span class="cn">Green</span> | <span class="cn">Blue</span>, <span class="cn">Blue</span> -&gt; <span class="kw">true</span>
+  | (<span class="cn">Red</span> | <span class="cn">Green</span> | <span class="cn">Blue</span>), _ -&gt; <span class="kw">false</span>
+</code></pre>
+</div>
+</div></div>
+</div>
 <div class="error-card" id="E110">
     <div>
         <span class="error-code">E110</span>
@@ -2294,7 +2348,7 @@ and replace each call site with [err_x &quot;...&quot; args] / [fail_x &quot;...
         <span class="error-code">E946</span>
         <span class="error-title">Protocol state machine</span>
     </div>
-    <div class="error-hint"><p>A protocol package (tagged protocol) is a codec plus an I/O-free state machine. Expose that state machine as a State module, or a role pair (Client/Server, Sender/Receiver, Initiator/Responder, Requester/Responder) for asymmetric protocols. Purity of the core is E930; AST/codec layering is E945.</p></div>
+    <div class="error-hint"><p>A protocol package (tagged protocol) is a codec plus an I/O-free state machine. Expose that state machine as a State module, or a role pair (Client/Server, Sender/Receiver, Initiator/Responder, Requester/Responder) for asymmetric protocols. A package whose machines use other names lists them in allowed_states in merlint.toml, which replaces the default vocabulary. Purity of the core is E930; AST/codec layering is E945.</p></div>
 </div>
 <div class="error-card" id="E947">
     <div>
@@ -2329,7 +2383,7 @@ and replace each call site with [err_x &quot;...&quot; args] / [fail_x &quot;...
         <span class="error-code">E951</span>
         <span class="error-title">Exhaustive message match</span>
     </div>
-    <div class="error-hint"><p>A match over the protocol message type must not silently accept an unexpected message with a wildcard arm that returns a normal value (Ok _, a tuple, a record, a state value, unit). Reject it by returning an Error, or enumerate every message constructor. See E946-E950 and E952 for the rest of the protocol shape.</p></div>
+    <div class="error-hint"><p>A match over the protocol message type must not use a catch-all wildcard arm (| _ -&gt; ...): it defeats the compiler's exhaustiveness check, so a new message constructor silently falls through instead of forcing a review. Enumerate every constructor (group them to share a rejection). See E946-E950 and E952 for the rest of the protocol shape.</p></div>
 </div>
 <div class="error-card" id="E952">
     <div>
