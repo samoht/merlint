@@ -124,6 +124,7 @@ let () =
       Test_e948.suite;
       Test_e949.suite;
       Test_e950.suite;
+      Test_e952.suite;
       Test_dep_deps.suite;
       Test_interop.suite;
       Test_opam_tags.suite;
