@@ -520,6 +520,29 @@ pre code {
 </div>
 </div></div>
 </div>
+<div class="error-card" id="E101">
+    <div>
+        <span class="error-code">E101</span>
+        <span class="error-title">No Marshal usage</span>
+    </div>
+    <div class="error-hint"><p>The Marshal module (and output_value/input_value) serializes values without their type. A marshalled value carries no type information, so Marshal.from_* can be read back at any type - including an abstract type - forging values that violate the invariants their module guarantees. Deserializing attacker-controlled data this way is also a code-execution risk. Use a typed codec (a wire or cbor encoder and decoder, or a hand-written printer and parser) instead. If a trusted in-process boundary truly needs it, isolate it in one module and document why.</p><div class="examples-grid">
+<div class="example bad">
+  <h4>BAD</h4>
+  <pre><code><span class="kw">let</span> dump x = <span class="cn">Marshal</span>.to_string x []
+<span class="kw">let</span> load s : int = <span class="cn">Marshal</span>.from_string s <span class="nu">0</span>
+<span class="kw">let</span> save oc x = output_value oc x
+<span class="kw">let</span> restore ic : int = input_value ic
+</code></pre>
+</div>
+<div class="example good">
+  <h4>GOOD</h4>
+  <pre><code><span class="cm">(* Use a typed encoder and decoder instead of Marshal *)</span>
+<span class="kw">let</span> to_string i = string_of_int i
+<span class="kw">let</span> of_string s = int_of_string_opt s
+</code></pre>
+</div>
+</div></div>
+</div>
 <div class="error-card" id="E105">
     <div>
         <span class="error-code">E105</span>
