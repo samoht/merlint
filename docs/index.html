@@ -2264,6 +2264,13 @@ and replace each call site with [err_x &quot;...&quot; args] / [fail_x &quot;...
     </div>
     <div class="error-hint"><p>A state-machine module holds exactly one state-machine type t. Two roles are two top-level modules (Client/Server, Sender/Receiver, ...), not nested module Sender / module Receiver in one state.ml. See E946 for the module, E947 for immutable state, E948 for verb names.</p></div>
 </div>
+<div class="error-card" id="E950">
+    <div>
+        <span class="error-code">E950</span>
+        <span class="error-title">Total protocol transitions</span>
+    </div>
+    <div class="error-hint"><p>A protocol's state machine is total: it returns errors as values, never raises. In a state-machine module, reject bad input with an Error rather than raise / failwith / invalid_arg. See E946-E949 for the rest of the protocol shape.</p></div>
+</div>
 
     <a href="#top" class="back-to-top">↑ Top</a>
 </body>

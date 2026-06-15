@@ -314,6 +314,7 @@ let push_application calls expr fn args =
 type walk_result = {
   refs : collected_refs;
   applications : application_site list;
+  asserts : Location.t list;  (** [assert ...] expression locations. *)
 }
 
 (* Single Tast_iterator pass that populates the resolved-references
@@ -323,6 +324,7 @@ type walk_result = {
 let collect_walk ~filename (tree : Merlin.typedtree) =
   let acc = refs_acc () in
   let calls = ref [] in
+  let asserts = ref [] in
   let iterator =
     {
       Tast_iterator.default_iterator with
@@ -330,6 +332,7 @@ let collect_walk ~filename (tree : Merlin.typedtree) =
         (fun this (expr : Typedtree.expression) ->
           (match expr.exp_desc with
           | Texp_apply (fn, args) -> push_application calls expr fn args
+          | Texp_assert _ -> asserts := expr.exp_loc :: !asserts
           | _ -> ());
           iter_typed_expr ~filename acc this expr);
       pat =
@@ -358,7 +361,11 @@ let collect_walk ~filename (tree : Merlin.typedtree) =
   (match tree with
   | `Implementation structure -> iterator.structure iterator structure
   | `Interface signature -> iterator.signature iterator signature);
-  { refs = collected_refs_of_acc acc; applications = List.rev !calls }
+  {
+    refs = collected_refs_of_acc acc;
+    applications = List.rev !calls;
+    asserts = List.rev !asserts;
+  }
 
 type file_item_kind =
   | Value
@@ -398,6 +405,7 @@ type t = {
   resolved : collected_refs option Lazy.t;
   module_names : string list Lazy.t;
   applications : application_site list Lazy.t;
+  asserts : Location.t list Lazy.t;
       (** Cache of every typed application site whose head is a path identifier.
           One typedtree walk per file regardless of how many rules call
           {!iter_applications}. *)
@@ -445,6 +453,12 @@ let lazy_applications walk =
   lazy
     (match Lazy.force walk with
     | Some (walk : walk_result) -> walk.applications
+    | None -> [])
+
+let lazy_asserts walk =
+  lazy
+    (match Lazy.force walk with
+    | Some (walk : walk_result) -> walk.asserts
     | None -> [])
 
 let typed_has_deprecated attrs =
@@ -798,6 +812,7 @@ let v ~filename ~typedtree () =
   let resolved = lazy_resolved walk in
   let module_names = lazy_module_names reference_outline in
   let applications = lazy_applications walk in
+  let asserts = lazy_asserts walk in
   {
     filename;
     lock = Eio.Mutex.create ();
@@ -808,6 +823,7 @@ let v ~filename ~typedtree () =
     resolved;
     module_names;
     applications;
+    asserts;
   }
 
 let filename t = t.filename
@@ -1130,6 +1146,10 @@ let iter_applications t f =
       in
       let call = { Call.callee; args; loc } in
       f call)
+
+let iter_asserts t f =
+  force t t.asserts
+  |> List.iter (fun loc -> f (Loc.of_typed ~filename:t.filename loc))
 
 let calls_path t path =
   let found = ref false in
