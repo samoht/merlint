@@ -1,31 +1,31 @@
-Bad: codec.ml depends on its sibling Message, inverting the protocol layering.
-  $ (cd bad && dune build @check)
+Bad: a protocol-tagged package with no Protocol / Client / Server module.
+  $ (cd bad/proto && dune build @check)
   $ merlint --build -r E946 bad/
   Dune root: $TESTCASE_ROOT/bad/
   Running merlint analysis...
   
-  Analyzing 2 files
+  Analyzing 1 files
   
   ✓ Code Quality (0 total issues)
   ✓ Code Style (0 total issues)
   ✓ Naming Conventions (0 total issues)
   ✓ Documentation (0 total issues)
   ✗ Project Structure (1 total issues)
-    [E946] Protocol layering (1 issue)
-    The ocaml-protocols layering is one-way codec <- message: codec.ml is the
-    AST-free combinator base and message.ml builds its codecs from it. A codec.ml
-    that references its sibling Message inverts that order. Mirror of E945
-    (encodings, value is the base). Dependency order only.
-    - bad/lib/codec.ml:1:0: codec.ml depends on Message, inverting the codec <- message layering. Keep codec.ml the AST-free base and build the message codecs in message.ml.
+    [E946] Protocol state machine (1 issue)
+    A protocol package (tagged protocol) is a codec plus an I/O-free state
+    machine. Expose that state machine as a Protocol module, or Client / Server
+    for asymmetric protocols. Purity of the core is E930; AST/codec layering is
+    E945.
+    - bad/proto/proto.opam:1:0: proto is tagged protocol but exposes no state-machine module. A protocol is a codec plus an I/O-free state machine; put it in a Protocol module (or Client / Server for asymmetric protocols).
   ✓ Test Quality (0 total issues)
   ✓ Interop Testing (0 total issues)
   ✓ Code Generation (0 total issues)
   
-  ╭───────────────────┬─────────────────────────╮
-  │ Category          │ Issues                  │
-  ├───────────────────┼─────────────────────────┤
-  │ Project Structure │ 1 (1 protocol layering) │
-  ╰───────────────────┴─────────────────────────╯
+  ╭───────────────────┬──────────────────────────────╮
+  │ Category          │ Issues                       │
+  ├───────────────────┼──────────────────────────────┤
+  │ Project Structure │ 1 (1 protocol state machine) │
+  ╰───────────────────┴──────────────────────────────╯
   
   
   Summary: ✗ 1 total issue (applied 1 rule)
@@ -33,8 +33,8 @@ Bad: codec.ml depends on its sibling Message, inverting the protocol layering.
     Run `merlint help E946` for the rule's description, hint, and good/bad examples.
   [1]
 
-Good: codec.ml is the AST-free base; message.ml depends on Codec (codec <- message).
-  $ (cd good && dune build @check)
+Good: a protocol-tagged package exposing a Protocol state-machine module.
+  $ (cd good/proto && dune build @check)
   $ merlint --build -r E946 good/
   Dune root: $TESTCASE_ROOT/good/
   Running merlint analysis...
