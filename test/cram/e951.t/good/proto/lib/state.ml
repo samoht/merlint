@@ -1,2 +1,2 @@
-let handle (m : Message.t) =
-  match m with Hello -> Ok () | Bye -> Ok () | Data _ -> Error "unexpected"
+let handle (m : Message.t) (t : int) =
+  match m with Hello -> Ok (t + 1) | _ -> Error "unexpected"

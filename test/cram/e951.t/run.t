@@ -12,22 +12,22 @@ unexpected message via a wildcard arm that returns a normal value.
   ✓ Naming Conventions (0 total issues)
   ✓ Documentation (0 total issues)
   ✗ Project Structure (1 total issues)
-    [E951] Exhaustive message match (1 issue)
-    A match over the protocol message type must not use a catch-all wildcard arm
-    (| _ -> ...): it defeats the compiler's exhaustiveness check, so a new message
-    constructor silently falls through instead of forcing a review. Enumerate
-    every constructor (group them to share a rejection). See E946-E950 and E952
-    for the rest of the protocol shape.
-    - bad/proto/lib/state.ml:2:32: State matches on the message type with a catch-all wildcard arm. The wildcard defeats the compiler's exhaustiveness check -- a message constructor added later silently falls through it. Enumerate every constructor (group them to share a rejection) so the type-checker flags every match when the message type grows.
+    [E951] Reject unexpected messages (1 issue)
+    A catch-all arm over the protocol message type must reject the message (| _ ->
+    Error _, or | s -> Error (`Unexpected s)), not silently accept it by returning
+    a normal value (Ok / a state / unit). A silent accept is the FREAK/SKIP-class
+    bug: the machine keeps going on a message it should have rejected. See
+    E946-E950 and E952 for the rest of the protocol shape.
+    - bad/proto/lib/state.ml:2:37: State matches on the message type with a catch-all arm that silently accepts an unexpected message (it returns a normal value instead of rejecting). Reject it at the catch-all: State.handle (m : Message.t) = match m with ... | _ -> Error "unexpected" (or | s -> Error (`Unexpected s)).
   ✓ Test Quality (0 total issues)
   ✓ Interop Testing (0 total issues)
   ✓ Code Generation (0 total issues)
   
-  ╭───────────────────┬────────────────────────────────╮
-  │ Category          │ Issues                         │
-  ├───────────────────┼────────────────────────────────┤
-  │ Project Structure │ 1 (1 exhaustive message match) │
-  ╰───────────────────┴────────────────────────────────╯
+  ╭───────────────────┬──────────────────────────────────╮
+  │ Category          │ Issues                           │
+  ├───────────────────┼──────────────────────────────────┤
+  │ Project Structure │ 1 (1 reject unexpected messages) │
+  ╰───────────────────┴──────────────────────────────────╯
   
   
   Summary: ✗ 1 total issue (applied 1 rule)
