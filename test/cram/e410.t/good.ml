@@ -12,3 +12,6 @@ let make ?foo ?bar () =
   | Some n, None -> string_of_int n
   | None, Some s -> s
   | None, None -> default
+let of_string s = s
+let concat sep parts = String.concat sep parts
+let of_pair (x, y) = string_of_int x ^ string_of_int y

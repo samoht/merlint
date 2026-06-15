@@ -14,3 +14,6 @@ val create : ?debug:bool -> name:string -> t -> t
 
 (** [trim t extra] has too many args. *)
 val trim : t -> t
+
+(** [combine "a b" x y] counts a literal as one arg but still over-counts. *)
+val combine : string -> string

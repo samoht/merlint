@@ -6,3 +6,4 @@ let default = "default"
 let create ?(debug = false) ~name t =
   if debug then name ^ t else t
 let trim t = t
+let combine s = s
