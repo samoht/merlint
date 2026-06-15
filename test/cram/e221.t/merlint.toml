@@ -1,0 +1,3 @@
+# This subtree must not format through Printf/Format/Fmt (e.g. a js_of_ocaml
+# directory). E221 bans their use; the list is empty elsewhere in the project.
+disallowed_modules = ["Stdlib.Printf", "Stdlib.Format", "Fmt"]

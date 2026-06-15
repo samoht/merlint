@@ -24,6 +24,19 @@ type t = {
           role names. A package with several deliberate machines (e.g. a CFDP
           Class-1/Class-2 sender and receiver) splits them into one module per
           machine and declares those module names here. *)
+  disallowed_modules : string list;
+      (** Module paths whose use is banned in matching files, parsed from
+          [disallowed_modules] in [merlint.toml] (e.g.
+          [["Stdlib.Printf"; "Stdlib.Format"; "Fmt"]]). E221 flags any reference
+          whose resolved path is, or sits under, one of these. Empty by default,
+          so the rule is silent until a project opts in -- typically via a
+          [merlint.toml] in the subtree it should cover (a [js_of_ocaml]
+          directory that must not pull in [Printf]/[Format]/[Fmt]). *)
+  disallowed_libraries : string list;
+      (** Library / opam-package names banned from a package's dependencies,
+          parsed from [disallowed_libraries] in [merlint.toml] (e.g. [["fmt"]]).
+          E942 flags any package that links one of these via [(libraries ...)]
+          or declares it in [depends:]. Empty by default. *)
   (* Style rules *)
   allow_obj_magic : bool;
   allow_str_module : bool;
