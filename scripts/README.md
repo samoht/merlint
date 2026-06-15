@@ -14,6 +14,6 @@ $ precommit init
 ```
 
 The pre-commit hook runs `dune fmt` (auto-fixing the whole tree) and
-`merlint -B .`, and works for both `git commit` and `git-x commit`. Pass
+`merlint --build .`, and works for both `git commit` and `git-x commit`. Pass
 `--hooks fmt,ai` to install without the merlint check. Bypass in emergencies
 with `git commit --no-verify` (or `git-x commit create --no-verify`).
