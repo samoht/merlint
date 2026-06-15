@@ -18,7 +18,9 @@ let () =
       Test_e005.suite;
       Test_e010.suite;
       Test_e100.suite;
+      Test_e101.suite;
       Test_e105.suite;
+      Test_e106.suite;
       Test_e110.suite;
       Test_e200.suite;
       Test_e205.suite;

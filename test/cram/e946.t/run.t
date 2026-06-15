@@ -15,7 +15,9 @@ Bad: a protocol-tagged package with no State / Client / Server module.
     A protocol package (tagged protocol) is a codec plus an I/O-free state
     machine. Expose that state machine as a State module, or a role pair
     (Client/Server, Sender/Receiver, Initiator/Responder, Requester/Responder) for
-    asymmetric protocols. Purity of the core is E930; AST/codec layering is E945.
+    asymmetric protocols. A package whose machines use other names lists them in
+    allowed_states in merlint.toml, which replaces the default vocabulary. Purity
+    of the core is E930; AST/codec layering is E945.
     - bad/proto/proto.opam:1:0: proto is tagged protocol but exposes no state-machine module. A protocol is a codec plus an I/O-free state machine; put it in a State module (or a role pair -- Client/Server, Sender/Receiver, ... -- for asymmetric protocols).
   ✓ Test Quality (0 total issues)
   ✓ Interop Testing (0 total issues)
@@ -72,3 +74,42 @@ Good: a non-vocabulary state module (engine.ml) declared via allowed_states.
   
   Summary: ✓ 0 total issues (applied 1 rule)
   ✓ All checks passed!
+
+Bad: allowed_states replaces the default vocabulary. The package has a State
+module but declares allowed_states = ["engine"], so [state] is no longer
+recognised and -- with no engine.ml -- the package exposes no state machine.
+  $ (cd bad-declared/proto && dune build @check)
+  $ merlint --build -r E946 bad-declared/
+  Dune root: $TESTCASE_ROOT/bad-declared/
+  Running merlint analysis...
+  
+  Analyzing 1 files
+  
+  ✓ Code Quality (0 total issues)
+  ✓ Code Style (0 total issues)
+  ✓ Naming Conventions (0 total issues)
+  ✓ Documentation (0 total issues)
+  ✗ Project Structure (1 total issues)
+    [E946] Protocol state machine (1 issue)
+    A protocol package (tagged protocol) is a codec plus an I/O-free state
+    machine. Expose that state machine as a State module, or a role pair
+    (Client/Server, Sender/Receiver, Initiator/Responder, Requester/Responder) for
+    asymmetric protocols. A package whose machines use other names lists them in
+    allowed_states in merlint.toml, which replaces the default vocabulary. Purity
+    of the core is E930; AST/codec layering is E945.
+    - bad-declared/proto/proto.opam:1:0: proto is tagged protocol but exposes no state-machine module. A protocol is a codec plus an I/O-free state machine; put it in a State module (or a role pair -- Client/Server, Sender/Receiver, ... -- for asymmetric protocols).
+  ✓ Test Quality (0 total issues)
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
+  
+  ╭───────────────────┬──────────────────────────────╮
+  │ Category          │ Issues                       │
+  ├───────────────────┼──────────────────────────────┤
+  │ Project Structure │ 1 (1 protocol state machine) │
+  ╰───────────────────┴──────────────────────────────╯
+  
+  
+  Summary: ✗ 1 total issue (applied 1 rule)
+  ✗ Some checks failed. See details above.
+    Run `merlint help E946` for the rule's description, hint, and good/bad examples.
+  [1]
