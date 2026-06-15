@@ -14,6 +14,10 @@ type t = {
   allowed_states : string list;
   (* Protocol state-machine module basenames declared by a package whose state
      machines do not use the default role vocabulary (E946-E949). *)
+  disallowed_modules : string list;
+  (* Module paths banned from use in matching files (E221). *)
+  disallowed_libraries : string list;
+  (* Library / opam-package names banned from a package's deps (E942). *)
   (* Style rules *)
   allow_obj_magic : bool;
   allow_str_module : bool;
@@ -38,6 +42,8 @@ let default =
     allowed_words = [];
     topics = [];
     allowed_states = [];
+    disallowed_modules = [];
+    disallowed_libraries = [];
     (* Style defaults - all issues enabled *)
     allow_obj_magic = false;
     allow_str_module = false;
@@ -105,6 +111,18 @@ let apply_config config key value : t =
   | "allowed_states" ->
       (* Accumulate across nested configs, like [allowed_words]. *)
       { config with allowed_states = config.allowed_states @ parse_list value }
+  | "disallowed_modules" ->
+      (* Accumulate so a closer merlint.toml extends the ban list rather than
+         replacing it. *)
+      {
+        config with
+        disallowed_modules = config.disallowed_modules @ parse_list value;
+      }
+  | "disallowed_libraries" ->
+      {
+        config with
+        disallowed_libraries = config.disallowed_libraries @ parse_list value;
+      }
   (* Style rules *)
   | "allow_obj_magic" -> { config with allow_obj_magic = parse_bool value }
   | "allow_str_module" -> { config with allow_str_module = parse_bool value }
@@ -155,6 +173,8 @@ let equal a b =
       a.allowed_words = b.allowed_words;
       a.topics = b.topics;
       a.allowed_states = b.allowed_states;
+      a.disallowed_modules = b.disallowed_modules;
+      a.disallowed_libraries = b.disallowed_libraries;
       a.allow_obj_magic = b.allow_obj_magic;
       a.allow_str_module = b.allow_str_module;
       a.allow_catch_all_exceptions = b.allow_catch_all_exceptions;
@@ -168,12 +188,15 @@ let pp ppf t =
   Fmt.pf ppf
     "@[<v>{ max_complexity = %d; max_function_length = %d; max_nesting = %d; \
      exempt_data_definitions = %b; max_underscores_in_name = %d; \
-     min_name_length_underscore = %d; topics = [%s]; allow_obj_magic = %b; \
-     allow_str_module = %b; allow_catch_all_exceptions = %b; \
-     require_ocamlformat_file = %b; require_mli_files = %b }@]"
+     min_name_length_underscore = %d; topics = [%s]; disallowed_modules = \
+     [%s]; disallowed_libraries = [%s]; allow_obj_magic = %b; allow_str_module \
+     = %b; allow_catch_all_exceptions = %b; require_ocamlformat_file = %b; \
+     require_mli_files = %b }@]"
     t.max_complexity t.max_function_length t.max_nesting
     t.exempt_data_definitions t.max_underscores_in_name
     t.min_name_length_underscore
     (String.concat "; " t.topics)
+    (String.concat "; " t.disallowed_modules)
+    (String.concat "; " t.disallowed_libraries)
     t.allow_obj_magic t.allow_str_module t.allow_catch_all_exceptions
     t.require_ocamlformat_file t.require_mli_files

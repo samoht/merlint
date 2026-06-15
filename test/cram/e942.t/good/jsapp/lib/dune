@@ -1,0 +1,4 @@
+(library
+ (name jsapp)
+ (public_name jsapp)
+ (flags :standard -warn-error -a))

@@ -1,0 +1,3 @@
+# This project bans the fmt library: code targeting js_of_ocaml must format
+# through a lighter path. E942 flags any package that links or depends on it.
+disallowed_libraries = ["fmt"]

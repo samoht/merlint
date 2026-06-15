@@ -1,0 +1,5 @@
+(library
+ (name jsapp)
+ (public_name jsapp)
+ (libraries fmt)
+ (flags :standard -warn-error -a))

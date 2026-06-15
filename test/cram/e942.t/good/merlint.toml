@@ -1,0 +1,2 @@
+# Same ban as the bad fixture; here the package honours it.
+disallowed_libraries = ["fmt"]

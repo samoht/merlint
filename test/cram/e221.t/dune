@@ -1,0 +1,4 @@
+(library
+ (name test_e221)
+ (libraries fmt)
+ (flags :standard -warn-error -a))

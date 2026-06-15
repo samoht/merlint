@@ -838,6 +838,29 @@ and replace each call site with [err_x &quot;...&quot; args] / [fail_x &quot;...
     </div>
     <div class="error-hint"><p>[module X : module type of Y] re-elaborates the target signature and hides type equalities behind a fresh abstraction; an alias [module X = Y] is cheaper to typecheck and preserves equalities. Keep [module type of] only when you immediately narrow with [with type t = ...] / [with module M = ...].</p></div>
 </div>
+<div class="error-card" id="E221">
+    <div>
+        <span class="error-code">E221</span>
+        <span class="error-title">Disallowed module</span>
+    </div>
+    <div class="error-hint"><p>This file references a module banned by the [disallowed_modules] list in a merlint.toml that covers it. Use an allowed alternative, or relax the ban for this subtree. The ban is empty by default and scoped to the directory tree of the merlint.toml that declares it, so a subtree that must not depend on Printf/Format/Fmt can forbid them without affecting the rest of the project.</p><div class="examples-grid">
+<div class="example bad">
+  <h4>BAD</h4>
+  <pre><code><span class="kw">let</span> make_error msg line = <span class="cn">Printf</span>.sprintf &quot;<span class="cn">Error</span>: %s at line %d&quot; msg line
+<span class="kw">let</span> print_count n = <span class="cn">Printf</span>.printf &quot;<span class="cn">Processing</span> %d items...\n&quot; n
+<span class="kw">let</span> format_count n = <span class="cn">Format</span>.asprintf &quot;<span class="cn">Processing</span> %d items...&quot; n
+<span class="kw">let</span> greet name = <span class="cn">Fmt</span>.str &quot;hello %s&quot; name
+</code></pre>
+</div>
+<div class="example good">
+  <h4>GOOD</h4>
+  <pre><code><span class="kw">let</span> make_error msg line = &quot;<span class="cn">Error</span>: &quot; ^ msg ^ &quot; at line &quot; ^ string_of_int line
+<span class="kw">let</span> print_count n = print_string (&quot;<span class="cn">Processing</span> &quot; ^ string_of_int n ^ &quot; items...&quot;)
+<span class="kw">let</span> greet name = &quot;hello &quot; ^ name
+</code></pre>
+</div>
+</div></div>
+</div>
 <h2 id="naming conventions">Naming Conventions</h2>
 <div class="category">E300-E399 • Identifier naming convention violations</div>
 <div class="error-card" id="E300">
@@ -2214,6 +2237,13 @@ and replace each call site with [err_x &quot;...&quot; args] / [fail_x &quot;...
         <span class="error-title">Missing runtime dependency</span>
     </div>
     <div class="error-hint"><p>When a library in your package's [(libraries L)] resolves to opam package P, P must appear in your package's [depends:]. This includes libraries linked by public executables, since [opam install] builds those through [@install]. Otherwise [opam install] from a fresh switch fails for downstream users -- your local build only works because P happens to be in the active switch. The fix depends on how you author opam metadata: if you hand-write [&lt;pkg&gt;.opam], add the package to its [depends:]; if you let dune generate [&lt;pkg&gt;.opam] from [dune-project], add it to the [(package (depends ...))] stanza (use [&lt;pkg&gt;.opam.template] only for fields dune can't generate). Builtin libraries (unix, str, threads, ...), build-tool packages dune resolves separately (ocaml, dune, js_of_ocaml), [conf-*] system-library wrappers, and libraries owned by the package itself are exempt.</p></div>
+</div>
+<div class="error-card" id="E942">
+    <div>
+        <span class="error-code">E942</span>
+        <span class="error-title">Disallowed library dependency</span>
+    </div>
+    <div class="error-hint"><p>This package links or declares a dependency banned by the [disallowed_libraries] list in merlint.toml. Drop the dependency, or relax the ban. The list is empty by default; set it (e.g. [disallowed_libraries = [&quot;fmt&quot;]]) to enforce a build-level boundary, the companion to E221's source-level module ban.</p></div>
 </div>
 <div class="error-card" id="E943">
     <div>

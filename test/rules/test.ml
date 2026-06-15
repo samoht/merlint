@@ -29,6 +29,7 @@ let () =
       Test_e218.suite;
       Test_e219.suite;
       Test_e220.suite;
+      Test_e221.suite;
       Test_e300.suite;
       Test_e305.suite;
       Test_e310.suite;
@@ -114,6 +115,7 @@ let () =
       Test_e932.suite;
       Test_e940.suite;
       Test_e941.suite;
+      Test_e942.suite;
       Test_e943.suite;
       Test_e944.suite;
       Test_e945.suite;
