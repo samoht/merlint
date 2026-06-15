@@ -2236,6 +2236,13 @@ and replace each call site with [err_x &quot;...&quot; args] / [fail_x &quot;...
     </div>
     <div class="error-hint"><p>The ocaml-encodings layering is one-way codec -&gt; value: codec.ml holds [type value = Value.t]; value.ml is the base layer and must not depend on Codec. Dependency order only -- a separate parser engine is fine.</p></div>
 </div>
+<div class="error-card" id="E946">
+    <div>
+        <span class="error-code">E946</span>
+        <span class="error-title">Protocol layering</span>
+    </div>
+    <div class="error-hint"><p>The ocaml-protocols layering is one-way codec &lt;- message: codec.ml is the AST-free combinator base and message.ml builds its codecs from it. A codec.ml that references its sibling Message inverts that order. Mirror of E945 (encodings, value is the base). Dependency order only.</p></div>
+</div>
 
     <a href="#top" class="back-to-top">↑ Top</a>
 </body>
