@@ -167,7 +167,7 @@ let positive (p : Money.t) = Money.(p > zero)
 
 ### [E500] Missing OCamlformat File
 
-All OCaml projects should have a .ocamlformat file in the root directory to ensure consistent code formatting. Create one with your preferred settings.
+Every package needs its own .ocamlformat so each standalone subtree formats consistently, not just the umbrella root. Create one in each directory the linter flags.
 
 **Core Libraries**: Projects typically embrace a curated set of high-quality libraries for common tasks. For example:
 
