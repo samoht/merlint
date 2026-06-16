@@ -94,10 +94,12 @@ let operator fn =
    module ([Pident]) is visible here and so safe; for another module's type
    ([Pdot]) we read its .cmti and exempt it when its declaration is transparent
    (a public record, variant, or alias). Scalars, transparent containers and
-   tuples of those, type variables and polymorphic variants are always safe.
-   [lib] is the library whose internal short sibling references the recursion is
-   currently resolving against (none at the top, the cross-module type's own
-   library once we descend into it). *)
+   tuples of those, and type variables are always safe. A polymorphic variant is
+   safe only when every present tag's payload is safe: a nullary tag carries
+   nothing to walk, but a tag whose payload is a function or an abstract handle
+   is as dangerous as that payload. [lib] is the library whose internal short
+   sibling references the recursion is currently resolving against (none at the
+   top, the cross-module type's own library once we descend into it). *)
 let rec dangerous ~root ~lib ~seen ty =
   match Types.get_desc ty with
   | Types.Tvar _ | Types.Tunivar _ -> false
@@ -105,9 +107,7 @@ let rec dangerous ~root ~lib ~seen ty =
   | Types.Ttuple fields ->
       List.exists (fun (_, t) -> dangerous ~root ~lib ~seen t) fields
   | Types.Tpoly (body, _) -> dangerous ~root ~lib ~seen body
-  (* Polymorphic variants are structurally typed: no abstraction boundary, a
-     canonical representation, and no owning module with its own equal. *)
-  | Types.Tvariant _ -> false
+  | Types.Tvariant row -> dangerous_row ~root ~lib ~seen row
   | Types.Tconstr (path, args, _) -> (
       if is_scalar path || is_custom_compare path then false
       else if is_container path then
@@ -117,6 +117,18 @@ let rec dangerous ~root ~lib ~seen ty =
         | Path.Pident _ -> List.exists (dangerous ~root ~lib ~seen) args
         | _ -> dangerous_named ~root ~lib ~seen (Path.name path) args)
   | _ -> true
+
+(* A polymorphic variant is dangerous when any present tag carries a payload
+   that is itself dangerous. Nullary and absent tags carry nothing to walk. *)
+and dangerous_row ~root ~lib ~seen row =
+  List.exists
+    (fun (_, field) ->
+      match Types.row_field_repr field with
+      | Types.Rpresent None | Types.Rabsent -> false
+      | Types.Rpresent (Some ty) -> dangerous ~root ~lib ~seen ty
+      | Types.Reither (_, tys, _) ->
+          List.exists (dangerous ~root ~lib ~seen) tys)
+    (Types.row_fields row)
 
 (* A type named by another module: dangerous if its declaration is abstract or
    unresolved, or if any type argument or - when transparent - any member is
