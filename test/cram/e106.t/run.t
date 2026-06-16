@@ -6,24 +6,26 @@ Test bad example - polymorphic comparison on non-scalar types:
   
   Analyzing 1 files
   
-  ✗ Code Quality (5 total issues)
-    [E106] Polymorphic comparison (5 issues)
+  ✗ Code Quality (6 total issues)
+    [E106] Polymorphic comparison (6 issues)
     OCaml's structural (=), (<>), (<), (>), (<=), (>=), compare, min, max and
-    Hashtbl.hash compare values by walking their runtime representation. On a
-    non-scalar type this is unsafe: it ignores abstraction boundaries (comparing
-    the concrete representation behind an abstract type), raises Invalid_argument
-    at runtime when a value contains a function, and gives wrong answers for types
-    with a custom notion of equality. Call the type's own equal, compare or hash -
-    every type module should expose them - and have a genuinely generic function
-    take an ~equal or ~compare parameter. Comparing scalars (int, char, string,
-    bytes, float, bool, unit, the fixed-width int types), transparent containers
-    (list, array, option) and tuples of those is fine, and so is comparing against
-    a nullary constructor ([], None, an enum tag), which is just a tag check.
-    - bad.ml:5:31: Polymorphic (=) used on a non-scalar type - use the type's own equal/compare/hash instead
-    - bad.ml:8:28: Polymorphic compare used on a non-scalar type - use the type's own equal/compare/hash instead
-    - bad.ml:11:31: Polymorphic (=) used on a non-scalar type - use the type's own equal/compare/hash instead
-    - bad.ml:14:33: Polymorphic (=) used on a non-scalar type - use the type's own equal/compare/hash instead
-    - bad.ml:17:22: Polymorphic Hashtbl.hash used on a non-scalar type - use the type's own equal/compare/hash instead
+    Hashtbl.hash compare values by walking their runtime representation. On a type
+    from the current module that is fine - you can see its representation, and you
+    expose your own equal in the .mli - but on another module's type it walks past
+    the abstraction (ordering two abstract handles leaks their hidden contents),
+    and on a function it raises Invalid_argument at runtime. Across modules, call
+    that type's own equal, compare or hash. Comparing scalars, transparent
+    containers (list, array, option) and tuples of those is always fine, as is a
+    tag check against a nullary constructor ([], None, an enum tag). Defining a
+    type's own equal or compare with these operators inside its defining module -
+    let equal a b = a = b - is fine and not flagged: there you see the
+    representation and are the authority on whether it is sound.
+    - bad.ml:14:27: Polymorphic (=) - use Id.equal instead
+    - bad.ml:17:28: Polymorphic compare - use Id.compare instead
+    - bad.ml:20:21: Polymorphic Hashtbl.hash - use Id.hash instead
+    - bad.ml:23:27: Polymorphic (=) - use Re.equal instead
+    - bad.ml:26:33: Polymorphic (=) - comparing a function value raises Invalid_argument at runtime
+    - bad.ml:29:22: Polymorphic (>) - use Id.compare instead
   ✓ Code Style (0 total issues)
   ✓ Naming Conventions (0 total issues)
   ✓ Documentation (0 total issues)
@@ -35,11 +37,11 @@ Test bad example - polymorphic comparison on non-scalar types:
   ╭──────────────┬──────────────────────────────╮
   │ Category     │ Issues                       │
   ├──────────────┼──────────────────────────────┤
-  │ Code Quality │ 5 (5 polymorphic comparison) │
+  │ Code Quality │ 6 (6 polymorphic comparison) │
   ╰──────────────┴──────────────────────────────╯
   
   
-  Summary: ✗ 5 total issues (applied 1 rule)
+  Summary: ✗ 6 total issues (applied 1 rule)
   ✗ Some checks failed. See details above.
     Run `merlint help E106` for the rule's description, hint, and good/bad examples.
   [1]

@@ -1,0 +1,27 @@
+; Fixture for Type_kind: a library that surfaces its public types through the
+; "_intf trick" (the real declarations live in an .ml-only *_intf module,
+; re-exported via `include module type of`). Unwrapped so the compilation-unit
+; names match the bare module names Type_kind resolves against.
+
+(library
+ (name intf_fixture)
+ (wrapped false))
+
+; Expose the built interfaces under stable names so the Type_kind test can lay
+; them out in an [_opam/lib] tree and point [classify ~root] at it, resolving
+; [Colour.t] / [Opaque.t] exactly as it resolves an installed package's types.
+; [wrapfix__Sibling.cmti] is Colour's interface under a library-qualified
+; compilation-unit name, as dune names a wrapped library's modules: a bare
+; [Sibling.t] (how a wrapped library records a cross-unit alias) resolves only
+; once the enclosing library [wrapfix] is supplied.
+
+(rule
+ (targets colour.cmti.staged opaque.cmti.staged wrapfix__Sibling.cmti.staged)
+ (deps
+  .intf_fixture.objs/byte/colour.cmti
+  .intf_fixture.objs/byte/opaque.cmti)
+ (action
+  (progn
+   (copy .intf_fixture.objs/byte/colour.cmti colour.cmti.staged)
+   (copy .intf_fixture.objs/byte/opaque.cmti opaque.cmti.staged)
+   (copy .intf_fixture.objs/byte/colour.cmti wrapfix__Sibling.cmti.staged))))

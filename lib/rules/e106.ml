@@ -3,26 +3,68 @@
 module T = Ocaml_typing.Typedtree
 module Types = Ocaml_typing.Types
 module Path = Ocaml_typing.Path
-module Predef = Ocaml_typing.Predef
-module Env = Ocaml_typing.Env
 
-type payload = { op : string }
+type payload = { op : string; advice : string }
 
-(* Scalars have a single, unambiguous structural comparison; polymorphic
-   comparison on them is monomorphic and safe. *)
-let scalar_paths =
+(* Built-in types whose representation is transparent, so structural
+   comparison on them is well defined. Matched by name because the compiler
+   spells them in several ways: the predefined [string], the same type
+   qualified through Stdlib, or via the primitive module's [t] (an inferred
+   type often becomes [Stdlib.String.t] because String.compare has signature
+   [t -> t -> int]). *)
+let scalar_names =
   [
-    Predef.path_int;
-    Predef.path_char;
-    Predef.path_string;
-    Predef.path_bytes;
-    Predef.path_float;
-    Predef.path_bool;
-    Predef.path_unit;
-    Predef.path_int32;
-    Predef.path_int64;
-    Predef.path_nativeint;
+    "int";
+    "char";
+    "string";
+    "bytes";
+    "float";
+    "bool";
+    "unit";
+    "int32";
+    "int64";
+    "nativeint";
   ]
+
+let scalar_modules =
+  [
+    "Int";
+    "Char";
+    "String";
+    "Bytes";
+    "Float";
+    "Bool";
+    "Unit";
+    "Int32";
+    "Int64";
+    "Nativeint";
+    "Uchar";
+  ]
+
+let container_names = [ "list"; "array"; "option"; "result" ]
+let container_modules = [ "List"; "Array"; "Option"; "Result" ]
+
+(* Abstract types whose module registers a correct custom comparison (a C
+   [custom_operations] block with [compare]/[compare_ext]/[hash]), so the
+   polymorphic operators dispatch to it and are reliable. zarith documents
+   this for Z.t and Q.t (reliable since OCaml 3.12.1). There is no static
+   signal for the C registration, so this is a curated list. *)
+let custom_compare_modules = [ "Z"; "Q" ]
+
+let path_matches path ~names ~modules =
+  match String.split_on_char '.' (Path.name path) with
+  | [ n ] | [ "Stdlib"; n ] -> List.mem n names
+  | [ m; "t" ] | [ "Stdlib"; m; "t" ] -> List.mem m modules
+  | _ -> false
+
+let is_scalar path =
+  path_matches path ~names:scalar_names ~modules:scalar_modules
+
+let is_container path =
+  path_matches path ~names:container_names ~modules:container_modules
+
+let is_custom_compare path =
+  path_matches path ~names:[] ~modules:custom_compare_modules
 
 (* Stdlib operators that compare or hash by walking the runtime
    representation, keyed by their resolved path. *)
@@ -46,63 +88,78 @@ let operator fn =
   | None -> None
   | Some parts -> List.assoc_opt parts poly_ops
 
-let container_paths =
-  [ Predef.path_list; Predef.path_array; Predef.path_option ]
-
-let constructor_arg_types (cd : Types.constructor_declaration) =
-  match cd.cd_args with
-  | Types.Cstr_tuple types -> types
-  | Types.Cstr_record labels ->
-      List.map (fun (l : Types.label_declaration) -> l.ld_type) labels
-
-(* Walking a value's runtime representation is dangerous only if it can reach
-   an abstract type (whose representation is meant to be hidden), a function
-   (which crashes), or a private type (whose equality is its own business).
-   Scalars and transparent records, variants, tuples and containers built
-   from safe types carry no such hazard. A type variable is generic: whoever
-   instantiates it owns the choice, so it is left alone here. [seen] breaks
-   recursion on cyclic type definitions. *)
-let rec dangerous ~env ~seen ty =
+(* Walking a value with the polymorphic operators is dangerous only when it can
+   reach an abstract type (whose hidden representation the owning module guards
+   with its own equal) or a function (which crashes). A type from the current
+   module ([Pident]) is visible here and so safe; for another module's type
+   ([Pdot]) we read its .cmti and exempt it when its declaration is transparent
+   (a public record, variant, or alias). Scalars, transparent containers and
+   tuples of those, type variables and polymorphic variants are always safe.
+   [lib] is the library whose internal short sibling references the recursion is
+   currently resolving against (none at the top, the cross-module type's own
+   library once we descend into it). *)
+let rec dangerous ~root ~lib ~seen ty =
   match Types.get_desc ty with
   | Types.Tvar _ | Types.Tunivar _ -> false
   | Types.Tarrow _ -> true
   | Types.Ttuple fields ->
-      List.exists (fun (_, t) -> dangerous ~env ~seen t) fields
-  | Types.Tpoly (body, _) -> dangerous ~env ~seen body
-  | Types.Tconstr (path, args, _) ->
-      if List.exists (Path.same path) scalar_paths then false
-      else if List.exists (Path.same path) container_paths then
-        List.exists (dangerous ~env ~seen) args
-      else if List.exists (Path.same path) seen then false
+      List.exists (fun (_, t) -> dangerous ~root ~lib ~seen t) fields
+  | Types.Tpoly (body, _) -> dangerous ~root ~lib ~seen body
+  (* Polymorphic variants are structurally typed: no abstraction boundary, a
+     canonical representation, and no owning module with its own equal. *)
+  | Types.Tvariant _ -> false
+  | Types.Tconstr (path, args, _) -> (
+      if is_scalar path || is_custom_compare path then false
+      else if is_container path then
+        List.exists (dangerous ~root ~lib ~seen) args
       else
-        let seen = path :: seen in
-        (* A dangerous type argument taints the whole value. *)
-        List.exists (dangerous ~env ~seen) args
-        ||
-        (match Env.find_type path env with
-        | exception Not_found -> true
-        | decl -> (
-            match decl.Types.type_private with
-            | Ocaml_parsing.Asttypes.Private -> true
-            | Ocaml_parsing.Asttypes.Public -> (
-                match (decl.type_kind, decl.type_manifest) with
-                | _, Some manifest -> dangerous ~env ~seen manifest
-                | Types.Type_record (labels, _), None ->
-                    List.exists
-                      (fun (l : Types.label_declaration) ->
-                        dangerous ~env ~seen l.ld_type)
-                      labels
-                | Types.Type_variant (cstrs, _), None ->
-                    List.exists
-                      (fun cd ->
-                        List.exists (dangerous ~env ~seen)
-                          (constructor_arg_types cd))
-                      cstrs
-                | Types.Type_abstract _, None | Types.Type_open, None -> true)))
+        match path with
+        | Path.Pident _ -> List.exists (dangerous ~root ~lib ~seen) args
+        | _ -> dangerous_named ~root ~lib ~seen (Path.name path) args)
   | _ -> true
 
-let flaggable (operand : T.expression) =
-  dangerous ~env:operand.exp_env ~seen:[] operand.exp_type
+(* A type named by another module: dangerous if its declaration is abstract or
+   unresolved, or if any type argument or - when transparent - any member is
+   itself dangerous. A short sibling name that does not resolve on its own is
+   retried as a sub-unit of the enclosing [lib]. Members are resolved against
+   the named type's own library (it owns them). [seen] breaks recursion on
+   cyclic type definitions. *)
+and dangerous_named ~root ~lib ~seen name args =
+  if List.mem name seen then false
+  else
+    let seen = name :: seen in
+    List.exists (dangerous ~root ~lib ~seen) args
+    ||
+    match Type_kind.classify ~root ?lib ~path:name () with
+    | Type_kind.Abstract | Type_kind.Unknown -> true
+    | Type_kind.Transparent members ->
+        let member_lib = Type_kind.library_of ?enclosing:lib name in
+        List.exists (dangerous ~root ~lib:(Some member_lib) ~seen) members
+
+let flaggable ~root (operand : T.expression) =
+  dangerous ~root ~lib:None ~seen:[] operand.exp_type
+
+(* The type-specific function the caller should reach for instead. *)
+let replacement = function
+  | "Hashtbl.hash" | "Hashtbl.seeded_hash" -> "hash"
+  | "(=)" | "(<>)" -> "equal"
+  | _ -> "compare"
+
+(* Name the function to use, e.g. [Z.equal] for a [Z.t] operand. *)
+let advice op (operand : T.expression) =
+  match Types.get_desc operand.exp_type with
+  | Types.Tarrow _ ->
+      "comparing a function value raises Invalid_argument at runtime"
+  | Types.Tconstr (path, _, _)
+    when (not (is_scalar path)) && not (is_container path) -> (
+      match List.rev (String.split_on_char '.' (Path.name path)) with
+      | type_name :: (_ :: _ as module_rev) ->
+          let m = String.concat "." (List.rev module_rev) in
+          let fn = replacement op in
+          let fn = if type_name = "t" then fn else fn ^ "_" ^ type_name in
+          Fmt.str "use %s.%s instead" m fn
+      | _ -> "use the type's own equal, compare or hash instead")
+  | _ -> "use the type's own equal, compare or hash instead"
 
 (* Comparing against a nullary constructor ([], None, an enum tag like
    [Red]) is a tag check: it inspects the constructor, not deep structure, so
@@ -110,7 +167,11 @@ let flaggable (operand : T.expression) =
 let is_tag_check (e : T.expression) =
   match e.exp_desc with Texp_construct (_, _, []) -> true | _ -> false
 
-type state = { filename : string; issues : payload Issue.t list ref }
+type state = {
+  filename : string;
+  root : string;
+  issues : payload Issue.t list ref;
+}
 
 let visit_expr state (expr : T.expression) =
   match expr.exp_desc with
@@ -120,41 +181,43 @@ let visit_expr state (expr : T.expression) =
           let operands = Query.Expr.positional_args args in
           match operands with
           | operand :: _
-            when flaggable operand
+            when flaggable ~root:state.root operand
                  && not (List.exists is_tag_check operands) ->
               state.issues :=
                 Issue.v
                   ~loc:(Loc.of_typed ~filename:state.filename expr.exp_loc)
-                  { op }
+                  { op; advice = advice op operand }
                 :: !(state.issues)
           | _ -> ())
       | None -> ())
   | _ -> ()
 
-let init ctx = { filename = Context.filename ctx; issues = ref [] }
-let finish _ state = List.rev !(state.issues)
+let init ctx =
+  {
+    filename = Context.filename ctx;
+    root = Context.project_root_string ctx;
+    issues = ref [];
+  }
 
-let pp ppf { op } =
-  Fmt.pf ppf
-    "Polymorphic %s used on a non-scalar type - use the type's own \
-     equal/compare/hash instead"
-    op
+let finish _ state = List.rev !(state.issues)
+let pp ppf { op; advice } = Fmt.pf ppf "Polymorphic %s - %s" op advice
 
 let rule =
   Rule.v ~code:"E106" ~title:"Polymorphic comparison" ~category:Security_safety
     ~hint:
       "OCaml's structural (=), (<>), (<), (>), (<=), (>=), compare, min, max \
        and Hashtbl.hash compare values by walking their runtime \
-       representation. That is dangerous when the value can hold an abstract \
-       type (the walk reaches through the abstraction boundary the module set \
-       up - e.g. ordering two abstract handles leaks their hidden contents), \
-       a function (which raises Invalid_argument at runtime), or a private \
-       type (whose equality is its own business). Call the type's own equal, \
-       compare or hash instead - every type module should expose them - and \
-       have a genuinely generic function take an ~equal or ~compare \
-       parameter. Comparing scalars and transparent records, variants, tuples \
-       and containers built only from safe types is fine, and so is comparing \
-       against a nullary constructor ([], None, an enum tag)."
+       representation. On a type from the current module that is fine - you \
+       can see its representation, and you expose your own equal in the .mli - \
+       but on another module's type it walks past the abstraction (ordering \
+       two abstract handles leaks their hidden contents), and on a function it \
+       raises Invalid_argument at runtime. Across modules, call that type's \
+       own equal, compare or hash. Comparing scalars, transparent containers \
+       (list, array, option) and tuples of those is always fine, as is a tag \
+       check against a nullary constructor ([], None, an enum tag). Defining a \
+       type's own equal or compare with these operators inside its defining \
+       module - let equal a b = a = b - is fine and not flagged: there you see \
+       the representation and are the authority on whether it is sound."
     ~examples:
       [ Example.bad Examples.E106.bad_ml; Example.good Examples.E106.good_ml ]
     ~pp
