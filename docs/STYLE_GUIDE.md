@@ -74,13 +74,14 @@ let of_string s = int_of_string_opt s
 
 ### [E106] Polymorphic comparison
 
-OCaml's structural (=), (<>), (<), (>), (<=), (>=), compare, min, max and Hashtbl.hash compare values by walking their runtime representation. That reaches through abstraction boundaries - ordering two values of an abstract type leaks their hidden contents - and raises Invalid_argument at runtime on functional values. Use the type's own equal, compare or hash instead (every type module should expose them), or pass an ~equal/~compare to a generic function. Comparing scalars, transparent containers (list, array, option) and tuples of those is fine, as is a tag check against a nullary constructor ([], None, an enum tag).
+OCaml's structural (=), (<>), (<), (>), (<=), (>=), compare, min, max and Hashtbl.hash compare values by walking their runtime representation. On a type from the current module that is fine - you can see its representation, and you expose your own equal in the .mli - but on another module's type it walks past the abstraction (ordering two abstract handles leaks their hidden contents), and on a function it raises Invalid_argument at runtime. Across modules, call that type's own equal, compare or hash. Comparing scalars, transparent containers (list, array, option) and tuples of those is always fine, as is a tag check against a nullary constructor ([], None, an enum tag). Defining a type's own equal or compare with these operators inside its defining module - let equal a b = a = b - is fine and not flagged: there you see the representation and are the authority on whether it is sound.
 
 **Examples:**
 
 **Bad:**
 ```ocaml
-(* An abstract type hides its representation *)
+(* Id.t is abstract here: another module's type, so it must be compared
+   through Id.equal, not by walking its hidden representation. *)
 module Id : sig
   type t
 
@@ -91,25 +92,23 @@ end = struct
   let v x = x
 end
 
-type handler = { name : string; run : unit -> unit }
-
-(* (=) on an abstract type reaches through the abstraction boundary *)
+(* (=) on another module's type *)
 let same_id (a : Id.t) b = a = b
 
-(* compare on an abstract type *)
+(* compare on another module's type *)
 let order_id (a : Id.t) b = compare a b
 
-(* (=) on a function value: also raises Invalid_argument at runtime *)
-let same_fn (a : int -> int) b = a = b
-
-(* (=) on a record that contains a function *)
-let same_handler (a : handler) b = a = b
-
-(* Hashtbl.hash on a record that contains a function *)
-let key (h : handler) = Hashtbl.hash h
+(* Hashtbl.hash on another module's type *)
+let key (a : Id.t) = Hashtbl.hash a
 
 (* (=) on an abstract type from another library (Re.t is a compiled regex) *)
 let same_re (a : Re.t) b = a = b
+
+(* (=) on a function value: this also raises Invalid_argument at runtime *)
+let same_fn (a : int -> int) b = a = b
+
+(* Stdlib (>) on another module's type: should use Id.compare *)
+let gt (a : Id.t) b = a > b
 
 ```
 
@@ -120,17 +119,42 @@ let same_int (a : int) b = a = b
 let same_string s = s = "hello"
 let bigger (a : float) b = a > b
 
-(* Transparent containers and tuples of safe types are fine too *)
+(* Transparent containers and tuples of safe types are fine too, however the
+   container is spelled - [sorted] infers its list through Stdlib.List *)
 let same_pair (a : int * int) b = a = b
 let same_path (a : string list) b = a = b
 let has_afl o = o = Some "afl"
+let sorted xs = List.sort_uniq String.compare xs = [ "x" ]
 
-(* Comparing against a nullary constructor is a tag check, also fine *)
+(* This module's own types: (=) is fine here because the representation is
+   visible; expose `equal` in the .mli for other modules to call. *)
+type point = { x : int; y : int }
 type color = Red | Green | Blue
 
+let equal_point (a : point) b = a = b
+let equal_color (a : color) b = a = b
+
+(* Tag checks against a nullary constructor *)
 let is_red c = c = Red
 let nonempty l = l <> []
 let absent o = o = None
+
+(* An operator from another module - like Z.(p > zero) on zarith - is that
+   module's own comparison, not Stdlib's, so it is fine even though the
+   operand's type is not local. *)
+module Money : sig
+  type t
+
+  val ( > ) : t -> t -> bool
+  val zero : t
+end = struct
+  type t = int
+
+  let ( > ) = Stdlib.( > )
+  let zero = 0
+end
+
+let positive (p : Money.t) = Money.(p > zero)
 
 ```
 
