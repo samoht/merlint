@@ -4,7 +4,9 @@ would otherwise trip E105 (catch-all handler), E300 (variant naming), E505
 (missing mli), and others. A clean run proves merlint honours the dune
 boundary.
 
-  $ merlint --build .
+The rule count is normalised so adding a rule elsewhere does not break this test.
+
+  $ merlint --build . | sed -E 's/applied [0-9]+ rules/applied N rules/'
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
@@ -17,8 +19,10 @@ boundary.
   ✓ Interop Testing (0 total issues)
   ✓ Code Generation (0 total issues)
   
-  Summary: ✓ 0 total issues (applied 114 rules)
+  Summary: ✓ 0 total issues (applied N rules)
   ✓ All checks passed!
+
+
 
 Passing --include-vendored opts the vendored subtree back in: the bait file now
 enters the analysis set (the default run above analysed none).
