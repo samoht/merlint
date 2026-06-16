@@ -1788,7 +1788,7 @@ and replace each call site with [err_x &quot;...&quot; args] / [fail_x &quot;...
         <span class="error-code">E500</span>
         <span class="error-title">Missing OCamlformat File</span>
     </div>
-    <div class="error-hint"><p>All OCaml projects should have a .ocamlformat file in the root directory to ensure consistent code formatting. Create one with your preferred settings.</p></div>
+    <div class="error-hint"><p>Every package needs its own .ocamlformat so each standalone subtree formats consistently, not just the umbrella root. Create one in each directory the linter flags.</p></div>
 </div>
 <div class="error-card" id="E505">
     <div>

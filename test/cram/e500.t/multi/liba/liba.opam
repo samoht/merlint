@@ -1,0 +1,7 @@
+opam-version: "2.0"
+synopsis: "test sub-package"
+maintainer: "test"
+authors: "test"
+homepage: "https://example.com"
+bug-reports: "https://example.com"
+depends: [ "ocaml" "dune" ]
