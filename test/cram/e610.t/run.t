@@ -130,3 +130,27 @@ Build good-generated fixture project:
   
   Summary: ✓ 0 total issues (applied 1 rule)
   ✓ All checks passed!
+
+A test in a non-mirroring directory (an imported [legacy/] suite) whose
+module lives in a library subdirectory still has a real library module
+behind it, so E610 must not fire:
+Build good-legacy fixture project:
+  $ (cd good-legacy && dune build @check)
+
+  $ merlint --build -r E610 good-legacy/
+  Dune root: $TESTCASE_ROOT/good-legacy/
+  Running merlint analysis...
+  
+  Analyzing 3 files
+  
+  ✓ Code Quality (0 total issues)
+  ✓ Code Style (0 total issues)
+  ✓ Naming Conventions (0 total issues)
+  ✓ Documentation (0 total issues)
+  ✓ Project Structure (0 total issues)
+  ✓ Test Quality (0 total issues)
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
+  
+  Summary: ✓ 0 total issues (applied 1 rule)
+  ✓ All checks passed!
