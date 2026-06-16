@@ -93,6 +93,12 @@ let library_source_files ctx libraries =
 type env = {
   library_module_paths : string list;
   referenced_modules : String_set.t;
+  provided_basenames : String_set.t;
+      (** Lower-cased [<module>.ml] basenames of the modules the test's own
+          declared libraries provide. A test in a non-mirroring directory (an
+          imported [legacy/] suite) or one for a library's namesake wrapper
+          module -- which nothing references by name -- still has a real library
+          module behind it; "Test Without Library" must not fire then. *)
 }
 
 type work = { env : env; file : Context.path; rel_file : Fpath.t }
@@ -138,7 +144,8 @@ let referenced_modules ctx library_source_files =
       else acc)
     String_set.empty library_source_files
 
-let check_test_file ~library_module_paths ~referenced_modules ~file ~rel_file =
+let check_test_file ~library_module_paths ~referenced_modules
+    ~provided_basenames ~file ~rel_file =
   let test_module = Fpath.(rel_file |> rem_ext |> basename) in
   if
     (not (Fpath.has_ext ".ml" rel_file))
@@ -161,46 +168,75 @@ let check_test_file ~library_module_paths ~referenced_modules ~file ~rel_file =
         let referenced =
           (not found) && String_set.mem cap_name referenced_modules
         in
-        Log.debug (fun m -> m "E610: found=%b referenced=%b" found referenced);
-        if found || referenced then None
+        let provided =
+          (not found) && (not referenced)
+          && String_set.mem
+               (String.lowercase_ascii (Filename.basename expected_path))
+               provided_basenames
+        in
+        Log.debug (fun m ->
+            m "E610: found=%b referenced=%b provided=%b" found referenced
+              provided);
+        if found || referenced || provided then None
         else Some (missing_library_issue file expected_path)
 
-let selected_test_files ctx =
-  Context.test_stanzas ctx
-  |> List.concat_map (fun (stanza : Project_index.source_stanza) ->
-      stanza.files)
-  |> List.filter_map (fun file ->
-      let file = Context.resolve ctx file in
-      let rel_file = Fpath.v (Context.project_relative_path ctx file) in
-      let path = Fpath.to_string rel_file in
+(* Lower-cased [<module>.ml] basenames provided by [stanza]'s own declared
+   libraries -- the modules a test in this stanza is entitled to exercise even
+   when the source directory does not mirror the test directory. *)
+let stanza_provided_basenames ctx (stanza : Project_index.source_stanza) =
+  let index = Context.index ctx in
+  stanza.libraries
+  |> List.concat_map (Project_index.libraries_of_name index)
+  |> List.concat_map Project_index.Library.files
+  |> List.filter_map (fun f ->
+      let s = Fpath.to_string f in
       if
-        ctx.Context.in_analyze_set file
-        && File_kind.is_ml path
-        && String.starts_with ~prefix:"test_"
-             Fpath.(rel_file |> rem_ext |> basename)
-        && not (File.is_in_examples path)
-      then Some (file, rel_file)
+        Filename.check_suffix s ".ml"
+        || Filename.check_suffix s ".mli"
+        || Filename.check_suffix s ".mll"
+        || Filename.check_suffix s ".mly"
+      then
+        Some
+          (String.lowercase_ascii
+             (Filename.remove_extension (Filename.basename s))
+          ^ ".ml")
       else None)
+  |> String_set.of_list
 
 let enumerate ctx =
-  match selected_test_files ctx with
-  | [] -> []
-  | files ->
-      let libraries = Project.Query.source_libraries (Context.index ctx) in
-      let library_module_paths = library_module_paths ctx libraries in
-      let library_source_files = library_source_files ctx libraries in
-      let referenced_modules = referenced_modules ctx library_source_files in
-      let env = { library_module_paths; referenced_modules } in
-      Log.debug (fun m ->
-          m "E610: library_module_paths = %a"
-            Fmt.(list ~sep:comma string)
-            library_module_paths);
-      List.map (fun (file, rel_file) -> { env; file; rel_file }) files
+  let libraries = Project.Query.source_libraries (Context.index ctx) in
+  let library_module_paths = library_module_paths ctx libraries in
+  let library_source_files = library_source_files ctx libraries in
+  let referenced_modules = referenced_modules ctx library_source_files in
+  Log.debug (fun m ->
+      m "E610: library_module_paths = %a"
+        Fmt.(list ~sep:comma string)
+        library_module_paths);
+  Context.test_stanzas ctx
+  |> List.concat_map (fun (stanza : Project_index.source_stanza) ->
+      let provided_basenames = stanza_provided_basenames ctx stanza in
+      let env =
+        { library_module_paths; referenced_modules; provided_basenames }
+      in
+      stanza.files
+      |> List.filter_map (fun file ->
+          let file = Context.resolve ctx file in
+          let rel_file = Fpath.v (Context.project_relative_path ctx file) in
+          let path = Fpath.to_string rel_file in
+          if
+            ctx.Context.in_analyze_set file
+            && File_kind.is_ml path
+            && String.starts_with ~prefix:"test_"
+                 Fpath.(rel_file |> rem_ext |> basename)
+            && not (File.is_in_examples path)
+          then Some { env; file; rel_file }
+          else None))
 
 let check_unit { env; file; rel_file } =
   match
     check_test_file ~library_module_paths:env.library_module_paths
-      ~referenced_modules:env.referenced_modules ~file ~rel_file
+      ~referenced_modules:env.referenced_modules
+      ~provided_basenames:env.provided_basenames ~file ~rel_file
   with
   | None -> []
   | Some issue -> [ issue ]
