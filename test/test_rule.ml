@@ -42,7 +42,7 @@ let test_issue_creation () =
       ~end_col:10
   in
   (* We can't create issues directly, but we can test location creation *)
-  Alcotest.(check bool) "location created" true (loc = loc)
+  Alcotest.(check bool) "location created" true (Merlint.Location.equal loc loc)
 
 let test_run_result () =
   (* Test Run.result functions *)

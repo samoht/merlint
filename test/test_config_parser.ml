@@ -8,7 +8,7 @@ let test_parse_empty () =
     (List.length result.settings);
   Alcotest.(check bool)
     "empty input returns empty exclusions" true
-    (result.exclusions = Rule_config.empty)
+    (Rule_config.equal result.exclusions Rule_config.empty)
 
 let test_parse_settings_only () =
   let input = {|max-complexity = 15
@@ -24,7 +24,7 @@ max-function-length = 100
     (List.assoc "max-complexity" config.settings);
   Alcotest.(check bool)
     "no exclusions" true
-    (config.exclusions = Rule_config.empty)
+    (Rule_config.equal config.exclusions Rule_config.empty)
 
 let test_parse_exclusions_only () =
   let input = {|[[rules]]
@@ -35,7 +35,7 @@ exclude = ["E100", "E200"]
   Alcotest.(check int) "no settings" 0 (List.length config.settings);
   Alcotest.(check bool)
     "has exclusions" false
-    (config.exclusions = Rule_config.empty)
+    (Rule_config.equal config.exclusions Rule_config.empty)
 
 let test_parse_full_config () =
   let input =
@@ -56,7 +56,7 @@ exclude = ["E100", "E200", "E300"]
   Alcotest.(check int) "settings count" 2 (List.length config.settings);
   Alcotest.(check bool)
     "has exclusions" false
-    (config.exclusions = Rule_config.empty)
+    (Rule_config.equal config.exclusions Rule_config.empty)
 
 let test_parse_invalid_toml () =
   let input = {|max-complexity 10
@@ -106,7 +106,7 @@ exclude = ["E001"]
       Alcotest.(check int) "settings count" 1 (List.length config.settings);
       Alcotest.(check bool)
         "has exclusions" false
-        (config.exclusions = Rule_config.empty)
+        (Rule_config.equal config.exclusions Rule_config.empty)
 
 let test_parse_allowed_words_multiline () =
   (* Multi-line array values must round-trip correctly. *)
@@ -143,7 +143,7 @@ exclude = ["E330"]
   let config = Config_parser.parse input in
   Alcotest.(check bool)
     "list form parses to non-empty exclusions" false
-    (config.exclusions = Rule_config.empty);
+    (Rule_config.equal config.exclusions Rule_config.empty);
   let pp = Fmt.str "%a" Rule_config.pp config.exclusions in
   let contains needle = Re.execp Re.(compile (str needle)) pp in
   Alcotest.(check bool) "first file expanded" true (contains "lib/color.ml*");

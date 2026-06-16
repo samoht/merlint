@@ -111,7 +111,7 @@ let check_package package =
   let runtime_depends = P.depends package in
   List.filter_map
     (fun dep ->
-      if dep = pkg_name then None
+      if String.equal dep pkg_name then None
       else if Dep_deps.is_conf_pkg dep then None
       else if Dep_deps.String_set.mem dep Dep_deps.build_tools then None
       else if Dep_deps.String_set.mem dep runtime_pkgs then None

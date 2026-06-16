@@ -1108,6 +1108,7 @@ module Item = struct
 
   let name (t : t) = t.item.name
   let kind (t : t) = kind_of_item t.item.kind
+  let equal_kind (a : kind) (b : kind) = a = b
   let deprecated (t : t) = t.item.deprecated
   let loc (t : t) = Loc.of_typed ~filename:t.filename t.item.loc
 

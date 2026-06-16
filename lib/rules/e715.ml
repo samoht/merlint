@@ -11,7 +11,7 @@ module Log = (val Logs.src_log log_src : Logs.LOG)
 let fuzz_modules runner_file fuzz_files =
   List.filter_map
     (fun f ->
-      if f = runner_file then None
+      if Fpath.equal f runner_file then None
       else
         let basename = Fpath.(f |> rem_ext |> basename) in
         if String.starts_with ~prefix:"fuzz_" basename then Some basename

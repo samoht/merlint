@@ -35,7 +35,8 @@ let test_runner files =
 let all_test_modules test_file files =
   List.filter_map
     (fun f ->
-      if File_kind.is_ml (Fpath.to_string f) && f <> test_file then
+      if File_kind.is_ml (Fpath.to_string f) && not (Fpath.equal f test_file)
+      then
         let basename = module_basename f in
         if
           String.starts_with ~prefix:"test_" basename
