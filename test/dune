@@ -1,5 +1,11 @@
 (test
  (name test)
+ (deps
+  ; built interfaces of the _intf-trick fixture, laid out into an _opam tree at
+  ; runtime by Test_type_kind so classify can resolve them
+  intf_fixture/colour.cmti.staged
+  intf_fixture/opaque.cmti.staged
+  intf_fixture/wrapfix__Sibling.cmti.staged)
  (libraries
   merlint
   merlint_doc
