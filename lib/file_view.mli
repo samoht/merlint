@@ -147,6 +147,9 @@ module Item : sig
   val kind : t -> kind
   (** [kind i] is the syntactic kind of the declaration. *)
 
+  val equal_kind : kind -> kind -> bool
+  (** [equal_kind a b] is [true] when [a] and [b] are the same kind. *)
+
   val loc : t -> Merlin.Location.t
   (** [loc i] is the source location of the declaration. *)
 

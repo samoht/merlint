@@ -5,7 +5,8 @@ open Examples
 type payload = { type_name : string; missing_functions : string list }
 
 let item_named kind name item =
-  File_view.Item.kind item = kind && File_view.Item.name item = name
+  File_view.Item.equal_kind (File_view.Item.kind item) kind
+  && File_view.Item.name item = name
 
 let has_pp items = List.exists (item_named File_view.Item.Value "pp") items
 
