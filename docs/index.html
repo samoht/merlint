@@ -606,10 +606,11 @@ pre code {
         <span class="error-code">E106</span>
         <span class="error-title">Polymorphic comparison</span>
     </div>
-    <div class="error-hint"><p>OCaml's structural (=), (&lt;&gt;), (&lt;), (&gt;), (&lt;=), (&gt;=), compare, min, max and Hashtbl.hash compare values by walking their runtime representation. That reaches through abstraction boundaries - ordering two values of an abstract type leaks their hidden contents - and raises Invalid_argument at runtime on functional values. Use the type's own equal, compare or hash instead (every type module should expose them), or pass an ~equal/~compare to a generic function. Comparing scalars, transparent containers (list, array, option) and tuples of those is fine, as is a tag check against a nullary constructor ([], None, an enum tag).</p><div class="examples-grid">
+    <div class="error-hint"><p>OCaml's structural (=), (&lt;&gt;), (&lt;), (&gt;), (&lt;=), (&gt;=), compare, min, max and Hashtbl.hash compare values by walking their runtime representation. On a type from the current module that is fine - you can see its representation, and you expose your own equal in the .mli - but on another module's type it walks past the abstraction (ordering two abstract handles leaks their hidden contents), and on a function it raises Invalid_argument at runtime. Across modules, call that type's own equal, compare or hash. Comparing scalars, transparent containers (list, array, option) and tuples of those is always fine, as is a tag check against a nullary constructor ([], None, an enum tag). Defining a type's own equal or compare with these operators inside its defining module - let equal a b = a = b - is fine and not flagged: there you see the representation and are the authority on whether it is sound.</p><div class="examples-grid">
 <div class="example bad">
   <h4>BAD</h4>
-  <pre><code><span class="cm">(* An abstract type hides its representation *)</span>
+  <pre><code>(* <span class="cn">Id</span>.t is abstract here: another <span class="kw">module</span>'s <span class="kw">type</span>, so it must be compared
+   through <span class="cn">Id</span>.equal, <span class="kw">not</span> by walking its hidden representation. *)
 <span class="kw">module</span> <span class="cn">Id</span> : <span class="kw">sig</span>
   <span class="kw">type</span> t
 
@@ -620,25 +621,23 @@ pre code {
   <span class="kw">let</span> v x = x
 <span class="kw">end</span>
 
-<span class="kw">type</span> handler = { name : string; run : unit -&gt; unit }
-
-<span class="cm">(* (=) on an abstract type reaches through the abstraction boundary *)</span>
+<span class="cm">(* (=) on another module's type *)</span>
 <span class="kw">let</span> same_id (a : <span class="cn">Id</span>.t) b = a = b
 
-<span class="cm">(* compare on an abstract type *)</span>
+<span class="cm">(* compare on another module's type *)</span>
 <span class="kw">let</span> order_id (a : <span class="cn">Id</span>.t) b = compare a b
 
-<span class="cm">(* (=) on a function value: also raises Invalid_argument at runtime *)</span>
-<span class="kw">let</span> same_fn (a : int -&gt; int) b = a = b
-
-<span class="cm">(* (=) on a record that contains a function *)</span>
-<span class="kw">let</span> same_handler (a : handler) b = a = b
-
-<span class="cm">(* Hashtbl.hash on a record that contains a function *)</span>
-<span class="kw">let</span> key (h : handler) = <span class="cn">Hashtbl</span>.hash h
+<span class="cm">(* Hashtbl.hash on another module's type *)</span>
+<span class="kw">let</span> key (a : <span class="cn">Id</span>.t) = <span class="cn">Hashtbl</span>.hash a
 
 <span class="cm">(* (=) on an abstract type from another library (Re.t is a compiled regex) *)</span>
 <span class="kw">let</span> same_re (a : <span class="cn">Re</span>.t) b = a = b
+
+<span class="cm">(* (=) on a function value: this also raises Invalid_argument at runtime *)</span>
+<span class="kw">let</span> same_fn (a : int -&gt; int) b = a = b
+
+<span class="cm">(* Stdlib (&gt;) on another module's type: should use Id.compare *)</span>
+<span class="kw">let</span> gt (a : <span class="cn">Id</span>.t) b = a &gt; b
 </code></pre>
 </div>
 <div class="example good">
@@ -648,17 +647,42 @@ pre code {
 <span class="kw">let</span> same_string s = s = &quot;hello&quot;
 <span class="kw">let</span> bigger (a : float) b = a &gt; b
 
-<span class="cm">(* Transparent containers and tuples of safe types are fine too *)</span>
+(* <span class="cn">Transparent</span> containers <span class="kw">and</span> tuples <span class="kw">of</span> safe types are fine too, however the
+   container is spelled - [sorted] infers its list through <span class="cn">Stdlib</span>.<span class="cn">List</span> *)
 <span class="kw">let</span> same_pair (a : int * int) b = a = b
 <span class="kw">let</span> same_path (a : string list) b = a = b
 <span class="kw">let</span> has_afl o = o = <span class="cn">Some</span> &quot;afl&quot;
+<span class="kw">let</span> sorted xs = <span class="cn">List</span>.sort_uniq <span class="cn">String</span>.compare xs = [ &quot;x&quot; ]
 
-<span class="cm">(* Comparing against a nullary constructor is a tag check, also fine *)</span>
+(* <span class="cn">This</span> <span class="kw">module</span>'s own types: (=) is fine here because the representation is
+   visible; expose `equal` <span class="kw">in</span> the .mli <span class="kw">for</span> other modules <span class="kw">to</span> call. *)
+<span class="kw">type</span> point = { x : int; y : int }
 <span class="kw">type</span> color = <span class="cn">Red</span> | <span class="cn">Green</span> | <span class="cn">Blue</span>
 
+<span class="kw">let</span> equal_point (a : point) b = a = b
+<span class="kw">let</span> equal_color (a : color) b = a = b
+
+<span class="cm">(* Tag checks against a nullary constructor *)</span>
 <span class="kw">let</span> is_red c = c = <span class="cn">Red</span>
 <span class="kw">let</span> nonempty l = l &lt;&gt; []
 <span class="kw">let</span> absent o = o = <span class="cn">None</span>
+
+(* <span class="cn">An</span> operator from another <span class="kw">module</span> - like <span class="cn">Z</span>.(p &gt; zero) on zarith - is that
+   <span class="kw">module</span>'s own comparison, <span class="kw">not</span> <span class="cn">Stdlib's</span>, so it is fine even though the
+   operand's <span class="kw">type</span> is <span class="kw">not</span> local. *)
+<span class="kw">module</span> <span class="cn">Money</span> : <span class="kw">sig</span>
+  <span class="kw">type</span> t
+
+  <span class="kw">val</span> ( &gt; ) : t -&gt; t -&gt; bool
+  <span class="kw">val</span> zero : t
+<span class="kw">end</span> = <span class="kw">struct</span>
+  <span class="kw">type</span> t = int
+
+  <span class="kw">let</span> ( &gt; ) = <span class="cn">Stdlib</span>.( &gt; )
+  <span class="kw">let</span> zero = <span class="nu">0</span>
+<span class="kw">end</span>
+
+<span class="kw">let</span> positive (p : <span class="cn">Money</span>.t) = <span class="cn">Money</span>.(p &gt; zero)
 </code></pre>
 </div>
 </div></div>
@@ -2399,6 +2423,20 @@ and replace each call site with [err_x &quot;...&quot; args] / [fail_x &quot;...
         <span class="error-title">Result-returning transitions</span>
     </div>
     <div class="error-hint"><p>A protocol transition (handle / incoming / outgoing / close / timer) returns a result carrying the new state, output, events, and an Error on bad input -- never unit, which forces in-place mutation and raising. See E947 (immutable state) and E950 (total transitions) for the related invariants.</p></div>
+</div>
+<div class="error-card" id="E953">
+    <div>
+        <span class="error-code">E953</span>
+        <span class="error-title">Encoding verb vocabulary</span>
+    </div>
+    <div class="error-hint"><p>A data-codec package (tagged codec) exposes its top-level entry points from a fixed vocabulary: of_string / to_string / of_reader / to_writer for I/O, and decode / encode over the AST, each of_/decode with an _exn twin (never a ' variant). The bare synonyms parse / from_string / unmarshal / print / unparse / marshal / read / input / write / output are rejected -- each maps to a canonical verb. The prefixed parse_* / print_* helpers are internal and left alone. See E945 for the codec/AST layering, E948 for the protocol verb vocabulary.</p></div>
+</div>
+<div class="error-card" id="E955">
+    <div>
+        <span class="error-code">E955</span>
+        <span class="error-title">No prime suffix on values</span>
+    </div>
+    <div class="error-hint"><p>A raising variant of a codec entry point is named with the _exn suffix (of_string_exn), never a ' suffix (of_string'). The ' suffix is reserved for a format-native keyword escape (object', the JSON object sort) or a pp / pp' configuration-variant pair; there are no built-in exceptions, so any ' name a codec package keeps must be documented in allowed-names in its merlint.toml. See E953 for the encoding verb vocabulary.</p></div>
 </div>
 
     <a href="#top" class="back-to-top">↑ Top</a>
