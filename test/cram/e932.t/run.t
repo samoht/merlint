@@ -1,4 +1,4 @@
-Test bad example - protocol package missing ocaml-probe:
+Test bad example - protocol package missing probe:
 Build bad fixture project:
   $ (cd bad && dune build @check)
 
@@ -12,12 +12,12 @@ Build bad fixture project:
   ✓ Documentation (0 total issues)
   ✗ Project Structure (1 total issues)
     [E932] Protocol probe dependency (1 issue)
-    Every package tagged [protocol] must depend on [ocaml-probe], and each public
-    protocol library in that package must link [ocaml-probe] in its [(libraries
-    ...)] stanza. Protocol libraries should declare a closed [Event.t] vocabulary
-    and expose [Event.emit_probe] so adapters can publish typed Runtime_events
-    probes without owning an in-process subscription API.
-    - bad/pkg/pkg.opam:1:0: pkg is tagged [protocol] but does not depend on ocaml-probe
+    Every package tagged [protocol] must depend on [probe], and each public
+    protocol library in that package must link [probe] in its [(libraries ...)]
+    stanza. Protocol libraries should declare a closed [Event.t] vocabulary and
+    expose [Event.emit_probe] so adapters can publish typed Runtime_events probes
+    without owning an in-process subscription API.
+    - bad/pkg/pkg.opam:1:0: pkg is tagged [protocol] but does not depend on probe
   ✓ Test Quality (0 total issues)
   ✓ Interop Testing (0 total issues)
   ✓ Code Generation (0 total issues)
@@ -34,7 +34,7 @@ Build bad fixture project:
     Run `merlint help E932` for the rule's description, hint, and good/bad examples.
   [1]
 
-Test bad link example - protocol package declares ocaml-probe but the public
+Test bad link example - protocol package declares probe but the public
 library does not link it:
 Build bad-link fixture project:
   $ (cd bad-link && dune build @check)
@@ -51,12 +51,12 @@ Build bad-link fixture project:
   ✓ Documentation (0 total issues)
   ✗ Project Structure (1 total issues)
     [E932] Protocol probe dependency (1 issue)
-    Every package tagged [protocol] must depend on [ocaml-probe], and each public
-    protocol library in that package must link [ocaml-probe] in its [(libraries
-    ...)] stanza. Protocol libraries should declare a closed [Event.t] vocabulary
-    and expose [Event.emit_probe] so adapters can publish typed Runtime_events
-    probes without owning an in-process subscription API.
-    - bad-link/pkg/pkg.opam:1:0: pkg is tagged [protocol], but public library pkg does not link ocaml-probe in its (libraries ...) stanza
+    Every package tagged [protocol] must depend on [probe], and each public
+    protocol library in that package must link [probe] in its [(libraries ...)]
+    stanza. Protocol libraries should declare a closed [Event.t] vocabulary and
+    expose [Event.emit_probe] so adapters can publish typed Runtime_events probes
+    without owning an in-process subscription API.
+    - bad-link/pkg/pkg.opam:1:0: pkg is tagged [protocol], but public library pkg does not link probe in its (libraries ...) stanza
   ✓ Test Quality (0 total issues)
   ✓ Interop Testing (0 total issues)
   ✓ Code Generation (0 total issues)
@@ -73,7 +73,7 @@ Build bad-link fixture project:
     Run `merlint help E932` for the rule's description, hint, and good/bad examples.
   [1]
 
-Test good example - protocol package depends on ocaml-probe:
+Test good example - protocol package depends on probe:
 Build good fixture project:
   $ (cd good && dune build @check)
 
