@@ -3,7 +3,7 @@
  (libraries
   test_helpers
   merlint
-  ocaml-project-index
+  project-index
   eio
   eio_main
   alcotest

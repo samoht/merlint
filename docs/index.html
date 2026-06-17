@@ -2331,7 +2331,7 @@ and replace each call site with [err_x &quot;...&quot; args] / [fail_x &quot;...
         <span class="error-code">E932</span>
         <span class="error-title">Protocol probe dependency</span>
     </div>
-    <div class="error-hint"><p>Every package tagged [protocol] must depend on [ocaml-probe], and each public protocol library in that package must link [ocaml-probe] in its [(libraries ...)] stanza. Protocol libraries should declare a closed [Event.t] vocabulary and expose [Event.emit_probe] so adapters can publish typed Runtime_events probes without owning an in-process subscription API.</p></div>
+    <div class="error-hint"><p>Every package tagged [protocol] must depend on [probe], and each public protocol library in that package must link [probe] in its [(libraries ...)] stanza. Protocol libraries should declare a closed [Event.t] vocabulary and expose [Event.emit_probe] so adapters can publish typed Runtime_events probes without owning an in-process subscription API.</p></div>
 </div>
 <div class="error-card" id="E940">
     <div>

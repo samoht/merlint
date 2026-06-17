@@ -4,7 +4,7 @@
  (public_name merlint)
  (name merlint)
  (libraries
-  ocaml-merlin
+  merlin
   compiler-libs.common
   eio
   re
@@ -20,8 +20,8 @@
   nox-toml
   bytesrw
   nox-sexp
-  ocaml-probe
-  ocaml-project-index
+  probe
+  project-index
   unix))
 
 (rule
