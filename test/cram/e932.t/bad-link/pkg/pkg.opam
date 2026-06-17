@@ -1,4 +1,4 @@
 opam-version: "2.0"
-synopsis: "Protocol package declaring ocaml-probe but not linking it"
+synopsis: "Protocol package declaring probe but not linking it"
 tags: [ "protocol" ]
-depends: [ "ocaml" "dune" "ocaml-probe" ]
+depends: [ "ocaml" "dune" "probe" ]

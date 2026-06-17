@@ -1,8 +1,8 @@
 (** E932: Protocol package probe dependency.
 
-    Protocol packages expose their event vocabulary through [ocaml-probe]. The
+    Protocol packages expose their event vocabulary through [probe]. The
     opam [protocol] tag is the package-level contract; this rule makes the
-    contract mechanically visible by requiring [ocaml-probe] in [depends:] and
+    contract mechanically visible by requiring [probe] in [depends:] and
     in the public protocol library's [(libraries ...)] stanza. *)
 
 type payload =
@@ -12,10 +12,10 @@ type payload =
 module P = Project_index.Package
 
 let has_protocol_tag tags = List.exists (String.equal "protocol") tags
-let has_probe_dep pkg = List.exists (String.equal "ocaml-probe") (P.depends pkg)
+let has_probe_dep pkg = List.exists (String.equal "probe") (P.depends pkg)
 
 let library_has_probe lib =
-  List.exists (String.equal "ocaml-probe") (Project_index.Library.deps lib)
+  List.exists (String.equal "probe") (Project_index.Library.deps lib)
 
 let public_libraries pkg =
   Project_index.package_libraries pkg
@@ -37,19 +37,19 @@ let check ctx = Context.index ctx |> Dep_deps.run_per_package ~check_package
 
 let pp ppf = function
   | Package_dep { package } ->
-      Fmt.pf ppf "%s is tagged [protocol] but does not depend on ocaml-probe"
+      Fmt.pf ppf "%s is tagged [protocol] but does not depend on probe"
         package
   | Library_dep { package; library } ->
       Fmt.pf ppf
         "%s is tagged [protocol], but public library %s does not link \
-         ocaml-probe in its (libraries ...) stanza"
+         probe in its (libraries ...) stanza"
         package library
 
 let rule =
   Rule.v ~code:"E932" ~title:"Protocol probe dependency"
     ~hint:
-      "Every package tagged [protocol] must depend on [ocaml-probe], and each \
-       public protocol library in that package must link [ocaml-probe] in its \
+      "Every package tagged [protocol] must depend on [probe], and each \
+       public protocol library in that package must link [probe] in its \
        [(libraries ...)] stanza. Protocol libraries should declare a closed \
        [Event.t] vocabulary and expose [Event.emit_probe] so adapters can \
        publish typed Runtime_events probes without owning an in-process \
