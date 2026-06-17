@@ -2394,7 +2394,7 @@ and replace each call site with [err_x &quot;...&quot; args] / [fail_x &quot;...
         <span class="error-code">E948</span>
         <span class="error-title">Protocol verb vocabulary</span>
     </div>
-    <div class="error-hint"><p>A state-machine module uses the canonical verb vocabulary (v, client, server, handle, incoming, outgoing, close, timer, next_timeout). The anti-pattern synonyms parse_* / process_* / eat_* and bare send / recv / receive / read / write / step / make / create / init / shutdown are rejected -- each maps to a canonical verb. See E946 for the module, E947 for immutable state, E949 for one machine per module.</p></div>
+    <div class="error-hint"><p>A state-machine module uses the canonical verb vocabulary (v, client, server, incoming, outgoing, close, timer, next_timeout). The anti-pattern synonyms parse_* / process_* / eat_* and bare send / recv / receive / read / write / step / make / create / init / shutdown are rejected -- each maps to a canonical verb. See E946 for the module, E947 for immutable state, E949 for one machine per module.</p></div>
 </div>
 <div class="error-card" id="E949">
     <div>
@@ -2430,6 +2430,13 @@ and replace each call site with [err_x &quot;...&quot; args] / [fail_x &quot;...
         <span class="error-title">Encoding verb vocabulary</span>
     </div>
     <div class="error-hint"><p>A data-codec package (tagged codec) exposes its top-level entry points from a fixed vocabulary: of_string / to_string / of_reader / to_writer for I/O, and decode / encode over the AST, each of_/decode with an _exn twin (never a ' variant). The bare synonyms parse / from_string / unmarshal / print / unparse / marshal / read / input / write / output are rejected -- each maps to a canonical verb. The prefixed parse_* / print_* helpers are internal and left alone. See E945 for the codec/AST layering, E948 for the protocol verb vocabulary.</p></div>
+</div>
+<div class="error-card" id="E954">
+    <div>
+        <span class="error-code">E954</span>
+        <span class="error-title">Protocol state machine entry points</span>
+    </div>
+    <div class="error-hint"><p>A protocol's state machine exposes both an inbound verb (incoming) and a constructor (v, or a role constructor: client / server / sender / receiver / initiator / responder / requester), so a reviewer can always find where the machine is built and where it steps. See E946 for the module being present, E948 for the verb names, E950 for total transitions.</p></div>
 </div>
 <div class="error-card" id="E955">
     <div>

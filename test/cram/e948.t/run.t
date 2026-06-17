@@ -11,13 +11,13 @@ Bad: a protocol state module using anti-pattern verbs (send, parse_*).
   ✗ Naming Conventions (2 total issues)
     [E948] Protocol verb vocabulary (2 issues)
     A state-machine module uses the canonical verb vocabulary (v, client, server,
-    handle, incoming, outgoing, close, timer, next_timeout). The anti-pattern
-    synonyms parse_* / process_* / eat_* and bare send / recv / receive / read /
-    write / step / make / create / init / shutdown are rejected -- each maps to a
+    incoming, outgoing, close, timer, next_timeout). The anti-pattern synonyms
+    parse_* / process_* / eat_* and bare send / recv / receive / read / write /
+    step / make / create / init / shutdown are rejected -- each maps to a
     canonical verb. See E946 for the module, E947 for immutable state, E949 for
     one machine per module.
-    - bad/proto/lib/state.ml:4:0: State.send is not a canonical protocol verb. Rename it to outgoing; the state machine uses the canonical vocabulary (v / client / server / handle / incoming / outgoing / close), and the parse_* / process_* / eat_* and bare send / recv / make synonyms are rejected.
-    - bad/proto/lib/state.ml:5:0: State.parse_frame is not a canonical protocol verb. Rename it to handle; the state machine uses the canonical vocabulary (v / client / server / handle / incoming / outgoing / close), and the parse_* / process_* / eat_* and bare send / recv / make synonyms are rejected.
+    - bad/proto/lib/state.ml:4:0: State.send is not a canonical protocol verb. Rename it to outgoing; the state machine uses the canonical vocabulary (v / client / server / incoming / outgoing / close), and the parse_* / process_* / eat_* and bare send / recv / make synonyms are rejected.
+    - bad/proto/lib/state.ml:5:0: State.parse_frame is not a canonical protocol verb. Rename it to incoming; the state machine uses the canonical vocabulary (v / client / server / incoming / outgoing / close), and the parse_* / process_* / eat_* and bare send / recv / make synonyms are rejected.
   ✓ Documentation (0 total issues)
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)

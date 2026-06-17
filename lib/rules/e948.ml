@@ -2,7 +2,7 @@
 
     Every protocol's state machine exposes the same small set of verbs, so a
     reviewer (and a state-machine learner) sees one uniform surface across the
-    tree. The canonical verbs are [v], [client], [server], [handle], [incoming],
+    tree. The canonical verbs are [v], [client], [server], [incoming],
     [outgoing], [close], plus [timer] / [next_timeout] for time-driven
     transitions.
 
@@ -29,16 +29,17 @@ let bare_synonyms =
     ("emit", "outgoing");
     ("transmit", "outgoing");
     ("output", "outgoing");
-    ("recv", "handle");
-    ("receive", "handle");
-    ("read", "handle");
-    ("parse", "handle");
-    ("process", "handle");
-    ("eat", "handle");
-    ("step", "handle");
-    ("dispatch", "handle");
-    ("consume", "handle");
-    ("ingest", "handle");
+    ("recv", "incoming");
+    ("receive", "incoming");
+    ("read", "incoming");
+    ("parse", "incoming");
+    ("process", "incoming");
+    ("eat", "incoming");
+    ("step", "incoming");
+    ("dispatch", "incoming");
+    ("consume", "incoming");
+    ("ingest", "incoming");
+    ("handle", "incoming");
     ("make", "v");
     ("create", "v");
     ("init", "v");
@@ -49,7 +50,7 @@ let bare_synonyms =
 
 (* Prefixes the protocols skill rejects outright. *)
 let banned_prefixes =
-  [ ("parse_", "handle"); ("process_", "handle"); ("eat_", "handle") ]
+  [ ("parse_", "incoming"); ("process_", "incoming"); ("eat_", "incoming") ]
 
 let canonical_of name =
   let n = String.lowercase_ascii name in
@@ -84,9 +85,9 @@ let enumerate ctx = Protocol_modules.protocol_machine_modules ctx
 let pp ppf { module_; verb; canonical } =
   Fmt.pf ppf
     "%s.%s is not a canonical protocol verb. Rename it to %s; the state \
-     machine uses the canonical vocabulary (v / client / server / handle / \
-     incoming / outgoing / close), and the parse_* / process_* / eat_* and \
-     bare send / recv / make synonyms are rejected."
+     machine uses the canonical vocabulary (v / client / server / incoming / \
+     outgoing / close), and the parse_* / process_* / eat_* and bare send / \
+     recv / make synonyms are rejected."
     (String.capitalize_ascii module_)
     verb canonical
 
@@ -95,7 +96,7 @@ let rule =
     ~category:Rule.Naming_conventions
     ~hint:
       "A state-machine module uses the canonical verb vocabulary (v, client, \
-       server, handle, incoming, outgoing, close, timer, next_timeout). The \
+       server, incoming, outgoing, close, timer, next_timeout). The \
        anti-pattern synonyms parse_* / process_* / eat_* and bare send / recv \
        / receive / read / write / step / make / create / init / shutdown are \
        rejected -- each maps to a canonical verb. See E946 for the module, \
