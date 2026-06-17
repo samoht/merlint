@@ -129,6 +129,7 @@ let () =
       Test_e951.suite;
       Test_e952.suite;
       Test_e953.suite;
+      Test_e954.suite;
       Test_e955.suite;
       Test_dep_deps.suite;
       Test_interop.suite;

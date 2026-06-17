@@ -717,14 +717,22 @@ let rec typed_class_type_children (typ : Typedtree.class_type) =
 let rec typed_structure_items (structure : Typedtree.structure) =
   List.concat_map typed_structure_item structure.str_items
 
+and typed_module_expr_items (mexpr : Typedtree.module_expr) =
+  (* Descend through functor abstractions and signature constraints so the
+     house-style [module Make (B : S) = struct ... end] machine body is
+     visible to outline-based rules. The functor parameter contributes no
+     value items; the structure inside the body (possibly behind a [: S]
+     constraint) does. [Tmod_ident]/[Tmod_apply] have no inline structure. *)
+  match mexpr.mod_desc with
+  | Tmod_structure s -> typed_structure_items s
+  | Tmod_functor (_param, body) -> typed_module_expr_items body
+  | Tmod_constraint (mexpr, _, _, _) -> typed_module_expr_items mexpr
+  | _ -> []
+
 and typed_module_binding_item (mb : Typedtree.module_binding) =
   Option.map
     (fun name ->
-      let children =
-        match mb.mb_expr.mod_desc with
-        | Tmod_structure s -> typed_structure_items s
-        | _ -> []
-      in
+      let children = typed_module_expr_items mb.mb_expr in
       typed_item ~name ~kind:Module ~children
         ?doc:(typed_doc mb.mb_attributes)
         ~deprecated:(typed_has_deprecated mb.mb_attributes)
