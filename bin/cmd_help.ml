@@ -62,7 +62,7 @@ let write_output output body =
 let rule_of_code code =
   List.find_opt (fun r -> Rule.code r = code) Data.all_rules
 
-let run topic format all output =
+let run () topic format all output =
   match (normalise_topic topic, all) with
   | _, true -> write_output output (Doc.render_all ~format Data.all_rules)
   | None, false -> (
@@ -107,4 +107,7 @@ let cmd =
   in
   let info = Cmd.info "help" ~doc ~man in
   Cmd.v info
-    Term.(ret (const run $ topic_arg $ format_arg $ all_arg $ output_arg))
+    Term.(
+      ret
+        (const run $ Observe.setup "merlint" $ topic_arg $ format_arg $ all_arg
+       $ output_arg))

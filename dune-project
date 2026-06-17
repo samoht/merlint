@@ -22,7 +22,7 @@
   bytesrw
   cmdliner
   eio
-  ocaml-merlin
+  merlin
   merlin-lib
   re
   fpath
@@ -36,10 +36,10 @@
   nox-toml
   nox-json
   nox-tty
-  ocaml-probe
-  ocaml-observe
+  probe
+  observe
   eio_main
-  ocaml-project-index
+  project-index
   dune-build-info
   (alcotest :with-test)
   (mdx :with-test)))

@@ -13,4 +13,4 @@ let cmd =
     @ Merlint_doc.Config_doc.man
   in
   let info = Cmd.info "config" ~doc ~man in
-  Cmd.v info Term.(const () |> map (fun () -> ()))
+  Cmd.v info Term.(const (fun () -> ()) $ Observe.setup "merlint")

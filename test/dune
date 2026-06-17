@@ -9,8 +9,8 @@
  (libraries
   merlint
   merlint_doc
-  ocaml-merlin
-  ocaml-project-index
+  merlin
+  project-index
   alcotest
   alcotest.engine
   compiler-libs.common

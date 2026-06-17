@@ -11,8 +11,8 @@
   fpath
   fmt
   logs
-  ocaml-observe
+  observe
   nox-json
   nox-tty
   version
-  ocaml-project-index))
+  project-index))
