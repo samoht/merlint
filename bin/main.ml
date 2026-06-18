@@ -4,8 +4,8 @@ let logs_src = Logs.Src.create "merlint" ~doc:"Merlint OCaml linter"
 
 module Log = (val Logs.src_log logs_src : Logs.LOG)
 
-let wrap_text ?(indent = 2) text =
-  Tty.Width.wrap ~indent (Tty.Width.terminal_width ()) text
+let wrap_text ~ctx ?(indent = 2) text =
+  Tty.Width.wrap ~indent (fst (Tty.Display.dimensions ctx)) text
 
 let normalize_fpath path = Fpath.(path |> normalize |> rem_empty_seg)
 
@@ -46,7 +46,7 @@ let relativize_rendered_issue text =
   loop 0;
   Buffer.contents buf
 
-let print_issue_group (error_code, issues) =
+let print_issue_group ~ctx (error_code, issues) =
   (* Sort issues within each group by location *)
   let sorted_issues = List.sort Merlint.Rule.Run.compare issues in
   match sorted_issues with
@@ -71,7 +71,7 @@ let print_issue_group (error_code, issues) =
       (match rule_opt with
       | Some rule ->
           let hint = Merlint.Rule.hint rule in
-          let wrapped_hint = wrap_text ~indent:2 hint in
+          let wrapped_hint = wrap_text ~ctx ~indent:2 hint in
           (* Print each line of the hint in gray *)
           String.split_on_char '\n' wrapped_hint
           |> List.iter (fun line ->
@@ -278,7 +278,7 @@ let group_issues_by_category all_issues =
     all_categories
 
 (* Print issues grouped by category *)
-let print_categorized_issues issues_by_category =
+let print_categorized_issues ~ctx issues_by_category =
   List.iter
     (fun (category_name, issues) ->
       let total_issues = List.length issues in
@@ -295,7 +295,7 @@ let print_categorized_issues issues_by_category =
         let sorted_groups =
           List.sort (fun (a, _) (b, _) -> String.compare a b) grouped_issues
         in
-        List.iter print_issue_group sorted_groups)
+        List.iter (print_issue_group ~ctx) sorted_groups)
     issues_by_category
 
 (* Get enabled rules based on filter *)
@@ -341,11 +341,11 @@ let summary_row (category_name, issues) =
     Some [ category_name; Fmt.str "%d (%s)" count details ]
 
 (* Print summary table by category *)
-let print_summary_table issues_by_category =
+let print_summary_table ~ctx issues_by_category =
   let rows = List.filter_map summary_row issues_by_category in
   if rows <> [] then (
     Fmt.pr "@.";
-    let term_width = Tty.Width.terminal_width () in
+    let term_width = fst (Tty.Display.dimensions ctx) in
     (* Account for borders and padding: 2 borders + 2 middle + 4 padding = 8 *)
     let available = term_width - 8 in
     let cat_width = min 20 (available / 4) in
@@ -359,7 +359,7 @@ let print_summary_table issues_by_category =
     let table =
       Tty.Table.of_string_rows ~border:Tty.Border.rounded columns rows
     in
-    Fmt.pr "%a@." Tty.Table.pp table)
+    Fmt.pr "%a@." (Tty.Table.pp ~ctx) table)
 
 (* Print summary and status *)
 let print_summary all_issues enabled_rule_count =
@@ -425,8 +425,8 @@ let print_exclusion_stats all_excluded =
     Fmt.pr "@]@."
   end
 
-let run_analysis ?domain_mgr ~load_file ~json_output project_root analyze_set
-    analyze_roots
+let run_analysis ~ctx ?domain_mgr ~load_file ~json_output project_root
+    analyze_set analyze_roots
     (build_index : ?pool:Eio.Executor_pool.t -> unit -> Project_index.t)
     rule_filter show_profile ~bail ~exclude ~include_vendored =
   let profiling_state =
@@ -461,10 +461,10 @@ let run_analysis ?domain_mgr ~load_file ~json_output project_root analyze_set
 
     (* Process each category *)
     ignore project_root;
-    print_categorized_issues issues_by_category;
+    print_categorized_issues ~ctx issues_by_category;
 
     (* Print summary table *)
-    print_summary_table issues_by_category;
+    print_summary_table ~ctx issues_by_category;
 
     (* Print custom summary *)
     print_summary all_issues enabled_rule_count;
@@ -472,9 +472,9 @@ let run_analysis ?domain_mgr ~load_file ~json_output project_root analyze_set
     (* Print profiling summary if enabled *)
     match profiling_state with
     | Some state ->
-        Merlint.Profiling.print_summary state;
-        Merlint.Profiling.print_rule_summary state;
-        Merlint.Profiling.print_file_summary state
+        Merlint.Profiling.print_summary ~ctx state;
+        Merlint.Profiling.print_rule_summary ~ctx state;
+        Merlint.Profiling.print_file_summary ~ctx state
     | None -> ());
 
   print_fix_hints all_issues
@@ -599,7 +599,7 @@ let installed_index_mode rule_filter =
   in
   if dep_rule_enabled then Project_index.Referenced else Project_index.Skip
 
-let analyze_files mgr fs domain_mgr ?(exclude_patterns = []) ?rule_filter
+let analyze_files ~ctx mgr fs domain_mgr ?(exclude_patterns = []) ?rule_filter
     ?(show_profile = false) ?(build = false) ?(bail = false)
     ?(include_vendored = false) ?(json_output = false) files =
   let load_file = load_file_via_eio fs in
@@ -618,7 +618,7 @@ let analyze_files mgr fs domain_mgr ?(exclude_patterns = []) ?rule_filter
   let lazy_index = lazy (build_index ()) in
   maybe_build_project mgr ~project_root ~analyze_set ~analyze_roots
     ~index:lazy_index ~build;
-  run_analysis ~domain_mgr ~load_file ~json_output project_root analyze_set
+  run_analysis ~ctx ~domain_mgr ~load_file ~json_output project_root analyze_set
     analyze_roots build_index rule_filter show_profile ~bail
     ~exclude:exclude_patterns ~include_vendored
 
@@ -728,12 +728,14 @@ let main exclude_patterns rules_spec ~show_profile ~show_config ~build ~bail
   else
     let rule_filter = parse_rule_filter rules_spec in
     Eio_main.run @@ fun env ->
+    let clock = Eio.Stdenv.clock env in
+    Tty_eio.run ~clock @@ fun ctx ->
     let mgr = Eio.Stdenv.process_mgr env in
     let fs = Eio.Stdenv.fs env in
     let domain_mgr = Eio.Stdenv.domain_mgr env in
     let json_output = Observe.json_enabled () in
-    analyze_files mgr fs domain_mgr ~exclude_patterns ?rule_filter ~show_profile
-      ~build ~bail ~include_vendored ~json_output files
+    analyze_files ~ctx mgr fs domain_mgr ~exclude_patterns ?rule_filter
+      ~show_profile ~build ~bail ~include_vendored ~json_output files
 
 let analyze_term =
   let json_log_reporter ~app:_ ~base:_ () = Observe.reporter () in

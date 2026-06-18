@@ -36,6 +36,7 @@
   nox-toml
   nox-json
   nox-tty
+  nox-tty-eio
   probe
   observe
   eio_main
