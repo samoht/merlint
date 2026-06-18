@@ -54,21 +54,43 @@ let clean_suggested original =
   in
   parts |> List.concat_map convert |> dedupe_adjacent |> String.concat "."
 
-let issue_of_identifier ref_ =
+let line_at content line =
+  let lines = String.split_on_char '\n' content in
+  List.nth_opt lines (line - 1)
+
+let source_contains_bad_path content loc =
+  match line_at content loc.Location.start.line with
+  | None -> true
+  | Some line ->
+      let start_col = max 0 loc.start.col in
+      let end_col =
+        if loc.end_.line = loc.start.line then
+          min (String.length line) loc.end_.col
+        else String.length line
+      in
+      if start_col >= String.length line || end_col <= start_col then true
+      else
+        let source = String.sub line start_col (end_col - start_col) in
+        Re.execp bad_pattern source
+
+let issue_of_identifier content ref_ =
   let name = File_view.Name.to_string (File_view.Reference.name ref_) in
   let base = File_view.Reference.base ref_ in
   if should_check name base && Re.execp bad_pattern name then
-    let module_path = clean_original name in
-    let suggested_path = clean_suggested module_path in
-    Option.map
-      (fun loc -> Issue.v ~loc { module_path; suggested_path })
-      (File_view.Reference.loc ref_)
+    match File_view.Reference.loc ref_ with
+    | None -> None
+    | Some loc when not (source_contains_bad_path content loc) -> None
+    | Some loc ->
+        let module_path = clean_original name in
+        let suggested_path = clean_suggested module_path in
+        Some (Issue.v ~loc { module_path; suggested_path })
   else None
 
 let check (ctx : Context.file) =
   let view = Context.view ctx in
+  let content = Context.content ctx in
   File_view.outline_identifiers view @ File_view.outline_modules view
-  |> List.filter_map issue_of_identifier
+  |> List.filter_map (issue_of_identifier content)
 
 let pp ppf { module_path; suggested_path } =
   Fmt.pf ppf "Use '%s' instead of '%s' - avoid double underscore module access"
