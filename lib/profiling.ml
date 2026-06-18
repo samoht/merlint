@@ -102,7 +102,7 @@ let summary_rows ~merlin_time ~file_rules_time ~project_rules_time ~merlin_count
   rows := [ "Total"; string_of_int total_count; ms total_time; ""; "" ] :: !rows;
   List.rev !rows
 
-let print_summary t =
+let print_summary ~ctx t =
   let timings = timings t in
   if timings = [] then ()
   else
@@ -123,7 +123,7 @@ let print_summary t =
     let table =
       Tty.Table.of_string_rows ~border:Tty.Border.none summary_columns rows
     in
-    Tty.Table.pp Format.std_formatter table
+    Tty.Table.pp ~ctx Format.std_formatter table
 
 let aggregate_file_timings timings =
   let file_timings =
@@ -182,7 +182,7 @@ let format_file_rows sorted =
       ];
     ]
 
-let print_file_summary t =
+let print_file_summary ~ctx t =
   let timings = timings t in
   if timings = [] then ()
   else
@@ -210,7 +210,7 @@ let print_file_summary t =
       let table =
         Tty.Table.of_string_rows ~border:Tty.Border.none columns rows
       in
-      Tty.Table.pp Format.std_formatter table
+      Tty.Table.pp ~ctx Format.std_formatter table
 
 let aggregate_rule_timings timings =
   let rule_timings =
@@ -267,7 +267,7 @@ let format_rule_rows sorted =
       rows @ [ [ Fmt.str "... (%d more)" remaining; ""; ""; ""; "" ] ]
     else rows
 
-let print_rule_summary t =
+let print_rule_summary ~ctx t =
   let timings = timings t in
   if timings = [] then ()
   else
@@ -295,4 +295,4 @@ let print_rule_summary t =
         let table =
           Tty.Table.of_string_rows ~border:Tty.Border.none columns rows
         in
-        Tty.Table.pp Format.std_formatter table
+        Tty.Table.pp ~ctx Format.std_formatter table

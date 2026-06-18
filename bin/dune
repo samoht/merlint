@@ -14,5 +14,6 @@
   observe
   nox-json
   nox-tty
+  nox-tty-eio
   version
   project-index))
