@@ -111,3 +111,30 @@ Build unused fixture project:
   ✗ Some checks failed. See details above.
     Run `merlint help E943` for the rule's description, hint, and good/bad examples.
   [1]
+
+A private executable installed through a (copy ...) rule belongs to the
+installing package: tool ships main as tool, so helper (which main links) is a
+runtime dep of tool, not a misclassification. The bin/ directory is
+multi-package (it also hosts other's public exe), so main is attributed to tool
+only via the install -> copy -> main.exe chain.
+
+Build installed fixture project:
+  $ (cd installed && dune build @check)
+
+  $ merlint --build -r E943 installed/
+  Dune root: $TESTCASE_ROOT/installed/
+  Running merlint analysis...
+  
+  Analyzing 3 files
+  
+  ✓ Code Quality (0 total issues)
+  ✓ Code Style (0 total issues)
+  ✓ Naming Conventions (0 total issues)
+  ✓ Documentation (0 total issues)
+  ✓ Project Structure (0 total issues)
+  ✓ Test Quality (0 total issues)
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
+  
+  Summary: ✓ 0 total issues (applied 1 rule)
+  ✓ All checks passed!
