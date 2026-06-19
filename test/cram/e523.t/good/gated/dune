@@ -1,5 +1,8 @@
 ; A stanza gated on an enabled_if predicate still claims its module: merlint
-; must treat [gated] as covered, not silently dropped.
+; must treat [gated] as covered, not silently dropped. This holds for a
+; [%{system}] gate too -- merlint must not resolve [%{system}] to the analysis
+; host, which would drop an off-host stanza (e.g. a Linux-only tender beside a
+; macOS-only one) and falsely flag its module as uncovered.
 
 (executable
  (name main_a)
@@ -10,3 +13,9 @@
  (modules gated)
  (enabled_if
   (= %{profile} e523_gated)))
+
+(executable
+ (name gated_system)
+ (modules gated_system)
+ (enabled_if
+  (= %{system} freebsd)))

@@ -59,7 +59,7 @@ Build good fixture project:
   Dune root: $TESTCASE_ROOT/good/
   Running merlint analysis...
   
-  Analyzing 17 files
+  Analyzing 18 files
   
   ✓ Code Quality (0 total issues)
   ✓ Code Style (0 total issues)
