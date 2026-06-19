@@ -1,0 +1,3 @@
+opam-version: "2.0"
+synopsis: "Helper library linked by the private tender exe"
+depends: [ "ocaml" "dune" ]

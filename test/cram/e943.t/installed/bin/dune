@@ -1,0 +1,21 @@
+(executable
+ (name main)
+ (modules main)
+ (libraries helper))
+
+(rule
+ (target main-signed)
+ (deps main.exe)
+ (action
+  (copy main.exe main-signed)))
+
+(install
+ (section bin)
+ (package tool)
+ (files (main-signed as tool)))
+
+(executable
+ (name other)
+ (public_name other)
+ (package other)
+ (modules other))
