@@ -2245,9 +2245,9 @@ and replace each call site with [err_x &quot;...&quot; args] / [fail_x &quot;...
 <div class="error-card" id="E900">
     <div>
         <span class="error-code">E900</span>
-        <span class="error-title">Wire.Codec without c/ directory</span>
+        <span class="error-title">Wire.Codec without a wired c/ directory</span>
     </div>
-    <div class="error-hint"><p>Add a c/ directory with gen.ml that calls Wire_3d.main to generate .3d files and C validators from the Wire codec definitions. See ocaml-clcw/c/ for the pattern.</p></div>
+    <div class="error-hint"><p>Add a c/ directory whose gen.ml calls Wire_3d.main ~mode:`Doc to project the Wire codecs into a single &lt;Name&gt;.3d EverParse spec and validator, and wire it into the build with a dune that compiles gen and includes the generated dune.inc. See ocaml-clcw/c/ for the pattern.</p></div>
 </div>
 <div class="error-card" id="E905">
     <div>

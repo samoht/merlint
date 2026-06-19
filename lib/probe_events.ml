@@ -14,7 +14,7 @@ let analysis_span =
       |> seal)
 
 let analysis ~project_root ~files ~rules f =
-  Probe.run analysis_span { project_root; files; rules } f
+  Probe.with_span analysis_span { project_root; files; rules } f
 
 type project_rules_payload = { rules : int; jobs : int }
 
@@ -27,7 +27,7 @@ let project_rules_span =
       |> seal)
 
 let project_rules ~rules ~jobs f =
-  Probe.run project_rules_span { rules; jobs } f
+  Probe.with_span project_rules_span { rules; jobs } f
 
 type rule_payload = { rule : string }
 
@@ -38,7 +38,7 @@ let project_rule_span =
       |> field "rule" string ~enc:(fun t -> t.rule)
       |> seal)
 
-let project_rule ~rule f = Probe.run project_rule_span { rule } f
+let project_rule ~rule f = Probe.with_span project_rule_span { rule } f
 
 type file_payload = { file : string; file_rules : int; pass_rules : int }
 
@@ -52,7 +52,7 @@ let file_analysis_span =
       |> seal)
 
 let file_analysis ~file ~file_rules ~pass_rules f =
-  Probe.run file_analysis_span { file; file_rules; pass_rules } f
+  Probe.with_span file_analysis_span { file; file_rules; pass_rules } f
 
 type file_rule_payload = { rule : string; file : string }
 
@@ -64,4 +64,4 @@ let file_rule_span =
       |> field "file" string ~enc:(fun t -> t.file)
       |> seal)
 
-let file_rule ~rule ~file f = Probe.run file_rule_span { rule; file } f
+let file_rule ~rule ~file f = Probe.with_span file_rule_span { rule; file } f

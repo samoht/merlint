@@ -1,0 +1,4 @@
+; Fixture: a wired c/ directory. A real package's dune also builds gen and
+; includes the generated rules; here the include is enough to exercise E900,
+; which checks that gen.ml, dune, and dune.inc are all present.
+(include dune.inc)
