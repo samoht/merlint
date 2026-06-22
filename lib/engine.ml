@@ -14,24 +14,50 @@ type result = {
   files_analyzed : int;
 }
 
-let warn_missing_cmts stats =
-  if stats.Merlin.cmt_misses > 0 then
-    let files = stats.cmt_miss_files in
+(* A typedtree query missing its [.cmt] falls into one of three actionable-or-not
+   buckets (a present, fresh [.cmt] is the silent Ok case):
+   - Outdated: the [.cmt] exists but its source digest is stale.
+   - Missing: no [.cmt] at all for a stanza the host does build.
+   - Unavailable: the file belongs to a platform- or config-gated stanza the host
+     does not build, so no [.cmt] is expected -- not the user's to fix.
+   Only Outdated and Missing warrant the "run dune build" warning. *)
+let warn_missing_cmts ~index stats =
+  let norm s = Fpath.(v s |> normalize |> to_string) in
+  let is_gated =
+    let tbl = Hashtbl.create 64 in
+    Project_index.gated_source_files index
+    |> List.iter (fun p -> Hashtbl.replace tbl (norm (Fpath.to_string p)) ());
+    fun f -> Hashtbl.mem tbl (norm f)
+  in
+  (* A gated stanza (platform- or config-conditional) is one the host may not
+     build, so its [.cmt] is legitimately absent or stale here -- nothing the
+     user can do about it. Such files are dropped from both buckets and left
+     silent. A non-gated absent/stale artefact is actionable: the user forgot to
+     [dune build]. *)
+  let _unavailable_miss, missing =
+    List.partition is_gated stats.Merlin.cmt_miss_files
+  in
+  let _unavailable_stale, outdated =
+    List.partition is_gated stats.cmt_stale_files
+  in
+  let pp_sample ppf files =
     let sample = List.filteri (fun i _ -> i < 10) files in
+    List.iter (fun file -> Fmt.pf ppf "@,%s" file) sample;
     let extra = List.length files - List.length sample in
-    let pp_sample ppf files =
-      List.iter (fun file -> Fmt.pf ppf "@,%s" file) files;
-      if extra > 0 then Fmt.pf ppf "@,... and %d more" extra
-    in
+    if extra > 0 then Fmt.pf ppf "@,... and %d more" extra
+  in
+  let actionable = outdated @ missing in
+  if actionable <> [] then
+    let n = List.length actionable in
     Log.warn (fun m ->
         m
-          "@[<v>%d typedtree-backed quer%s found no fresh .cmt/.cmti file. The \
-           affected typedtree-backed rule runs were skipped for those files; \
-           run [dune build @check] (or pass [--build]) before merlint so the \
-           build artefacts are present and up to date.%a@]"
-          stats.cmt_misses
-          (if stats.cmt_misses = 1 then "y" else "ies")
-          pp_sample sample)
+          "@[<v>%d typedtree-backed quer%s found a missing or stale .cmt/.cmti \
+           file; the affected rule runs were skipped for those files. Run \
+           [dune build @check] (or pass [--build]) before merlint so the build \
+           artefacts are present and up to date.%a@]"
+          n
+          (if n = 1 then "y" else "ies")
+          pp_sample actionable)
 
 let log_fs_stats () =
   let s = Fs.stats () in
@@ -42,12 +68,12 @@ let log_fs_stats () =
         m "FS stats: readdirs=%d is_directory=%d file_exists=%d file_opens=%d"
           s.readdirs s.is_directory_checks s.file_exists_checks s.file_opens)
 
-let log_backend_stats backend =
+let log_backend_stats ~index backend =
   let s = Merlin.stats backend in
   Log.info (fun m ->
       m "Merlin stats: cmt_hits=%d cmt_misses=%d cmt_reads=%d source_parses=%d"
         s.cmt_hits s.cmt_misses s.cmt_reads s.source_parses);
-  warn_missing_cmts s
+  warn_missing_cmts ~index s
 
 (* The whole-repo index builders are meant to run a handful of times per
    analysis (roughly once per project rule). A count orders of magnitude higher
@@ -444,11 +470,11 @@ let run ?domain_mgr ~load_file ~filter ?analyze_set ?analyze_roots ~index
         ~enabled_rules analyze_set
     in
     log_index_stats idx_value;
+    log_backend_stats ~index:idx_value backend;
     (project_results, file_results, files_analyzed)
   in
   Fun.protect
     ~finally:(fun () ->
-      log_backend_stats backend;
       log_fs_stats ();
       Merlin.close backend)
     (fun () ->
