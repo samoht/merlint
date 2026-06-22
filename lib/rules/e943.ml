@@ -51,6 +51,7 @@ let dep_provides_ocaml_libraries package name =
   | Some dep_pkg -> Project_index.package_libraries dep_pkg <> []
 
 let closed_runtime_library_uses package =
+  let index = P.index package in
   let libs = Project_index.package_libraries package in
   let name = Project_index.Library.name in
   let own_names = List.rev_map name libs |> Dep_deps.String_set.of_list in
@@ -62,6 +63,18 @@ let closed_runtime_library_uses package =
       libs;
     fun n -> match Hashtbl.find_opt tbl n with None -> [] | Some xs -> xs
   in
+  (* A private (package-less) library reached through this package's stanzas --
+     even one whose source lives under another package's directory -- is
+     compiled into this package's binary, so its [(libraries ...)] are direct
+     runtime deps of this package and must be followed. A public library
+     resolves to its own opam package, which carries those deps transitively, so
+     the closure stops there. *)
+  let private_lib_deps n =
+    match Project_index.libraries_of_name index n with
+    | lib :: _ when Project_index.Library.public_name lib = None ->
+        Project_index.Library.deps lib
+    | _ -> []
+  in
   let uses = P.runtime_library_uses package in
   let reachable = ref Dep_deps.String_set.empty in
   let rec visit n =
@@ -70,6 +83,7 @@ let closed_runtime_library_uses package =
       reachable := Dep_deps.String_set.add n !reachable;
       if Dep_deps.String_set.mem n own_names then
         List.iter visit (deps_by_name n)
+      else List.iter visit (private_lib_deps n)
     end
   in
   List.iter visit uses;
