@@ -17,10 +17,10 @@ Build bad fixture project:
   ✓ Interop Testing (0 total issues)
   ✗ Code Generation (1 total issues)
     [E900] Wire.Codec without a wired c/ directory (1 issue)
-    Add a c/ directory whose gen.ml calls Wire_3d.main ~mode:`Doc to project the
-    Wire codecs into a single <Name>.3d EverParse spec and validator, and wire it
-    into the build with a dune that compiles gen and includes the generated
-    dune.inc. See ocaml-clcw/c/ for the pattern.
+    Add a c/ directory whose gen.ml calls Wire_3d.main ~mode:`Standalone to
+    project the Wire codecs into a single <Name>.3d EverParse spec and validator,
+    and wire it into the build with a dune that compiles gen and includes the
+    generated dune.inc. See ocaml-clcw/c/ for the pattern.
     - foo/dune-project:1:0: foo uses Wire.Codec but has no c/ directory for EverParse 3D generation
   
   ╭─────────────────┬───────────────────────────────────────────────╮
@@ -85,10 +85,10 @@ Build unwired fixture project:
   ✓ Interop Testing (0 total issues)
   ✗ Code Generation (1 total issues)
     [E900] Wire.Codec without a wired c/ directory (1 issue)
-    Add a c/ directory whose gen.ml calls Wire_3d.main ~mode:`Doc to project the
-    Wire codecs into a single <Name>.3d EverParse spec and validator, and wire it
-    into the build with a dune that compiles gen and includes the generated
-    dune.inc. See ocaml-clcw/c/ for the pattern.
+    Add a c/ directory whose gen.ml calls Wire_3d.main ~mode:`Standalone to
+    project the Wire codecs into a single <Name>.3d EverParse spec and validator,
+    and wire it into the build with a dune that compiles gen and includes the
+    generated dune.inc. See ocaml-clcw/c/ for the pattern.
     - foo/c/dune:1:0: foo has a c/ directory but it is not wired into the build (missing dune, dune.inc), so the EverParse 3D generation never runs
   
   ╭─────────────────┬───────────────────────────────────────────────╮

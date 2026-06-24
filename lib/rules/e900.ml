@@ -88,7 +88,7 @@ let rule =
   Rule.v ~code:"E900" ~title:"Wire.Codec without a wired c/ directory"
     ~category:Code_generation
     ~hint:
-      "Add a c/ directory whose gen.ml calls Wire_3d.main ~mode:`Doc to \
+      "Add a c/ directory whose gen.ml calls Wire_3d.main ~mode:`Standalone to \
        project the Wire codecs into a single <Name>.3d EverParse spec and \
        validator, and wire it into the build with a dune that compiles gen and \
        includes the generated dune.inc. See ocaml-clcw/c/ for the pattern."
