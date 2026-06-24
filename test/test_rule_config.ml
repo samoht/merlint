@@ -89,12 +89,13 @@ let test_prefix_patterns () =
 let test_config_dir_relative_patterns () =
   let exclusions =
     Rule_config.empty
-    |> add_pattern_in ~config_dir:"memtrace" "lib/trace.ml" [ "E100" ]
+    |> add_pattern_in ~config_dir:"ocaml-observe" "lib/memtrace/trace.ml"
+         [ "E100" ]
   in
   Alcotest.(check bool)
     "matches file relative to config dir" true
     (Rule_config.should_exclude exclusions ~rule:"E100"
-       ~file:"memtrace/lib/trace.ml");
+       ~file:"ocaml-observe/lib/memtrace/trace.ml");
   Alcotest.(check bool)
     "does not match sibling directory" false
     (Rule_config.should_exclude exclusions ~rule:"E100"

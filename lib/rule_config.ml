@@ -66,8 +66,9 @@ let matches_pattern pattern file =
 
 (* The file path the user wrote in [merlint.toml] is relative to that
    config's directory. Strip the [config_dir] prefix from [file] before
-   matching so [files = "lib/trace.ml"] in [memtrace/merlint.toml] matches
-   any analyzed [memtrace/lib/trace.ml] regardless of cwd. *)
+   matching so [files = "lib/memtrace/trace.ml"] in
+   [ocaml-observe/merlint.toml] matches any analyzed
+   [ocaml-observe/lib/memtrace/trace.ml] regardless of cwd. *)
 let config_relative_file ~config_dir file =
   if config_dir = "" then file
   else
