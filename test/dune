@@ -38,7 +38,9 @@
   (source_tree ../bin)
   ../.ocamlformat
   ../dune
-  ../dune-project)
+  ../dune-project
+  ../README.md
+  ../LICENSE.md)
  (action
   (chdir
    ..

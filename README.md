@@ -12,10 +12,10 @@ For a complete reference of all rules, visit the official documentation:
 
 ## Features
 
-- **Comprehensive Analysis**: Checks for issues in code quality,
+- **Broad analysis**: Checks for issues in code quality,
     style, naming, documentation, project structure, and testing.
-- **Intelligent Prioritization**: Automatically sorts issues by
-    severity, so you can focus on the most critical problems first.
+- **Severity ordering**: Sorts issues by severity, so you can fix the
+    most serious problems first.
 - **Modern & Opinionated**: Enforces current best practices, such as
     using `Fmt` over `Printf` and `Re` over `Str`.
 - **Zero Configuration**: Works out of the box with sensible defaults,
@@ -52,7 +52,7 @@ Analysing 15 files
   - src/api.ml:12:4: 'very_long_function_name_with_many_underscores' has too many underscores (6)
   [E305] Module Naming Convention
   This issue means your module names don't follow OCaml conventions. Fix them
-  by renaming to snake_case (e.g., myModule → my_module).
+  by renaming to snake_case (e.g., myModule to my_module).
   - src/types.ml:12:4: Module 'myModule' should be 'my_module'
 
 Summary: ✗ 5 total issues
@@ -62,14 +62,24 @@ Summary: ✗ 5 total issues
 
 ### Installation
 
-Install with opam:
+On macOS or Linux, the quickest way is the Homebrew tap:
+
+<!-- $MDX skip -->
+```sh
+$ brew install samoht/monopam/merlint
+```
+
+That auto-taps `samoht/monopam`; equivalently, `brew tap samoht/monopam`
+once and then `brew install merlint`.
+
+Or install with opam:
 
 <!-- $MDX skip -->
 ```sh
 $ opam install merlint
 ```
 
-If opam cannot find the package, it may not yet be released in the public
+If opam cannot find the package, it has not yet landed in the public
 `opam-repository`. Add the overlay repository, then install it:
 
 <!-- $MDX skip -->
@@ -89,21 +99,25 @@ $ dune install
 ```
 
 ### Usage
-<!-- $MDX non-deterministic=command -->
+
+The file count and rule totals vary by project, so the analysis output
+below is not pinned; the commands themselves are exercised by the test
+suite.
+
+<!-- $MDX non-deterministic=output -->
 ```sh
 $ # Analyse the entire project
 $ merlint
 
 $ # Analyse specific files or directories
-$ merlint src/ lib/
+$ merlint lib/ bin/
 
-$ # Dune (vendored_dirs ...) subtrees are skipped automatically
-
-$ # Exclude vendored or generated code
+$ # Exclude vendored or generated code (dune (vendored_dirs ...) subtrees
+$ # are skipped automatically)
 $ merlint --exclude 'vendor/**'
 
 $ # Filter rules (e.g., run all rules except E110)
-$ merlint --rules A-E110
+$ merlint --rules all-E110
 
 $ # Stop at the first issue, in normal report order (fast fail)
 $ merlint --bail
@@ -112,29 +126,51 @@ $ # Emit a machine-readable JSON report instead of the formatted tables
 $ merlint --json
 ```
 
-`--bail` reports only the first issue it finds and skips the rest --
+`--bail` reports only the first issue it finds and skips the rest,
 useful when you only want a quick pass/fail signal and don't need the
 full list.
 
-`--json` prints a single JSON object -- file/rule counts, a `passed`
-boolean, and the `issues` (each with its location) and `excluded`
-arrays -- and suppresses the human `Dune root:` banner and summary
-tables. The exit code is unchanged -- `1` when any issue is found, `0`
-otherwise -- so it stays usable as a gate. This is the format to
+`--json` prints a single JSON object with the file and rule counts, a
+`passed` boolean, and the `issues` (each with its location) and
+`excluded` arrays. It suppresses the human `Dune root:` banner and the
+summary tables. The exit code is unchanged, `1` when any issue is found
+and `0` otherwise, so it stays usable as a gate. This is the format to
 consume from editors, CI, and git hooks.
 
 Every issue is tagged with an error code (e.g. `E100`). To see what a
 rule means and how to fix it, ask `merlint help`:
 
-<!-- $MDX non-deterministic=command -->
 ```sh
-$ # Describe a single rule on the terminal
 $ merlint help E100
+[E100] No Obj usage
+  Category: Security/Safety
 
-$ # Describe the configuration file format
+The Obj module bypasses OCaml's type system and is not part of the language. Any use (Obj.magic, Obj.repr, Obj.obj, Obj.tag, ...) can cause segmentation faults, data corruption, and unpredictable behavior. Use proper type definitions, GADTs, or polymorphic variants instead. If an unsafe boundary is truly unavoidable, isolate it in one module and document why.
+
+Examples:
+  Bad:
+    let coerce x = Obj.magic x
+    let erased x = Obj.repr x
+    let recovered o : int = Obj.obj o
+    let tag_of x = Obj.tag (Obj.repr x)
+
+  Good:
+    (* Use proper type conversions *)
+    let int_of_string_opt s =
+      try Some (int_of_string s) with _ -> None
+
+    (* Or use variant types *)
+    type value = Int of int | String of string
+    let to_int = function Int i -> Some i | _ -> None
+```
+
+`merlint help config` prints the `merlint.toml` reference as a man page,
+and `merlint help --all --format=html -o docs/index.html` (or
+`--format=md -o STYLE_GUIDE.md`) renders the full rule reference:
+
+<!-- $MDX skip -->
+```sh
 $ merlint help config
-
-$ # Render the full reference as HTML or Markdown
 $ merlint help --all --format=html -o docs/index.html
 $ merlint help --all --format=md -o STYLE_GUIDE.md
 ```
@@ -142,7 +178,7 @@ $ merlint help --all --format=md -o STYLE_GUIDE.md
 ## Configuration
 
 Merlint reads `merlint.toml` from your project root. Run
-`merlint help config` for the full reference -- the man page
+`merlint help config` for the full reference. The man page
 covers the settings keys, the `[[rules]]` block format (single glob
 or list of globs), and the pattern syntax. The same examples it
 shows are round-tripped through the parser by the test suite, so
@@ -161,16 +197,20 @@ exclude = ["E330"]
 
 ## Rules Overview
 
-Merlint groups rules by category and priority:
+Merlint sorts rules into categories, and within a run orders the issues
+by severity so the most serious appear first:
 
-1.  **Critical (Priority 1-2)**: `Obj.magic` usage, catch-all
-exception handlers.
-2.  **High (Priority 3-5)**: High cyclomatic complexity, long
-functions, and deep nesting.
-3.  **Medium (Priority 6-12)**: Modernization (e.g., `Re` vs. `Str`),
-naming conventions, and missing interface files.
-4.  **Low (Priority 13-17)**: Documentation standards and project
-structure.
+- **Code Quality**: `Obj.magic`, catch-all exception handlers, high
+  cyclomatic complexity, long functions, and deep nesting.
+- **Code Style**: modernisation such as `Re` over `Str` and `Fmt` over
+  `Printf`.
+- **Naming Conventions**: variant, module, and identifier naming.
+- **Documentation**: interface documentation standards.
+- **Project Structure**: missing interfaces and dune/opam consistency.
+- **Test Quality**: test discipline and coverage of each rule's own
+  examples.
+- **Interop Testing** and **Code Generation**: conventions for interop
+  traces and generated code.
 
 For a complete list of rules and error codes, see the **[official
 documentation](https://samoht.github.io/merlint/)**.
@@ -183,7 +223,7 @@ Prefer `--json` in hooks: the output is stable and machine-readable
 (no banner or formatted tables), and the exit code still signals
 success or failure, so the `$?` check below works unchanged.
 
-<!-- $MDX non-deterministic=command -->
+<!-- $MDX skip -->
 ```sh
 $ # Add to .git/hooks/pre-commit
 $ #!/bin/bash
@@ -191,11 +231,11 @@ $ echo "Running merlint analysis..."
 $ if command -v merlint >/dev/null 2>&1; then
 $     merlint --json > merlint-report.json
 $     if [ $? -ne 0 ]; then
-$         echo "❌ Merlint found issues. See merlint-report.json before committing."
+$         echo "merlint found issues. See merlint-report.json before committing."
 $         exit 1
 $     fi
 $ else
-$     echo "⚠️  Warning: merlint not found. Skipping analysis."
+$     echo "Warning: merlint not found, skipping analysis."
 $ fi
 ```
 
@@ -214,7 +254,7 @@ Merlint, see the official **[Style Guide](docs/STYLE_GUIDE.md)**.
 
 ## Development
 
-<!-- $MDX non-deterministic=command -->
+<!-- $MDX skip -->
 ```sh
 $ # Run tests
 $ dune runtest
@@ -228,18 +268,29 @@ $ merlint lib/ bin/
 
 ### Architecture
 
-Merlint uses a multi-strategy approach to analyse OCaml code:
+Merlint analyses the compiler's typed tree rather than re-parsing source:
 
-1.  **Merlin outline** for function boundaries and line counts.
-2.  **Merlin AST dump** for name extraction and **compiler-libs parsetree** for cyclomatic complexity and control flow.
-3.  **Pattern matching and regex on source text** for detecting specific code patterns.
+1.  **Typed tree.** Merlint reads the `.cmt`/`.cmti` artefacts dune emits
+    for your project and loads them with `merlin-lib`. Most rules
+    (complexity, control flow, naming, documentation) walk this typed
+    tree, so they see exactly what the compiler saw. Run `dune build
+    @check` first (or pass `--build`) so the artefacts are present and
+    current; merlint skips the typed-tree rules for any file whose
+    artefact is missing or stale, and reports which.
+2.  **Source text.** A few style rules match directly on source text for
+    patterns the typed tree does not carry.
+3.  **Project index.** Project-structure and test rules inspect the dune
+    project layout: libraries, interfaces, and test stanzas.
 
-This hybrid approach ensures accurate analysis while maintaining simplicity and performance.
+Working from typed-tree artefacts means merlint never drives `ocamlmerlin`
+itself; it only needs a project that `dune build` can type-check.
 
 ## Requirements
 
-- OCaml ≥ 4.14 with dune
-- Merlin (`ocamlmerlin` in your `$PATH`)
+- OCaml >= 4.14
+- Dune. Merlint reads the typed-tree (`.cmt`/`.cmti`) artefacts dune
+  emits, so run it from inside a dune project, with `dune build @check`
+  run first (or pass `--build`).
 
 ## AI Transparency
 
@@ -272,7 +323,7 @@ and test thoroughly.
 
 ## Licence
 
-ISC — see LICENSE.md for details.
+ISC, see LICENSE.md for details.
 
 ## Acknowledgements
 

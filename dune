@@ -4,4 +4,5 @@
 
 (mdx
  (files README.md)
- (libraries merlint))
+ (libraries merlint)
+ (deps %{bin:merlint}))
