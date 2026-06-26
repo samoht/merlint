@@ -2247,7 +2247,7 @@ and replace each call site with [err_x &quot;...&quot; args] / [fail_x &quot;...
         <span class="error-code">E900</span>
         <span class="error-title">Wire.Codec without a wired c/ directory</span>
     </div>
-    <div class="error-hint"><p>Add a c/ directory whose gen.ml calls Wire_3d.main ~mode:`Standalone to project the Wire codecs into a single &lt;Name&gt;.3d EverParse spec and validator, and wire it into the build with a dune that compiles gen and includes the generated dune.inc. See ocaml-clcw/c/ for the pattern.</p></div>
+    <div class="error-hint"><p>Add a c/ directory that projects the package's Wire codecs into a verified EverParse parser, the standard pattern across the CCSDS packages (ocaml-clcw/c, ocaml-pe/c, ...). Three wiring files: (1) gen.ml calls Wire_3d.main ~mode:`Standalone ~package:&quot;&lt;pkg&gt;&quot; [Wire_3d.pack &lt;Module&gt;.&lt;codec&gt;; ...], which emits a single &lt;Name&gt;.3d spec and C validator; (2) dune builds it -- (executable (name gen) (libraries &lt;pkg&gt; wire.3d)) plus (rule (alias 3d) (mode promote) (targets dune.inc) (action (run %{exe:gen.exe} dune))) and (include dune.inc); (3) the generated dune.inc and the C output (&lt;Name&gt;.3d, &lt;Name&gt;.c/.h, the &lt;Name&gt;Wrapper and EverParse runtime headers) are committed -- promoted to the source tree -- so an ordinary build compiles the checked-in C without EverParse. Regenerate after a codec change with BUILD_EVERPARSE=1 dune build @&lt;pkg&gt;/c/3d (the C-emitting rule is gated on that env var); it needs the EverParse 3d.exe on PATH (e.g. ~/.local/everparse/bin).</p></div>
 </div>
 <div class="error-card" id="E905">
     <div>
