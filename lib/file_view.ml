@@ -968,30 +968,38 @@ end
 module Type_view = struct
   type t = Typed_types.type_expr
 
-  let arrow ct =
+  (* OCaml 5.5 wraps function argument types in [Tpoly (_, [])] even when no
+     polymorphism is present. Peel those identity wrappers so the leaf
+     inspectors below see the underlying [Tconstr]/[Tarrow]/etc. *)
+  let rec desc ct =
     match Typed_types.get_desc ct with
+    | Typed_types.Tpoly (body, _) -> desc body
+    | d -> d
+
+  let arrow ct =
+    match desc ct with
     | Typed_types.Tarrow (label, dom, ret, _) -> Some (label, dom, ret)
     | _ -> None
 
   let is_function (ct : t) = Option.is_some (arrow ct)
 
   let is_variable ct =
-    match Typed_types.get_desc ct with
+    match desc ct with
     | Typed_types.Tvar _ | Typed_types.Tunivar _ -> true
     | _ -> false
 
   let tuple ct =
-    match Typed_types.get_desc ct with
+    match desc ct with
     | Typed_types.Ttuple fields -> Some (List.map snd fields)
     | _ -> None
 
   let constr ct =
-    match Typed_types.get_desc ct with
+    match desc ct with
     | Typed_types.Tconstr (path, args, _) -> Some (name_of_path path, args)
     | _ -> None
 
   let constr_path ct =
-    match Typed_types.get_desc ct with
+    match desc ct with
     | Typed_types.Tconstr (path, _, _) -> Some path
     | _ -> None
 
@@ -1042,12 +1050,12 @@ module Type_view = struct
     | _ -> false
 
   let rec return_type (ct : t) : t option =
-    match Typed_types.get_desc ct with
+    match desc ct with
     | Typed_types.Tarrow (_, _, ret, _) -> return_type ret
     | _ -> Some ct
 
   let rec returns_option (ct : t) =
-    match Typed_types.get_desc ct with
+    match desc ct with
     | Typed_types.Tarrow (_, _, ret, _) -> returns_option ret
     | Typed_types.Tconstr (path, _, _) ->
         Typed_path.same path Typed_predef.path_option
@@ -1057,7 +1065,7 @@ module Type_view = struct
 
   let count_unlabelled (ct : t) ~match_ =
     let rec aux acc (ct : t) =
-      match Typed_types.get_desc ct with
+      match desc ct with
       | Typed_types.Tarrow (Asttypes.Nolabel, dom, rest, _) ->
           let acc = if match_ dom then acc + 1 else acc in
           aux acc rest
