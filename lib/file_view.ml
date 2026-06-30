@@ -291,7 +291,7 @@ let typed_expr_callee_name (expr : Typedtree.expression) =
     | Texp_ident (path, _, _) -> Some (name_of_path path)
     | Texp_apply (fn, _) -> aux fn
     | Texp_construct (lid, _, _) -> Some (name_of_longident lid.txt)
-    | Texp_open (_, body) -> aux body
+    | Texp_struct_item (_, body) -> aux body
     | _ -> None
   in
   aux expr
@@ -339,7 +339,7 @@ let rec is_silent_accept (expr : Typedtree.expression) =
       | "Ok" | "()" -> true
       | _ -> false)
   | Texp_tuple _ | Texp_record _ | Texp_ident _ -> true
-  | Texp_let (_, _, body) | Texp_open (_, body) | Texp_sequence (_, body) ->
+  | Texp_let (_, _, body) | Texp_struct_item (_, body) | Texp_sequence (_, body) ->
       is_silent_accept body
   | Texp_ifthenelse (_, a, Some b) -> is_silent_accept a && is_silent_accept b
   | Texp_match (_, comp_cases, value_cases, _) ->
@@ -662,7 +662,7 @@ let typed_type_children (decl : Typedtree.type_declaration) =
             ~deprecated:(typed_has_deprecated cd.cd_attributes)
             cd.cd_loc)
         constructors
-  | Ttype_abstract | Ttype_open -> []
+  | Ttype_abstract | Ttype_open | Ttype_external _ -> []
 
 let typed_type_item (decl : Typedtree.type_declaration) =
   typed_item ~name:decl.typ_name.txt ~kind:Type

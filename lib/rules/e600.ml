@@ -37,7 +37,7 @@ let rec is_list_expr (expr : T.expression) =
   match expr.exp_desc with
   | Texp_construct (lid, _, _) ->
       List.mem (Ocaml_parsing.Longident.flatten lid.txt) [ [ "[]" ]; [ "::" ] ]
-  | Texp_open (_, expr) -> is_list_expr expr
+  | Texp_struct_item (_, expr) -> is_list_expr expr
   | _ -> false
 
 let binding_defines_tests (vb : T.value_binding) =

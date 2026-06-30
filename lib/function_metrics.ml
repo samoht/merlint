@@ -68,7 +68,7 @@ let rec callee_parts expr =
   match expr.T.exp_desc with
   | Texp_ident (path, _, _) -> Some (path_parts path)
   | Texp_apply (fn, _) -> callee_parts fn
-  | Texp_open (_, inner) -> callee_parts inner
+  | Texp_struct_item (_, inner) -> callee_parts inner
   | _ -> None
 
 let is_boolean_operator expr =
@@ -83,7 +83,7 @@ let is_boolean_operator expr =
 let rec is_function_expr expr =
   match expr.T.exp_desc with
   | Texp_function _ -> true
-  | Texp_open (_, inner) -> is_function_expr inner
+  | Texp_struct_item (_, inner) -> is_function_expr inner
   | _ -> false
 
 let rec analyze_expr expr =
@@ -131,9 +131,7 @@ let rec analyze_expr expr =
   | Texp_atomic_loc (expr, _, _)
   | Texp_field (expr, _, _)
   | Texp_lazy expr
-  | Texp_assert (expr, _)
-  | Texp_open (_, expr)
-  | Texp_letexception (_, expr) ->
+  | Texp_assert (expr, _) ->
       analyze_expr expr
   | Texp_setfield (record, _, _, value) ->
       merge (analyze_expr record) (analyze_expr value)
@@ -143,7 +141,7 @@ let rec analyze_expr expr =
   | Texp_for (_, _, first, last, _, body) ->
       merge (decision ~loops:1 1)
         (sum [ analyze_expr first; analyze_expr last; analyze_expr body ])
-  | Texp_letmodule (_, _, _, _, body) -> analyze_expr body
+  | Texp_struct_item (_, body) -> analyze_expr body
   | Texp_letop { let_; ands; body; _ } ->
       let binding_count = 1 + List.length ands in
       let binding_exprs =
@@ -278,9 +276,7 @@ let rec count_match_cases_expr expr =
   | Texp_atomic_loc (expr, _, _)
   | Texp_field (expr, _, _)
   | Texp_lazy expr
-  | Texp_assert (expr, _)
-  | Texp_open (_, expr)
-  | Texp_letexception (_, expr) ->
+  | Texp_assert (expr, _) ->
       count_match_cases_expr expr
   | Texp_setfield (record, _, _, value) ->
       count_match_cases_expr record + count_match_cases_expr value
@@ -290,8 +286,9 @@ let rec count_match_cases_expr expr =
       count_match_cases_expr first
       + count_match_cases_expr last
       + count_match_cases_expr body
-  | Texp_letmodule (_, _, _, module_expr, body) ->
-      count_match_cases_module_expr module_expr + count_match_cases_expr body
+  | Texp_struct_item ({ str_desc = Tstr_module mb; _ }, body) ->
+      count_match_cases_module_expr mb.mb_expr + count_match_cases_expr body
+  | Texp_struct_item (_, expr) -> count_match_cases_expr expr
   | Texp_letop { let_; ands; body; _ } ->
       count_match_cases_expr let_.bop_exp
       + List.fold_left
@@ -390,7 +387,7 @@ and trailing_record_fields_expr expr =
   | Texp_try (expr, _, _) -> trailing_record_fields_expr expr
   | Texp_function ([], T.Tfunction_body body) ->
       trailing_record_fields_expr body
-  | Texp_open (_, body) -> trailing_record_fields_expr body
+  | Texp_struct_item (_, body) -> trailing_record_fields_expr body
   | Texp_construct (_, _, [ expr ]) | Texp_variant (_, Some expr) ->
       trailing_record_fields_expr expr
   | _ -> 0
@@ -488,17 +485,16 @@ let rec depth_expr ~in_closure current_depth expr =
   | Texp_field (expr, _, _)
   | Texp_lazy expr
   | Texp_assert (expr, _)
-  | Texp_open (_, expr)
-  | Texp_letexception (_, expr)
   | Texp_send (expr, _)
   | Texp_pack { mod_desc = Tmod_unpack (expr, _); _ } ->
       depth_expr ~in_closure current_depth expr
   | Texp_setfield (record, _, _, value) ->
       depth_pair ~in_closure current_depth record value
-  | Texp_letmodule (_, _, _, module_expr, body) ->
+  | Texp_struct_item ({ str_desc = Tstr_module mb; _ }, body) ->
       max
-        (depth_module_expr ~in_closure current_depth module_expr)
+        (depth_module_expr ~in_closure current_depth mb.mb_expr)
         (depth_expr ~in_closure current_depth body)
+  | Texp_struct_item (_, expr) -> depth_expr ~in_closure current_depth expr
   | Texp_letop { let_; ands; body; _ } ->
       depth_letop ~in_closure current_depth let_ ands body
   | Texp_variant (_, arg) -> (

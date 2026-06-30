@@ -66,7 +66,7 @@ let decl_member_types (td : Types.type_declaration) =
           | Types.Cstr_record labels ->
               List.map (fun (l : Types.label_declaration) -> l.ld_type) labels)
         cstrs
-  | Types.Type_abstract _ | Types.Type_open -> (
+  | Types.Type_abstract _ | Types.Type_open | Types.Type_external _ -> (
       match td.type_manifest with Some ty -> [ ty ] | None -> [])
 
 (* A private type still exposes its representation (you may read it, only not

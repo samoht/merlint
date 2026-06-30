@@ -33,7 +33,7 @@ module Expr = struct
     | Texp_ident (path, _, _) -> Some (Path.parts path)
     | Texp_apply (fn, _) -> callee_parts fn
     | Texp_construct (lid, _, _) -> Some (Longident.parts lid.txt)
-    | Texp_open (_, inner) -> callee_parts inner
+    | Texp_struct_item (_, inner) -> callee_parts inner
     | _ -> None
 
   let callee_ends_with expr suffix =
@@ -45,9 +45,9 @@ module Expr = struct
     match expr.T.exp_desc with
     | Texp_apply ({ exp_desc = Texp_ident (path, _, _); _ }, _) ->
         Path.ends_with path suffix
-    | Texp_apply ({ exp_desc = Texp_open (_, inner); _ }, _) ->
+    | Texp_apply ({ exp_desc = Texp_struct_item (_, inner); _ }, _) ->
         calls inner suffix
-    | Texp_open (_, inner) -> calls inner suffix
+    | Texp_struct_item (_, inner) -> calls inner suffix
     | _ -> false
 
   let positional_args args =

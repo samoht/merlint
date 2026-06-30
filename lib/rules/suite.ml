@@ -7,7 +7,7 @@ let rec is_empty_list (expr : T.expression) =
   match expr.exp_desc with
   | Texp_construct (lid, _, []) ->
       Ocaml_parsing.Longident.flatten lid.txt = [ "[]" ]
-  | Texp_open (_, inner) -> is_empty_list inner
+  | Texp_struct_item (_, inner) -> is_empty_list inner
   | _ -> false
 
 let string_constant (expr : T.expression) =
