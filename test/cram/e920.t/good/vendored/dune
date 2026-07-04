@@ -1,0 +1,3 @@
+(library
+ (name vendored_doc)
+ (modules_without_implementation vendored_doc))

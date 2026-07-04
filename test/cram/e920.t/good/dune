@@ -4,3 +4,5 @@
 
 (mdx
  (files README.md))
+
+(vendored_dirs vendored)
