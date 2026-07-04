@@ -44,18 +44,21 @@ let issue_for ctx (doc : Project_index.doc_file) =
         (Issue.v ~loc:(Location.in_file display)
            { dune_file; doc_file = display })
 
+(* A (vendored_dirs ...) subtree is upstream-verbatim: its docs cannot grow
+   mdx stanzas without editing the vendor, so they are out of scope. *)
 let docs_in_scope ctx =
+  let index = Context.index ctx in
   let docs = ref [] in
-  Context.index ctx |> Project_index.source_package_list
+  let add d =
+    if not (Project_index.is_vendored_path index d.Project_index.path) then
+      docs := d :: !docs
+  in
+  Project_index.source_package_list index
   |> List.iter (fun pkg ->
-      List.iter
-        (fun d -> docs := d :: !docs)
-        (Project_index.Package.doc_files pkg);
+      List.iter add (Project_index.Package.doc_files pkg);
       Project_index.package_libraries pkg
       |> List.iter (fun lib ->
-          List.iter
-            (fun d -> docs := d :: !docs)
-            (Project_index.Library.doc_files lib)));
+          List.iter add (Project_index.Library.doc_files lib)));
   List.sort_uniq
     (fun a b -> Fpath.compare a.Project_index.path b.Project_index.path)
     !docs
