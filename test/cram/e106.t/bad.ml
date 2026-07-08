@@ -27,3 +27,8 @@ let same_fn (a : int -> int) b = a = b
 
 (* Stdlib (>) on another module's type: should use Id.compare *)
 let gt (a : Id.t) b = a > b
+
+(* Comparing two result VALUES whose error type is abstract: when both are
+   Error the walk reaches the hidden Id.t, so this must go through its own
+   equal - unlike a tag check against [Ok ()], which never walks the error. *)
+let same_res (a : (unit, Id.t) result) b = a = b

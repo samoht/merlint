@@ -606,7 +606,7 @@ pre code {
         <span class="error-code">E106</span>
         <span class="error-title">Polymorphic comparison</span>
     </div>
-    <div class="error-hint"><p>OCaml's structural (=), (&lt;&gt;), (&lt;), (&gt;), (&lt;=), (&gt;=), compare, min, max and Hashtbl.hash compare values by walking their runtime representation. On a type from the current module that is fine - you can see its representation, and you expose your own equal in the .mli - but on another module's type it walks past the abstraction (ordering two abstract handles leaks their hidden contents), and on a function it raises Invalid_argument at runtime. Across modules, call that type's own equal, compare or hash. Comparing scalars, transparent containers (list, array, option) and tuples of those is always fine, as is a tag check against a nullary constructor ([], None, an enum tag). Defining a type's own equal or compare with these operators inside its defining module - let equal a b = a = b - is fine and not flagged: there you see the representation and are the authority on whether it is sound.</p><div class="examples-grid">
+    <div class="error-hint"><p>OCaml's structural (=), (&lt;&gt;), (&lt;), (&gt;), (&lt;=), (&gt;=), compare, min, max and Hashtbl.hash compare values by walking their runtime representation. On a type from the current module that is fine - you can see its representation, and you expose your own equal in the .mli - but on another module's type it walks past the abstraction (ordering two abstract handles leaks their hidden contents), and on a function it raises Invalid_argument at runtime. Across modules, call that type's own equal, compare or hash. Comparing scalars, transparent containers (list, array, option) and tuples of those is always fine, as is a tag check against a constructor whose payload is itself only tag checks ([], None, an enum tag, or one wrapping such like Ok () or Some None). Defining a type's own equal or compare with these operators inside its defining module - let equal a b = a = b - is fine and not flagged: there you see the representation and are the authority on whether it is sound.</p><div class="examples-grid">
 <div class="example bad">
   <h4>BAD</h4>
   <pre><code>(* <span class="cn">Id</span>.t is abstract here: another <span class="kw">module</span>'s <span class="kw">type</span>, so it must be compared
@@ -638,6 +638,11 @@ pre code {
 
 <span class="cm">(* Stdlib (&gt;) on another module's type: should use Id.compare *)</span>
 <span class="kw">let</span> gt (a : <span class="cn">Id</span>.t) b = a &gt; b
+
+(* <span class="cn">Comparing</span> two result <span class="cn">VALUES</span> whose error <span class="kw">type</span> is abstract: <span class="kw">when</span> both are
+   <span class="cn">Error</span> the walk reaches the hidden <span class="cn">Id</span>.t, so this must go through its own
+   equal - unlike a tag check against [<span class="cn">Ok</span> ()], which never walks the error. *)
+<span class="kw">let</span> same_res (a : (unit, <span class="cn">Id</span>.t) result) b = a = b
 </code></pre>
 </div>
 <div class="example good">
@@ -666,6 +671,21 @@ pre code {
 <span class="kw">let</span> is_red c = c = <span class="cn">Red</span>
 <span class="kw">let</span> nonempty l = l &lt;&gt; []
 <span class="kw">let</span> absent o = o = <span class="cn">None</span>
+
+(* <span class="cn">A</span> constructor wrapping only tag checks is a tag check too: comparing against
+   [<span class="cn">Ok</span> ()] short-circuits on the constructor tag, so [<span class="cn">Res</span>.err] being abstract
+   never matters - the error payload is never walked. *)
+<span class="kw">module</span> <span class="cn">Res</span> : <span class="kw">sig</span>
+  <span class="kw">type</span> err
+
+  <span class="kw">val</span> run : unit -&gt; (unit, err) result
+<span class="kw">end</span> = <span class="kw">struct</span>
+  <span class="kw">type</span> err = string
+
+  <span class="kw">let</span> run () = <span class="cn">Ok</span> ()
+<span class="kw">end</span>
+
+<span class="kw">let</span> succeeded () = <span class="cn">Res</span>.run () = <span class="cn">Ok</span> ()
 
 (* <span class="cn">An</span> operator from another <span class="kw">module</span> - like <span class="cn">Z</span>.(p &gt; zero) on zarith - is that
    <span class="kw">module</span>'s own comparison, <span class="kw">not</span> <span class="cn">Stdlib's</span>, so it is fine even though the

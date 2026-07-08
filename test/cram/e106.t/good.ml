@@ -23,6 +23,21 @@ let is_red c = c = Red
 let nonempty l = l <> []
 let absent o = o = None
 
+(* A constructor wrapping only tag checks is a tag check too: comparing against
+   [Ok ()] short-circuits on the constructor tag, so [Res.err] being abstract
+   never matters - the error payload is never walked. *)
+module Res : sig
+  type err
+
+  val run : unit -> (unit, err) result
+end = struct
+  type err = string
+
+  let run () = Ok ()
+end
+
+let succeeded () = Res.run () = Ok ()
+
 (* An operator from another module - like Z.(p > zero) on zarith - is that
    module's own comparison, not Stdlib's, so it is fine even though the
    operand's type is not local. *)

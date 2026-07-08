@@ -74,7 +74,7 @@ let of_string s = int_of_string_opt s
 
 ### [E106] Polymorphic comparison
 
-OCaml's structural (=), (<>), (<), (>), (<=), (>=), compare, min, max and Hashtbl.hash compare values by walking their runtime representation. On a type from the current module that is fine - you can see its representation, and you expose your own equal in the .mli - but on another module's type it walks past the abstraction (ordering two abstract handles leaks their hidden contents), and on a function it raises Invalid_argument at runtime. Across modules, call that type's own equal, compare or hash. Comparing scalars, transparent containers (list, array, option) and tuples of those is always fine, as is a tag check against a nullary constructor ([], None, an enum tag). Defining a type's own equal or compare with these operators inside its defining module - let equal a b = a = b - is fine and not flagged: there you see the representation and are the authority on whether it is sound.
+OCaml's structural (=), (<>), (<), (>), (<=), (>=), compare, min, max and Hashtbl.hash compare values by walking their runtime representation. On a type from the current module that is fine - you can see its representation, and you expose your own equal in the .mli - but on another module's type it walks past the abstraction (ordering two abstract handles leaks their hidden contents), and on a function it raises Invalid_argument at runtime. Across modules, call that type's own equal, compare or hash. Comparing scalars, transparent containers (list, array, option) and tuples of those is always fine, as is a tag check against a constructor whose payload is itself only tag checks ([], None, an enum tag, or one wrapping such like Ok () or Some None). Defining a type's own equal or compare with these operators inside its defining module - let equal a b = a = b - is fine and not flagged: there you see the representation and are the authority on whether it is sound.
 
 **Examples:**
 
@@ -110,6 +110,11 @@ let same_fn (a : int -> int) b = a = b
 (* Stdlib (>) on another module's type: should use Id.compare *)
 let gt (a : Id.t) b = a > b
 
+(* Comparing two result VALUES whose error type is abstract: when both are
+   Error the walk reaches the hidden Id.t, so this must go through its own
+   equal - unlike a tag check against [Ok ()], which never walks the error. *)
+let same_res (a : (unit, Id.t) result) b = a = b
+
 ```
 
 **Good:**
@@ -138,6 +143,21 @@ let equal_color (a : color) b = a = b
 let is_red c = c = Red
 let nonempty l = l <> []
 let absent o = o = None
+
+(* A constructor wrapping only tag checks is a tag check too: comparing against
+   [Ok ()] short-circuits on the constructor tag, so [Res.err] being abstract
+   never matters - the error payload is never walked. *)
+module Res : sig
+  type err
+
+  val run : unit -> (unit, err) result
+end = struct
+  type err = string
+
+  let run () = Ok ()
+end
+
+let succeeded () = Res.run () = Ok ()
 
 (* An operator from another module - like Z.(p > zero) on zarith - is that
    module's own comparison, not Stdlib's, so it is fine even though the

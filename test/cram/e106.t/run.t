@@ -6,8 +6,8 @@ Test bad example - polymorphic comparison on non-scalar types:
   
   Analyzing 1 files
   
-  ✗ Code Quality (6 total issues)
-    [E106] Polymorphic comparison (6 issues)
+  ✗ Code Quality (7 total issues)
+    [E106] Polymorphic comparison (7 issues)
     OCaml's structural (=), (<>), (<), (>), (<=), (>=), compare, min, max and
     Hashtbl.hash compare values by walking their runtime representation. On a type
     from the current module that is fine - you can see its representation, and you
@@ -16,7 +16,8 @@ Test bad example - polymorphic comparison on non-scalar types:
     and on a function it raises Invalid_argument at runtime. Across modules, call
     that type's own equal, compare or hash. Comparing scalars, transparent
     containers (list, array, option) and tuples of those is always fine, as is a
-    tag check against a nullary constructor ([], None, an enum tag). Defining a
+    tag check against a constructor whose payload is itself only tag checks ([],
+    None, an enum tag, or one wrapping such like Ok () or Some None). Defining a
     type's own equal or compare with these operators inside its defining module -
     let equal a b = a = b - is fine and not flagged: there you see the
     representation and are the authority on whether it is sound.
@@ -26,6 +27,7 @@ Test bad example - polymorphic comparison on non-scalar types:
     - bad.ml:23:27: Polymorphic (=) - use Re.equal instead
     - bad.ml:26:33: Polymorphic (=) - comparing a function value raises Invalid_argument at runtime
     - bad.ml:29:22: Polymorphic (>) - use Id.compare instead
+    - bad.ml:34:43: Polymorphic (=) - use the type's own equal, compare or hash instead
   ✓ Code Style (0 total issues)
   ✓ Naming Conventions (0 total issues)
   ✓ Documentation (0 total issues)
@@ -37,11 +39,11 @@ Test bad example - polymorphic comparison on non-scalar types:
   ╭──────────────┬──────────────────────────────╮
   │ Category     │ Issues                       │
   ├──────────────┼──────────────────────────────┤
-  │ Code Quality │ 6 (6 polymorphic comparison) │
+  │ Code Quality │ 7 (7 polymorphic comparison) │
   ╰──────────────┴──────────────────────────────╯
   
   
-  Summary: ✗ 6 total issues (applied 1 rule)
+  Summary: ✗ 7 total issues (applied 1 rule)
   ✗ Some checks failed. See details above.
     Run `merlint help E106` for the rule's description, hint, and good/bad examples.
   [1]

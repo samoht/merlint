@@ -173,11 +173,17 @@ let advice op (operand : T.expression) =
       | _ -> "use the type's own equal, compare or hash instead")
   | _ -> "use the type's own equal, compare or hash instead"
 
-(* Comparing against a nullary constructor ([], None, an enum tag like
-   [Red]) is a tag check: it inspects the constructor, not deep structure, so
-   it is safe and idiomatic. Leave those alone. *)
-let is_tag_check (e : T.expression) =
-  match e.exp_desc with Texp_construct (_, _, []) -> true | _ -> false
+(* Comparing against a constructor whose arguments are themselves tag checks is
+   a tag check: a nullary constructor ([], None, an enum tag like [Red]), or one
+   wrapping only such ([Ok ()], [Some None]). Such a comparison inspects
+   constructor tags and, at deepest, a trivially comparable nested tag, never
+   deep or abstract structure -- [x = Ok ()] short-circuits on the tag when [x]
+   is [Error _], so an abstract error payload is never walked. Leave those
+   alone. *)
+let rec is_tag_check (e : T.expression) =
+  match e.exp_desc with
+  | Texp_construct (_, _, args) -> List.for_all is_tag_check args
+  | _ -> false
 
 type state = {
   filename : string;
@@ -226,10 +232,12 @@ let rule =
        raises Invalid_argument at runtime. Across modules, call that type's \
        own equal, compare or hash. Comparing scalars, transparent containers \
        (list, array, option) and tuples of those is always fine, as is a tag \
-       check against a nullary constructor ([], None, an enum tag). Defining a \
-       type's own equal or compare with these operators inside its defining \
-       module - let equal a b = a = b - is fine and not flagged: there you see \
-       the representation and are the authority on whether it is sound."
+       check against a constructor whose payload is itself only tag checks \
+       ([], None, an enum tag, or one wrapping such like Ok () or Some None). \
+       Defining a type's own equal or compare with these operators inside its \
+       defining module - let equal a b = a = b - is fine and not flagged: \
+       there you see the representation and are the authority on whether it is \
+       sound."
     ~examples:
       [ Example.bad Examples.E106.bad_ml; Example.good Examples.E106.good_ml ]
     ~pp
