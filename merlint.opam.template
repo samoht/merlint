@@ -1,6 +1,7 @@
 x-quality-build: "2026-04-15"
 x-quality-test: "2026-04-15"
 pin-depends: [
+  ["bytesrw.0.3.0" "git+https://github.com/dbuenzli/bytesrw.git#d62c9007aa28f8da872a9662a6e95f9979bca38b"]
   ["eio.dev" "git+https://github.com/ocaml-multicore/eio.git#e7e6cf38a643ff0665c96d9ef6e68a998663a246"]
   ["eio_main.dev" "git+https://github.com/ocaml-multicore/eio.git#e7e6cf38a643ff0665c96d9ef6e68a998663a246"]
   ["eio_posix.dev" "git+https://github.com/ocaml-multicore/eio.git#e7e6cf38a643ff0665c96d9ef6e68a998663a246"]
