@@ -5,29 +5,14 @@ type payload = { name : string; depth : int; threshold : int }
 
 let check (ctx : Context.file) =
   let config = { max_nesting = ctx.config.max_nesting } in
-  let item_loc name =
-    File_view.items (Context.view ctx)
-    |> List.find_map (fun item ->
-        if
-          File_view.Item.kind item = File_view.Item.Value
-          && File_view.Item.name item = name
-        then Some (File_view.Item.loc item)
-        else None)
-    |> Option.value
-         ~default:
-           (Location.v ~file:(Context.filename ctx) ~start_line:1 ~start_col:0
-              ~end_line:1 ~end_col:0)
-  in
-
   if File.is_test (Context.project_relative_file ctx) then []
   else
     List.filter_map
-      (fun ({ name; nesting = depth; is_function; _ } : Function_metrics.value)
-         ->
+      (fun ({ name; loc; nesting = depth; is_function; _ } :
+             Function_metrics.value) ->
         if is_function && depth > config.max_nesting then
-          Some
-            (Issue.v ~loc:(item_loc name)
-               { name; depth; threshold = config.max_nesting })
+          let loc = Loc.of_typed ~filename:(Context.filename ctx) loc in
+          Some (Issue.v ~loc { name; depth; threshold = config.max_nesting })
         else None)
       (Context.values ctx)
     |> List.sort Issue.compare
