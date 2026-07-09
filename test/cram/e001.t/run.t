@@ -91,6 +91,41 @@ Test flat boolean predicate - breadth alone is not control-flow complexity:
   Summary: ✓ 0 total issues (applied 1 rule)
   ✓ All checks passed!
 
+Complexity is measured inside functor and signature-constrained module bodies,
+not only inside a bare struct:
+  $ merlint --build -r E001 functor_body.ml
+  Dune root: $TESTCASE_ROOT/
+  Running merlint analysis...
+  
+  Analyzing 1 files
+  
+  ✗ Code Quality (2 total issues)
+    [E001] High Cyclomatic Complexity (2 issues)
+    High cyclomatic complexity makes code harder to understand and test. Consider
+    breaking complex functions into smaller, more focused functions. Each function
+    should ideally do one thing well.
+    - functor_body.ml:10:2: Function 'check_input' has cyclomatic complexity of 7 (threshold: 5)
+    - functor_body.ml:26:2: Function 'check_input' has cyclomatic complexity of 7 (threshold: 5)
+  ✓ Code Style (0 total issues)
+  ✓ Naming Conventions (0 total issues)
+  ✓ Documentation (0 total issues)
+  ✓ Project Structure (0 total issues)
+  ✓ Test Quality (0 total issues)
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
+  
+  ╭──────────────┬──────────────────────────────────╮
+  │ Category     │ Issues                           │
+  ├──────────────┼──────────────────────────────────┤
+  │ Code Quality │ 2 (2 high cyclomatic complexity) │
+  ╰──────────────┴──────────────────────────────────╯
+  
+  
+  Summary: ✗ 2 total issues (applied 1 rule)
+  ✗ Some checks failed. See details above.
+    Run `merlint help E001` for the rule's description, hint, and good/bad examples.
+  [1]
+
 Test OCaml syntax that should stay below the complexity threshold:
   $ merlint --build -r E001 syntax_good.ml
   Dune root: $TESTCASE_ROOT/

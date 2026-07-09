@@ -662,19 +662,28 @@ let of_binding (vb : T.value_binding) =
 let of_structure (structure : T.structure) =
   let values = ref [] in
   let push value = values := value :: !values in
-  let rec process_structure_item item =
+  (* Reach the structure under any module expression, not just a bare
+     [struct ... end]: a functor body, a signature-constrained body, and a
+     functor application all wrap one. Functions defined inside them are
+     ordinary functions and must be measured like any other. *)
+  let rec process_module_expr (module_expr : T.module_expr) =
+    match module_expr.T.mod_desc with
+    | Tmod_structure structure ->
+        List.iter process_structure_item structure.str_items
+    | Tmod_functor (_, body)
+    | Tmod_constraint (body, _, _, _)
+    | Tmod_apply (body, _, _)
+    | Tmod_apply_unit body ->
+        process_module_expr body
+    | Tmod_ident _ | Tmod_unpack _ | Tmod_typed_hole -> ()
+  and process_structure_item item =
     match item.T.str_desc with
     | Tstr_value (_, bindings) ->
         List.filter_map of_binding bindings |> List.iter push
-    | Tstr_module { mb_expr = { mod_desc = Tmod_structure structure; _ }; _ } ->
-        List.iter process_structure_item structure.str_items
+    | Tstr_module mb -> process_module_expr mb.mb_expr
     | Tstr_recmodule modules ->
         List.iter
-          (fun (mb : T.module_binding) ->
-            match mb.mb_expr.mod_desc with
-            | Tmod_structure structure ->
-                List.iter process_structure_item structure.str_items
-            | _ -> ())
+          (fun (mb : T.module_binding) -> process_module_expr mb.mb_expr)
           modules
     | _ -> ()
   in
