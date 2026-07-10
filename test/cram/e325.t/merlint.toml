@@ -1,0 +1,4 @@
+# Spec-mandated names kept verbatim (e.g. a Cryptoki client whose
+# find_objects mirrors C_FindObjects) are exempt from the find_/get_
+# return-shape convention.
+allowed_words = ["find_objects"]

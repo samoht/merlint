@@ -52,9 +52,15 @@ let check_single_function item loc =
             ~is_option:(File_view.Type_view.returns_option typ))
   | _ -> None
 
-let check ctx =
+let check (ctx : Context.file) =
   List.filter_map
-    (fun item -> check_single_function item (File_view.Item.loc item))
+    (fun item ->
+      (* allowed_words exempts spec-mandated names (a Cryptoki client's
+         find_objects mirrors C_FindObjects) from the return-shape
+         convention. *)
+      let name = File_view.Item.name item in
+      if Config.allows ctx.config ~bare:name ~qualified:name then None
+      else check_single_function item (File_view.Item.loc item))
     (File_view.items (Context.view ctx))
 
 let pp ppf { function_name; expected } =

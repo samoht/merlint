@@ -53,3 +53,37 @@ Test good example - should find no issues:
   
   Summary: ✓ 0 total issues (applied 1 rule)
   ✓ All checks passed!
+
+An allowed_words entry (merlint.toml) exempts a spec-mandated find_ name;
+names outside the allowlist stay flagged:
+  $ merlint --build -r E325 allowed.ml
+  Dune root: $TESTCASE_ROOT/
+  Running merlint analysis...
+  
+  Analyzing 1 files
+  
+  ✓ Code Quality (0 total issues)
+  ✓ Code Style (0 total issues)
+  ✗ Naming Conventions (1 total issues)
+    [E325] Function Naming Convention (1 issue)
+    Functions that return option types should be prefixed with 'find_', while
+    functions that return non-option types should be prefixed with 'get_'. This
+    convention helps communicate the function's behavior to callers.
+    - allowed.ml:5:0: Function 'find_name' naming convention: consider 'get_name'
+  ✓ Documentation (0 total issues)
+  ✓ Project Structure (0 total issues)
+  ✓ Test Quality (0 total issues)
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
+  
+  ╭────────────────────┬──────────────────────────────────╮
+  │ Category           │ Issues                           │
+  ├────────────────────┼──────────────────────────────────┤
+  │ Naming Conventions │ 1 (1 function naming convention) │
+  ╰────────────────────┴──────────────────────────────────╯
+  
+  
+  Summary: ✗ 1 total issue (applied 1 rule)
+  ✗ Some checks failed. See details above.
+    Run `merlint help E325` for the rule's description, hint, and good/bad examples.
+  [1]
