@@ -34,14 +34,14 @@ val add_timing : t -> timing -> unit
 val reset_state : t -> unit
 (** [reset_state t] clears all timings in the state. *)
 
-val print_summary : ctx:Tty.Display.ctx -> t -> unit
+val print_summary : ctx:Console.Display.ctx -> t -> unit
 (** [print_summary ~ctx t] prints timing summary from the given state. Output is
     formatted to fit the terminal width. *)
 
-val print_file_summary : ctx:Tty.Display.ctx -> t -> unit
+val print_file_summary : ctx:Console.Display.ctx -> t -> unit
 (** [print_file_summary ~ctx t] prints per-file breakdown from the given state.
     Output is formatted to fit the terminal width. *)
 
-val print_rule_summary : ctx:Tty.Display.ctx -> t -> unit
+val print_rule_summary : ctx:Console.Display.ctx -> t -> unit
 (** [print_rule_summary ~ctx t] prints per-rule breakdown from the given state.
     Output is formatted to fit the terminal width. *)

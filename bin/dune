@@ -13,7 +13,7 @@
   logs
   observe
   nox-json
-  nox-tty
-  nox-tty-eio
+  console
+  console-eio
   version
   project-index))

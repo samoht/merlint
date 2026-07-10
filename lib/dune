@@ -14,7 +14,7 @@
   fpath
   merlin-lib.ocaml_parsing
   merlin-lib.ocaml_typing
-  nox-tty
+  console
   nox-opam
   nox-dune
   nox-toml

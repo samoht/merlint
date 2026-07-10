@@ -5,7 +5,7 @@ let logs_src = Logs.Src.create "merlint" ~doc:"Merlint OCaml linter"
 module Log = (val Logs.src_log logs_src : Logs.LOG)
 
 let wrap_text ~ctx ?(indent = 2) text =
-  Tty.Width.wrap ~indent (fst (Tty.Display.dimensions ctx)) text
+  Console.Width.wrap ~indent (fst (Console.Display.dimensions ctx)) text
 
 let normalize_fpath path = Fpath.(path |> normalize |> rem_empty_seg)
 
@@ -57,9 +57,11 @@ let print_issue_group ~ctx (error_code, issues) =
       let issue_count = List.length sorted_issues in
       let issue_word = if issue_count = 1 then "issue" else "issues" in
       Fmt.pr "  %a %a (%d %s)@."
-        (Tty.Style.styled Tty.Style.(fg Tty.Color.yellow) Fmt.string)
+        (Console.Style.styled
+           Console.Style.(fg Console.Color.yellow)
+           Fmt.string)
         (Fmt.str "[%s]" error_code)
-        (Tty.Style.styled Tty.Style.bold Fmt.string)
+        (Console.Style.styled Console.Style.bold Fmt.string)
         title issue_count issue_word;
 
       (* Find the rule to get the hint *)
@@ -75,7 +77,9 @@ let print_issue_group ~ctx (error_code, issues) =
           (* Print each line of the hint in gray *)
           String.split_on_char '\n' wrapped_hint
           |> List.iter (fun line ->
-              Fmt.pr "%a@." (Tty.Style.styled Tty.Style.faint Fmt.string) line)
+              Fmt.pr "%a@."
+                (Console.Style.styled Console.Style.faint Fmt.string)
+                line)
       | None -> ());
 
       (* Print each issue with location and description *)
@@ -345,21 +349,21 @@ let print_summary_table ~ctx issues_by_category =
   let rows = List.filter_map summary_row issues_by_category in
   if rows <> [] then (
     Fmt.pr "@.";
-    let term_width = fst (Tty.Display.dimensions ctx) in
+    let term_width = fst (Console.Display.dimensions ctx) in
     (* Account for borders and padding: 2 borders + 2 middle + 4 padding = 8 *)
     let available = term_width - 8 in
     let cat_width = min 20 (available / 4) in
     let issues_width = available - cat_width in
     let columns =
       [
-        Tty.Table.column ~align:`Left ~max_width:cat_width "Category";
-        Tty.Table.column ~align:`Left ~max_width:issues_width "Issues";
+        Console.Table.column ~align:`Left ~max_width:cat_width "Category";
+        Console.Table.column ~align:`Left ~max_width:issues_width "Issues";
       ]
     in
     let table =
-      Tty.Table.of_string_rows ~border:Tty.Border.rounded columns rows
+      Console.Table.of_string_rows ~border:Console.Border.rounded columns rows
     in
-    Fmt.pr "%a@." (Tty.Table.pp ~ctx) table)
+    Fmt.pr "%a@." (Console.Table.pp ~ctx) table)
 
 (* Print summary and status *)
 let print_summary all_issues enabled_rule_count =
@@ -729,7 +733,7 @@ let main exclude_patterns rules_spec ~show_profile ~show_config ~build ~bail
     let rule_filter = parse_rule_filter rules_spec in
     Eio_main.run @@ fun env ->
     let clock = Eio.Stdenv.clock env in
-    Tty_eio.run ~clock @@ fun ctx ->
+    Console_eio.run ~clock @@ fun ctx ->
     let mgr = Eio.Stdenv.process_mgr env in
     let fs = Eio.Stdenv.fs env in
     let domain_mgr = Eio.Stdenv.domain_mgr env in

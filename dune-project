@@ -35,8 +35,8 @@
   nox-opam
   nox-toml
   nox-json
-  nox-tty
-  nox-tty-eio
+  console
+  console-eio
   probe
   observe
   eio_main

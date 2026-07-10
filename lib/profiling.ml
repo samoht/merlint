@@ -70,7 +70,7 @@ let aggregate_timings timings =
     !project_rule_count )
 
 let summary_columns =
-  Tty.Table.
+  Console.Table.
     [
       column "Operation";
       column ~align:`Right "Count";
@@ -121,9 +121,10 @@ let print_summary ~ctx t =
     in
     Fmt.pr "@.[Profiling Summary]@.";
     let table =
-      Tty.Table.of_string_rows ~border:Tty.Border.none summary_columns rows
+      Console.Table.of_string_rows ~border:Console.Border.none summary_columns
+        rows
     in
-    Tty.Table.pp ~ctx Format.std_formatter table
+    Console.Table.pp ~ctx Format.std_formatter table
 
 let aggregate_file_timings timings =
   let file_timings =
@@ -195,7 +196,7 @@ let print_file_summary ~ctx t =
           file_stats
       in
       let columns =
-        Tty.Table.
+        Console.Table.
           [
             column "File";
             column ~align:`Right "Merlin (ms)";
@@ -208,9 +209,9 @@ let print_file_summary ~ctx t =
 
       Fmt.pr "@.[Top Slowest Files]@.";
       let table =
-        Tty.Table.of_string_rows ~border:Tty.Border.none columns rows
+        Console.Table.of_string_rows ~border:Console.Border.none columns rows
       in
-      Tty.Table.pp ~ctx Format.std_formatter table
+      Console.Table.pp ~ctx Format.std_formatter table
 
 let aggregate_rule_timings timings =
   let rule_timings =
@@ -281,7 +282,7 @@ let print_rule_summary ~ctx t =
       if rows = [] then ()
       else
         let columns =
-          Tty.Table.
+          Console.Table.
             [
               column "Rule";
               column "Type";
@@ -293,6 +294,6 @@ let print_rule_summary ~ctx t =
 
         Fmt.pr "@.[Top Slowest Rules]@.";
         let table =
-          Tty.Table.of_string_rows ~border:Tty.Border.none columns rows
+          Console.Table.of_string_rows ~border:Console.Border.none columns rows
         in
-        Tty.Table.pp ~ctx Format.std_formatter table
+        Console.Table.pp ~ctx Format.std_formatter table
