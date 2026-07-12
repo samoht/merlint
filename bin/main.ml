@@ -599,7 +599,7 @@ let installed_index_mode rule_filter =
     | Some filter ->
         List.exists
           (Merlint.Filter.is_enabled_by_code filter)
-          [ "E941"; "E943"; "E944" ]
+          [ "E941"; "E943"; "E944"; "E956" ]
   in
   if dep_rule_enabled then Project_index.Referenced else Project_index.Skip
 

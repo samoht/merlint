@@ -120,4 +120,5 @@ let all_rules =
     E953.rule;
     E954.rule;
     E955.rule;
+    E956.rule;
   ]

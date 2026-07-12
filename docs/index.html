@@ -2465,6 +2465,13 @@ and replace each call site with [err_x &quot;...&quot; args] / [fail_x &quot;...
     </div>
     <div class="error-hint"><p>A raising variant of a codec entry point is named with the _exn suffix (of_string_exn), never a ' suffix (of_string'). The ' suffix is reserved for a format-native keyword escape (object', the JSON object sort) or a pp / pp' configuration-variant pair; there are no built-in exceptions, so any ' name a codec package keeps must be documented in allowed-names in its merlint.toml. See E953 for the encoding verb vocabulary.</p></div>
 </div>
+<div class="error-card" id="E956">
+    <div>
+        <span class="error-code">E956</span>
+        <span class="error-title">Dead library dependency</span>
+    </div>
+    <div class="error-hint"><p>A stanza's [(libraries ...)] entry is dead when no compilation unit of that library appears in the imports the compiler recorded in the stanza's [.cmt] files. Imports are matched by object name (an internal [wire.ml] of library [spy] is [Spy__Wire], never [Wire]), so doc comments and source-basename collisions cannot mask a dead entry. Remove the entry or use the library. [(re_export ...)] entries, stanzas with [-linkall], C-shipping libraries under [(foreign_stubs ...)] stanzas, virtual-library implementations, and stanzas with missing or stale artefacts are not flagged.</p></div>
+</div>
 
     <a href="#top" class="back-to-top">↑ Top</a>
 </body>

@@ -15,7 +15,9 @@ Build bad fixture project:
   {"project_root":"$TESTCASE_ROOT/bad/","files_analyzed":4,"rules_applied":1,"total_issues":1,"passed":false,"issues":[{"code":"E956","title":"Dead library dependency","category":"Project Structure","message":"spy is linked by stanza consumer but never imported: no compilation unit of spy appears in the stanza's .cmt imports. Remove it from (libraries ...).","location":{"file":"bad/consumer/dune","start":{"line":1,"column":0},"end":{"line":1,"column":0}}}],"excluded":[]}
   [1]
 
-Test good example - both libraries are imported:
+Test good example - both libraries are imported by the consumer, and the
+umbrella library (re_export ...)s them to its dependents without importing
+them itself:
 Build good fixture project:
   $ (cd good && dune build @check)
 
@@ -23,7 +25,7 @@ Build good fixture project:
   Dune root: $TESTCASE_ROOT/good/
   Running merlint analysis...
   
-  Analyzing 4 files
+  Analyzing 5 files
   
   ✓ Code Quality (0 total issues)
   ✓ Code Style (0 total issues)

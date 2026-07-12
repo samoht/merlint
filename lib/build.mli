@@ -25,6 +25,12 @@ val refresh_stale_cmt_targets :
     skipped. Returns [Ok ()] when the (possibly empty) target list builds
     cleanly. *)
 
+val cmt_artefact : root:string -> Fpath.t -> (string * bool) option
+(** [cmt_artefact ~root file] is the [.cmt] / [.cmti] path for [file] under
+    [root]'s [_build], paired with [true] when the artefact is at least as new
+    as the source. [None] when no artefact exists or the file cannot be
+    resolved. *)
+
 type source_status =
   | Compiled  (** Source exists and its [.cmt] / [.cmti] is up to date. *)
   | Not_compiled

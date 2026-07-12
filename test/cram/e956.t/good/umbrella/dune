@@ -1,0 +1,6 @@
+(library
+ (name umbrella)
+ (public_name pkg.umbrella)
+ (libraries
+  (re_export wire)
+  (re_export spy)))
