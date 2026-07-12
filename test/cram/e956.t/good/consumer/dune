@@ -1,0 +1,4 @@
+(library
+ (name consumer)
+ (public_name pkg)
+ (libraries wire spy))
