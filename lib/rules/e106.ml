@@ -174,15 +174,17 @@ let advice op (operand : T.expression) =
   | _ -> "use the type's own equal, compare or hash instead"
 
 (* Comparing against a constructor whose arguments are themselves tag checks is
-   a tag check: a nullary constructor ([], None, an enum tag like [Red]), or one
-   wrapping only such ([Ok ()], [Some None]). Such a comparison inspects
-   constructor tags and, at deepest, a trivially comparable nested tag, never
-   deep or abstract structure -- [x = Ok ()] short-circuits on the tag when [x]
-   is [Error _], so an abstract error payload is never walked. Leave those
-   alone. *)
+   a tag check: a nullary constructor ([], None, an enum tag like [Red]), a
+   nullary polymorphic variant tag ([`UDP]), or one wrapping only such ([Ok ()],
+   [Some None]). Such a comparison inspects constructor tags and, at deepest, a
+   trivially comparable nested tag, never deep or abstract structure -- [x = Ok
+   ()] short-circuits on the tag when [x] is [Error _], so an abstract error
+   payload is never walked. Leave those alone. *)
 let rec is_tag_check (e : T.expression) =
   match e.exp_desc with
   | Texp_construct (_, _, args) -> List.for_all is_tag_check args
+  | Texp_variant (_, None) -> true
+  | Texp_variant (_, Some arg) -> is_tag_check arg
   | _ -> false
 
 type state = {
@@ -233,11 +235,11 @@ let rule =
        own equal, compare or hash. Comparing scalars, transparent containers \
        (list, array, option) and tuples of those is always fine, as is a tag \
        check against a constructor whose payload is itself only tag checks \
-       ([], None, an enum tag, or one wrapping such like Ok () or Some None). \
-       Defining a type's own equal or compare with these operators inside its \
-       defining module - let equal a b = a = b - is fine and not flagged: \
-       there you see the representation and are the authority on whether it is \
-       sound."
+       ([], None, an enum tag, a polymorphic variant tag like `UDP, or one \
+       wrapping such like Ok () or Some None). Defining a type's own equal or \
+       compare with these operators inside its defining module - let equal a b \
+       = a = b - is fine and not flagged: there you see the representation and \
+       are the authority on whether it is sound."
     ~examples:
       [ Example.bad Examples.E106.bad_ml; Example.good Examples.E106.good_ml ]
     ~pp

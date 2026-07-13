@@ -23,6 +23,11 @@ let is_red c = c = Red
 let nonempty l = l <> []
 let absent o = o = None
 
+(* A polymorphic variant tag is a tag check too. The type here is otherwise
+   dangerous - [`Run] wraps a function - but [s = `Idle] short-circuits on the
+   tag, so the function payload is never walked. *)
+let is_idle (s : [ `Idle | `Run of (unit -> unit) ]) = s = `Idle
+
 (* A constructor wrapping only tag checks is a tag check too: comparing against
    [Ok ()] short-circuits on the constructor tag, so [Res.err] being abstract
    never matters - the error payload is never walked. *)

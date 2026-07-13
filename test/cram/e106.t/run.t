@@ -17,10 +17,11 @@ Test bad example - polymorphic comparison on non-scalar types:
     that type's own equal, compare or hash. Comparing scalars, transparent
     containers (list, array, option) and tuples of those is always fine, as is a
     tag check against a constructor whose payload is itself only tag checks ([],
-    None, an enum tag, or one wrapping such like Ok () or Some None). Defining a
-    type's own equal or compare with these operators inside its defining module -
-    let equal a b = a = b - is fine and not flagged: there you see the
-    representation and are the authority on whether it is sound.
+    None, an enum tag, a polymorphic variant tag like `UDP, or one wrapping such
+    like Ok () or Some None). Defining a type's own equal or compare with these
+    operators inside its defining module - let equal a b = a = b - is fine and not
+    flagged: there you see the representation and are the authority on whether it
+    is sound.
     - bad.ml:14:27: Polymorphic (=) - use Id.equal instead
     - bad.ml:17:28: Polymorphic compare - use Id.compare instead
     - bad.ml:20:21: Polymorphic Hashtbl.hash - use Id.hash instead
