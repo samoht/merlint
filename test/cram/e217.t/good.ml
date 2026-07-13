@@ -16,6 +16,9 @@ let put_string s = Fmt.pr "%s" s
 let pp_int ppf n = Fmt.pf ppf "%d" n
 let printed n = n |> Fmt.str "%a" pp_int |> print_endline
 let chain n = n |> Fmt.str "%a" pp_int |> String.length
+let digest s = s
+let signature n payload = Fmt.str "%d.%s" n payload |> digest
+let log_event_pipeline buf msg = Fmt.str "event: %s" msg |> Buffer.add_string buf
 
 (* Infix operators (e.g. [Bos.Cmd.( % )]) take their argument before the
    string and cannot be wrapped as [Fmt.kstr op "..."]. The rule should

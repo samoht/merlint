@@ -84,6 +84,14 @@ let is_explicit_output_helper path =
       true
   | _ -> false
 
+(** The type-checker lowers [arg |> fn] to [fn arg], but preserves source
+    locations: the argument still precedes the callee. *)
+let is_piped_into (fn : T.expression) args =
+  List.exists
+    (fun (arg : T.expression) ->
+      arg.exp_loc.loc_start.pos_cnum < fn.exp_loc.loc_start.pos_cnum)
+    args
+
 type state = { filename : string; issues : payload Issue.t list ref }
 
 let visit_expr state (expr : T.expression) =
@@ -109,7 +117,8 @@ let visit_expr state (expr : T.expression) =
               | [] -> false
             else is_unary_fmt_str_arg args
           in
-          if rewriteable then flag (suggestion_for_apply path)
+          if rewriteable && not (is_piped_into fn args) then
+            flag (suggestion_for_apply path)
       | _ -> ())
   | Texp_construct (lid, _, [ arg ])
     when (not lid.loc.loc_ghost) && Query.Expr.calls arg [ "Fmt"; "str" ] ->
