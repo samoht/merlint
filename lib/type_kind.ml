@@ -35,7 +35,9 @@ let cmti_index root =
   | Some tbl -> tbl
   | None ->
       let tbl = Hashtbl.create 4096 in
-      let install = Filename.concat root "_build/install/default/lib" in
+      let install =
+        Filename.concat (Dune.Root.build_dir root) "install/default/lib"
+      in
       let opam = Filename.concat root "_opam/lib" in
       (* .cmti interfaces take priority; .cmt implementations then fill in
          modules that ship no .mli (e.g. eio's Eio__Fs). *)

@@ -28,7 +28,9 @@ let ensure_project_built ~path mgr =
   | Error msg -> err_build_failed msg
 
 let dune_target_of_cmt ~root cmt =
-  let build_root = Fpath.(v root / "_build" / "default" |> normalize) in
+  let build_root =
+    Fpath.(v (Dune.Root.default_context_dir root) |> normalize)
+  in
   let cmt = Fpath.(v cmt |> normalize) in
   Fpath.rem_prefix build_root cmt
 
