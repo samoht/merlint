@@ -1103,7 +1103,9 @@ and replace each call site with [err_x &quot;...&quot; args] / [fail_x &quot;...
 <div class="example good">
   <h4>GOOD</h4>
   <pre><code><span class="kw">let</span> find_user () = <span class="cn">None</span>  <span class="cm">(* returns option, correctly named *)</span>
-<span class="kw">let</span> get_name () = &quot;<span class="cn">John</span>&quot;  <span class="cm">(* returns string, correctly named *)</span></code></pre>
+<span class="kw">let</span> find_users_by_email () = []  <span class="cm">(* collection searches may return many *)</span>
+<span class="kw">let</span> get_name () = &quot;<span class="cn">John</span>&quot;  <span class="cm">(* returns string, correctly named *)</span>
+</code></pre>
 </div>
 </div></div>
 </div>
