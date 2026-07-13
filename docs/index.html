@@ -606,7 +606,7 @@ pre code {
         <span class="error-code">E106</span>
         <span class="error-title">Polymorphic comparison</span>
     </div>
-    <div class="error-hint"><p>OCaml's structural (=), (&lt;&gt;), (&lt;), (&gt;), (&lt;=), (&gt;=), compare, min, max and Hashtbl.hash compare values by walking their runtime representation. On a type from the current module that is fine - you can see its representation, and you expose your own equal in the .mli - but on another module's type it walks past the abstraction (ordering two abstract handles leaks their hidden contents), and on a function it raises Invalid_argument at runtime. Across modules, call that type's own equal, compare or hash. Comparing scalars, transparent containers (list, array, option) and tuples of those is always fine, as is a tag check against a constructor whose payload is itself only tag checks ([], None, an enum tag, or one wrapping such like Ok () or Some None). Defining a type's own equal or compare with these operators inside its defining module - let equal a b = a = b - is fine and not flagged: there you see the representation and are the authority on whether it is sound.</p><div class="examples-grid">
+    <div class="error-hint"><p>OCaml's structural (=), (&lt;&gt;), (&lt;), (&gt;), (&lt;=), (&gt;=), compare, min, max and Hashtbl.hash compare values by walking their runtime representation. On a type from the current module that is fine - you can see its representation, and you expose your own equal in the .mli - but on another module's type it walks past the abstraction (ordering two abstract handles leaks their hidden contents), and on a function it raises Invalid_argument at runtime. Across modules, call that type's own equal, compare or hash. Comparing scalars, transparent containers (list, array, option) and tuples of those is always fine, as is a tag check against a constructor whose payload is itself only tag checks ([], None, an enum tag, a polymorphic variant tag like `UDP, or one wrapping such like Ok () or Some None). Defining a type's own equal or compare with these operators inside its defining module - let equal a b = a = b - is fine and not flagged: there you see the representation and are the authority on whether it is sound.</p><div class="examples-grid">
 <div class="example bad">
   <h4>BAD</h4>
   <pre><code>(* <span class="cn">Id</span>.t is abstract here: another <span class="kw">module</span>'s <span class="kw">type</span>, so it must be compared
@@ -671,6 +671,11 @@ pre code {
 <span class="kw">let</span> is_red c = c = <span class="cn">Red</span>
 <span class="kw">let</span> nonempty l = l &lt;&gt; []
 <span class="kw">let</span> absent o = o = <span class="cn">None</span>
+
+(* <span class="cn">A</span> polymorphic variant tag is a tag check too. <span class="cn">The</span> <span class="kw">type</span> here is otherwise
+   dangerous - [`<span class="cn">Run</span>] wraps a <span class="kw">function</span> - but [s = `<span class="cn">Idle</span>] short-circuits on the
+   tag, so the <span class="kw">function</span> payload is never walked. *)
+<span class="kw">let</span> is_idle (s : [ `<span class="cn">Idle</span> | `<span class="cn">Run</span> <span class="kw">of</span> (unit -&gt; unit) ]) = s = `<span class="cn">Idle</span>
 
 (* <span class="cn">A</span> constructor wrapping only tag checks is a tag check too: comparing against
    [<span class="cn">Ok</span> ()] short-circuits on the constructor tag, so [<span class="cn">Res</span>.err] being abstract

@@ -74,7 +74,7 @@ let of_string s = int_of_string_opt s
 
 ### [E106] Polymorphic comparison
 
-OCaml's structural (=), (<>), (<), (>), (<=), (>=), compare, min, max and Hashtbl.hash compare values by walking their runtime representation. On a type from the current module that is fine - you can see its representation, and you expose your own equal in the .mli - but on another module's type it walks past the abstraction (ordering two abstract handles leaks their hidden contents), and on a function it raises Invalid_argument at runtime. Across modules, call that type's own equal, compare or hash. Comparing scalars, transparent containers (list, array, option) and tuples of those is always fine, as is a tag check against a constructor whose payload is itself only tag checks ([], None, an enum tag, or one wrapping such like Ok () or Some None). Defining a type's own equal or compare with these operators inside its defining module - let equal a b = a = b - is fine and not flagged: there you see the representation and are the authority on whether it is sound.
+OCaml's structural (=), (<>), (<), (>), (<=), (>=), compare, min, max and Hashtbl.hash compare values by walking their runtime representation. On a type from the current module that is fine - you can see its representation, and you expose your own equal in the .mli - but on another module's type it walks past the abstraction (ordering two abstract handles leaks their hidden contents), and on a function it raises Invalid_argument at runtime. Across modules, call that type's own equal, compare or hash. Comparing scalars, transparent containers (list, array, option) and tuples of those is always fine, as is a tag check against a constructor whose payload is itself only tag checks ([], None, an enum tag, a polymorphic variant tag like `UDP, or one wrapping such like Ok () or Some None). Defining a type's own equal or compare with these operators inside its defining module - let equal a b = a = b - is fine and not flagged: there you see the representation and are the authority on whether it is sound.
 
 **Examples:**
 
@@ -143,6 +143,11 @@ let equal_color (a : color) b = a = b
 let is_red c = c = Red
 let nonempty l = l <> []
 let absent o = o = None
+
+(* A polymorphic variant tag is a tag check too. The type here is otherwise
+   dangerous - [`Run] wraps a function - but [s = `Idle] short-circuits on the
+   tag, so the function payload is never walked. *)
+let is_idle (s : [ `Idle | `Run of (unit -> unit) ]) = s = `Idle
 
 (* A constructor wrapping only tag checks is a tag check too: comparing against
    [Ok ()] short-circuits on the constructor tag, so [Res.err] being abstract
