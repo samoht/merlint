@@ -2,14 +2,9 @@
 
 type payload = { function_name : string; expected : string }
 
-(** Stdlib-aligned [find_*] names whose return shape is a collection (not an
-    option): [List.find_all], [Hashtbl.find_all], etc. *)
-let is_stdlib_find_collection_name name =
-  name = "find_all" || name = "find_many"
-
 (** A type-variable [Ptyp_var "a"] means merlin couldn't resolve the type; skip
     the rule rather than guess. *)
-let issue_for_return_shape ~loc ~name ~is_option =
+let issue_for_return_shape ~loc ~name ~is_option ~is_collection =
   if (String.starts_with ~prefix:"get_" name || name = "get") && is_option then
     Some
       (Issue.v ~loc
@@ -23,8 +18,7 @@ let issue_for_return_shape ~loc ~name ~is_option =
          })
   else if
     (String.starts_with ~prefix:"find_" name || name = "find")
-    && (not is_option)
-    && not (is_stdlib_find_collection_name name)
+    && (not is_option) && not is_collection
   then
     Some
       (Issue.v ~loc
@@ -47,9 +41,11 @@ let check_single_function item loc =
       match return_type with
       | None -> None
       | Some ret when File_view.Type_view.is_variable ret -> None
-      | Some _ ->
+      | Some ret ->
           issue_for_return_shape ~loc ~name:n
-            ~is_option:(File_view.Type_view.returns_option typ))
+            ~is_option:(File_view.Type_view.returns_option typ)
+            ~is_collection:
+              (File_view.Type_view.is_list ret ~elem:(Fun.const true)))
   | _ -> None
 
 let check (ctx : Context.file) =
