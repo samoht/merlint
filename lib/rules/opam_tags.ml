@@ -22,8 +22,8 @@ let read opam_path = Option.value (read_opt opam_path) ~default:[]
 (** A package declares the I/O-free contract when its tags include the top-level
     [protocol] tag (a state machine over a wire codec) or any [codec] /
     [codec.*] topic (an encoding kind). *)
-let is_sans_io = function
+let is_io_free = function
   | "codec" | "protocol" -> true
   | t -> String.length t > 6 && String.sub t 0 6 = "codec."
 
-let has_sans_io tags = List.exists is_sans_io tags
+let has_io_free tags = List.exists is_io_free tags

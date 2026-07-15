@@ -77,42 +77,42 @@ tags: true
         "non-string/non-list value -> Some []" (Some [])
         (Opam_tags.read_opt path))
 
-let test_is_sans_io_predicate () =
+let test_is_io_free_predicate () =
   Alcotest.(check bool)
     "bare [codec] matches" true
-    (Opam_tags.is_sans_io "codec");
+    (Opam_tags.is_io_free "codec");
   Alcotest.(check bool)
     "[codec.json] matches" true
-    (Opam_tags.is_sans_io "codec.json");
+    (Opam_tags.is_io_free "codec.json");
   Alcotest.(check bool)
     "[protocol] matches" true
-    (Opam_tags.is_sans_io "protocol");
+    (Opam_tags.is_io_free "protocol");
   Alcotest.(check bool)
     "[eio] does not match" false
-    (Opam_tags.is_sans_io "eio");
+    (Opam_tags.is_io_free "eio");
   Alcotest.(check bool)
     "[org:blacksun] does not match" false
-    (Opam_tags.is_sans_io "org:blacksun");
+    (Opam_tags.is_io_free "org:blacksun");
   (* Adversarial: short strings starting with [codec] but missing the dot. *)
   Alcotest.(check bool)
     "[codec_] does NOT match (no dot)" false
-    (Opam_tags.is_sans_io "codec_");
+    (Opam_tags.is_io_free "codec_");
   Alcotest.(check bool)
     "[codecs] does NOT match" false
-    (Opam_tags.is_sans_io "codecs");
+    (Opam_tags.is_io_free "codecs");
   Alcotest.(check bool)
     "[codec.] (dot but no subtag) does NOT match" false
-    (Opam_tags.is_sans_io "codec.");
-  Alcotest.(check bool) "empty string" false (Opam_tags.is_sans_io "")
+    (Opam_tags.is_io_free "codec.");
+  Alcotest.(check bool) "empty string" false (Opam_tags.is_io_free "")
 
-let test_has_sans_io () =
+let test_has_io_free () =
   Alcotest.(check bool)
     "any I/O-free tag in the list" true
-    (Opam_tags.has_sans_io [ "org:blacksun"; "codec.cbor" ]);
+    (Opam_tags.has_io_free [ "org:blacksun"; "codec.cbor" ]);
   Alcotest.(check bool)
     "no I/O-free tag" false
-    (Opam_tags.has_sans_io [ "org:blacksun"; "eio" ]);
-  Alcotest.(check bool) "empty list" false (Opam_tags.has_sans_io [])
+    (Opam_tags.has_io_free [ "org:blacksun"; "eio" ]);
+  Alcotest.(check bool) "empty list" false (Opam_tags.has_io_free [])
 
 let suite =
   ( "opam_tags",
@@ -125,6 +125,6 @@ let suite =
       Alcotest.test_case "non-string entries dropped" `Quick
         test_non_string_entries_dropped;
       Alcotest.test_case "non-string non-list value" `Quick test_other_value;
-      Alcotest.test_case "is_sans_io predicate" `Quick test_is_sans_io_predicate;
-      Alcotest.test_case "has_sans_io" `Quick test_has_sans_io;
+      Alcotest.test_case "is_io_free predicate" `Quick test_is_io_free_predicate;
+      Alcotest.test_case "has_io_free" `Quick test_has_io_free;
     ] )

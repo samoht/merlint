@@ -10,9 +10,9 @@ val read : string -> string list
 (** [read path] is like {!read_opt} but folds absent fields and unreadable files
     into the empty list. *)
 
-val is_sans_io : string -> bool
-(** [is_sans_io t] is [true] when [t] is the top-level [protocol] tag, the bare
+val is_io_free : string -> bool
+(** [is_io_free t] is [true] when [t] is the top-level [protocol] tag, the bare
     [codec] tag, or a [codec.*] sub-tag. *)
 
-val has_sans_io : string list -> bool
-(** [has_sans_io tags] is [List.exists is_sans_io tags]. *)
+val has_io_free : string list -> bool
+(** [has_io_free tags] is [List.exists is_io_free tags]. *)

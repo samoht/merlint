@@ -43,7 +43,7 @@ let lib_matches ~banned name =
   List.exists (fun b -> b = name || b = top) banned
 
 let kind_of_tags tags =
-  if not (Opam_tags.has_sans_io tags) then Non_codec
+  if not (Opam_tags.has_io_free tags) then Non_codec
   else if List.mem "eio" tags then Eio_codec
   else Pure_codec
 

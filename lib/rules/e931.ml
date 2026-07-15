@@ -101,7 +101,7 @@ let check (ctx : Context.project) =
   let index = Context.index ctx in
   List.concat_map
     (fun pkg ->
-      if not (Opam_tags.has_sans_io (P.tags pkg)) then []
+      if not (Opam_tags.has_io_free (P.tags pkg)) then []
       else
         let mls =
           Project_index.package_libraries pkg
