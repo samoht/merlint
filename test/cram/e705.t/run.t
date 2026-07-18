@@ -80,3 +80,40 @@ a stale tree into a finding. Same sources as good/, never built:
   
   Summary: ✓ 0 total issues (applied 1 rule)
   ✓ All checks passed!
+
+An interface that exports more than the suite is still reported, so the skip
+above cannot be mistaken for the rule going quiet altogether:
+
+  $ (cd bad_type && dune build @check)
+
+  $ merlint --build -r E705 bad_type/
+  Dune root: $TESTCASE_ROOT/bad_type/
+  Running merlint analysis...
+  
+  Analyzing 4 files
+  
+  ✓ Code Quality (0 total issues)
+  ✓ Code Style (0 total issues)
+  ✓ Naming Conventions (0 total issues)
+  ✓ Documentation (0 total issues)
+  ✓ Project Structure (0 total issues)
+  ✗ Test Quality (1 total issues)
+    [E705] Missing Fuzz MLI File (1 issue)
+    Fuzz modules (fuzz_*.ml) should have corresponding .mli files that export only
+    'suite : string * Alcobar.test_case list'. This enforces proper encapsulation
+    of fuzz test internals.
+    - bad_type/fuzz/fuzz_parser.mli:1:0: Fuzz module interface should only export 'suite' with type string * Alcobar.test_case list
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
+  
+  ╭──────────────┬─────────────────────────────╮
+  │ Category     │ Issues                      │
+  ├──────────────┼─────────────────────────────┤
+  │ Test Quality │ 1 (1 missing fuzz mli file) │
+  ╰──────────────┴─────────────────────────────╯
+  
+  
+  Summary: ✗ 1 total issue (applied 1 rule)
+  ✗ Some checks failed. See details above.
+    Run `merlint help E705` for the rule's description, hint, and good/bad examples.
+  [1]
