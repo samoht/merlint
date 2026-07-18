@@ -14,17 +14,22 @@ let test_unknown_type_lazy () =
       ()
   in
   Alcotest.(check bool)
-    "rejected" false
-    (Merlint.Suite.is_compliant_view ~expected:"unknown" view);
+    "rejected" true
+    (Merlint.Suite.is_compliant_view ~expected:"unknown" view
+    = Merlint.Suite.Resolved false);
   Alcotest.(check bool) "typedtree not forced" false !forced
 
 let test_unresolved_skips () =
   with_eio @@ fun () ->
   let view = unresolved_view () in
+  (* Not "not compliant": without a typedtree the type cannot be read, and a
+     caller that takes the absent answer for a mismatch reports every compliant
+     interface in an unbuilt tree. *)
   Alcotest.(check bool)
-    "not compliant without typedtree" false
+    "compliance unresolved without typedtree" true
     (Merlint.Suite.is_compliant_view
-       ~expected:"string * unit Alcotest.test_case list" view);
+       ~expected:"string * unit Alcotest.test_case list" view
+    = Merlint.Suite.Unresolved);
   Alcotest.(check bool)
     "references unresolved" true
     (Merlint.Suite.references view "Test_foo" = Merlint.Suite.Unresolved);

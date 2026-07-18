@@ -18,19 +18,23 @@ let check_fuzz_mli_file ctx index filename view =
     && (not (is_in_private_library ctx index filename))
     && not (File.is_in_examples filename_s)
   then
-    if Suite.is_compliant_view ~expected:"string * Alcobar.test_case list" view
-    then []
-    else
-      [
-        Issue.v
-          ~loc:
-            (Location.v ~file:filename_s ~start_line:1 ~start_col:0 ~end_line:1
-               ~end_col:0)
-          {
-            filename = filename_s;
-            module_name = basename |> Filename.chop_extension;
-          };
-      ]
+    match
+      Suite.is_compliant_view ~expected:"string * Alcobar.test_case list" view
+    with
+    (* Unresolved: no typedtree, so the suite type could not be read at all --
+       not evidence the interface is wrong. *)
+    | Suite.Unresolved | Suite.Resolved true -> []
+    | Suite.Resolved false ->
+        [
+          Issue.v
+            ~loc:
+              (Location.v ~file:filename_s ~start_line:1 ~start_col:0
+                 ~end_line:1 ~end_col:0)
+            {
+              filename = filename_s;
+              module_name = basename |> Filename.chop_extension;
+            };
+        ]
   else []
 
 (** Check if fuzz_*.ml files have corresponding .mli files. *)

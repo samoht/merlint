@@ -175,11 +175,16 @@ let is_value_suite expected item =
   | Some typ -> expected_type expected typ
   | None -> false
 
+(* [expected] is parsed before the typedtree is consulted: an expectation this
+   module cannot express is the caller's error, answerable without forcing the
+   artefact. *)
 let is_compliant_view ~expected view =
   match expected_of_string expected with
-  | None -> false
+  | None -> Resolved false
   | Some expected -> (
-      match File_view.items view with
-      | [ item ] when File_view.Item.kind item = File_view.Item.Value ->
-          is_value_suite expected item
-      | _ -> false)
+      if not (File_view.is_resolved view) then Unresolved
+      else
+        match File_view.items view with
+        | [ item ] when File_view.Item.kind item = File_view.Item.Value ->
+            Resolved (is_value_suite expected item)
+        | _ -> Resolved false)

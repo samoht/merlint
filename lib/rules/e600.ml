@@ -52,12 +52,12 @@ let item_defines_tests (item : T.structure_item) =
   | _ -> false
 
 let test_mli_needs_issue view =
-  match File_view.typedtree view with
-  | None -> false
-  | Some _ ->
-      not
-        (Suite.is_compliant_view
-           ~expected:"string * unit Alcotest.test_case list" view)
+  match
+    Suite.is_compliant_view ~expected:"string * unit Alcotest.test_case list"
+      view
+  with
+  | Suite.Unresolved | Suite.Resolved true -> false
+  | Suite.Resolved false -> true
 
 let test_mli_target ctx index filename =
   let basename = Filename.basename filename in

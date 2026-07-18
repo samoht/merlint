@@ -53,6 +53,9 @@ val calls_test_case : File_view.t -> bool resolved
     constructor, or {!constructor-Unresolved} when the typedtree is not built.
 *)
 
-val is_compliant_view : expected:string -> File_view.t -> bool
-(** [is_compliant_view ~expected view] checks that an interface exposes exactly
-    one [suite] value with the expected test-suite type. *)
+val is_compliant_view : expected:string -> File_view.t -> bool resolved
+(** [is_compliant_view ~expected view] is whether an interface exposes exactly
+    one [suite] value with the expected test-suite type, or
+    {!constructor-Unresolved} when the typedtree is not built. The expected type
+    cannot be recognised without one, so a caller treating the absent answer as
+    a mismatch reports every compliant interface in an unbuilt tree. *)
