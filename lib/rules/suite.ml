@@ -111,8 +111,10 @@ let references_in callers module_name =
        (fun actual -> String.ends_with ~suffix:("__" ^ module_name) actual)
        callers.wrapped
 
-let missing_references _view _modules =
-  failwith "TODO: implement Suite.missing_references"
+let missing_references view modules =
+  match callers view with
+  | None -> []
+  | Some c -> List.filter (fun module_ -> not (references_in c module_)) modules
 
 type 'a resolved = Unresolved | Resolved of 'a
 

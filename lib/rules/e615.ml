@@ -58,11 +58,6 @@ let test_modules env (test_stanza : Project_index.source_stanza) test_file =
         None)
       else Some basename)
 
-let suite_included callers test_mod =
-  match callers with
-  | None -> false
-  | Some c -> Suite.references_in c (String.capitalize_ascii test_mod)
-
 let missing_issue test_file test_mod =
   let loc =
     Issue_location.v
@@ -91,10 +86,14 @@ let check_test_info ctx env (test_stanza : Project_index.source_stanza) =
                 (List.length modules) name
                 Fmt.(list ~sep:comma string)
                 modules);
-          let callers = Suite.callers view in
+          (* An unresolved runner answers no absence claims: flagging every
+             module because the typedtree is stale is how this rule used to
+             flap under a concurrent build. *)
           modules
-          |> List.filter (fun test_mod -> not (suite_included callers test_mod))
-          |> List.map (missing_issue test_file)
+          |> List.map String.capitalize_ascii
+          |> Suite.missing_references view
+          |> List.map (fun module_ ->
+              missing_issue test_file (String.uncapitalize_ascii module_))
       with File_view.Analysis_error _ -> [])
 
 let stanza_is_selected ctx (stanza : Project_index.source_stanza) =
