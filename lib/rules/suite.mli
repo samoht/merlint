@@ -28,6 +28,13 @@ val references_in : callers -> string -> bool
 (** [references_in callers module_name] checks whether precomputed [callers]
     contains [module_name].suite. *)
 
+val missing_references : File_view.t -> string list -> string list
+(** [missing_references view modules] is the subset of [modules] (capitalized
+    module names) whose [<module>.suite] the runner [view] does not reference,
+    in input order. Empty when the typedtree is not built: an unresolved runner
+    answers no absence claims (see {!type-resolved}), it never flags every
+    module. The caller set is computed once for the whole list. *)
+
 (** The result of a typedtree-backed query. Returning this instead of a bare
     [bool] stops callers from reading {!constructor-Unresolved} as a negative
     answer, which is how an absence check ("module X is not referenced") turns

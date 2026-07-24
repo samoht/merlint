@@ -111,6 +111,9 @@ let references_in callers module_name =
        (fun actual -> String.ends_with ~suffix:("__" ^ module_name) actual)
        callers.wrapped
 
+let missing_references _view _modules =
+  failwith "TODO: implement Suite.missing_references"
+
 type 'a resolved = Unresolved | Resolved of 'a
 
 let references view module_name =
