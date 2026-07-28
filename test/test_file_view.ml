@@ -61,14 +61,14 @@ let test_interface_has_no_values () =
     "no implementation values" 0
     (List.length (Merlint.File_view.values v))
 
-let test_application_cache_is_empty_without_implementation () =
+let test_application_cache_without_implementation () =
   with_eio @@ fun () ->
   let v = view "iface.mli" (fun () -> Ok (Some empty_interface)) in
   let calls = ref 0 in
   Merlint.File_view.iter_applications v (fun _ -> incr calls);
   Alcotest.(check int) "no calls" 0 !calls
 
-let test_typedtree_loaded_once_across_domains () =
+let test_typedtree_loaded_across_domains () =
   Eio_main.run @@ fun env ->
   let typedtree_calls = Atomic.make 0 in
   let v =
@@ -94,10 +94,10 @@ let tests =
     ("interface_has_no_values", `Quick, test_interface_has_no_values);
     ( "application_cache_empty_without_implementation",
       `Quick,
-      test_application_cache_is_empty_without_implementation );
+      test_application_cache_without_implementation );
     ( "typedtree_loaded_once_across_domains",
       `Quick,
-      test_typedtree_loaded_once_across_domains );
+      test_typedtree_loaded_across_domains );
   ]
 
 let suite = ("file_view", tests)

@@ -74,7 +74,7 @@ let test_oracle_dirs () =
       Alcotest.(check bool) "has test.ml" true dir.has_test_ml
   | dirs -> Alcotest.failf "expected one oracle dir, got %d" (List.length dirs)
 
-let test_oracle_dirs_exclude_vendored_packages () =
+let test_oracle_exclude_vendored_packages () =
   with_temp_dir "merlint-interop-" @@ fun root ->
   write_file (Filename.concat root "dune-project") "(lang dune 3.0)\n";
   write_file (Filename.concat root "dune") "(vendored_dirs vendor)\n";
@@ -113,5 +113,5 @@ let suite =
       Alcotest.test_case "script text query" `Quick test_script_contains;
       Alcotest.test_case "oracle discovery" `Quick test_oracle_dirs;
       Alcotest.test_case "oracle discovery excludes vendored packages" `Quick
-        test_oracle_dirs_exclude_vendored_packages;
+        test_oracle_exclude_vendored_packages;
     ] )

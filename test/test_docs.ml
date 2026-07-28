@@ -4,7 +4,9 @@
 let style_issue : Merlint.Docs.style_issue Alcotest.testable =
   Alcotest.testable Merlint.Docs.pp_style_issue Merlint.Docs.equal_style_issue
 
-let test_check_function_doc () =
+(* The [name args] shape itself: brackets, the name inside them, the trailing
+   period, and redundant phrasing. *)
+let test_check_function_doc_format () =
   let open Merlint.Docs in
   (* Good function doc with [name args] format *)
   let issues =
@@ -50,8 +52,13 @@ let test_check_function_doc () =
       ~doc:"[wrong x] computes something."
   in
   Alcotest.(check (list style_issue))
-    "wrong name in brackets" [ Bad_function_format ] issues;
+    "wrong name in brackets" [ Bad_function_format ] issues
 
+(* Whether the documented arguments match the signature's arity, including
+   optional arguments and arrows that belong to an argument type rather than to
+   the function itself. *)
+let test_check_function_doc_arity () =
+  let open Merlint.Docs in
   (* No arguments is OK: [fn] can simply name the function. *)
   let issues =
     check_function_doc ~name:"make"
@@ -178,7 +185,9 @@ let test_check_type_doc () =
 let tests =
   let open Alcotest in
   [
-    test_case "check_function_doc" `Quick test_check_function_doc;
+    test_case "check_function_doc format" `Quick test_check_function_doc_format;
+    Alcotest.test_case "check_function_doc arity" `Quick
+      test_check_function_doc_arity;
     test_case "check_value_doc" `Quick test_check_value_doc;
     test_case "check_type_doc" `Quick test_check_type_doc;
   ]
