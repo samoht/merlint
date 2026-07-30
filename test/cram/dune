@@ -1,7 +1,11 @@
 (cram
  (deps
   %{bin:merlint}
-  (package nox-csv))
+  ; nox-csv's own local dependencies: a (package ...) dep installs that package
+  ; alone, not the tree below it, so the sandbox needs each one named.
+  (package nox-csv)
+  (package nox-loc)
+  (package nox-utf8))
  (locks merlint-cram-dune))
 
 (rule
