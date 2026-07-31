@@ -76,3 +76,12 @@ type alg = None | HS256
 
 (** [status] is the outcome of a run. *)
 type status = Ok | Error
+
+type outcome = { target : string  (** Where the whole run landed. *) }
+(** The type for where a run landed. *)
+
+(** The type for what one step did. *)
+type step =
+  | Moved of { target : string }
+      (** The step moved something to [target], which is this constructor's
+          own field and not {!type-outcome}'s. *)

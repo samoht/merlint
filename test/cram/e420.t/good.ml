@@ -44,3 +44,7 @@ let decode (_ : string) : (int, string) result = Ok 0
 
 type alg = None | HS256
 type status = Ok | Error
+
+type outcome = { target : string }
+
+type step = Moved of { target : string }
