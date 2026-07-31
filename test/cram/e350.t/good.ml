@@ -8,3 +8,8 @@ let create_window ~visibility ~mode ~resizable =
   | _ -> "no window"
   
 let w = create_window ~visibility:Visible ~mode:Fullscreen ~resizable:Fixed_size
+(* Its shape comes from the function it names, not from a choice made here,
+   so the advice to use a variant cannot be taken. *)
+let both = Bool.equal
+
+let _ = both true false
