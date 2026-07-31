@@ -93,7 +93,14 @@ let issue ctx =
    module doesn't trip the rule; the engine surfaces the missing-
    resolution count. *)
 let check (ctx : Context.file) =
-  try
+  (* A test that exercises a reporter has to emit through it, and the record it
+     emits is the thing under assertion. Declaring a source there would change
+     the record being asserted on, so the rule's own remedy would break the
+     test. A test module has no log-filtering story to get wrong either: the
+     rule is about library code whose users need to select its output. *)
+  if File.is_test (Context.project_relative_file ctx) then []
+  else
+    try
     let view = Context.view ctx in
     match
       (File_view.resolved_identifiers view, File_view.resolved_values view)
