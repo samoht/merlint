@@ -1,4 +1,7 @@
 Bad: README.md and lib/foo.mli have OCaml code blocks but no mdx stanza references them.
+The good project also carries a TODO.md with a code block: private working notes
+are gitignored and never committed, so a stanza covering one would name a file no
+checkout has, and the rule leaves them alone.
 
 Build bad fixture project:
   $ (cd bad && dune build @check)
