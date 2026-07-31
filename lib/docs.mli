@@ -1,7 +1,9 @@
 (** Documentation style analysis following Daniel Bünzli's conventions.
 
     This module enforces consistent documentation style:
-    - Type documentation ends with a period.
+    - Type documentation ends with a period, unless its last element is an odoc
+      block -- a code block, a verbatim block, a list or a table -- which
+      carries its own punctuation and closes the comment on its delimiter.
     - Function documentation starts with the documented name when it uses
       [[name args] description.] format. If it mentions arguments, it mentions
       at least all mandatory arguments and no impossible arguments.

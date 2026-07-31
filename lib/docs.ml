@@ -157,6 +157,91 @@ let check_bracket_format ~name ~signature ~is_operator ~doc issues =
       else check_function_bracket ~name ~signature ~bracket_content issues
   | None -> ()
 
+(* Odoc elements that carry their own punctuation: a code block, a verbatim
+   block, raw markup, a list or a table. A doc whose last element is one of
+   these closes on its delimiter and the sentence period sits inside it. An
+   inline element ({b ...}, {e ...}, {!ref}) is part of the prose and the
+   period is still due after it. *)
+let is_block_tag = function
+  | "[" | "v" | "%" | "ul" | "ol" | "table" | "math" -> true
+  | _ -> false
+
+let is_tag_char = function
+  | 'a' .. 'z' | 'A' .. 'Z' | '0' .. '9' -> true
+  | _ -> false
+
+let tag_at doc i =
+  let len = String.length doc in
+  let rec last j = if j < len && is_tag_char doc.[j] then last (j + 1) else j in
+  String.sub doc i (last i - i)
+
+let past doc start pattern =
+  let len = String.length doc and plen = String.length pattern in
+  let rec loop i =
+    if i + plen > len then len
+    else if String.sub doc i plen = pattern then i + plen
+    else loop (i + 1)
+  in
+  loop start
+
+(* [i] indexes the opening '['. Braces inside a code span are literal text. *)
+let past_code_span doc i =
+  let len = String.length doc in
+  let rec loop j depth =
+    if j >= len then len
+    else
+      match doc.[j] with
+      | '\\' -> loop (j + 2) depth
+      | '[' -> loop (j + 1) (depth + 1)
+      | ']' -> if depth <= 1 then j + 1 else loop (j + 1) (depth - 1)
+      | _ -> loop (j + 1) depth
+  in
+  loop i 0
+
+type step =
+  | Whole of string * int  (** an element read in one go, and what follows it *)
+  | Enter of string * int
+  | Leave of int
+  | Plain of int
+
+let step doc i =
+  let len = String.length doc in
+  if doc.[i] = '\\' then Plain (i + 2)
+  else if doc.[i] = '[' then Plain (past_code_span doc i)
+  else if doc.[i] = '}' then Leave (i + 1)
+  else if doc.[i] <> '{' || i + 1 >= len then Plain (i + 1)
+  else
+    match doc.[i + 1] with
+    | '[' | '@' -> Whole ("[", past doc (i + 2) "]}")
+    | 'v' -> Whole ("v", past doc (i + 2) "v}")
+    | '%' -> Whole ("%", past doc (i + 2) "%}")
+    | _ ->
+        let tag = tag_at doc (i + 1) in
+        Enter (tag, i + 1 + String.length tag)
+
+(* The tag of the element that closes last in [doc], with the offset just past
+   its closing delimiter. *)
+let last_closed doc =
+  let len = String.length doc in
+  let rec walk i opened closed =
+    if i >= len then closed
+    else
+      match step doc i with
+      | Plain next -> walk next opened closed
+      | Whole (tag, next) -> walk next opened (Some (tag, next))
+      | Enter (tag, next) -> walk next (tag :: opened) closed
+      | Leave next -> (
+          match opened with
+          | tag :: rest -> walk next rest (Some (tag, next))
+          | [] -> walk next [] closed)
+  in
+  walk 0 [] None
+
+let ends_with_block doc =
+  match last_closed doc with
+  | Some (tag, stop) -> stop = String.length doc && is_block_tag tag
+  | None -> false
+
 let check_ends_with_period ~doc issues =
   let trimmed = String.trim doc in
   let has_list_markers =
@@ -167,7 +252,7 @@ let check_ends_with_period ~doc issues =
   if
     String.length trimmed > 0
     && (not (String.ends_with ~suffix:"." trimmed))
-    && (not (String.ends_with ~suffix:"]}" trimmed))
+    && (not (ends_with_block trimmed))
     && not (has_list_markers && String.ends_with ~suffix:")" trimmed)
   then issues := Missing_period :: !issues
 
@@ -201,7 +286,8 @@ let check_function_doc ~name ~signature ~doc =
     || String.starts_with ~prefix:"this method" lower
   then issues := Redundant_phrase "This function" :: !issues;
 
-  (* Check ends with period (but not if it ends with a code block ]} or if it's a list ending with ) *)
+  (* Check ends with period (but not if the last element is an odoc block or
+     if it's a list ending with ) *)
   check_ends_with_period ~doc issues;
 
   !issues
