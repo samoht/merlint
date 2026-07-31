@@ -650,6 +650,7 @@ let typed_type_children (decl : Typedtree.type_declaration) =
         (fun (ld : Typedtree.label_declaration) ->
           typed_item ~name:ld.ld_name.txt ~kind:Field
             ~type_:ld.ld_type.ctyp_type
+            ?doc:(typed_doc ld.ld_attributes)
             ~deprecated:(typed_has_deprecated ld.ld_attributes)
             ~mutable_field:
               (match ld.ld_mutable with Mutable -> true | Immutable -> false)
@@ -659,6 +660,7 @@ let typed_type_children (decl : Typedtree.type_declaration) =
       List.map
         (fun (cd : Typedtree.constructor_declaration) ->
           typed_item ~name:cd.cd_name.txt ~kind:Constructor
+            ?doc:(typed_doc cd.cd_attributes)
             ~deprecated:(typed_has_deprecated cd.cd_attributes)
             cd.cd_loc)
         constructors

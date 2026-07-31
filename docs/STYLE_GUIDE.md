@@ -330,6 +330,41 @@ val default : t
 ```
 
 
+**Where the type's doc goes**: A variant declaration has no closing delimiter, so a doc comment written after the last constructor documents that constructor, not the type. Put a variant type's documentation before its declaration; documenting after the declaration is safe only for records, aliases and abstract types.
+
+### [E425] Type Documentation Bound to a Constructor
+
+A variant declaration has no closing delimiter, so a doc comment placed after the last constructor attaches to that constructor: odoc renders the type's description under one case and the type itself stays undocumented. Put the type's documentation before the declaration, on the line above 'type'. If the comment really does describe that last constructor, the type is simply undocumented: give it its own doc comment before the declaration and the constructor's doc becomes unambiguous. Documentation written after the declaration is safe for records, aliases and abstract types, which end with a delimiter.
+
+**Examples:**
+
+**Bad:**
+```ocaml
+(** Workload states. *)
+
+type status = Running | Paused | Stopped
+(** The type for the state a workload is in. *)
+
+type level =
+  | Debug
+  | Info
+  | Error  (** The type for the severity of a log entry. *)
+
+```
+
+**Good:**
+```ocaml
+(** Workload states. *)
+
+(** The type for the state a workload is in. *)
+type status = Running | Paused | Stopped
+
+(** The type for the severity of a log entry. *)
+type level = Debug | Info | Error
+
+```
+
+
 **Documentation Philosophy**: For functions, use the `[function_name arg1 arg2] is ...` pattern.
 
 For values, describe what the value represents.

@@ -86,6 +86,14 @@ let content =
              a consistent, concise style.";
           Rule "E410";
           Paragraph
+            "**Where the type's doc goes**: A variant declaration has no \
+             closing delimiter, so a doc comment written after the last \
+             constructor documents that constructor, not the type. Put a \
+             variant type's documentation before its declaration; documenting \
+             after the declaration is safe only for records, aliases and \
+             abstract types.";
+          Rule "E425";
+          Paragraph
             "**Documentation Philosophy**: For functions, use the \
              `[function_name arg1 arg2] is ...` pattern.";
           Paragraph "For values, describe what the value represents.";

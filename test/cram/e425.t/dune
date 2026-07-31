@@ -1,0 +1,5 @@
+(library
+ (name test_e425)
+ (libraries fmt alcotest compiler-libs.common unix str re logs)
+ (modules_without_implementation every_constructor_good last_constructor_good)
+ (flags :standard -warn-error -a))

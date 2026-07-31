@@ -1808,6 +1808,38 @@ and replace each call site with [err_x &quot;...&quot; args] / [fail_x &quot;...
     </div>
     <div class="error-hint"><p>When documentation mentions another exported API item, use an odoc cross-reference link such as {!type-t}, {!val-v}, {!module-M}, {!module-type-S}, {!exception-E}, {!extension-X}, {!constructor-C}, {!field-f}, {!class-c}, {!class-type-c}, {!method-m}, or {!instance-variable-v}. Keep [x] for code literals and documented arguments.</p></div>
 </div>
+<div class="error-card" id="E425">
+    <div>
+        <span class="error-code">E425</span>
+        <span class="error-title">Type Documentation Bound to a Constructor</span>
+    </div>
+    <div class="error-hint"><p>A variant declaration has no closing delimiter, so a doc comment placed after the last constructor attaches to that constructor: odoc renders the type's description under one case and the type itself stays undocumented. Put the type's documentation before the declaration, on the line above 'type'. If the comment really does describe that last constructor, the type is simply undocumented: give it its own doc comment before the declaration and the constructor's doc becomes unambiguous. Documentation written after the declaration is safe for records, aliases and abstract types, which end with a delimiter.</p><div class="examples-grid">
+<div class="example bad">
+  <h4>BAD</h4>
+  <pre><code><span class="cm">(** Workload states. *)</span>
+
+<span class="kw">type</span> status = <span class="cn">Running</span> | <span class="cn">Paused</span> | <span class="cn">Stopped</span>
+<span class="cm">(** The type for the state a workload is in. *)</span>
+
+<span class="kw">type</span> level =
+  | <span class="cn">Debug</span>
+  | <span class="cn">Info</span>
+  | <span class="cn">Error</span>  <span class="cm">(** The type for the severity of a log entry. *)</span>
+</code></pre>
+</div>
+<div class="example good">
+  <h4>GOOD</h4>
+  <pre><code><span class="cm">(** Workload states. *)</span>
+
+<span class="cm">(** The type for the state a workload is in. *)</span>
+<span class="kw">type</span> status = <span class="cn">Running</span> | <span class="cn">Paused</span> | <span class="cn">Stopped</span>
+
+<span class="cm">(** The type for the severity of a log entry. *)</span>
+<span class="kw">type</span> level = <span class="cn">Debug</span> | <span class="cn">Info</span> | <span class="cn">Error</span>
+</code></pre>
+</div>
+</div></div>
+</div>
 <h2 id="project structure">Project Structure</h2>
 <div class="category">E500-E599 • Project organization and configuration issues</div>
 <div class="error-card" id="E500">
