@@ -1,0 +1,4 @@
+(library
+ (name test_e510_test)
+ (libraries logs logs.fmt)
+ (flags :standard -warn-error -a))
