@@ -101,19 +101,19 @@ let check (ctx : Context.file) =
   if File.is_test (Context.project_relative_file ctx) then []
   else
     try
-    let view = Context.view ctx in
-    match
-      (File_view.resolved_identifiers view, File_view.resolved_values view)
-    with
-    | None, _ | _, None ->
-        if uses_logging_surface view && not (has_log_source_surface view) then
-          [ issue ctx ]
-        else []
-    | Some identifiers, Some values ->
-        if uses_logging identifiers && not (has_log_source values identifiers)
-        then [ issue ctx ]
-        else []
-  with File_view.Analysis_error _ -> []
+      let view = Context.view ctx in
+      match
+        (File_view.resolved_identifiers view, File_view.resolved_values view)
+      with
+      | None, _ | _, None ->
+          if uses_logging_surface view && not (has_log_source_surface view) then
+            [ issue ctx ]
+          else []
+      | Some identifiers, Some values ->
+          if uses_logging identifiers && not (has_log_source values identifiers)
+          then [ issue ctx ]
+          else []
+    with File_view.Analysis_error _ -> []
 
 let pp ppf { module_name } =
   Fmt.pf ppf "Module '%s' uses logging but has no log source defined"
