@@ -6,9 +6,17 @@ module Log = (val Logs.src_log src : Logs.LOG)
 
 let err fmt = Fmt.kstr (fun s -> Error s) fmt
 
-let err_exit_code code =
-  Log.err (fun m -> m "Command failed with exit code %d" code);
-  err "Command failed with exit code %d" code
+(* What the command said on its way out. Without it a caller sees only an exit
+   code, and cannot tell a busy build daemon from broken code -- dune reports
+   both by exiting 1, and says which on stderr. *)
+let with_diagnosis message = function
+  | "" -> message
+  | diagnosis -> Fmt.str "%s: %s" message (String.trim diagnosis)
+
+let err_exit_code ~diagnosis code =
+  let message = Fmt.str "Command failed with exit code %d" code in
+  Log.err (fun m -> m "%s" (with_diagnosis message diagnosis));
+  err "%s" (with_diagnosis message diagnosis)
 
 let err_signal n =
   Log.err (fun m -> m "Command killed by signal %d" n);
@@ -22,11 +30,13 @@ let run mgr cmd =
   Log.info (fun m -> m "Running command: %s (cwd: %s)" cmd (Sys.getcwd ()));
   try
     let buf = Buffer.create 256 in
+    let errbuf = Buffer.create 256 in
     let stdout = Eio.Flow.buffer_sink buf in
+    let stderr = Eio.Flow.buffer_sink errbuf in
     let status =
       Eio.Switch.run @@ fun sw ->
       let proc =
-        Eio.Process.spawn ~sw mgr ~stdout ~executable:"/bin/sh"
+        Eio.Process.spawn ~sw mgr ~stdout ~stderr ~executable:"/bin/sh"
           [ "sh"; "-c"; cmd ]
       in
       Eio.Process.await proc
@@ -43,6 +53,6 @@ let run mgr cmd =
     | `Exited 127 ->
         Log.err (fun m -> m "Command not found: %s" cmd);
         Error "Command not found"
-    | `Exited code -> err_exit_code code
+    | `Exited code -> err_exit_code ~diagnosis:(Buffer.contents errbuf) code
     | `Signaled n -> err_signal n
   with exn -> err_exception exn
