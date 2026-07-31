@@ -151,7 +151,7 @@ let generate kind =
   let test_dirs = test_directories cram_dir in
 
   Fmt.pr "(** Auto-generated examples from test/cram/*.t/\n";
-  Fmt.pr "    DO NOT EDIT - Run 'dune build @gen' to regenerate *)\n\n";
+  Fmt.pr "    DO NOT EDIT - Run [dune build @gen] to regenerate *)\n\n";
 
   List.iter (process_test_directory kind cram_dir) test_dirs
 
