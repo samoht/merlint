@@ -2,6 +2,20 @@
 
 type payload = { function_name : string; bool_count : int }
 
+(* A value bound to an expression rather than defined with parameters gets its
+   shape from whatever it names -- [let bools = Alcotest.(check bool)] is two
+   bools because Alcotest says so. The advice to replace them with a variant
+   cannot be taken there, since the signature is not this author's to change,
+   so only a value that introduces its own parameters is asked. *)
+let defines_its_parameters ctx name =
+  match
+    List.find_opt
+      (fun (value : Function_metrics.value) -> String.equal value.name name)
+      (File_view.values (Context.view ctx))
+  with
+  | Some value -> value.is_function
+  | None -> true
+
 let check ctx =
   List.filter_map
     (fun item ->
@@ -12,7 +26,7 @@ let check ctx =
             File_view.Type_view.count_unlabelled typ
               ~match_:File_view.Type_view.is_bool
           in
-          if bool_count >= 2 then
+          if bool_count >= 2 && defines_its_parameters ctx (Item.name item) then
             Some
               (Issue.v ~loc:(Item.loc item)
                  { function_name = Item.name item; bool_count })
