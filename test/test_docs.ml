@@ -165,6 +165,53 @@ let test_check_value_doc () =
   Alcotest.(check (list style_issue))
     "wrong name in brackets" [ Bad_value_format ] issues
 
+(* A doc whose last element is an odoc block -- a code block, a verbatim
+   block, or a list -- carries its punctuation inside the block, so the
+   trailing '}' is not a missing period. An inline element closing the doc is
+   still prose and still needs one. *)
+let test_ends_with_block () =
+  let open Merlint.Docs in
+  let issues =
+    check_function_doc ~name:"render" ~signature:"arg -> ret"
+      ~doc:"[render t] renders [t]:\n{[\n  render t\n]}"
+  in
+  Alcotest.(check (list style_issue)) "code block" [] issues;
+
+  let issues =
+    check_function_doc ~name:"describe" ~signature:"arg -> ret"
+      ~doc:
+        "[describe t] is a one-word summary of [t]:\n\
+         {ul\n\
+        \ {- [\"empty\"] when [t] carries nothing.}\n\
+        \ {- [\"full\"] otherwise.}}"
+  in
+  Alcotest.(check (list style_issue)) "list block" [] issues;
+
+  let issues =
+    check_value_doc ~name:"cases"
+      ~doc:"[cases] are the outcomes.\n{ol\n {- Success.}\n {- Failure.}}"
+  in
+  Alcotest.(check (list style_issue)) "numbered list block" [] issues;
+
+  let issues =
+    check_value_doc ~name:"raw" ~doc:"[raw] is the wire form.\n{v\n  0102\nv}"
+  in
+  Alcotest.(check (list style_issue)) "verbatim block" [] issues;
+
+  (* An inline element is prose: the period is still required. *)
+  let issues =
+    check_function_doc ~name:"render" ~signature:"arg -> ret"
+      ~doc:"[render t] is the rendering of {b t}"
+  in
+  Alcotest.(check (list style_issue))
+    "inline emphasis" [ Missing_period ] issues;
+
+  let issues =
+    check_value_doc ~name:"other" ~doc:"[other] is the peer of {!val-render}"
+  in
+  Alcotest.(check (list style_issue))
+    "inline reference" [ Missing_period ] issues
+
 let test_check_type_doc () =
   let open Merlint.Docs in
   (* Good type doc *)
@@ -189,6 +236,7 @@ let tests =
     Alcotest.test_case "check_function_doc arity" `Quick
       test_check_function_doc_arity;
     test_case "check_value_doc" `Quick test_check_value_doc;
+    test_case "doc ending in an odoc block" `Quick test_ends_with_block;
     test_case "check_type_doc" `Quick test_check_type_doc;
   ]
 

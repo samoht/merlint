@@ -26,3 +26,5 @@ let make value =
   ignore Fast;
   if value < 0 then raise E;
   { value }
+
+let helper () = ()

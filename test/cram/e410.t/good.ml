@@ -15,3 +15,4 @@ let make ?foo ?bar () =
 let of_string s = s
 let concat sep parts = String.concat sep parts
 let of_pair (x, y) = string_of_int x ^ string_of_int y
+let describe t = if t = "" then "empty" else "full"

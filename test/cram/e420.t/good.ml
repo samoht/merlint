@@ -26,3 +26,21 @@ let make value =
   ignore Fast;
   if value < 0 then raise E;
   { value }
+
+module Raw = struct
+  type entry = { k : string; v : int }
+end
+
+type opts = { metadata : string; retries : int }
+type left = { count : int }
+type right = { count : int }
+
+let scan opts ~key ?metadata () =
+  ignore (opts.metadata, opts.retries, key, metadata);
+  0
+
+let expiry (_ : opts) : int option = None
+let decode (_ : string) : (int, string) result = Ok 0
+
+type alg = None | HS256
+type status = Ok | Error

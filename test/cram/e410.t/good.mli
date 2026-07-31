@@ -33,3 +33,9 @@ val concat : string -> string list -> string
 
 (** [of_pair (x, y)] builds a value from a pair. *)
 val of_pair : int * int -> t
+
+(** [describe t] is a one-word summary of [t]:
+    {ul
+     {- ["empty"] when [t] carries nothing.}
+     {- ["full"] otherwise.}} *)
+val describe : t -> string

@@ -17,3 +17,6 @@ val trim : t -> t
 
 (** [combine "a b" x y] counts a literal as one arg but still over-counts. *)
 val combine : string -> string
+
+(** [describe t] is a summary of {b t} *)
+val describe : t -> string

@@ -16,6 +16,7 @@ exception E
 (** [S] is a module type. *)
 module type S = sig
   val run : unit -> unit
+  (** [run ()] runs against a [t] taken from the enclosing scope. *)
 end
 
 (** [M] implements [S]. *)
@@ -34,7 +35,10 @@ end
 
 (** [make x] builds a [t] with field [value], using constructor [Fast],
     extension [Added], module [M], module type [S], exception [E], class [c],
-    class method [c.m], instance variable [c.iv], class type [ct], and class type
-    method [ct.n].
+    class method [c.m], instance variable [c.iv], class type [ct], class type
+    method [ct.n], and value [helper].
 *)
 val make : int -> t
+
+(** [helper] is a top-level value. *)
+val helper : unit -> unit

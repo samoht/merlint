@@ -11,8 +11,8 @@ Test bad example - should find bad documentation style:
   ✓ Code Quality (0 total issues)
   ✓ Code Style (0 total issues)
   ✓ Naming Conventions (0 total issues)
-  ✗ Documentation (5 total issues)
-    [E410] Bad Documentation Style (5 issues)
+  ✗ Documentation (6 total issues)
+    [E410] Bad Documentation Style (6 issues)
     Follow OCaml documentation conventions: when documentation starts with [name
     ...], [name] should be the function or value being documented. Operators
     should use infix notation like '[x op y] description.' All documentation
@@ -22,6 +22,7 @@ Test bad example - should find bad documentation style:
     - bad.mli:12:0: Documentation for 'create' has 1 args in doc but function takes at least 2 mandatory args
     - bad.mli:15:0: Documentation for 'trim' has 2 args in doc but function takes at most 1 args
     - bad.mli:18:0: Documentation for 'combine' has 3 args in doc but function takes at most 1 args
+    - bad.mli:21:0: Documentation for 'describe' should end with a period
   ✓ Project Structure (0 total issues)
   ✓ Test Quality (0 total issues)
   ✓ Interop Testing (0 total issues)
@@ -30,11 +31,11 @@ Test bad example - should find bad documentation style:
   ╭───────────────┬───────────────────────────────╮
   │ Category      │ Issues                        │
   ├───────────────┼───────────────────────────────┤
-  │ Documentation │ 5 (5 bad documentation style) │
+  │ Documentation │ 6 (6 bad documentation style) │
   ╰───────────────┴───────────────────────────────╯
   
   
-  Summary: ✗ 5 total issues (applied 1 rule)
+  Summary: ✗ 6 total issues (applied 1 rule)
   ✗ Some checks failed. See details above.
     Run `merlint help E410` for the rule's description, hint, and good/bad examples.
   [1]
