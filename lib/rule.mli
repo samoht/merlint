@@ -18,6 +18,7 @@ type example = {
 }
 (** A code example with label. *)
 
+(** A rule fragment for the engine's shared traversal. *)
 type 'a pass =
   | Pass : {
       select : Context.file -> bool;
@@ -32,8 +33,11 @@ type 'a pass =
         ('state -> Ocaml_typing.Typedtree.signature_item -> unit) option;
       finish : Context.file -> 'state -> 'a Issue.t list;
     }
-      -> 'a pass  (** A rule fragment for the engine's shared traversal. *)
+      -> 'a pass
 
+(** Rule scope. {!constructor-Project_units} is for the small set of project
+    rules whose work naturally splits into independent units; the engine
+    schedules those units directly. *)
 type 'a scope =
   | File of (Context.file -> 'a Issue.t list)
   | Pass of 'a pass
@@ -43,9 +47,6 @@ type 'a scope =
       check : Context.project -> 'unit -> 'a Issue.t list;
     }
       -> 'a scope
-      (** Rule scope. [Project_units] is for the small set of project rules
-          whose work naturally splits into independent units; the engine
-          schedules those units directly. *)
 
 type t
 (** Type for rules. *)
