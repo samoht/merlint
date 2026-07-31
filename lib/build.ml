@@ -34,17 +34,16 @@ let dune_target_of_cmt ~root cmt =
   let cmt = Fpath.(v cmt |> normalize) in
   Fpath.rem_prefix build_root cmt
 
-(* [.cmt]/[.cmti] for [file] with [true] when at least as new as the source. *)
+(* [.cmt]/[.cmti] for [file] with [true] when it describes the current source.
+   Whether an artefact still describes its source is {!Merlin.Cmt}'s to answer,
+   so a rebuild decision here and a rule's reading of the same artefact cannot
+   disagree about which files a run actually examined. *)
 let cmt_artefact ~root file =
-  match Merlin.Project.cmt ~root_dir:root (Fpath.to_string file) with
+  let file = Fpath.to_string file in
+  match Merlin.Project.cmt ~root_dir:root file with
   | None -> None
   | Some cmt when not (Sys.file_exists cmt) -> None
-  | Some cmt -> (
-      try
-        let source_mtime = (Unix.stat (Fpath.to_string file)).st_mtime in
-        let cmt_mtime = (Unix.stat cmt).st_mtime in
-        Some (cmt, cmt_mtime >= source_mtime)
-      with Unix.Unix_error _ -> None)
+  | Some cmt -> Some (cmt, Merlin.Cmt.describes ~root_dir:root file)
 
 let maybe_cmt_target ~root file =
   match cmt_artefact ~root file with

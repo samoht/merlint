@@ -29,30 +29,22 @@ let pp ppf { stanza; library } =
 
 module String_set = Set.Make (String)
 
-(* Object names imported by one compiled unit, from its [.cmt] / [.cmti]. *)
-let unit_imports cmt_path =
-  match Ocaml_typing.Cmt_format.read_cmt cmt_path with
-  | exception _ -> None
-  | infos -> Some (List.map fst infos.Ocaml_typing.Cmt_format.cmt_imports)
-
 (* Union of the imports of every unit in [files]; [None] when any unit's
-   artefact is missing or stale -- the stanza is skipped, not judged. *)
+   artefact is missing or no longer describes its source -- the stanza is
+   skipped, not judged. Deciding a dependency is dead from an artefact built
+   before the import was written would have this rule recommend removing a
+   library the code goes on to call. *)
 let stanza_imports ~root files =
   List.fold_left
     (fun acc file ->
       match acc with
       | None -> None
       | Some set -> (
-          match Build.cmt_artefact ~root file with
-          | Some (cmt, true) -> (
-              match unit_imports cmt with
-              | Some units ->
-                  Some
-                    (List.fold_left
-                       (fun set u -> String_set.add u set)
-                       set units)
-              | None -> None)
-          | Some (_, false) | None -> None))
+          match Merlin.Cmt.imports ~root_dir:root (Fpath.to_string file) with
+          | None -> None
+          | Some units ->
+              Some
+                (List.fold_left (fun set u -> String_set.add u set) set units)))
     (Some String_set.empty) files
 
 (* One buildable stanza with a [(libraries ...)] field, whatever its kind. *)
