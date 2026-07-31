@@ -30,8 +30,8 @@ type t = {
           would otherwise flag them, parsed from [allowed-names] in
           [merlint.toml]. Currently consulted by E955 (the ban on the ['] verb
           suffix): a name listed here keeps its ['] (e.g. a format-native
-          keyword escape like [object'], or a [pp]/[pp'] configuration-variant
-          pair) without being rejected. *)
+          keyword escape like ["object'"], or a ["pp"]/["pp'"]
+          configuration-variant pair) without being rejected. *)
   disallowed_modules : string list;
       (** Module paths whose use is banned in matching files, parsed from
           [disallowed_modules] in [merlint.toml] (e.g.

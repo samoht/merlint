@@ -59,24 +59,132 @@ let target_kind target =
   | [] -> File_view.Item.Value
   | last :: _ -> last.kind
 
-let rec add_item (prefix : component list) acc item =
-  let name = File_view.Item.name item in
-  let kind = File_view.Item.kind item in
-  let path = name_path prefix name in
-  let component : component = { name; kind } in
-  let target = { path = prefix @ [ component ] } in
-  let acc = String_map.add path target acc in
-  let acc =
-    match prefix with
-    | [] -> String_map.add name target acc
-    | _ -> (
-        match List.rev target.path with
-        | [ _ ] | [] -> acc
-        | last :: _ -> String_map.add name { path = [ last ] } acc)
-  in
-  List.fold_left (add_item target.path) acc (File_view.Item.children item)
+(* A declaration's scope: the module path a documentation comment sits in, and
+   whether the names declared there are reachable unqualified from it. Values
+   and types of a module are; a class's methods and instance variables are
+   not, they need the class in the path. *)
+type scope = { modules : string list; visible : bool }
 
-let targets items = List.fold_left (add_item []) String_map.empty items
+let root_scope = { modules = []; visible = true }
+let scope_key scope = String.concat "." scope.modules
+
+let enter scope (component : component) =
+  match component.kind with
+  | File_view.Item.Module | Module_type ->
+      { scope with modules = scope.modules @ [ component.name ] }
+  | Type | Extension -> scope
+  | _ -> { scope with visible = false }
+
+(* Where an unqualified reference can resolve, per scope, alongside the dotted
+   paths that name everything from the file's root. A name bound twice in one
+   scope maps to [None]: odoc would pick one of them and the rule has no way to
+   tell which the prose meant, so it proposes nothing. *)
+type index = {
+  paths : target String_map.t;
+  scoped : target option String_map.t String_map.t;
+}
+
+let empty_index = { paths = String_map.empty; scoped = String_map.empty }
+
+let add_scoped index scope name target =
+  if not scope.visible then index
+  else
+    let key = scope_key scope in
+    let names =
+      String_map.find_opt key index.scoped
+      |> Option.value ~default:String_map.empty
+      |> String_map.update name (function
+        | None -> Some (Some target)
+        | Some _ -> Some None)
+    in
+    { index with scoped = String_map.add key names index.scoped }
+
+let rec add_item scope (prefix : component list) index item =
+  let name = File_view.Item.name item in
+  let component : component = { name; kind = File_view.Item.kind item } in
+  let target = { path = prefix @ [ component ] } in
+  let index =
+    {
+      index with
+      paths = String_map.add (name_path prefix name) target index.paths;
+    }
+  in
+  let index = add_scoped index scope name { path = [ component ] } in
+  List.fold_left
+    (add_item (enter scope component) target.path)
+    index
+    (File_view.Item.children item)
+
+let index items = List.fold_left (add_item root_scope []) empty_index items
+
+let parent_modules modules =
+  match List.rev modules with [] -> None | _ :: rest -> Some (List.rev rest)
+
+(* Resolve as odoc does: the innermost scope that binds the name wins, and the
+   search stops there rather than reaching an outer binding it shadows. *)
+let rec resolve_scoped scoped modules name =
+  let bound =
+    match String_map.find_opt (String.concat "." modules) scoped with
+    | None -> None
+    | Some names -> String_map.find_opt name names
+  in
+  match bound with
+  | Some target -> target
+  | None -> (
+      match parent_modules modules with
+      | None -> None
+      | Some outer -> resolve_scoped scoped outer name)
+
+let resolve index scope reference =
+  if String.contains reference '.' then
+    String_map.find_opt reference index.paths
+  else resolve_scoped index.scoped scope.modules reference
+
+(* Names OCaml predefines. Prose writing [None], [Error] or [int] means the
+   predefined one even in a package that exports a constructor or type of that
+   name, so linking would send the reader somewhere the prose never meant. *)
+let predefined =
+  String_set.of_list
+    [
+      "None";
+      "Some";
+      "Ok";
+      "Error";
+      "true";
+      "false";
+      "int";
+      "char";
+      "string";
+      "bytes";
+      "float";
+      "bool";
+      "unit";
+      "exn";
+      "array";
+      "list";
+      "option";
+      "result";
+      "int32";
+      "int64";
+      "nativeint";
+      "lazy_t";
+      "ref";
+      "format";
+      "Match_failure";
+      "Assert_failure";
+      "Invalid_argument";
+      "Failure";
+      "Not_found";
+      "Out_of_memory";
+      "Stack_overflow";
+      "Sys_error";
+      "End_of_file";
+      "Division_by_zero";
+      "Sys_blocked_io";
+      "Undefined_recursive_module";
+      "Exit";
+    ]
+
 let trim = String.trim
 let words s = String.split_on_char ' ' s |> List.filter (fun s -> trim s <> "")
 
@@ -94,19 +202,38 @@ let leading_code_span doc =
     | None -> None
     | Some stop -> Some (String.sub doc 1 (stop - 1))
 
-let prefix_names item doc =
+let arg_label = function
+  | Ocaml_parsing.Asttypes.Labelled name | Optional name -> Some name
+  | Nolabel -> None
+
+let arg_labels item =
+  match File_view.Item.type_sig item with
+  | None -> []
+  | Some typ ->
+      let rec labels acc typ =
+        match File_view.Type_view.arrow typ with
+        | Some (label, _arg, rest) -> labels (arg_label label :: acc) rest
+        | None -> acc
+      in
+      labels [] typ |> List.filter_map Fun.id
+
+let documented_args item doc =
   let self = File_view.Item.name item in
   match leading_code_span doc with
-  | None -> String_set.singleton self
+  | None -> []
   | Some span -> (
       match words span with
-      | [] -> String_set.singleton self
-      | name :: args when name = self ->
-          args |> List.map unlabel
-          |> List.fold_left
-               (fun names arg -> String_set.add arg names)
-               (String_set.singleton self)
-      | _ -> String_set.singleton self)
+      | name :: args when name = self -> List.map unlabel args
+      | _ -> [])
+
+(* The names a declaration owns: itself, its own arguments, and its own
+   constructors, fields or members. A doc naming what it declares refers to
+   nothing else, so there is nothing to link to. *)
+let owned_names item doc =
+  let children = File_view.Item.children item |> List.map File_view.Item.name in
+  (File_view.Item.name item :: (arg_labels item @ documented_args item doc))
+  @ children
+  |> String_set.of_list
 
 let substring_from s start pattern =
   let plen = String.length pattern in
@@ -152,9 +279,9 @@ let code_spans doc =
   in
   loop [] 0
 
-let check_doc target_map item doc =
+let check_doc index scope item doc =
   let doc_text = File_view.Doc.text doc in
-  let ignored = prefix_names item doc_text in
+  let owned = owned_names item doc_text in
   let spans =
     match (leading_code_span doc_text, code_spans doc_text) with
     | Some leading, first :: rest when trim leading = first -> rest
@@ -162,9 +289,10 @@ let check_doc target_map item doc =
   in
   spans
   |> List.filter_map (fun reference ->
-      if String_set.mem reference ignored then None
+      if String_set.mem reference owned || String_set.mem reference predefined
+      then None
       else
-        match String_map.find_opt reference target_map with
+        match resolve index scope reference with
         | None -> None
         | Some target ->
             Some
@@ -176,17 +304,25 @@ let check_doc target_map item doc =
                    location = File_view.Doc.loc doc;
                  }))
 
-let check_item target_map item =
-  match File_view.Item.doc item with
-  | None -> []
-  | Some doc -> check_doc target_map item doc
+let rec check_items index scope items =
+  items
+  |> List.concat_map (fun item ->
+      let here =
+        match File_view.Item.doc item with
+        | None -> []
+        | Some doc -> check_doc index scope item doc
+      in
+      let component : component =
+        { name = File_view.Item.name item; kind = File_view.Item.kind item }
+      in
+      here
+      @ check_items index (enter scope component) (File_view.Item.children item))
 
 let check (ctx : Context.file) =
   if not (File_kind.is_mli (Context.filename ctx)) then []
   else
-    let items = File_view.all_items (Context.view ctx) in
-    let target_map = targets items in
-    List.concat_map (check_item target_map) items
+    let items = File_view.items (Context.view ctx) in
+    check_items (index items) root_scope items
 
 let pp ppf { documented_name; reference; target; location = _ } =
   Fmt.pf ppf
