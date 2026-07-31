@@ -59,7 +59,9 @@ Build good fixture project:
 A correct fuzz interface must not be reported just because its .cmti was
 never built. Without a typedtree the expected type cannot be resolved, and a
 rule that reads that as "does not match" turns every compliant fuzz module in
-a stale tree into a finding. Same sources as good/, never built:
+a stale tree into a finding. Same sources as good/, never built -- so the rule
+reports nothing AND the run says it could not check the file, which are two
+different facts and both belong in the output:
 
   $ merlint -r E705 unbuilt/
   Dune root: $TESTCASE_ROOT/unbuilt/
@@ -78,8 +80,9 @@ a stale tree into a finding. Same sources as good/, never built:
   ✓ Interop Testing (0 total issues)
   ✓ Code Generation (0 total issues)
   
-  Summary: ✓ 0 total issues (applied 1 rule)
-  ✓ All checks passed!
+  Summary: ✗ 0 total issues (applied 1 rule, 1 file unchecked)
+  ✗ No issues found, but 1 file could not be checked: the .cmt/.cmti was missing or out of date, so the rules that read a typedtree did not run on it. Re-run with -v to name it.
+  [1]
 
 An interface that exports more than the suite is still reported, so the skip
 above cannot be mistaken for the rule going quiet altogether:

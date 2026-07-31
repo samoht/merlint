@@ -105,7 +105,11 @@ let group_issues_by_code issues =
       (error_code, issue :: current) :: List.remove_assoc error_code acc)
     [] issues
 
-let print_fix_hints all_issues = if all_issues <> [] then exit 1
+(* An incomplete run exits non-zero even with no findings: a caller that treats
+   exit 0 as "this code is clean" would otherwise be told so by a run that
+   never read part of it. *)
+let print_fix_hints ?(unchecked = 0) all_issues =
+  if all_issues <> [] || unchecked > 0 then exit 1
 
 let rule_category_name code =
   match
@@ -366,20 +370,40 @@ let print_summary_table ~ctx issues_by_category =
     Fmt.pr "%a@." (Console.Table.pp ~ctx) table)
 
 (* Print summary and status *)
-let print_summary all_issues enabled_rule_count =
+(* A run whose typedtree-backed rules could not read an artefact examined less
+   than it was asked to. Saying only "0 issues" would report that as the same
+   outcome as a complete run, so the count of unchecked files goes in the
+   summary line itself, where a caller reading the last line of output sees
+   it. *)
+let print_summary ?(unchecked = 0) all_issues enabled_rule_count =
   let total_issues = List.length all_issues in
-  let all_passed = total_issues = 0 in
+  let complete = unchecked = 0 in
+  let all_passed = total_issues = 0 && complete in
   let rule_word = if enabled_rule_count = 1 then "rule" else "rules" in
 
-  Fmt.pr "@.Summary: %s %d total %s (applied %d %s)@."
+  Fmt.pr "@.Summary: %s %d total %s (applied %d %s%s)@."
     (Merlint.Report.print_color all_passed
        (Merlint.Report.print_status all_passed))
     total_issues
     (if total_issues = 1 then "issue" else "issues")
-    enabled_rule_count rule_word;
+    enabled_rule_count rule_word
+    (if complete then ""
+     else
+       Fmt.str ", %d file%s unchecked" unchecked
+         (if unchecked = 1 then "" else "s"));
 
   if all_passed then
     Fmt.pr "%s All checks passed!@." (Merlint.Report.print_color true "✓")
+  else if total_issues = 0 then
+    Fmt.pr
+      "%s No issues found, but %d file%s could not be checked: the .cmt/.cmti \
+       was missing or out of date, so the rules that read a typedtree did not \
+       run on %s. Re-run with -v to name %s.@."
+      (Merlint.Report.print_color false "✗")
+      unchecked
+      (if unchecked = 1 then "" else "s")
+      (if unchecked = 1 then "it" else "them")
+      (if unchecked = 1 then "it" else "them")
   else begin
     Fmt.pr "%s Some checks failed. See details above.@."
       (Merlint.Report.print_color false "✗");
@@ -409,7 +433,12 @@ let run_engine ?domain_mgr ~load_file ?profiling ~bail ~exclude
             ?analyze_roots ~index:build_index ?profiling ~bail ~exclude
             ~include_vendored project_root
       | Error _ ->
-          { Merlint.Engine.issues = []; excluded = []; files_analyzed = 0 })
+          {
+            Merlint.Engine.issues = [];
+            excluded = [];
+            files_analyzed = 0;
+            unchecked_files = [];
+          })
 
 let print_exclusion_stats all_excluded =
   if all_excluded <> [] then begin
@@ -444,6 +473,7 @@ let run_analysis ~ctx ?domain_mgr ~load_file ~json_output project_root
     Merlint.Engine.issues = all_issues;
     excluded = all_excluded;
     files_analyzed;
+    unchecked_files;
   } =
     run_engine ?domain_mgr ~load_file ?profiling:profiling_state rule_filter
       ~bail ~exclude ~include_vendored analyze_set analyze_roots build_index
@@ -471,7 +501,9 @@ let run_analysis ~ctx ?domain_mgr ~load_file ~json_output project_root
     print_summary_table ~ctx issues_by_category;
 
     (* Print custom summary *)
-    print_summary all_issues enabled_rule_count;
+    print_summary
+      ~unchecked:(List.length unchecked_files)
+      all_issues enabled_rule_count;
 
     (* Print profiling summary if enabled *)
     match profiling_state with
@@ -481,7 +513,7 @@ let run_analysis ~ctx ?domain_mgr ~load_file ~json_output project_root
         Merlint.Profiling.print_file_summary ~ctx state
     | None -> ());
 
-  print_fix_hints all_issues
+  print_fix_hints ~unchecked:(List.length unchecked_files) all_issues
 
 let ensure_project_built ~path mgr =
   match Merlint.Build.ensure_project_built ~path mgr with

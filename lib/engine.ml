@@ -12,6 +12,7 @@ type result = {
   issues : Rule.Run.result list;
   excluded : exclusion_stats list;
   files_analyzed : int;
+  unchecked_files : string list;
 }
 
 (* A typedtree query missing its [.cmt] falls into one of three actionable-or-not
@@ -47,17 +48,18 @@ let warn_missing_cmts ~index stats =
     if extra > 0 then Fmt.pf ppf "@,... and %d more" extra
   in
   let actionable = outdated @ missing in
-  if actionable <> [] then
-    let n = List.length actionable in
-    Log.warn (fun m ->
-        m
-          "@[<v>%d typedtree-backed quer%s found a missing or stale .cmt/.cmti \
-           file; the affected rule runs were skipped for those files. Run \
-           [dune build @check] (or pass [--build]) before merlint so the build \
-           artefacts are present and up to date.%a@]"
-          n
-          (if n = 1 then "y" else "ies")
-          pp_sample actionable)
+  (if actionable <> [] then
+     let n = List.length actionable in
+     Log.warn (fun m ->
+         m
+           "@[<v>%d typedtree-backed quer%s found a missing or stale \
+            .cmt/.cmti file; the affected rule runs were skipped for those \
+            files. Run [dune build @check] (or pass [--build]) before merlint \
+            so the build artefacts are present and up to date.%a@]"
+           n
+           (if n = 1 then "y" else "ies")
+           pp_sample actionable));
+  actionable
 
 let log_fs_stats () =
   let s = Fs.stats () in
@@ -433,8 +435,8 @@ let run_enabled_rules ?pool ?profiling ~project_ctx ~project_root ~enabled_rules
       |> Eio.Promise.resolve file_resolver);
   (Eio.Promise.await project_promise, Eio.Promise.await file_promise)
 
-let build_result ?(bail = false) (project_issues, project_excluded) file_results
-    files_analyzed =
+let build_result ?(bail = false) ?(unchecked_files = [])
+    (project_issues, project_excluded) file_results files_analyzed =
   let file_issues = List.concat_map fst file_results in
   let file_excluded = List.concat_map snd file_results in
   let issues = List.sort Rule.Run.compare (project_issues @ file_issues) in
@@ -442,7 +444,12 @@ let build_result ?(bail = false) (project_issues, project_excluded) file_results
     if bail then match issues with [] -> [] | issue :: _ -> [ issue ]
     else issues
   in
-  { issues; excluded = project_excluded @ file_excluded; files_analyzed }
+  {
+    issues;
+    excluded = project_excluded @ file_excluded;
+    files_analyzed;
+    unchecked_files;
+  }
 
 let run ?domain_mgr ~load_file ~filter ?analyze_set ?analyze_roots ~index
     ?profiling ?(bail = false) ?(exclude = []) ?(include_vendored = false)
@@ -470,19 +477,22 @@ let run ?domain_mgr ~load_file ~filter ?analyze_set ?analyze_roots ~index
         ~enabled_rules analyze_set
     in
     log_index_stats idx_value;
-    log_backend_stats ~index:idx_value backend;
-    (project_results, file_results, files_analyzed)
+    let unchecked_files = log_backend_stats ~index:idx_value backend in
+    (project_results, file_results, files_analyzed, unchecked_files)
   in
   Fun.protect
     ~finally:(fun () ->
       log_fs_stats ();
       Merlin.close backend)
     (fun () ->
-      let (project_issues, project_excluded), file_results, files_analyzed =
+      let ( (project_issues, project_excluded),
+            file_results,
+            files_analyzed,
+            unchecked_files ) =
         match domain_mgr with
         | None -> run_with_pool ()
         | Some dm -> Fs.with_pool dm (fun pool -> run_with_pool ~pool ())
       in
-      build_result ~bail
+      build_result ~bail ~unchecked_files
         (project_issues, project_excluded)
         file_results files_analyzed)

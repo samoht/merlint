@@ -7,10 +7,18 @@ type result = {
   issues : Rule.Run.result list;
   excluded : exclusion_stats list;
   files_analyzed : int;
+  unchecked_files : string list;
 }
 (** Analysis result. {!field-files_analyzed} is the size of the file set the
     engine actually iterated -- either the [?analyze_set] supplied by the caller
-    or every source file the project index found. *)
+    or every source file the project index found.
+
+    {!field-unchecked_files} are the files whose [.cmt]/[.cmti] was missing or
+    out of date, so the rules that read a typedtree could not run on them. A run
+    with a non-empty list examined less than it was asked to, and a caller that
+    reports "no issues" without saying so is reporting a different result than
+    the one it obtained. Files belonging to platform- or config-gated stanzas
+    the host does not build are not listed: no artefact is expected for them. *)
 
 val run :
   ?domain_mgr:[> Eio.Domain_manager.ty ] Eio.Resource.t ->
