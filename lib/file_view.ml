@@ -643,25 +643,33 @@ let rec typed_pattern_items ?loc (pat : Typedtree.pattern) =
   | Tpat_lazy p -> typed_pattern_items ~loc p
   | Tpat_any | Tpat_constant _ -> []
 
+let typed_field_item (ld : Typedtree.label_declaration) =
+  typed_item ~name:ld.ld_name.txt ~kind:Field ~type_:ld.ld_type.ctyp_type
+    ?doc:(typed_doc ld.ld_attributes)
+    ~deprecated:(typed_has_deprecated ld.ld_attributes)
+    ~mutable_field:
+      (match ld.ld_mutable with Mutable -> true | Immutable -> false)
+    ld.ld_loc
+
+(* A constructor declared with an inline record owns those fields: they belong
+   to it, not to the enclosing type, and no other declaration can reach them.
+   Leaving them off made a constructor's own field read as a reference to a
+   same-named field of some other record. *)
+let typed_constructor_children (cd : Typedtree.constructor_declaration) =
+  match cd.cd_args with
+  | Cstr_record labels -> List.map typed_field_item labels
+  | Cstr_tuple _ -> []
+
 let typed_type_children (decl : Typedtree.type_declaration) =
   match decl.typ_kind with
-  | Ttype_record labels ->
-      List.map
-        (fun (ld : Typedtree.label_declaration) ->
-          typed_item ~name:ld.ld_name.txt ~kind:Field
-            ~type_:ld.ld_type.ctyp_type
-            ?doc:(typed_doc ld.ld_attributes)
-            ~deprecated:(typed_has_deprecated ld.ld_attributes)
-            ~mutable_field:
-              (match ld.ld_mutable with Mutable -> true | Immutable -> false)
-            ld.ld_loc)
-        labels
+  | Ttype_record labels -> List.map typed_field_item labels
   | Ttype_variant constructors ->
       List.map
         (fun (cd : Typedtree.constructor_declaration) ->
           typed_item ~name:cd.cd_name.txt ~kind:Constructor
             ?doc:(typed_doc cd.cd_attributes)
             ~deprecated:(typed_has_deprecated cd.cd_attributes)
+            ~children:(typed_constructor_children cd)
             cd.cd_loc)
         constructors
   | Ttype_abstract | Ttype_open -> []
