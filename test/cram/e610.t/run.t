@@ -154,3 +154,68 @@ Build good-legacy fixture project:
   
   Summary: ✓ 0 total issues (applied 1 rule)
   ✓ All checks passed!
+
+A module defined inside another compilation unit has no source file, so the
+only evidence it exists is a reference in a library typedtree. Built, the
+reference to Mylib.Gadget.Control is there and the rule is silent:
+
+Build stale fixture project:
+  $ (cd stale && dune build @check)
+
+  $ merlint -r E610 stale/
+  Dune root: $TESTCASE_ROOT/stale/
+  Running merlint analysis...
+  
+  Analyzing 2 files
+  
+  ✓ Code Quality (0 total issues)
+  ✓ Code Style (0 total issues)
+  ✓ Naming Conventions (0 total issues)
+  ✓ Documentation (0 total issues)
+  ✓ Project Structure (0 total issues)
+  ✓ Test Quality (0 total issues)
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
+  
+  Summary: ✓ 0 total issues (applied 1 rule)
+  ✓ All checks passed!
+
+Edit the library source and its .cmt no longer describes it. The reference
+scan cannot read the unit, so the rule must not report control.ml as absent:
+
+  $ chmod +w stale/lib/gadget.ml
+  $ printf '\n(* A comment the .cmt predates. *)\n' >> stale/lib/gadget.ml
+
+  $ merlint -r E610 stale/
+  Dune root: $TESTCASE_ROOT/stale/
+  merlint: [WARNING] 1 typedtree-backed query found a missing or stale .cmt/.cmti file; the affected rule runs were skipped for those files. Run [dune build @check] (or pass [--build]) before merlint so the build artefacts are present and up to date.
+                     $TESTCASE_ROOT/stale/lib/gadget.ml
+  Running merlint analysis...
+  
+  Analyzing 2 files
+  
+  ✓ Code Quality (0 total issues)
+  ✓ Code Style (0 total issues)
+  ✓ Naming Conventions (0 total issues)
+  ✓ Documentation (0 total issues)
+  ✓ Project Structure (0 total issues)
+  ✗ Test Quality (1 total issues)
+    [E610] Test Without Library (1 issue)
+    Every test module should have a corresponding library module. This ensures
+    that tests are testing actual library functionality rather than testing code
+    that doesn't exist in the library.
+    - stale/test/test_control.ml:1:0: Missing or stale .cmt/.cmti for lib/gadget.ml, so library module 'control.ml' is either present and unread or genuinely absent. Run [dune build @check] before merlint so the build artefacts are present and up to date.
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
+  
+  ╭──────────────┬────────────────────────────╮
+  │ Category     │ Issues                     │
+  ├──────────────┼────────────────────────────┤
+  │ Test Quality │ 1 (1 test without library) │
+  ╰──────────────┴────────────────────────────╯
+  
+  
+  Summary: ✗ 1 total issue (applied 1 rule, 1 file unchecked)
+  ✗ Some checks failed. See details above.
+    Run `merlint help E610` for the rule's description, hint, and good/bad examples.
+  [1]
