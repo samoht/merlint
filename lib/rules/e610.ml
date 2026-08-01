@@ -2,7 +2,13 @@
 
 module Issue_location = Location
 
-type payload = { expected_module : string }
+type payload = {
+  expected_module : string;
+  unscanned : string list;
+      (** Library sources whose [.cmt]/[.cmti] no longer describes them, sorted.
+          Empty when the reference scan read every library source, which is what
+          makes an absence a fact rather than a guess. *)
+}
 
 let log_src = Logs.Src.create "merlint.rules.e610" ~doc:"E610 rule diagnostics"
 
@@ -93,6 +99,8 @@ let library_source_files ctx libraries =
 type env = {
   library_module_paths : string list;
   referenced_modules : String_set.t;
+  unscanned : string list;
+      (** The library sources the reference scan could not read. *)
   provided_basenames : String_set.t;
       (** Lower-cased [<module>.ml] basenames of the modules the test's own
           declared libraries provide. A test in a non-mirroring directory (an
@@ -125,26 +133,71 @@ let module_path_matches ~expected_path lib_path =
            root. *)
         || lib_lc = lib_base)
 
-let missing_library_issue file expected_path =
+let missing_library_issue ~unscanned file expected_path =
   let loc =
     Issue_location.v
       ~file:(Context.string_of_path file)
       ~start_line:1 ~start_col:0 ~end_line:1 ~end_col:0
   in
-  Issue.v ~loc { expected_module = expected_path }
+  Issue.v ~loc { expected_module = expected_path; unscanned }
 
-let referenced_modules ctx library_source_files =
-  List.fold_left
-    (fun acc path ->
-      if Path.has_ext ".ml" path || Path.has_ext ".mli" path then
-        try
-          Context.file_view ctx path |> File_view.referenced_module_names
-          |> List.fold_left (fun acc name -> String_set.add name acc) acc
-        with Context.Analysis_error _ -> acc
-      else acc)
-    String_set.empty library_source_files
+type scan = { names : String_set.t; unread : string list }
 
-let check_test_file ~library_module_paths ~referenced_modules
+(* A platform- or config-gated stanza is one the host does not build, so its
+   artefact is legitimately absent and names no defect the user can act on. *)
+let gated_source ctx =
+  let norm path = Fpath.(v path |> normalize |> to_string) in
+  let gated =
+    Project_index.gated_source_files (Context.index ctx)
+    |> List.map (fun p -> norm (Fpath.to_string p))
+    |> String_set.of_list
+  in
+  fun path -> String_set.mem (norm (Context.string_of_path path)) gated
+
+(* The reference scan is the only artefact-backed evidence this rule holds: a
+   module defined inside another compilation unit is named nowhere but that
+   unit's typedtree. A library source whose [.cmt] no longer describes it
+   withholds the references it carries, so an absence read off the remainder is
+   a guess. Record those sources and let the finding say which reading it is. *)
+let scan_library_file ctx ~gated acc path =
+  if not (Path.has_ext ".ml" path || Path.has_ext ".mli" path) then acc
+  else
+    let unread () =
+      if gated path then acc
+      else
+        {
+          acc with
+          unread = Context.project_relative_path ctx path :: acc.unread;
+        }
+    in
+    match
+      let view = Context.file_view ctx path in
+      if File_view.is_resolved view then
+        Some (File_view.referenced_module_names view)
+      else None
+    with
+    | exception Context.Analysis_error _ -> unread ()
+    | None -> unread ()
+    | Some names ->
+        {
+          acc with
+          names =
+            List.fold_left
+              (fun acc name -> String_set.add name acc)
+              acc.names names;
+        }
+
+let scan_libraries ctx library_source_files =
+  let gated = gated_source ctx in
+  let scan =
+    List.fold_left
+      (scan_library_file ctx ~gated)
+      { names = String_set.empty; unread = [] }
+      library_source_files
+  in
+  { scan with unread = List.sort_uniq String.compare scan.unread }
+
+let check_test_file ~library_module_paths ~referenced_modules ~unscanned
     ~provided_basenames ~file ~rel_file =
   let test_module = Fpath.(rel_file |> rem_ext |> basename) in
   if
@@ -178,7 +231,7 @@ let check_test_file ~library_module_paths ~referenced_modules
             m "E610: found=%b referenced=%b provided=%b" found referenced
               provided);
         if found || referenced || provided then None
-        else Some (missing_library_issue file expected_path)
+        else Some (missing_library_issue ~unscanned file expected_path)
 
 (* Lower-cased [<module>.ml] basenames provided by [stanza]'s own declared
    libraries -- the modules a test in this stanza is entitled to exercise even
@@ -207,16 +260,23 @@ let enumerate ctx =
   let libraries = Project.Query.source_libraries (Context.index ctx) in
   let library_module_paths = library_module_paths ctx libraries in
   let library_source_files = library_source_files ctx libraries in
-  let referenced_modules = referenced_modules ctx library_source_files in
+  let scan = scan_libraries ctx library_source_files in
   Log.debug (fun m ->
       m "E610: library_module_paths = %a"
         Fmt.(list ~sep:comma string)
         library_module_paths);
+  Log.debug (fun m ->
+      m "E610: unscanned = %a" Fmt.(list ~sep:comma string) scan.unread);
   Context.test_stanzas ctx
   |> List.concat_map (fun (stanza : Project_index.source_stanza) ->
       let provided_basenames = stanza_provided_basenames ctx stanza in
       let env =
-        { library_module_paths; referenced_modules; provided_basenames }
+        {
+          library_module_paths;
+          referenced_modules = scan.names;
+          unscanned = scan.unread;
+          provided_basenames;
+        }
       in
       stanza.files
       |> List.filter_map (fun file ->
@@ -235,15 +295,31 @@ let enumerate ctx =
 let check_unit { env; file; rel_file } =
   match
     check_test_file ~library_module_paths:env.library_module_paths
-      ~referenced_modules:env.referenced_modules
+      ~referenced_modules:env.referenced_modules ~unscanned:env.unscanned
       ~provided_basenames:env.provided_basenames ~file ~rel_file
   with
   | None -> []
   | Some issue -> [ issue ]
 
-let pp ppf { expected_module } =
-  Fmt.pf ppf "Test file exists but corresponding library module '%s' not found"
-    expected_module
+let pp_unscanned ppf = function
+  | [] -> ()
+  | [ file ] -> Fmt.string ppf file
+  | file :: rest ->
+      Fmt.pf ppf "%s and %d more library source%s" file (List.length rest)
+        (if List.compare_length_with rest 1 = 0 then "" else "s")
+
+let pp ppf { expected_module; unscanned } =
+  match unscanned with
+  | [] ->
+      Fmt.pf ppf
+        "Test file exists but corresponding library module '%s' not found"
+        expected_module
+  | _ :: _ ->
+      Fmt.pf ppf
+        "Missing or stale .cmt/.cmti for %a, so library module '%s' is either \
+         present and unread or genuinely absent. Run [dune build @check] \
+         before merlint so the build artefacts are present and up to date."
+        pp_unscanned unscanned expected_module
 
 let rule =
   Rule.v ~code:"E610" ~title:"Test Without Library" ~category:Testing
