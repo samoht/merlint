@@ -219,3 +219,28 @@ scan cannot read the unit, so the rule must not report control.ml as absent:
   ✗ Some checks failed. See details above.
     Run `merlint help E610` for the rule's description, hint, and good/bad examples.
   [1]
+
+A successful Dune process is not evidence that a proven-stale generated file
+changed: the shared cache can restore the same CMT. This adapter models that
+successful no-op while the stale target exists, then delegates to real Dune
+once merlint invalidates it. [--build] must leave a current typedtree:
+
+  $ chmod +x fake-bin/dune
+  $ stale_cmt=$(find stale/_build/default -name 'mylib__Gadget.cmt'); real_dune=$(command -v dune); PATH="$PWD/fake-bin:$PATH" STALE_CMT="$PWD/$stale_cmt" REAL_DUNE="$real_dune" merlint --build -r E610 stale/ >merlint-refresh.out 2>&1
+  $ cat merlint-refresh.out
+  Dune root: $TESTCASE_ROOT/stale/
+  Running merlint analysis...
+  
+  Analyzing 2 files
+  
+  ✓ Code Quality (0 total issues)
+  ✓ Code Style (0 total issues)
+  ✓ Naming Conventions (0 total issues)
+  ✓ Documentation (0 total issues)
+  ✓ Project Structure (0 total issues)
+  ✓ Test Quality (0 total issues)
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
+  
+  Summary: ✓ 0 total issues (applied 1 rule)
+  ✓ All checks passed!
