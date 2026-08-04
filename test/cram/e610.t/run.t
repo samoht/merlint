@@ -188,8 +188,8 @@ scan cannot read the unit, so the rule must not report control.ml as absent:
 
   $ merlint -r E610 stale/
   Dune root: $TESTCASE_ROOT/stale/
-  merlint: [WARNING] 1 typedtree-backed query found a missing or stale .cmt/.cmti file; the affected rule runs were skipped for those files. Run [dune build @check] (or pass [--build]) before merlint so the build artefacts are present and up to date.
-                     $TESTCASE_ROOT/stale/lib/gadget.ml
+  ! 1 typedtree-backed query found a missing or stale .cmt/.cmti file; the affected rule runs were skipped for those files. Run [dune build @check] (or pass [--build]) before merlint so the build artefacts are present and up to date.
+  ! $TESTCASE_ROOT/stale/lib/gadget.ml
   Running merlint analysis...
   
   Analyzing 2 files

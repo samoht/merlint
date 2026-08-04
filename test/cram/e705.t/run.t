@@ -65,8 +65,8 @@ different facts and both belong in the output:
 
   $ merlint -r E705 unbuilt/
   Dune root: $TESTCASE_ROOT/unbuilt/
-  merlint: [WARNING] 1 typedtree-backed query found a missing or stale .cmt/.cmti file; the affected rule runs were skipped for those files. Run [dune build @check] (or pass [--build]) before merlint so the build artefacts are present and up to date.
-                     $TESTCASE_ROOT/unbuilt/fuzz/fuzz_parser.mli
+  ! 1 typedtree-backed query found a missing or stale .cmt/.cmti file; the affected rule runs were skipped for those files. Run [dune build @check] (or pass [--build]) before merlint so the build artefacts are present and up to date.
+  ! $TESTCASE_ROOT/unbuilt/fuzz/fuzz_parser.mli
   Running merlint analysis...
   
   Analyzing 4 files

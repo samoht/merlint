@@ -12,9 +12,9 @@ Test bad example - should flag a printer not named pp / pp_<type>:
   ✓ Code Style (0 total issues)
   ✗ Naming Conventions (1 total issues)
     [E336] Pretty-printer naming (1 issue)
-    Pretty-printers — values of type [_ Fmt.t] or [Format.formatter -> _ ->
-    unit] — follow a fixed naming convention: [pp] when the value type is the
-    module's main type [t], and [pp_<type>] otherwise. The convention matches
+    Pretty-printers — values of type [_ Fmt.t] or [Format.formatter -> _ -> unit]
+    — follow a fixed naming convention: [pp] when the value type is the module's
+    main type [t], and [pp_<type>] otherwise. The convention matches
     [Fmt.pp_print_*] and [Format.pp_print_*] in the stdlib.
     - bad.mli:3:0: Pretty-printer 'print' should be named 'pp' (functions of type [_ Fmt.t] or [Format.formatter -> _ -> unit] use the [pp]/[pp_<type>] convention)
   ✓ Documentation (0 total issues)

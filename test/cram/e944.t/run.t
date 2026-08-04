@@ -18,10 +18,10 @@ Build bad fixture project:
     When you use [X.suffix] from package X, X's installation might have skipped
     that sub-library because the system dep it gates wasn't available at X's build
     time. The gating dep is one of X's opam [depopts:]. Declare it in your own
-    [depends:] so opam-install picks it up in a fresh switch. The (parent, sub)
-    → depopt mapping lives in [merlint/lib/rules/e944.ml]'s [gating_table];
-    extend it when you find a new case. Each entry is verified against X's actual
-    depopts at run time; stale entries surface as findings too.
+    [depends:] so opam-install picks it up in a fresh switch. The (parent, sub) →
+    depopt mapping lives in [merlint/lib/rules/e944.ml]'s [gating_table]; extend
+    it when you find a new case. Each entry is verified against X's actual depopts
+    at run time; stale entries surface as findings too.
     - bad/pkg/pkg.opam:1:0: pkg uses optional sub-library fmt.tty but base-unix is missing from pkg.opam's [depends:]. Add "base-unix" — that's the depopt fmt declares to gate fmt.tty's installation (see File "merlint/lib/rules/e944.ml", line 44, characters 32-39).
   ✓ Test Quality (0 total issues)
   ✓ Interop Testing (0 total issues)

@@ -15,9 +15,8 @@ Build bad fixture project:
   ✗ Interop Testing (1 total issues)
     [E830] Inlined algorithm in generator (1 issue)
     The generator MUST call the upstream tool's public API. Never reimplement the
-    algorithm being verified — this defeats the purpose of interop testing. If
-    the public API doesn't expose what you need, drop the test rather than
-    inlining.
+    algorithm being verified — this defeats the purpose of interop testing. If the
+    public API doesn't expose what you need, drop the test rather than inlining.
     - (global) Interop generator bad/foo/test/interop/oracle/scripts/generate.py: defines encode/decode/compute functions — may be reimplementing the algorithm instead of calling the oracle's API
   ✓ Code Generation (0 total issues)
   

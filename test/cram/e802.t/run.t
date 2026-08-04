@@ -15,8 +15,8 @@ Build bad fixture project:
   ✗ Interop Testing (1 total issues)
     [E802] Interop test not replay-only (1 issue)
     Traces must be committed to git. The test stanza must depend on (source_tree
-    traces) so tests run from traces alone — the external tool is NOT required
-    at test time. This is the 'generate once, replay always' principle.
+    traces) so tests run from traces alone — the external tool is NOT required at
+    test time. This is the 'generate once, replay always' principle.
     - (global) Interop test bad/foo/test/interop/oracle: missing traces/ directory — traces must be committed
   ✓ Code Generation (0 total issues)
   
