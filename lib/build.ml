@@ -5,8 +5,12 @@ let src = Logs.Src.create "merlint.build" ~doc:"Build helpers"
 
 module Log = (val Logs.src_log src : Logs.LOG)
 
-let err_build_failed msg =
-  Fmt.kstr (fun s -> Error s) "Failed to build project: %s" msg
+let err fmt = Fmt.kstr (fun s -> Error s) fmt
+let err_build_failed msg = err "Failed to build project: %s" msg
+
+let err_invalidate_failed ~error ~operation ~path =
+  err "Failed to invalidate stale typedtree artefact %s: %s (%s)" path
+    (Unix.error_message error) operation
 
 let log_command cmd =
   match Logs.level () with
@@ -45,10 +49,52 @@ let cmt_artefact ~root file =
   | Some cmt when not (Sys.file_exists cmt) -> None
   | Some cmt -> Some (cmt, Merlin.Cmt.describes ~root_dir:root file)
 
-let maybe_cmt_target ~root file =
-  match cmt_artefact ~root file with
+let is_ocaml_source file =
+  let path = Fpath.to_string file in
+  Filename.check_suffix path ".ml" || Filename.check_suffix path ".mli"
+
+type stale_cmt = { source : Fpath.t; artefact : string; target : Fpath.t }
+
+let maybe_stale_cmt ~root source =
+  match if is_ocaml_source source then cmt_artefact ~root source else None with
   | None | Some (_, true) -> None
-  | Some (cmt, false) -> dune_target_of_cmt ~root cmt
+  | Some (artefact, false) ->
+      dune_target_of_cmt ~root artefact
+      |> Option.map (fun target -> { source; artefact; target })
+
+let invalidate_artefact artefact =
+  match Unix.unlink artefact with
+  | () -> Ok ()
+  | exception Unix.Unix_error (Unix.ENOENT, _, _) -> Ok ()
+  | exception Unix.Unix_error (error, operation, path) ->
+      err_invalidate_failed ~error ~operation ~path
+
+let invalidate_stale_cmts stale_cmts =
+  stale_cmts
+  |> List.map (fun stale -> stale.artefact)
+  |> List.sort_uniq String.compare
+  |> List.fold_left
+       (fun result artefact ->
+         match result with
+         | Error _ -> result
+         | Ok () -> invalidate_artefact artefact)
+       (Ok ())
+
+let stale_sources ~root stale_cmts =
+  List.filter_map
+    (fun stale ->
+      if Merlin.Cmt.describes ~root_dir:root (Fpath.to_string stale.source) then
+        None
+      else Some stale.source)
+    stale_cmts
+
+let err_still_stale sources =
+  let paths =
+    sources |> List.map Fpath.to_string |> List.sort_uniq String.compare
+  in
+  err "Dune completed, but these typedtree artefacts remain stale: %a"
+    Fmt.(list ~sep:(any ", ") string)
+    paths
 
 type source_status = Compiled | Not_compiled | Skipped | Missing
 
@@ -62,16 +108,27 @@ let source_status ~root ~index file =
       | None | Some (_, false) -> Not_compiled)
 
 let refresh_stale_cmt_targets ~path ~files mgr =
-  let targets = List.filter_map (maybe_cmt_target ~root:path) files in
-  match targets with
+  let stale_cmts = List.filter_map (maybe_stale_cmt ~root:path) files in
+  match stale_cmts with
   | [] -> Ok ()
-  | targets -> (
-      let cmd =
-        "dune build --root " ^ Filename.quote path ^ " "
-        ^ String.concat " "
-            (List.map (fun p -> Filename.quote (Fpath.to_string p)) targets)
+  | stale_cmts -> (
+      let targets =
+        stale_cmts
+        |> List.map (fun stale -> stale.target)
+        |> List.sort_uniq Fpath.compare
       in
-      log_command cmd;
-      match Command.run mgr cmd with
-      | Ok _ -> Ok ()
-      | Error msg -> err_build_failed msg)
+      match invalidate_stale_cmts stale_cmts with
+      | Error _ as error -> error
+      | Ok () -> (
+          let cmd =
+            "dune build --cache=disabled --root " ^ Filename.quote path ^ " "
+            ^ String.concat " "
+                (List.map (fun p -> Filename.quote (Fpath.to_string p)) targets)
+          in
+          log_command cmd;
+          match Command.run mgr cmd with
+          | Ok _ -> (
+              match stale_sources ~root:path stale_cmts with
+              | [] -> Ok ()
+              | sources -> err_still_stale sources)
+          | Error msg -> err_build_failed msg))

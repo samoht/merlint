@@ -20,15 +20,16 @@ val refresh_stale_cmt_targets :
   _ Eio.Process.mgr ->
   (unit, string) result
 (** [refresh_stale_cmt_targets ~path ~files mgr] re-builds the [.cmt] / [.cmti]
-    targets whose mtime is older than their source. Files whose [.cmt] is
-    already fresh, or whose [.cmt] cannot be located in [_build/default], are
-    skipped. Returns [Ok ()] when the (possibly empty) target list builds
-    cleanly. *)
+    targets whose recorded source digest does not match the current source. Each
+    proven-stale artefact is invalidated before building with Dune's cache
+    disabled, then checked again before returning [Ok ()]. Files whose artefact
+    already describes the current source, or whose artefact cannot be located in
+    [_build/default], are skipped. *)
 
 val cmt_artefact : root:string -> Fpath.t -> (string * bool) option
 (** [cmt_artefact ~root file] is the [.cmt] / [.cmti] path for [file] under
-    [root]'s [_build], paired with [true] when the artefact is at least as new
-    as the source. [None] when no artefact exists or the file cannot be
+    [root]'s [_build], paired with [true] when the artefact records the current
+    source path and digest. [None] when no artefact exists or the file cannot be
     resolved. *)
 
 type source_status =
@@ -48,8 +49,8 @@ val source_status :
     analysis. Presence comes from {!Project_index.source_presence}, which
     distinguishes an indexed source, one merely {!constructor-Skipped} (on disk
     but not indexed), and a genuinely {!constructor-Missing} one; compilation
-    freshness compares the [.cmt] / [.cmti] under [root]'s [_build] against the
-    source mtime. Rules use this to tell a genuinely absent interface
+    freshness checks the source path and digest recorded by the [.cmt] / [.cmti]
+    under [root]'s [_build]. Rules use this to tell a genuinely absent interface
     ({!constructor-Missing}) from one that merely lacks a fresh artefact
     ({!constructor-Not_compiled}) or escaped indexing ({!constructor-Skipped}).
 *)
