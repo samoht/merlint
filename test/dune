@@ -33,6 +33,7 @@
 (rule
  (alias runtest)
  (deps
+  (sandbox none)
   %{bin:merlint}
   (source_tree ../lib)
   (source_tree ../bin)
@@ -44,4 +45,4 @@
  (action
   (chdir
    ..
-   (run merlint lib bin))))
+   (run %{bin:merlint} lib bin))))
