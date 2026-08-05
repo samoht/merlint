@@ -18,7 +18,6 @@
  (license ISC)
  (depends
   ocaml
-  dune
   bytesrw
   cmdliner
   eio
