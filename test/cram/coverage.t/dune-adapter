@@ -1,0 +1,7 @@
+#!/bin/sh
+set -eu
+
+"$REAL_DUNE" "$@"
+if [ ! -e "$ADD_SOURCE" ]; then
+  printf 'let value = 42\n' > "$ADD_SOURCE"
+fi
