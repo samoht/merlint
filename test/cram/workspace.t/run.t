@@ -52,3 +52,18 @@ workspace it is already there and stays put.
   $ cd ../ws
   $ merlint pkg | sed -n '1p'
   Dune root: $TESTCASE_ROOT/ws/
+
+A declaration that does not apply here is a note, not a refusal. This is what a
+second working tree of the checkout sees, since no workspace reaches it: the
+run continues where it stands and answers exactly as it would with no
+declaration at all.
+
+  $ rm pkg
+  $ cd ../pkg
+  $ merlint . 2>&1 >/dev/null
+  Note: merlint.toml declares workspace $TESTCASE_ROOT/ws/, whose source tree does not reach $TESTCASE_ROOT/pkg/. The workspace builds this checkout only if one of its directories is this one.
+  Analysing this tree where it stands.
+  [1]
+  $ merlint . 2>/dev/null | tail -2
+  Summary: ✗ 0 total issues (applied 119 rules, 2 files unchecked)
+  ✗ No issues found, but 2 files could not be checked: the .cmt/.cmti was missing or out of date, so the rules that read a typedtree did not run on them. Re-run with -v to name them.
