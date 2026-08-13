@@ -37,9 +37,14 @@ val workspace_link : string -> (link option, string) result
 
     [Ok None] when no [merlint.toml] up to the workspace root declares one, or
     when the declared workspace is the checkout's own Dune root, so a run
-    started inside the workspace stays put. [Error] when the declaration cannot
-    be honoured: the declared directory is not a Dune root, or its source tree
-    does not reach this checkout. *)
+    started inside the workspace stays put.
+
+    [Error] says why a declaration cannot be honoured -- the declared directory
+    is not a Dune root, or its source tree does not reach this checkout, which
+    is what a second working tree of the checkout sees. It is a reason to
+    analyse the checkout where it stands, not a reason to refuse: a checkout
+    that builds where it is needs no declaration to be checked, and one that
+    does not is told so by the run itself. *)
 
 module Query : sig
   (** Structural queries over the shared {!Project_index.t}. These helpers

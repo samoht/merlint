@@ -21,6 +21,7 @@ let () =
       Test_config_parser.suite;
       Test_rule_config.suite;
       Test_project.suite;
+      Test_worktree.suite;
       Test_build.suite;
       Test_issue.suite;
       Test_location.suite;

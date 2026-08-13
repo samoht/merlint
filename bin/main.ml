@@ -367,13 +367,49 @@ let print_summary_table issues_by_category =
     in
     Fmt.pr "%a@." Console.Table.pp table)
 
+let has_switch dir = Sys.file_exists Fpath.(to_string (dir / "_opam"))
+
+(* What to do about files nothing could be read for. A linked working tree
+   holds only what is committed, so the local opam switch the main tree carries
+   is not in it and dune has none to build against; naming the tree it was
+   branched from turns the verdict into the one command that fixes it. Silent
+   when the tree has its own switch, since then the artefacts are missing for
+   some other reason and a switch is not it. *)
+let unchecked_remedy ~project_root =
+  let root = Fpath.(v project_root |> normalize |> rem_empty_seg) in
+  if has_switch root then None
+  else
+    match Merlint.Worktree.main root with
+    | Some main when has_switch main ->
+        Fmt.kstr
+          (fun s -> Some s)
+          "  This working tree has no opam switch of its own, so nothing here \
+           could be built. Link the switch of the tree it was branched from, \
+           then re-run:@.    opam switch link %a %a"
+          Fpath.pp main Fpath.pp root
+    | Some _ | None -> None
+
+(* A run that could not read an artefact for every file it was given examined
+   less than it was asked to, so it reports what it could not reach and, when
+   the tree says why, what to do about it. *)
+let print_incomplete ?remedy unchecked =
+  let plural = if unchecked = 1 then "" else "s" in
+  let it = if unchecked = 1 then "it" else "them" in
+  Fmt.pr
+    "%s No issues found, but %d file%s could not be checked: the .cmt/.cmti \
+     was missing or out of date, so the rules that read a typedtree did not \
+     run on %s. Re-run with -v to name %s.@."
+    (Merlint.Report.print_color false "✗")
+    unchecked plural it it;
+  match remedy with Some remedy -> Fmt.pr "%s@." remedy | None -> ()
+
 (* Print summary and status *)
 (* A run whose typedtree-backed rules could not read an artefact examined less
    than it was asked to. Saying only "0 issues" would report that as the same
    outcome as a complete run, so the count of unchecked files goes in the
    summary line itself, where a caller reading the last line of output sees
    it. *)
-let print_summary ?(unchecked = 0) all_issues enabled_rule_count =
+let print_summary ?(unchecked = 0) ?remedy all_issues enabled_rule_count =
   let total_issues = List.length all_issues in
   let complete = unchecked = 0 in
   let all_passed = total_issues = 0 && complete in
@@ -392,16 +428,7 @@ let print_summary ?(unchecked = 0) all_issues enabled_rule_count =
 
   if all_passed then
     Fmt.pr "%s All checks passed!@." (Merlint.Report.print_color true "✓")
-  else if total_issues = 0 then
-    Fmt.pr
-      "%s No issues found, but %d file%s could not be checked: the .cmt/.cmti \
-       was missing or out of date, so the rules that read a typedtree did not \
-       run on %s. Re-run with -v to name %s.@."
-      (Merlint.Report.print_color false "✗")
-      unchecked
-      (if unchecked = 1 then "" else "s")
-      (if unchecked = 1 then "it" else "them")
-      (if unchecked = 1 then "it" else "them")
+  else if total_issues = 0 then print_incomplete ?remedy unchecked
   else begin
     Fmt.pr "%s Some checks failed. See details above.@."
       (Merlint.Report.print_color false "✗");
@@ -492,7 +519,6 @@ let run_analysis ?domain_mgr ~load_file ~json_output project_root analyze_set
     let issues_by_category = group_issues_by_category all_issues in
 
     (* Process each category *)
-    ignore project_root;
     print_categorized_issues issues_by_category;
 
     (* Print summary table *)
@@ -501,6 +527,7 @@ let run_analysis ?domain_mgr ~load_file ~json_output project_root analyze_set
     (* Print custom summary *)
     print_summary
       ~unchecked:(List.length unchecked_files)
+      ?remedy:(unchecked_remedy ~project_root)
       all_issues enabled_rule_count;
 
     (* Print profiling summary if enabled *)
@@ -588,13 +615,21 @@ let project_root_of_files = function
    files, and every rule that reads a typedtree is skipped. When its
    merlint.toml names that workspace, move the whole analysis to the paths the
    workspace knows these files by: from there on this is an ordinary run
-   rooted at the workspace. *)
+   rooted at the workspace.
+
+   A declaration that does not apply here -- what a second working tree of the
+   checkout sees, since no workspace reaches it -- is a note, not a refusal.
+   The run continues where it stands: a tree that builds where it is has its
+   artefacts there and is checked normally, and one that does not is told so by
+   the summary, which is the same answer it would give with no declaration at
+   all. *)
 let redirect_analysis files =
   let anchor = match files with file :: _ -> file | [] -> "." in
   match Merlint.Project.workspace_link anchor with
   | Error msg ->
-      Fmt.epr "Error: %s@." msg;
-      exit 1
+      Fmt.epr "Note: %s@." msg;
+      Fmt.epr "Analysing this tree where it stands.@.";
+      None
   | Ok None -> None
   | Ok (Some { Merlint.Project.checkout; workspace; path }) ->
       let into_workspace file =
