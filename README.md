@@ -125,9 +125,11 @@ $ merlint help --all --format=md -o STYLE_GUIDE.md
 
 Merlint reads `merlint.toml` from your project root. Run
 `merlint help config` for the full reference: the settings keys, the
-`[[rules]]` block format (single glob or list of globs), and the pattern
-syntax. The same examples it shows are round-tripped through the parser
-by the test suite, so the docs can't drift from the implementation.
+`workspace` declaration a checkout built from a workspace elsewhere
+needs, the `[[rules]]` block format (single glob or list of globs), and
+the pattern syntax. The same examples it shows are round-tripped through
+the parser by the test suite, so the docs can't drift from the
+implementation.
 
 ```toml
 max-complexity = 15

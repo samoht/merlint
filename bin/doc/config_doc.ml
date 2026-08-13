@@ -23,6 +23,8 @@ let example_settings =
 let example_allowed_words =
   "allowed_words = [\"create_table\", \"EdDSA\", \"ECDSA\"]"
 
+let example_workspace = "workspace = \"../mono\""
+
 let example_rules_single_glob =
   "[[rules]]\nfiles = \"lib/prose*.ml\"\nexclude = [\"E330\"]"
 
@@ -41,6 +43,7 @@ let examples =
   [
     ("settings", example_settings);
     ("allowed_words", example_allowed_words);
+    ("workspace", example_workspace);
     ("rules: single glob", example_rules_single_glob);
     ("rules: files list", example_rules_files_list);
     ("rules: recursive glob", example_rules_recursive_glob);
@@ -49,7 +52,7 @@ let examples =
 
 let join_pre xs = String.concat "\n\n" xs
 
-let man =
+let man_file =
   [
     `S "CONFIGURATION FILE";
     `P
@@ -58,6 +61,10 @@ let man =
        files are merged: settings from closer files override outer ones, while \
        rule exclusions accumulate. Use $(b,--show-config) on the main command \
        to verify the loaded configuration.";
+  ]
+
+let man_settings =
+  [
     `S "SETTINGS";
     `P
       "Top-level keys override default thresholds and toggles. All names use \
@@ -69,6 +76,26 @@ let man =
        example $(b,create_table) would normally trigger E331 (redundant \
        prefix) but can be exempted:";
     `Pre example_allowed_words;
+  ]
+
+let man_linked_checkouts =
+  [
+    `S "LINKED CHECKOUTS";
+    `P
+      "A checkout whose dependencies resolve only inside a larger dune \
+       workspace is built there, and its $(b,.cmt)/$(b,.cmti) artefacts are \
+       written there too, so $(mname) analyses it as that workspace knows it. \
+       $(b,workspace) names the workspace, as a path relative to the \
+       $(b,merlint.toml) that sets it; the workspace reaches the checkout \
+       through a symlink, and the run is rooted there. Without the declaration \
+       the checkout is analysed as a project of its own, where no artefact \
+       describes any of its files and every rule that reads a typedtree is \
+       skipped.";
+    `Pre example_workspace;
+  ]
+
+let man_exclusions =
+  [
     `S "RULE EXCLUSIONS";
     `P
       "$(b,[[rules]]) blocks exclude specific rule codes for files matching a \
@@ -91,6 +118,10 @@ let man =
       "Each entry of a list-form $(b,files) becomes its own pattern -- the \
        second block above is equivalent to three separate $(b,[[rules]]) \
        blocks with the same exclude.";
+  ]
+
+let man_patterns =
+  [
     `S "PATTERN SYNTAX";
     `P
       "Globs use standard wildcards: $(b,*) (any filename, no $(b,/)), $(b,**) \
@@ -98,3 +129,6 @@ let man =
        (character class). Rule patterns also accept $(b,*) (all rules) and \
        prefix forms like $(b,E1*) (all rules starting with E1).";
   ]
+
+let man =
+  man_file @ man_settings @ man_linked_checkouts @ man_exclusions @ man_patterns

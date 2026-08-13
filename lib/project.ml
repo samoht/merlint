@@ -22,6 +22,95 @@ let workspace_root_and_configs path =
 
 let config_files path = snd (workspace_root_and_configs path)
 
+type link = { checkout : Fpath.t; workspace : Fpath.t; path : Fpath.t }
+
+let err fmt = Fmt.kstr (fun s -> Error s) fmt
+
+let err_not_a_root workspace =
+  err
+    "merlint.toml declares workspace %a, which is not a Dune root: it has \
+     neither a dune-workspace nor a dune-project file."
+    Fpath.pp workspace
+
+let err_not_linked ~workspace ~checkout =
+  err
+    "merlint.toml declares workspace %a, whose source tree does not reach %a. \
+     The workspace builds this checkout only if one of its directories is this \
+     one."
+    Fpath.pp workspace Fpath.pp checkout
+
+let real path = try Some (Unix.realpath path) with Unix.Unix_error _ -> None
+let dir_path path = Fpath.(v path |> normalize |> to_dir_path)
+
+(* The checkout's own Dune root, as the directory the declaration is resolved
+   against. *)
+let checkout_root path = dir_path (root path)
+
+let is_dune_root dir =
+  let has name = Sys.file_exists Fpath.(to_string (dir / name)) in
+  has "dune-workspace" || has "dune-project"
+
+(* The closest [merlint.toml] that declares a workspace wins, like every other
+   scalar setting. The value is a path relative to the file that declares it,
+   resolved through the real directory so that the same file read through the
+   workspace's own symlink names the same workspace. *)
+let declared_workspace path =
+  config_files path
+  |> List.filter_map (fun config ->
+      match Config_parser.parse_file config with
+      | None -> None
+      | Some parsed ->
+          List.find_map
+            (fun (key, value) ->
+              if key = "workspace" then Some (config, value) else None)
+            parsed.Config_parser.settings)
+  |> List.rev
+  |> function
+  | [] -> None
+  | (config, value) :: _ ->
+      let dir = Filename.dirname config in
+      let declared_in = Option.value ~default:dir (real dir) in
+      Some (dir_path Fpath.(to_string (v declared_in // v value)))
+
+(* Where [workspace] reaches [checkout]: the entry that resolves to it, tried
+   under the checkout's own name first since that is what a link is normally
+   called. *)
+let linked_path ~workspace ~checkout =
+  match real (Fpath.to_string checkout) with
+  | None -> None
+  | Some target ->
+      let ws = Fpath.to_string workspace in
+      let resolves name =
+        match real (Filename.concat ws name) with
+        | Some path -> String.equal path target
+        | None -> false
+      in
+      let named = Fpath.basename (Fpath.rem_empty_seg checkout) in
+      if resolves named then Some Fpath.(workspace / named)
+      else
+        let entries = try Sys.readdir ws with Sys_error _ -> [||] in
+        Array.sort String.compare entries;
+        Array.to_list entries |> List.find_opt resolves
+        |> Option.map (fun entry -> Fpath.(workspace / entry))
+
+let same_dir a b =
+  match (real (Fpath.to_string a), real (Fpath.to_string b)) with
+  | Some a, Some b -> String.equal a b
+  | _ -> Fpath.equal a b
+
+let workspace_link path =
+  match declared_workspace path with
+  | None -> Ok None
+  | Some workspace -> (
+      let checkout = checkout_root path in
+      if same_dir workspace checkout then Ok None
+      else if not (is_dune_root workspace) then err_not_a_root workspace
+      else
+        match linked_path ~workspace ~checkout with
+        | None -> err_not_linked ~workspace ~checkout
+        | Some path ->
+            Ok (Some { checkout; workspace; path = Fpath.to_dir_path path }))
+
 module Query = struct
   let source_libraries index =
     Project_index.source_package_list index

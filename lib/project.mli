@@ -16,6 +16,31 @@ val config_files : string -> string list
     up to the workspace root, ordered outermost-first. Closer configs override
     settings from outer ones; exclusions accumulate. *)
 
+type link = {
+  checkout : Fpath.t;  (** the checkout's own Dune root *)
+  workspace : Fpath.t;  (** the Dune workspace that builds it *)
+  path : Fpath.t;  (** the directory that workspace reaches the checkout by *)
+}
+(** The type for a checkout built from a workspace elsewhere. *)
+
+val workspace_link : string -> (link option, string) result
+(** [workspace_link path] is the workspace the checkout enclosing [path]
+    declares it is built from, as [workspace = "<path>"] in its [merlint.toml],
+    with the directory that workspace reaches the checkout by.
+
+    A checkout whose dependencies resolve only inside a larger workspace is
+    built there, and its [.cmt]/[.cmti] artefacts are written there too, so it
+    must be analysed as the workspace knows it. Nothing in the checkout points
+    back at the workspace, and several workspaces may link the same sources, so
+    the checkout names the one that builds it. The declared path is relative to
+    the [merlint.toml] that sets it.
+
+    [Ok None] when no [merlint.toml] up to the workspace root declares one, or
+    when the declared workspace is the checkout's own Dune root, so a run
+    started inside the workspace stays put. [Error] when the declaration cannot
+    be honoured: the declared directory is not a Dune root, or its source tree
+    does not reach this checkout. *)
+
 module Query : sig
   (** Structural queries over the shared {!Project_index.t}. These helpers
       answer project-shape questions for rules without re-reading or re-parsing

@@ -582,6 +582,37 @@ let project_root_of_files = function
   | file :: _ -> Merlint.Project.root file
   | [] -> Merlint.Project.root "."
 
+(* A checkout whose dependencies resolve only inside a larger workspace is
+   built there, so that is where its typedtree artefacts are and where a build
+   can be asked for. Analysed on its own it has no artefact for any of its
+   files, and every rule that reads a typedtree is skipped. When its
+   merlint.toml names that workspace, move the whole analysis to the paths the
+   workspace knows these files by: from there on this is an ordinary run
+   rooted at the workspace. *)
+let redirect_analysis files =
+  let anchor = match files with file :: _ -> file | [] -> "." in
+  match Merlint.Project.workspace_link anchor with
+  | Error msg ->
+      Fmt.epr "Error: %s@." msg;
+      exit 1
+  | Ok None -> None
+  | Ok (Some { Merlint.Project.checkout; workspace; path }) ->
+      let into_workspace file =
+        let file = resolve_cli_path file in
+        if Fpath.equal (Fpath.to_dir_path file) checkout then
+          Fpath.to_string path
+        else
+          match Fpath.rem_prefix checkout file with
+          | Some rel -> Fpath.(to_string (path // rel))
+          | None -> Fpath.to_string file
+      in
+      let files =
+        match files with
+        | [] -> [ Fpath.to_string path ]
+        | files -> List.map into_workspace files
+      in
+      Some (files, Fpath.to_string workspace)
+
 let maybe_build_project mgr ~project_root ~analyze_set ~analyze_roots ~index
     ~build =
   if build then (
@@ -642,7 +673,11 @@ let analyze_files mgr fs domain_mgr ?(exclude_patterns = []) ?rule_filter
     ?(show_profile = false) ?(build = false) ?(bail = false)
     ?(include_vendored = false) ?(json_output = false) files =
   let load_file = load_file_via_eio fs in
-  let project_root = project_root_of_files files in
+  let files, project_root =
+    match redirect_analysis files with
+    | Some (files, workspace) -> (files, workspace)
+    | None -> (files, project_root_of_files files)
+  in
   Log.info (fun m -> m "Dune root: %s (cwd: %s)" project_root (Sys.getcwd ()));
   if not json_output then Fmt.pr "Dune root: %s@." project_root;
   Log.info (fun m -> m "Scanning project structure...");
