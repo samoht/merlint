@@ -25,22 +25,6 @@ let test_root_from_dir () =
       (Sys.file_exists (Filename.concat project_root "dune-project"))
   else ()
 
-let test_workspace_root () =
-  let cwd = Sys.getcwd () in
-  let ws = Project.workspace_root cwd in
-  Alcotest.(check bool)
-    "workspace root has dune-project" true
-    (Sys.file_exists (Filename.concat ws "dune-project"))
-
-let test_workspace_root_is_outermost () =
-  let cwd = Sys.getcwd () in
-  let nearest = Project.root cwd in
-  let ws = Project.workspace_root cwd in
-  (* Workspace root should be at the same level or higher than nearest root *)
-  Alcotest.(check bool)
-    "workspace root <= nearest root length" true
-    (String.length ws <= String.length nearest)
-
 let with_temp_tree f =
   let tmp = Filename.temp_dir "merlint_test" "" in
   Fun.protect
@@ -137,8 +121,6 @@ let suite =
       ("find project root", `Quick, test_find_project_root);
       ("project root from file", `Quick, test_root_from_file);
       ("project root from directory", `Quick, test_root_from_dir);
-      ("workspace root", `Quick, test_workspace_root);
-      ("workspace root is outermost", `Quick, test_workspace_root_is_outermost);
       ("config files empty", `Quick, test_config_files_empty);
       ("config files single", `Quick, test_config_files_single);
       ("config files nested", `Quick, test_config_files_nested);

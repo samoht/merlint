@@ -7,10 +7,6 @@ val root : string -> string
     its parent directory. Returns the current working directory if no project
     root is found. *)
 
-val workspace_root : string -> string
-(** [workspace_root path] is kept for compatibility and uses the same Dune root
-    policy as {!root}. *)
-
 val config_files : string -> string list
 (** [config_files path] returns all [merlint.toml] config file paths from [path]
     up to the workspace root, ordered outermost-first. Closer configs override

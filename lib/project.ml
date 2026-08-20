@@ -3,7 +3,6 @@
 let start_dir = Merlin.Project.start_dir
 let walk_up = Merlin.Project.walk_up
 let root = Merlin.Project.root
-let workspace_root = Merlin.Project.workspace_root
 
 let workspace_root_and_configs path =
   let start = start_dir path in

@@ -778,13 +778,6 @@ let show_config_flag =
   in
   Arg.(value & flag & info [ "show-config" ] ~doc)
 
-let no_build_flag =
-  let doc =
-    "Deprecated no-op. Merlint does not build by default; pass --build to run \
-     'dune build @check' before analysis."
-  in
-  Term.(const ignore $ Arg.(value & flag & info [ "no-build" ] ~doc))
-
 let build_flag =
   let doc =
     "Run 'dune build @check' and refresh stale .cmt/.cmti artifacts before \
@@ -795,12 +788,10 @@ let build_flag =
 let show_configuration files =
   let path = match files with [] -> Sys.getcwd () | path :: _ -> path in
   let project_root = Merlint.Project.root path in
-  let workspace_root = Merlint.Project.workspace_root path in
   let config_files = Merlint.Project.config_files path in
   let config = Merlint.Config.load path in
   Fmt.pr "=== Merlint Configuration ===@.";
-  Fmt.pr "Project root: %s@." project_root;
-  Fmt.pr "Workspace root: %s@." workspace_root;
+  Fmt.pr "Dune root: %s@." project_root;
   (match config_files with
   | [] -> Fmt.pr "Config files: (none, using defaults)@."
   | files ->
@@ -852,11 +843,11 @@ let main exclude_patterns rules_spec ~show_profile ~show_config ~build ~bail
 let analyze_term =
   let json_log_reporter ~app:_ ~base:_ () = Observe.reporter () in
   Term.(
-    const (fun e r p bail c b vendored () f u ->
+    const (fun e r p bail c b vendored f u ->
         main e r ~show_profile:p ~show_config:c ~build:b ~bail
           ~include_vendored:vendored f u)
     $ exclude_flag $ rules_flag $ profile_flag $ bail_flag $ show_config_flag
-    $ build_flag $ include_vendored_flag $ no_build_flag $ files
+    $ build_flag $ include_vendored_flag $ files
     $ Observe.setup ~json_reporter:(Some json_log_reporter) "merlint")
 
 let scan =
