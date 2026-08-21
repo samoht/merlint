@@ -1,4 +1,4 @@
-(* Bare [Parsetree], [Asttypes], [Location] and [Longident] here are
+(* Bare [Parsetree], [Asttypes], [Warnings] and [Longident] here are
    compiler-libs': the tree walked is the one {!Ast} parsed with the stock
    parser, so that a declaration's span is the very span [Doc_comments] keyed
    its doc comment by. What leaves the module is in merlint's ambient types --
