@@ -23,6 +23,15 @@ let pp_sample ppf files =
   let extra = List.length files - List.length sample in
   if extra > 0 then Fmt.pf ppf "@,... and %d more" extra
 
+(* Membership over a set of paths, compared after normalisation: the backend
+   names a file as it was handed it and the index as it walked to it, and the
+   two spell the same file differently. *)
+let path_mem paths =
+  let norm s = Fpath.(v s |> normalize |> to_string) in
+  let tbl = Hashtbl.create 64 in
+  List.iter (fun p -> Hashtbl.replace tbl (norm (Fpath.to_string p)) ()) paths;
+  fun f -> Hashtbl.mem tbl (norm f)
+
 (* A file whose artefact no longer describes it is typechecked instead, so the
    only files a run cannot look at are the ones nothing could say what to type
    against. Those split two ways:
@@ -32,17 +41,20 @@ let pp_sample ppf files =
    - Unavailable: the file belongs to a platform- or config-gated stanza the
      host does not build, so the build system has nothing to say about it and
      never will here -- not the user's to fix.
-   Only Missing warrants the "run dune build" warning. *)
-let warn_unresolved ~index stats =
-  let norm s = Fpath.(v s |> normalize |> to_string) in
-  let is_gated =
-    let tbl = Hashtbl.create 64 in
-    Project_index.gated_source_files index
-    |> List.iter (fun p -> Hashtbl.replace tbl (norm (Fpath.to_string p)) ());
-    fun f -> Hashtbl.mem tbl (norm f)
-  in
+   Only Missing warrants the "run dune build" warning.
+
+   The question is asked of [analyzed] alone. A project rule reads sources well
+   outside the files a run was asked to analyse -- E610's reference scan reads
+   every library source in the project -- and one of those it cannot read
+   weakens that rule's evidence, which the rule reports in its own finding. It
+   cannot leave this run incomplete: no rule of this run was going to examine
+   the file. *)
+let warn_unresolved ~index ~analyzed stats =
+  let in_scope = path_mem analyzed in
+  let is_gated = path_mem (Project_index.gated_source_files index) in
   let _unavailable, missing =
-    List.partition is_gated stats.Merlin.unresolved_files
+    List.filter in_scope stats.Merlin.unresolved_files
+    |> List.partition is_gated
   in
   (if missing <> [] then
      let n = List.length missing in
@@ -70,7 +82,7 @@ let log_fs_stats () =
         m "FS stats: readdirs=%d is_directory=%d file_exists=%d file_opens=%d"
           s.readdirs s.is_directory_checks s.file_exists_checks s.file_opens)
 
-let log_backend_stats ~index backend =
+let log_backend_stats ~index ~analyzed backend =
   let s = Merlin.stats backend in
   Log.info (fun m ->
       m
@@ -88,7 +100,7 @@ let log_backend_stats ~index backend =
             (List.length recovered)
             (if List.length recovered = 1 then "" else "s")
             (if List.length recovered = 1 then "it" else "them")));
-  warn_unresolved ~index s
+  warn_unresolved ~index ~analyzed s
 
 (* The whole-repo index builders are meant to run a handful of times per
    analysis (roughly once per project rule). A count orders of magnitude higher
@@ -490,7 +502,9 @@ let run ?domain_mgr ~load_file ~filter ?analyze_set ?analyze_roots ~index
         ~enabled_rules analyze_set
     in
     log_index_stats idx_value;
-    let unchecked_files = log_backend_stats ~index:idx_value backend in
+    let unchecked_files =
+      log_backend_stats ~index:idx_value ~analyzed:analyze_set backend
+    in
     (project_results, file_results, files_analyzed, unchecked_files)
   in
   Fun.protect

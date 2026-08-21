@@ -399,10 +399,9 @@ let unchecked_remedy ~project_root =
     | Some _ | None -> None
 
 (* A run that examined less than it was asked to reports what it could not
-   reach and, when the tree says why, what to do about it. A file gets here two
-   ways: nothing said what to type it against, or its interface was typechecked
-   rather than read from an artefact and so carried no doc comments. A build
-   answers both. *)
+   reach and, when the tree says why, what to do about it. A file gets here one
+   way: it was named for analysis and nothing said what to type it against. A
+   build answers that. *)
 let print_incomplete ?remedy unchecked =
   let plural = if unchecked = 1 then "" else "s" in
   let it = if unchecked = 1 then "it" else "them" in
