@@ -103,34 +103,34 @@ describes:
     Run `merlint help E105` for the rule's description, hint, and good/bad examples.
   [1]
 
-An interface is the exception. The compiler records doc comments as attributes
-in the artefact it writes; merlin's lexer does not emit doc comments at all, so
-a typechecked interface carries none and the four rules that read one cannot
-run. The other rules do, and the run says which four did not:
+A doc comment is a property of the source, not of anything the compiler wrote:
+it is in the interface's parsetree, which needs no artefact and no typechecker.
+So the rules that read one answer for the file on disk. Document a type after
+its declaration, where odoc binds the comment to the last constructor instead
+of the type, and leave the artefact describing the source before the edit:
 
   $ chmod +w lib.mli
-  $ printf '\n(** A note the .cmti predates. *)\n' >> lib.mli
+  $ cat >> lib.mli <<'EOF'
+  > 
+  > type level = Debug | Info | Error
+  > (** The type for the severity of a log entry. *)
+  > EOF
+  $ cat >> lib.ml <<'EOF'
+  > 
+  > type level = Debug | Info | Error
+  > EOF
   $ touch _build/default/.lib.objs/byte/lib.cmti
-  $ merlint -r E425 lib.mli
-  Dune root: $TESTCASE_ROOT/
-  ! 1 interface was typechecked rather than read from an artefact, which loses the doc comments: E405, E410, E420 and E425 could not run on it. Run [dune build @check] (or pass [--build]) before merlint.
-  ! $TESTCASE_ROOT/lib.mli
-  Running merlint analysis...
-  
-  Analyzing 1 files
-  
-  ✓ Code Quality (0 total issues)
-  ✓ Code Style (0 total issues)
-  ✓ Naming Conventions (0 total issues)
-  ✓ Documentation (0 total issues)
-  ✓ Project Structure (0 total issues)
-  ✓ Test Quality (0 total issues)
-  ✓ Interop Testing (0 total issues)
-  ✓ Code Generation (0 total issues)
-  
-  Summary: ✗ 0 total issues (applied 1 rule, 1 file unchecked)
-  ✗ No issues found, but 1 file could not be fully checked, so some of the rules that read a typedtree did not run on it. Re-run with -v to name it and say why.
-  [1]
+  $ merlint -r E425 lib.mli | grep -E "lib.mli:|Summary"
+    - lib.mli:10:0: Type 'level' has no documentation: the comment after its last constructor documents 'Error'. Put the type's doc before 'type level'
+  Summary: ✗ 1 total issue (applied 1 rule)
+
+Nothing the compiler wrote is involved, so removing the artefact outright
+changes no answer:
+
+  $ rm -f _build/default/.lib.objs/byte/lib.cmti
+  $ merlint -r E425 lib.mli | grep -E "lib.mli:|Summary"
+    - lib.mli:10:0: Type 'level' has no documentation: the comment after its last constructor documents 'Error'. Put the type's doc before 'type level'
+  Summary: ✗ 1 total issue (applied 1 rule)
 
 A stanza Dune does not build here is one the build system has nothing to say
 about, so a file of it can never be placed and no build the user runs will

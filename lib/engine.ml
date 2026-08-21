@@ -15,17 +15,6 @@ type result = {
   unchecked_files : string list;
 }
 
-(* The compiler records a source's doc comments as [ocaml.doc] attributes in the
-   artefact it writes; merlin's own lexer does not emit doc comments at all, so
-   a typedtree recovered by typechecking has none of them. Every rule that reads
-   a doc comment (E405, E410, E420, E425) reads it off the typedtree and applies
-   to interfaces, so a recovered interface is examined by every other rule and
-   by none of those -- less than the run was asked for, and it says so rather
-   than letting four rules report a clean absence they cannot see. An
-   implementation has no doc rules and is fully examined. *)
-let partly_examined stats =
-  List.filter File_kind.is_mli stats.Merlin.recovered_files
-
 (* A bounded sample: naming every file of a whole-repo run buries the message
    the warning is carrying. *)
 let pp_sample ppf files =
@@ -99,20 +88,7 @@ let log_backend_stats ~index backend =
             (List.length recovered)
             (if List.length recovered = 1 then "" else "s")
             (if List.length recovered = 1 then "it" else "them")));
-  let partly = partly_examined s in
-  (if partly <> [] then
-     let n = List.length partly in
-     Log.warn (fun m ->
-         m
-           "@[<v>%d interface%s typechecked rather than read from an artefact, \
-            which loses the doc comments: E405, E410, E420 and E425 could not \
-            run on %s. Run [dune build @check] (or pass [--build]) before \
-            merlint.%a@]"
-           n
-           (if n = 1 then " was" else "s were")
-           (if n = 1 then "it" else "them")
-           pp_sample partly));
-  warn_unresolved ~index s @ partly
+  warn_unresolved ~index s
 
 (* The whole-repo index builders are meant to run a handful of times per
    analysis (roughly once per project rule). A count orders of magnitude higher
@@ -195,7 +171,7 @@ let file_view ?profiling ~load_file ~backend filename =
       merlin_op ?profiling source_filename (fun () ->
           Merlin.typedtree backend ~source)
   in
-  File_view.v ~filename:source_filename ~typedtree ()
+  File_view.v ~filename:source_filename ~content ~typedtree ()
 
 let setup_analysis ~filter ~analyze_set ~index ~file_view project_root =
   (* Resolve a relative root (e.g. ".") against the cwd: the analyze_set paths

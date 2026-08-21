@@ -61,6 +61,7 @@ let file ~analyze_set ~selected_file ~project_index ~filename ~config
     project_index;
     view =
       File_view.v ~filename:(string_of_path filename)
+        ~content:(lazy (load_content ()))
         ~typedtree:(fun () -> Ok None)
         ();
     content = lazy (load_content ());
@@ -86,7 +87,7 @@ let default_load_content filename () =
       (Printexc.to_string exn)
 
 let default_file_view filename =
-  File_view.v ~filename ~typedtree:(fun () -> Ok None) ()
+  File_view.v ~filename ~content:(lazy "") ~typedtree:(fun () -> Ok None) ()
 
 (* Memoise [make] keyed by file path. The lock guards only the cache table, not
    [make] itself: [make] reads (and parses) a file, and holding the lock across

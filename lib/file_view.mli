@@ -18,11 +18,14 @@ val pp : t Fmt.t
 
 val v :
   filename:string ->
+  content:string Lazy.t ->
   typedtree:(unit -> ((Merlin.typedtree * Merlin.docs) option, string) result) ->
   unit ->
   t
-(** [v ~filename ~typedtree ()] builds a fresh view over [filename]. The
-    [typedtree] thunk is called on first access and never twice. *)
+(** [v ~filename ~content ~typedtree ()] builds a fresh view over [filename].
+    The [typedtree] thunk is called on first access and never twice; [content]
+    is forced only if something asks for a doc comment, which is read from a
+    parse of the source rather than from the typedtree. *)
 
 val filename : t -> string
 (** [filename t] is the source file this view describes. *)

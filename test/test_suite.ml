@@ -16,7 +16,10 @@ let with_eio f = Eio_main.run @@ fun _env -> f ()
 let unresolved_answers_no_absence () =
   with_eio @@ fun () ->
   let view =
-    Merlint.File_view.v ~filename:"test.ml" ~typedtree:(fun () -> Ok None) ()
+    Merlint.File_view.v ~filename:"test.ml"
+      ~content:(lazy "")
+      ~typedtree:(fun () -> Ok None)
+      ()
   in
   Alcotest.(check (list string))
     "no typedtree, no claims" []
@@ -26,6 +29,7 @@ let an_empty_runner_misses_everything () =
   with_eio @@ fun () ->
   let view =
     Merlint.File_view.v ~filename:"test.ml"
+      ~content:(lazy "")
       ~typedtree:(fun () -> Ok (Some (empty_implementation, Merlin.Recorded)))
       ()
   in

@@ -13,7 +13,6 @@ let missing_doc item =
      the engine reports it as not fully examined. *)
 let check (ctx : Context.file) =
   if not (File_kind.is_mli (Context.filename ctx)) then []
-  else if not (File_view.docs_recorded (Context.view ctx)) then []
   else if
     match ctx.project_index with
     | Some idx ->

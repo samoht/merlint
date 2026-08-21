@@ -472,14 +472,11 @@ type file_item_kind =
   | Method
   | Instance_variable
 
-type doc = { text : string; loc : Location.t }
-
 type file_item = {
   name : string;
   kind : file_item_kind;
   loc : Location.t;
   deprecated : bool;
-  doc : doc option;
   deriving : string list;
   type_ : Typed_types.type_expr option;
   children : file_item list;
@@ -489,6 +486,11 @@ type file_item = {
 type t = {
   filename : string;
   lock : Eio.Mutex.t;
+  docstrings : Doc_comments.t Lazy.t;
+      (** The file's doc comments, from a parse of the source. A doc comment is
+          in the parsetree, so reading them needs neither an artefact nor a
+          typechecker, and the rules that read one answer for the file on disk.
+      *)
   typedtree : Merlin.typedtree option Lazy.t;
   docs : Merlin.docs Lazy.t;
       (** Whether the typedtree carries the source's doc comments. A tree
@@ -528,7 +530,20 @@ let lazy_loaded ~filename typedtree =
                skipped for this file. Run dune build @check before merlint so \
                the .cmt/.cmti artefact exists and is up to date."
               filename msg);
-        fail "%s" msg)
+        fail "%s" msg
+    (* Loading a typedtree runs the OCaml frontend, which reports a good deal
+       through exceptions -- [Persistent_env] raises [Not_found] for a [.cmi] it
+       expected to find, and does it from inside a lazy, so it surfaces here
+       rather than at the call that started the load. One file the frontend
+       cannot read is a file this run did not examine, which is a thing merlint
+       reports; it is not a reason to abandon the other ten thousand. *)
+    | exception exn ->
+        Log.warn (fun m ->
+            m
+              "Failed to load typedtree for %s: %s; typedtree-backed rules are \
+               skipped for this file."
+              filename (Printexc.to_string exn));
+        None)
 
 let lazy_typedtree loaded = lazy (Option.map fst (Lazy.force loaded))
 
@@ -583,39 +598,6 @@ let typed_has_deprecated attrs =
       || attr.attr_name.txt = "ocaml.deprecated")
     attrs
 
-let doc_payload_string (payload : Parsetree.payload) =
-  match payload with
-  | PStr
-      [
-        {
-          pstr_desc =
-            Pstr_eval
-              ( {
-                  pexp_desc =
-                    Pexp_constant { pconst_desc = Pconst_string (doc, _, _); _ };
-                  _;
-                },
-                _ );
-          _;
-        };
-      ] ->
-      Some doc
-  | _ -> None
-
-let typed_doc attrs =
-  List.find_map
-    (fun (attr : Parsetree.attribute) ->
-      if attr.attr_name.txt = "ocaml.doc" then
-        Some
-          {
-            text =
-              Option.value ~default:"" (doc_payload_string attr.attr_payload)
-              |> String.trim;
-            loc = attr.attr_loc;
-          }
-      else None)
-    attrs
-
 let rec deriving_names_expr expr =
   match expr.Parsetree.pexp_desc with
   | Pexp_ident { txt = Longident.Lident name; _ } -> [ name ]
@@ -632,9 +614,9 @@ let deriving_names attrs =
       | _ -> [])
     attrs
 
-let typed_item ~name ~kind ?type_ ?doc ?(children = []) ?(deriving = [])
+let typed_item ~name ~kind ?type_ ?(children = []) ?(deriving = [])
     ?(deprecated = false) ?(mutable_field = false) loc =
-  { name; kind; loc; deprecated; doc; deriving; type_; children; mutable_field }
+  { name; kind; loc; deprecated; deriving; type_; children; mutable_field }
 
 let rec typed_pattern_items ?loc (pat : Typedtree.pattern) =
   let loc = Option.value loc ~default:pat.pat_loc in
@@ -660,7 +642,6 @@ let rec typed_pattern_items ?loc (pat : Typedtree.pattern) =
 
 let typed_field_item (ld : Typedtree.label_declaration) =
   typed_item ~name:ld.ld_name.txt ~kind:Field ~type_:ld.ld_type.ctyp_type
-    ?doc:(typed_doc ld.ld_attributes)
     ~deprecated:(typed_has_deprecated ld.ld_attributes)
     ~mutable_field:
       (match ld.ld_mutable with Mutable -> true | Immutable -> false)
@@ -682,7 +663,6 @@ let typed_type_children (decl : Typedtree.type_declaration) =
       List.map
         (fun (cd : Typedtree.constructor_declaration) ->
           typed_item ~name:cd.cd_name.txt ~kind:Constructor
-            ?doc:(typed_doc cd.cd_attributes)
             ~deprecated:(typed_has_deprecated cd.cd_attributes)
             ~children:(typed_constructor_children cd)
             cd.cd_loc)
@@ -695,7 +675,6 @@ let typed_type_item (decl : Typedtree.type_declaration) =
       (Option.map
          (fun (ct : Typedtree.core_type) -> ct.ctyp_type)
          decl.typ_manifest)
-    ?doc:(typed_doc decl.typ_attributes)
     ~deriving:(deriving_names decl.typ_attributes)
     ~children:(typed_type_children decl)
     ~deprecated:(typed_has_deprecated decl.typ_attributes)
@@ -703,14 +682,12 @@ let typed_type_item (decl : Typedtree.type_declaration) =
 
 let typed_extension_item (ext : Typedtree.extension_constructor) =
   typed_item ~name:ext.ext_name.txt ~kind:Extension
-    ?doc:(typed_doc ext.ext_attributes)
     ~deprecated:(typed_has_deprecated ext.ext_attributes)
     ext.ext_loc
 
 let typed_exception_item (exn : Typedtree.type_exception) =
   let ext = exn.tyexn_constructor in
   typed_item ~name:ext.ext_name.txt ~kind:Exception
-    ?doc:(typed_doc ext.ext_attributes)
     ~deprecated:(typed_has_deprecated ext.ext_attributes)
     ext.ext_loc
 
@@ -719,13 +696,11 @@ let typed_class_type_field_item (field : Typedtree.class_type_field) =
   | Tctf_val (name, _mutable, _virtual, typ) ->
       Some
         (typed_item ~name ~kind:Instance_variable ~type_:typ.ctyp_type
-           ?doc:(typed_doc field.ctf_attributes)
            ~deprecated:(typed_has_deprecated field.ctf_attributes)
            field.ctf_loc)
   | Tctf_method (name, _private, _virtual, typ) ->
       Some
         (typed_item ~name ~kind:Method ~type_:typ.ctyp_type
-           ?doc:(typed_doc field.ctf_attributes)
            ~deprecated:(typed_has_deprecated field.ctf_attributes)
            field.ctf_loc)
   | Tctf_inherit _ | Tctf_constraint _ | Tctf_attribute _ -> None
@@ -759,7 +734,6 @@ and typed_module_binding_item (mb : Typedtree.module_binding) =
     (fun name ->
       let children = typed_module_expr_items mb.mb_expr in
       typed_item ~name ~kind:Module ~children
-        ?doc:(typed_doc mb.mb_attributes)
         ~deprecated:(typed_has_deprecated mb.mb_attributes)
         mb.mb_loc)
     mb.mb_name.txt
@@ -775,7 +749,6 @@ and typed_structure_item (item : Typedtree.structure_item) =
       [
         typed_item ~name:vd.val_name.txt ~kind:Value
           ~type_:vd.val_desc.ctyp_type
-          ?doc:(typed_doc vd.val_attributes)
           ~deprecated:(typed_has_deprecated vd.val_attributes)
           vd.val_loc;
       ]
@@ -791,7 +764,6 @@ and typed_structure_item (item : Typedtree.structure_item) =
             (match mtd.mtd_type with
             | Some { mty_desc = Tmty_signature s; _ } -> typed_signature_items s
             | _ -> [])
-          ?doc:(typed_doc mtd.mtd_attributes)
           ~deprecated:(typed_has_deprecated mtd.mtd_attributes)
           mtd.mtd_loc;
       ]
@@ -801,7 +773,6 @@ and typed_structure_item (item : Typedtree.structure_item) =
       List.map
         (fun ((cd, _) : Typedtree.class_declaration * string list) ->
           typed_item ~name:cd.ci_id_name.txt ~kind:Class
-            ?doc:(typed_doc cd.ci_attributes)
             ~deprecated:(typed_has_deprecated cd.ci_attributes)
             cd.ci_loc)
         classes
@@ -813,7 +784,6 @@ and typed_structure_item (item : Typedtree.structure_item) =
                * Typedtree.class_type_declaration) ->
           typed_item ~name:name.txt ~kind:Class_type
             ~children:(typed_class_type_children cd.ci_expr)
-            ?doc:(typed_doc cd.ci_attributes)
             ~deprecated:(typed_has_deprecated cd.ci_attributes)
             cd.ci_loc)
         classes
@@ -830,7 +800,6 @@ and typed_recmodule_item (md : Typedtree.module_declaration) =
           (match md.md_type.mty_desc with
           | Tmty_signature s -> typed_signature_items s
           | _ -> [])
-        ?doc:(typed_doc md.md_attributes)
         ~deprecated:(typed_has_deprecated md.md_attributes)
         md.md_loc)
     md.md_name.txt
@@ -841,7 +810,6 @@ and typed_signature_item (item : Typedtree.signature_item) =
       [
         typed_item ~name:vd.val_name.txt ~kind:Value
           ~type_:vd.val_desc.ctyp_type
-          ?doc:(typed_doc vd.val_attributes)
           ~deprecated:(typed_has_deprecated vd.val_attributes)
           vd.val_loc;
       ]
@@ -855,7 +823,6 @@ and typed_signature_item (item : Typedtree.signature_item) =
                 (match md.md_type.mty_desc with
                 | Tmty_signature s -> typed_signature_items s
                 | _ -> [])
-              ?doc:(typed_doc md.md_attributes)
               ~deprecated:(typed_has_deprecated md.md_attributes)
               md.md_loc;
           ])
@@ -867,7 +834,6 @@ and typed_signature_item (item : Typedtree.signature_item) =
             (match mtd.mtd_type with
             | Some { mty_desc = Tmty_signature s; _ } -> typed_signature_items s
             | _ -> [])
-          ?doc:(typed_doc mtd.mtd_attributes)
           ~deprecated:(typed_has_deprecated mtd.mtd_attributes)
           mtd.mtd_loc;
       ]
@@ -878,7 +844,6 @@ and typed_signature_item (item : Typedtree.signature_item) =
         (fun (cd : Typedtree.class_description) ->
           typed_item ~name:cd.ci_id_name.txt ~kind:Class
             ~children:(typed_class_type_children cd.ci_expr)
-            ?doc:(typed_doc cd.ci_attributes)
             ~deprecated:(typed_has_deprecated cd.ci_attributes)
             cd.ci_loc)
         classes
@@ -887,7 +852,6 @@ and typed_signature_item (item : Typedtree.signature_item) =
         (fun (cd : Typedtree.class_type_declaration) ->
           typed_item ~name:cd.ci_id_name.txt ~kind:Class_type
             ~children:(typed_class_type_children cd.ci_expr)
-            ?doc:(typed_doc cd.ci_attributes)
             ~deprecated:(typed_has_deprecated cd.ci_attributes)
             cd.ci_loc)
         classes
@@ -936,7 +900,17 @@ let lazy_module_names reference_outline =
      let names = List.fold_left module_names_of_ref names refs.values in
      List.sort_uniq String.compare names)
 
-let v ~filename ~typedtree () =
+let v ~filename ~content ~typedtree () =
+  let docstrings =
+    lazy
+      (match Lazy.force content with
+      | content -> Doc_comments.v ~filename ~content
+      | exception exn ->
+          Log.warn (fun m ->
+              m "Failed to read %s for its doc comments: %s" filename
+                (Printexc.to_string exn));
+          Doc_comments.v ~filename ~content:"")
+  in
   let loaded = lazy_loaded ~filename typedtree in
   let docs = lazy_docs loaded in
   let typedtree = lazy_typedtree loaded in
@@ -952,6 +926,7 @@ let v ~filename ~typedtree () =
   {
     filename;
     lock = Eio.Mutex.create ();
+    docstrings;
     typedtree;
     docs;
     values;
@@ -1106,10 +1081,10 @@ end
 (* {2 Item} *)
 
 module Doc = struct
-  type t = { doc : doc; filename : string }
+  type t = Doc_comments.comment
 
-  let text t = t.doc.text
-  let loc t = Loc.of_typed ~filename:t.filename t.doc.loc
+  let text (t : t) = t.text
+  let loc (t : t) = t.loc
 end
 
 module Item = struct
@@ -1127,7 +1102,7 @@ module Item = struct
     | Method
     | Instance_variable
 
-  type t = { item : file_item; filename : string }
+  type t = { item : file_item; filename : string; docstrings : Doc_comments.t }
 
   let kind_of_item : file_item_kind -> kind = function
     | Value -> Value
@@ -1149,15 +1124,20 @@ module Item = struct
   let deprecated (t : t) = t.item.deprecated
   let loc (t : t) = Loc.of_typed ~filename:t.filename t.item.loc
 
+  (* The declaration's own byte range is the key: both trees come from the same
+     buffer, so the parser and the typechecker record the same span for it. *)
   let doc (t : t) =
-    Option.map (fun doc -> { Doc.doc; filename = t.filename }) t.item.doc
+    Doc_comments.find t.docstrings ~start:t.item.loc.loc_start.pos_cnum
+      ~stop:t.item.loc.loc_end.pos_cnum
 
   let derives (t : t) name = List.mem name t.item.deriving
   let type_sig (t : t) = t.item.type_
   let is_mutable_field (t : t) = t.item.mutable_field
 
   let children (t : t) =
-    List.map (fun item -> { item; filename = t.filename }) t.item.children
+    List.map
+      (fun item -> { item; filename = t.filename; docstrings = t.docstrings })
+      t.item.children
 end
 
 (* {2 Reference} *)
@@ -1223,7 +1203,10 @@ end
 (* {2 Top-level accessors} *)
 
 let items t =
-  List.map (fun item -> { Item.item; filename = t.filename }) (force t t.items)
+  let docstrings = force t t.docstrings in
+  List.map
+    (fun item -> { Item.item; filename = t.filename; docstrings })
+    (force t t.items)
 
 let rec flatten_items items =
   List.concat_map (fun item -> item :: flatten_items (Item.children item)) items

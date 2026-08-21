@@ -1,5 +1,8 @@
 let empty_view filename =
-  Merlint.File_view.v ~filename ~typedtree:(fun () -> Ok None) ()
+  Merlint.File_view.v ~filename
+    ~content:(lazy "")
+    ~typedtree:(fun () -> Ok None)
+    ()
 
 let test_empty_build () =
   let calls = ref 0 in

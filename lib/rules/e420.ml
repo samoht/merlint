@@ -324,7 +324,6 @@ let rec check_items index scope items =
      the engine reports it as not fully examined. *)
 let check (ctx : Context.file) =
   if not (File_kind.is_mli (Context.filename ctx)) then []
-  else if not (File_view.docs_recorded (Context.view ctx)) then []
   else
     let items = File_view.items (Context.view ctx) in
     check_items (index items) root_scope items

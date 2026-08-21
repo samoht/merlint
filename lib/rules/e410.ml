@@ -45,7 +45,6 @@ let check_doc item =
      the engine reports it as not fully examined. *)
 let check (ctx : Context.file) =
   if not (File_kind.is_mli (Context.filename ctx)) then []
-  else if not (File_view.docs_recorded (Context.view ctx)) then []
   else Context.view ctx |> File_view.value_items |> List.filter_map check_doc
 
 let pp ppf { value_name; location = _; issue } =

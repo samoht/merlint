@@ -61,6 +61,7 @@ let test_cache_canonicalizes_keys () =
     incr created;
     Merlint.File_view.v
       ~filename:(Merlint.Context.string_of_path filename)
+      ~content:(lazy "")
       ~typedtree:(fun () -> Ok None)
       ()
   in

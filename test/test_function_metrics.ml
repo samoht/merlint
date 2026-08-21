@@ -13,6 +13,7 @@ let test_empty_structure_no_values () =
 let test_empty_view_exposes_metrics () =
   let view =
     Merlint.File_view.v ~filename:"empty.ml"
+      ~content:(lazy "")
       ~typedtree:(fun () ->
         Ok (Some (`Implementation empty_structure, Merlin.Recorded)))
       ()

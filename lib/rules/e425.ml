@@ -68,7 +68,6 @@ let is_type item =
      the engine reports it as not fully examined. *)
 let check (ctx : Context.file) =
   if not (File_kind.is_mli (Context.filename ctx)) then []
-  else if not (File_view.docs_recorded (Context.view ctx)) then []
   else
     Context.view ctx |> File_view.all_items |> List.filter is_type
     |> List.concat_map check_type

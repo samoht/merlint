@@ -1,5 +1,8 @@
 let unresolved_view ?(filename = "test_suite.mli") () =
-  Merlint.File_view.v ~filename ~typedtree:(fun () -> Ok None) ()
+  Merlint.File_view.v ~filename
+    ~content:(lazy "")
+    ~typedtree:(fun () -> Ok None)
+    ()
 
 let with_eio f = Eio_main.run @@ fun _env -> f ()
 
@@ -8,6 +11,7 @@ let test_unknown_type_lazy () =
   let forced = ref false in
   let view =
     Merlint.File_view.v ~filename:"test_suite.mli"
+      ~content:(lazy "")
       ~typedtree:(fun () ->
         forced := true;
         Ok None)

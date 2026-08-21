@@ -16,7 +16,9 @@ let empty_interface =
       sig_final_env = Ocaml_typing.Env.empty;
     }
 
-let view filename typedtree = Merlint.File_view.v ~filename ~typedtree ()
+let view filename typedtree =
+  Merlint.File_view.v ~filename ~content:(lazy "") ~typedtree ()
+
 let with_eio f = Eio_main.run @@ fun _env -> f ()
 
 let test_lazy_without_access () =
