@@ -207,15 +207,7 @@ let arg_label = function
   | Nolabel -> None
 
 let arg_labels item =
-  match File_view.Item.type_sig item with
-  | None -> []
-  | Some typ ->
-      let rec labels acc typ =
-        match File_view.Type_view.arrow typ with
-        | Some (label, _arg, rest) -> labels (arg_label label :: acc) rest
-        | None -> acc
-      in
-      labels [] typ |> List.filter_map Fun.id
+  File_view.Item.arg_labels item |> List.filter_map arg_label
 
 let documented_args item doc =
   let self = File_view.Item.name item in
@@ -318,10 +310,6 @@ let rec check_items index scope items =
       here
       @ check_items index (enter scope component) (File_view.Item.children item))
 
-(* Doc comments live in the artefact the compiler wrote; a typedtree
-     typechecked from source carries none, so every declaration would look
-     undocumented. Skip the file rather than report an absence nobody can see;
-     the engine reports it as not fully examined. *)
 let check (ctx : Context.file) =
   if not (File_kind.is_mli (Context.filename ctx)) then []
   else

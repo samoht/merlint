@@ -2,25 +2,21 @@
 
 type payload = { value_name : string; location : Location.t; issue : string }
 
-let doc_signature typ =
-  let rec labels acc typ =
-    match File_view.Type_view.arrow typ with
-    | Some (label, _arg, rest) -> labels (label :: acc) rest
-    | None -> List.rev acc
-  in
+let doc_signature labels =
   let arg = function
     | Ocaml_parsing.Asttypes.Optional _ -> "?arg"
     | Labelled _ | Nolabel -> "arg"
   in
-  labels [] typ |> List.map arg |> fun args ->
-  String.concat " -> " (args @ [ "ret" ])
+  String.concat " -> " (List.map arg labels @ [ "ret" ])
 
+(* A value that takes no argument takes no label either, so an empty list is
+   exactly the value case. *)
 let style_issues item doc =
   let name = File_view.Item.name item in
-  match File_view.Item.type_sig item with
-  | Some typ when File_view.Type_view.is_function typ ->
-      Docs.check_function_doc ~name ~signature:(doc_signature typ) ~doc
-  | _ -> Docs.check_value_doc ~name ~doc
+  match File_view.Item.arg_labels item with
+  | [] -> Docs.check_value_doc ~name ~doc
+  | labels ->
+      Docs.check_function_doc ~name ~signature:(doc_signature labels) ~doc
 
 let doc_style_issue item doc =
   match style_issues item (File_view.Doc.text doc) with
@@ -39,10 +35,6 @@ let check_doc item =
   | Some doc -> doc_style_issue item doc
   | None -> None
 
-(* Doc comments live in the artefact the compiler wrote; a typedtree
-     typechecked from source carries none, so every declaration would look
-     undocumented. Skip the file rather than report an absence nobody can see;
-     the engine reports it as not fully examined. *)
 let check (ctx : Context.file) =
   if not (File_kind.is_mli (Context.filename ctx)) then []
   else Context.view ctx |> File_view.value_items |> List.filter_map check_doc
