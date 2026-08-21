@@ -1,18 +1,28 @@
 (** Shell out to [dune build] for the artefacts typedtree-backed rules need.
 
-    One operation: a whole-project warm-up before a run, so [@check] has
-    produced the [.cmi] files a file is typed against and the [.cmt] / [.cmti]
-    that answer for it directly. An artefact left describing source that has
-    since changed needs no attention here -- the source is typechecked in its
-    place. *)
+    One operation: a warm-up before a run, scoped to the directories that run
+    analyses, so [@check] has produced the [.cmi] files a file is typed against
+    and the [.cmt] / [.cmti] that answer for it directly. An artefact left
+    describing source that has since changed needs no attention here -- the
+    source is typechecked in its place. *)
 
 val ensure_project_built :
-  path:string -> _ Eio.Process.mgr -> (unit, string) result
-(** [ensure_project_built ~path mgr] runs [dune build --root <path> @check]. The
-    [@check] alias is what produces [.cmt] artefacts for every module (including
-    wrapped executables and tests where a plain [dune build] only emits native
-    code). Stderr is suppressed unless the [merlint.build] log source is at
-    debug level. Returns [Ok ()] on dune exit 0, [Error msg] otherwise. *)
+  root:Fpath.t ->
+  scopes:Fpath.t list ->
+  _ Eio.Process.mgr ->
+  (unit, string) result
+(** [ensure_project_built ~root ~scopes mgr] runs a single
+    [dune build --root <root>] over the [check] alias of every directory in
+    [scopes]: [@<dir>/check] for a directory below [root], and the bare [@check]
+    for [root] itself or for empty [scopes]. Dune resolves a scoped alias
+    against the whole workspace, so cross-package dependencies still build and
+    only the targets narrow. The [check] alias is what produces [.cmt] artefacts
+    for every module (including wrapped executables and tests where a plain
+    [dune build] only emits native code). Stderr is suppressed unless the
+    [merlint.build] log source is at debug level. Returns [Ok ()] on dune exit
+    0, and [Error msg] on a scope [root] does not contain -- which has no alias
+    under it, and which the whole-tree alias would build past without saying so
+    -- or on any other dune exit. *)
 
 val cmt_artefact : root:string -> Fpath.t -> (string * bool) option
 (** [cmt_artefact ~root file] is the [.cmt] / [.cmti] path for [file] under

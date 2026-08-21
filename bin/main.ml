@@ -552,8 +552,8 @@ let run_analysis ?domain_mgr ~load_file ~json_output project_root analyze_set
 
   print_fix_hints ~unchecked:(List.length unchecked_files) all_issues
 
-let ensure_project_built ~path mgr =
-  match Merlint.Build.ensure_project_built ~path mgr with
+let ensure_project_built ~root ~scopes mgr =
+  match Merlint.Build.ensure_project_built ~root ~scopes mgr with
   | Ok () -> ()
   | Error msg ->
       Fmt.epr "Warning: %s@." msg;
@@ -607,6 +607,20 @@ let analyze_roots_of_files files =
   | [] -> None
   | roots -> Some roots
 
+(* The directories whose [check] alias the [--build] warm-up must build. A
+   directory argument is its own scope; a file argument is scoped by the
+   directory holding it, which is the directory whose alias compiles it. With
+   nothing to scope to the run analyses the whole project, and the warm-up
+   builds the whole project. *)
+let build_scopes_of_files files =
+  List.filter_map
+    (fun p ->
+      match classify_path p with
+      | `Dir -> Some (resolve_cli_path p)
+      | `File -> Some (Fpath.parent (resolve_cli_path p))
+      | `Other | `Missing -> None)
+    files
+
 let load_file_via_eio fs filename = Eio.Path.load Eio.Path.(fs / filename)
 
 let project_root_of_files = function
@@ -652,7 +666,8 @@ let redirect_analysis files =
       in
       Some (files, Fpath.to_string workspace)
 
-let maybe_build_project mgr ~project_root ~analyze_roots ~index ~build =
+let maybe_build_project mgr ~project_root ~analyze_roots ~build_scopes ~index
+    ~build =
   if build then (
     Log.info (fun m -> m "Building project...");
     (* Freeze the analysis set before starting Dune. A source added while the
@@ -665,7 +680,7 @@ let maybe_build_project mgr ~project_root ~analyze_roots ~index ~build =
     ignore
       (Project_index.source_files ?roots:analyze_roots frozen_index
         : Fpath.t list);
-    ensure_project_built ~path:project_root mgr;
+    ensure_project_built ~root:(Fpath.v project_root) ~scopes:build_scopes mgr;
     Log.info (fun m -> m "Build done."))
 
 let monorepo_for_index project_root =
@@ -716,6 +731,7 @@ let analyze_files mgr fs domain_mgr ?(exclude_patterns = []) ?rule_filter
   Log.info (fun m -> m "Scanning project structure...");
   let analyze_set = analyze_set_of_files files in
   let analyze_roots = analyze_roots_of_files files in
+  let build_scopes = build_scopes_of_files files in
   let monorepo = monorepo_for_index project_root in
   let index_roots = index_roots_of_files files in
   let installed = installed_index_mode rule_filter in
@@ -723,7 +739,8 @@ let analyze_files mgr fs domain_mgr ?(exclude_patterns = []) ?rule_filter
     build_project_index ~fs ~monorepo ?roots:index_roots ~installed ?pool ()
   in
   let lazy_index = lazy (build_index ()) in
-  maybe_build_project mgr ~project_root ~analyze_roots ~index:lazy_index ~build;
+  maybe_build_project mgr ~project_root ~analyze_roots ~build_scopes
+    ~index:lazy_index ~build;
   let analysis_index ?pool () =
     if build then Lazy.force lazy_index else build_index ?pool ()
   in
