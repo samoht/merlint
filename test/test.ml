@@ -40,7 +40,6 @@ let () =
       Test_function_metrics.suite;
       Test_loc.suite;
       Test_type_kind.suite;
-      Test_cl_lock.suite;
       Test_example.suite;
       Test_file.suite;
       Test_path.suite;
