@@ -65,7 +65,7 @@ different facts and both belong in the output:
 
   $ merlint -r E705 unbuilt/
   Dune root: $TESTCASE_ROOT/unbuilt/
-  ! 1 typedtree-backed query found a missing or stale .cmt/.cmti file; the affected rule runs were skipped for those files. Run [dune build @check] (or pass [--build]) before merlint so the build artefacts are present and up to date.
+  ! 1 file has no typedtree: no build artefact describes it and the build system names no stanza that compiles it, so nothing says what to type it against and the rules that read a typedtree were skipped. Run [dune build @check] (or pass [--build]) before merlint.
   ! $TESTCASE_ROOT/unbuilt/fuzz/fuzz_parser.mli
   Running merlint analysis...
   
@@ -81,7 +81,7 @@ different facts and both belong in the output:
   ✓ Code Generation (0 total issues)
   
   Summary: ✗ 0 total issues (applied 1 rule, 1 file unchecked)
-  ✗ No issues found, but 1 file could not be checked: the .cmt/.cmti was missing or out of date, so the rules that read a typedtree did not run on it. Re-run with -v to name it.
+  ✗ No issues found, but 1 file could not be fully checked, so some of the rules that read a typedtree did not run on it. Re-run with -v to name it and say why.
   [1]
 
 An interface that exports more than the suite is still reported, so the skip

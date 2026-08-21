@@ -24,7 +24,7 @@ let test_lazy_without_access () =
   let _ =
     view "lazy.ml" (fun () ->
         incr typedtree_calls;
-        Ok (Some empty_implementation))
+        Ok (Some (empty_implementation, Merlin.Recorded)))
   in
   Alcotest.(check int) "typedtree not loaded" 0 !typedtree_calls
 
@@ -34,7 +34,7 @@ let test_typedtree_loaded_once () =
   let v =
     view "once.ml" (fun () ->
         incr typedtree_calls;
-        Ok (Some empty_implementation))
+        Ok (Some (empty_implementation, Merlin.Recorded)))
   in
   Alcotest.(check bool) "resolved" true (Merlint.File_view.is_resolved v);
   Alcotest.(check bool)
@@ -56,14 +56,18 @@ let test_missing_typedtree_is_empty () =
 
 let test_interface_has_no_values () =
   with_eio @@ fun () ->
-  let v = view "iface.mli" (fun () -> Ok (Some empty_interface)) in
+  let v =
+    view "iface.mli" (fun () -> Ok (Some (empty_interface, Merlin.Recorded)))
+  in
   Alcotest.(check int)
     "no implementation values" 0
     (List.length (Merlint.File_view.values v))
 
 let test_application_cache_without_implementation () =
   with_eio @@ fun () ->
-  let v = view "iface.mli" (fun () -> Ok (Some empty_interface)) in
+  let v =
+    view "iface.mli" (fun () -> Ok (Some (empty_interface, Merlin.Recorded)))
+  in
   let calls = ref 0 in
   Merlint.File_view.iter_applications v (fun _ -> incr calls);
   Alcotest.(check int) "no calls" 0 !calls
@@ -75,7 +79,7 @@ let test_typedtree_loaded_across_domains () =
     view "parallel.ml" (fun () ->
         ignore (Atomic.fetch_and_add typedtree_calls 1);
         Unix.sleepf 0.05;
-        Ok (Some empty_implementation))
+        Ok (Some (empty_implementation, Merlin.Recorded)))
   in
   let dm = Eio.Stdenv.domain_mgr env in
   let results =
@@ -85,6 +89,30 @@ let test_typedtree_loaded_across_domains () =
   in
   Alcotest.(check (list bool)) "all resolved" [ true; true; true; true ] results;
   Alcotest.(check int) "typedtree loaded once" 1 (Atomic.get typedtree_calls)
+
+(* A tree typechecked from source carries no doc comments, and a view over one
+   must say so: a rule that reads doc comments would otherwise read the absence
+   of every one of them as a source with no documentation and report on all of
+   it. An absent tree has none to speak of either. *)
+let test_docs_recorded_follows_the_tree () =
+  with_eio @@ fun () ->
+  let recorded =
+    view "recorded.mli" (fun () -> Ok (Some (empty_interface, Merlin.Recorded)))
+  in
+  Alcotest.(check bool)
+    "artefact tree records docs" true
+    (Merlint.File_view.docs_recorded recorded);
+  let typechecked =
+    view "typechecked.mli" (fun () ->
+        Ok (Some (empty_interface, Merlin.Unavailable)))
+  in
+  Alcotest.(check bool)
+    "typechecked tree does not" false
+    (Merlint.File_view.docs_recorded typechecked);
+  let absent = view "absent.mli" (fun () -> Ok None) in
+  Alcotest.(check bool)
+    "absent tree does not" false
+    (Merlint.File_view.docs_recorded absent)
 
 let tests =
   [
@@ -98,6 +126,9 @@ let tests =
     ( "typedtree_loaded_once_across_domains",
       `Quick,
       test_typedtree_loaded_across_domains );
+    ( "docs_recorded_follows_the_tree",
+      `Quick,
+      test_docs_recorded_follows_the_tree );
   ]
 
 let suite = ("file_view", tests)

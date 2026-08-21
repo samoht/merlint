@@ -13,7 +13,7 @@ The exit status reports the incomplete run rather than a clean one.
   $ mv merlint.toml declared.toml
   $ merlint --build . 2>/dev/null | tail -2
   Summary: ✗ 0 total issues (applied 119 rules, 2 files unchecked)
-  ✗ No issues found, but 2 files could not be checked: the .cmt/.cmti was missing or out of date, so the rules that read a typedtree did not run on them. Re-run with -v to name them.
+  ✗ No issues found, but 2 files could not be fully checked, so some of the rules that read a typedtree did not run on them. Re-run with -v to name them and say why.
   $ merlint . > /dev/null 2>&1
   [1]
 
@@ -66,4 +66,4 @@ declaration at all.
   [1]
   $ merlint . 2>/dev/null | tail -2
   Summary: ✗ 0 total issues (applied 119 rules, 2 files unchecked)
-  ✗ No issues found, but 2 files could not be checked: the .cmt/.cmti was missing or out of date, so the rules that read a typedtree did not run on them. Re-run with -v to name them.
+  ✗ No issues found, but 2 files could not be fully checked, so some of the rules that read a typedtree did not run on them. Re-run with -v to name them and say why.

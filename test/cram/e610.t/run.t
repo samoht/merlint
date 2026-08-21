@@ -180,16 +180,16 @@ Build stale fixture project:
   Summary: ✓ 0 total issues (applied 1 rule)
   ✓ All checks passed!
 
-Edit the library source and its .cmt no longer describes it. The reference
-scan cannot read the unit, so the rule must not report control.ml as absent:
+Edit the library source and its .cmt no longer describes it. The artefact is
+refused, the source is typechecked in its place, and the reference to
+Mylib.Gadget.Control is read off that tree instead -- so the rule has evidence
+the module exists and stays silent, with nothing to hedge about:
 
   $ chmod +w stale/lib/gadget.ml
   $ printf '\n(* A comment the .cmt predates. *)\n' >> stale/lib/gadget.ml
 
   $ merlint -r E610 stale/
   Dune root: $TESTCASE_ROOT/stale/
-  ! 1 typedtree-backed query found a missing or stale .cmt/.cmti file; the affected rule runs were skipped for those files. Run [dune build @check] (or pass [--build]) before merlint so the build artefacts are present and up to date.
-  ! $TESTCASE_ROOT/stale/lib/gadget.ml
   Running merlint analysis...
   
   Analyzing 2 files
@@ -199,26 +199,12 @@ scan cannot read the unit, so the rule must not report control.ml as absent:
   ✓ Naming Conventions (0 total issues)
   ✓ Documentation (0 total issues)
   ✓ Project Structure (0 total issues)
-  ✗ Test Quality (1 total issues)
-    [E610] Test Without Library (1 issue)
-    Every test module should have a corresponding library module. This ensures
-    that tests are testing actual library functionality rather than testing code
-    that doesn't exist in the library.
-    - stale/test/test_control.ml:1:0: Missing or stale .cmt/.cmti for lib/gadget.ml, so library module 'control.ml' is either present and unread or genuinely absent. Run [dune build @check] before merlint so the build artefacts are present and up to date.
+  ✓ Test Quality (0 total issues)
   ✓ Interop Testing (0 total issues)
   ✓ Code Generation (0 total issues)
   
-  ╭──────────────┬────────────────────────────╮
-  │ Category     │ Issues                     │
-  ├──────────────┼────────────────────────────┤
-  │ Test Quality │ 1 (1 test without library) │
-  ╰──────────────┴────────────────────────────╯
-  
-  
-  Summary: ✗ 1 total issue (applied 1 rule, 1 file unchecked)
-  ✗ Some checks failed. See details above.
-    Run `merlint help E610` for the rule's description, hint, and good/bad examples.
-  [1]
+  Summary: ✓ 0 total issues (applied 1 rule)
+  ✓ All checks passed!
 
 A successful Dune process is not evidence that a proven-stale generated file
 changed: the shared cache can restore the same CMT. This adapter models that

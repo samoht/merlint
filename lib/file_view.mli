@@ -18,7 +18,7 @@ val pp : t Fmt.t
 
 val v :
   filename:string ->
-  typedtree:(unit -> (Merlin.typedtree option, string) result) ->
+  typedtree:(unit -> ((Merlin.typedtree * Merlin.docs) option, string) result) ->
   unit ->
   t
 (** [v ~filename ~typedtree ()] builds a fresh view over [filename]. The
@@ -26,6 +26,13 @@ val v :
 
 val filename : t -> string
 (** [filename t] is the source file this view describes. *)
+
+val docs_recorded : t -> bool
+(** [docs_recorded t] is [true] iff the typedtree carries the source's doc
+    comments. It does not when the tree was typechecked from source rather than
+    read from an artefact: merlin's lexer does not emit doc comments, so every
+    declaration looks undocumented. A rule that reads a doc comment must skip
+    the file when this is [false] rather than report on what it cannot see. *)
 
 val is_resolved : t -> bool
 (** [is_resolved t] is [true] iff a fresh typedtree was loaded from [.cmt] or

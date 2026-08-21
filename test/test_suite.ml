@@ -26,7 +26,7 @@ let an_empty_runner_misses_everything () =
   with_eio @@ fun () ->
   let view =
     Merlint.File_view.v ~filename:"test.ml"
-      ~typedtree:(fun () -> Ok (Some empty_implementation))
+      ~typedtree:(fun () -> Ok (Some (empty_implementation, Merlin.Recorded)))
       ()
   in
   Alcotest.(check (list string))

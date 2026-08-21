@@ -490,6 +490,11 @@ type t = {
   filename : string;
   lock : Eio.Mutex.t;
   typedtree : Merlin.typedtree option Lazy.t;
+  docs : Merlin.docs Lazy.t;
+      (** Whether the typedtree carries the source's doc comments. A tree
+          typechecked from source carries none, and reading their absence as an
+          undocumented source is worse than not looking, so the rules that read
+          a doc comment consult this first. *)
   values : Function_metrics.value list Lazy.t;
   reference_outline : collected_refs Lazy.t;
   items : file_item list Lazy.t;
@@ -511,10 +516,10 @@ let force t lazy_value =
     ~finally:(fun () -> Eio.Mutex.unlock t.lock)
     (fun () -> Lazy.force lazy_value)
 
-let lazy_typedtree ~filename typedtree =
+let lazy_loaded ~filename typedtree =
   lazy
     (match typedtree () with
-    | Ok (Some _ as tree) -> tree
+    | Ok (Some _ as loaded) -> loaded
     | Ok None -> None
     | Error msg ->
         Log.warn (fun m ->
@@ -524,6 +529,16 @@ let lazy_typedtree ~filename typedtree =
                the .cmt/.cmti artefact exists and is up to date."
               filename msg);
         fail "%s" msg)
+
+let lazy_typedtree loaded = lazy (Option.map fst (Lazy.force loaded))
+
+(* An absent tree has no doc comments to speak of either; saying [Unavailable]
+   keeps a doc rule from reporting on a file nothing was read for. *)
+let lazy_docs loaded =
+  lazy
+    (match Lazy.force loaded with
+    | Some (_, docs) -> docs
+    | None -> Merlin.Unavailable)
 
 let lazy_walk ~filename ~typedtree =
   lazy
@@ -922,7 +937,9 @@ let lazy_module_names reference_outline =
      List.sort_uniq String.compare names)
 
 let v ~filename ~typedtree () =
-  let typedtree = lazy_typedtree ~filename typedtree in
+  let loaded = lazy_loaded ~filename typedtree in
+  let docs = lazy_docs loaded in
+  let typedtree = lazy_typedtree loaded in
   let values = lazy_values typedtree in
   let walk = lazy_walk ~filename ~typedtree in
   let reference_outline = lazy_reference_outline walk in
@@ -936,6 +953,7 @@ let v ~filename ~typedtree () =
     filename;
     lock = Eio.Mutex.create ();
     typedtree;
+    docs;
     values;
     reference_outline;
     items;
@@ -951,6 +969,7 @@ let pp ppf t = Fmt.string ppf t.filename
 let typedtree t = force t t.typedtree
 let values t = force t t.values
 let is_resolved t = Option.is_some (force t t.typedtree)
+let docs_recorded t = force t t.docs = Merlin.Recorded
 
 (* {2 Name} *)
 

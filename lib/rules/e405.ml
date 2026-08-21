@@ -7,8 +7,13 @@ let missing_doc item =
   let module Item = File_view.Item in
   Item.kind item = Item.Value && Option.is_none (Item.doc item)
 
+(* Doc comments live in the artefact the compiler wrote; a typedtree
+     typechecked from source carries none, so every declaration would look
+     undocumented. Skip the file rather than report an absence nobody can see;
+     the engine reports it as not fully examined. *)
 let check (ctx : Context.file) =
   if not (File_kind.is_mli (Context.filename ctx)) then []
+  else if not (File_view.docs_recorded (Context.view ctx)) then []
   else if
     match ctx.project_index with
     | Some idx ->

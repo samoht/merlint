@@ -39,8 +39,13 @@ let check_doc item =
   | Some doc -> doc_style_issue item doc
   | None -> None
 
+(* Doc comments live in the artefact the compiler wrote; a typedtree
+     typechecked from source carries none, so every declaration would look
+     undocumented. Skip the file rather than report an absence nobody can see;
+     the engine reports it as not fully examined. *)
 let check (ctx : Context.file) =
   if not (File_kind.is_mli (Context.filename ctx)) then []
+  else if not (File_view.docs_recorded (Context.view ctx)) then []
   else Context.view ctx |> File_view.value_items |> List.filter_map check_doc
 
 let pp ppf { value_name; location = _; issue } =

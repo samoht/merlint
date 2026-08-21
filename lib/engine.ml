@@ -59,13 +59,13 @@ let warn_unresolved ~index stats =
      let n = List.length missing in
      Log.warn (fun m ->
          m
-           "@[<v>%d file%s has no typedtree: no build artefact describes %s \
-            and the build system names no stanza that compiles %s, so nothing \
-            says what to type %s against and the rules that read a typedtree \
-            were skipped. Run [dune build @check] (or pass [--build]) before \
+           "@[<v>%d file%s no typedtree: no build artefact describes %s and \
+            the build system names no stanza that compiles %s, so nothing says \
+            what to type %s against and the rules that read a typedtree were \
+            skipped. Run [dune build @check] (or pass [--build]) before \
             merlint.%a@]"
            n
-           (if n = 1 then "" else "s")
+           (if n = 1 then " has" else "s have")
            (if n = 1 then "it" else "them")
            (if n = 1 then "it" else "them")
            (if n = 1 then "it" else "them")
