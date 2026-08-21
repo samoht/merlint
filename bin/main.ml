@@ -137,6 +137,7 @@ module Json_report = struct
     files_analyzed : int;
     rules_applied : int;
     total_issues : int;
+    unchecked : int;
     passed : bool;
     issues : issue list;
     excluded : exclusion list;
@@ -150,13 +151,14 @@ module Json_report = struct
 
   let exclusion rule file = ({ rule; file } : exclusion)
 
-  let v project_root files_analyzed rules_applied total_issues passed issues
-      excluded =
+  let v project_root files_analyzed rules_applied total_issues unchecked passed
+      issues excluded =
     {
       project_root;
       files_analyzed;
       rules_applied;
       total_issues;
+      unchecked;
       passed;
       issues;
       excluded;
@@ -201,6 +203,7 @@ module Json_report = struct
     |> C.Object.member "rules_applied" C.int ~enc:(fun (t : t) ->
         t.rules_applied)
     |> C.Object.member "total_issues" C.int ~enc:(fun (t : t) -> t.total_issues)
+    |> C.Object.member "unchecked" C.int ~enc:(fun (t : t) -> t.unchecked)
     |> C.Object.member "passed" C.bool ~enc:(fun (t : t) -> t.passed)
     |> C.Object.member "issues" (C.list issue_json) ~enc:(fun (t : t) ->
         t.issues)
@@ -230,22 +233,28 @@ module Json_report = struct
   let exclusion_of_engine (e : Merlint.Engine.exclusion_stats) =
     exclusion e.rule e.file
 
-  let v ~project_root ~files_analyzed ~enabled_rule_count ~excluded issues =
+  (* A run that could not read an artefact for every file it was given examined
+     less than it was asked to, and the process exits 1 for it. The document
+     carries that count and reports the same verdict, so a caller reading the
+     JSON and a caller reading the exit status never disagree. *)
+  let v ~project_root ~files_analyzed ~enabled_rule_count ~unchecked ~excluded
+      issues =
     let issues =
       issues |> List.sort Merlint.Rule.Run.compare |> List.map issue_of_run
     in
     let total_issues = List.length issues in
-    v project_root files_analyzed enabled_rule_count total_issues
-      (total_issues = 0) issues
+    v project_root files_analyzed enabled_rule_count total_issues unchecked
+      (total_issues = 0 && unchecked = 0)
+      issues
       (List.map exclusion_of_engine excluded)
 
   let print t = Fmt.pr "%s@." (Json.to_string json t)
 end
 
 let print_json_report ~project_root ~files_analyzed ~enabled_rule_count
-    ~excluded issues =
-  Json_report.v ~project_root ~files_analyzed ~enabled_rule_count ~excluded
-    issues
+    ~unchecked ~excluded issues =
+  Json_report.v ~project_root ~files_analyzed ~enabled_rule_count ~unchecked
+    ~excluded issues
   |> Json_report.print
 
 (* Group issues by category for visual reporting *)
@@ -508,6 +517,7 @@ let run_analysis ?domain_mgr ~load_file ~json_output project_root analyze_set
   let enabled_rule_count = List.length enabled_rules in
   if json_output then
     print_json_report ~project_root ~files_analyzed ~enabled_rule_count
+      ~unchecked:(List.length unchecked_files)
       ~excluded:all_excluded all_issues
   else (
     (match files_analyzed with
@@ -830,13 +840,16 @@ let main exclude_patterns rules_spec ~show_profile ~show_config ~build ~bail
   if show_config then show_configuration files
   else
     let rule_filter = parse_rule_filter rules_spec in
+    let json_output = Observe.json_enabled () in
+    (* The display owns whichever stream it is given, and log events are routed
+       into it, so under --json stdout has to belong to the document alone. *)
+    let ppf = if json_output then Fmt.stderr else Fmt.stdout in
     Eio_main.run @@ fun env ->
     let clock = Eio.Stdenv.clock env in
-    Console_eio.run ~clock @@ fun _display ->
+    Console_eio.run ~clock ~ppf @@ fun _display ->
     let mgr = Eio.Stdenv.process_mgr env in
     let fs = Eio.Stdenv.fs env in
     let domain_mgr = Eio.Stdenv.domain_mgr env in
-    let json_output = Observe.json_enabled () in
     analyze_files mgr fs domain_mgr ~exclude_patterns ?rule_filter ~show_profile
       ~build ~bail ~include_vendored ~json_output files
 

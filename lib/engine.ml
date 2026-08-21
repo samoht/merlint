@@ -31,16 +31,15 @@ let warn_missing_cmts ~index stats =
     fun f -> Hashtbl.mem tbl (norm f)
   in
   (* A gated stanza (platform- or config-conditional) is one the host may not
-     build, so its [.cmt] is legitimately absent or stale here -- nothing the
-     user can do about it. Such files are dropped from both buckets and left
-     silent. A non-gated absent/stale artefact is actionable: the user forgot to
-     [dune build]. *)
-  let _unavailable_miss, missing =
+     build, so an artefact it never produced is legitimately absent here --
+     nothing the user can do about it, and dropped from the Missing bucket. An
+     artefact that exists with the wrong digest is the opposite evidence: only a
+     compilation on this host writes one, so the stanza does build here and the
+     staleness is the user's to fix. Outdated is therefore never gated. *)
+  let _unavailable, missing =
     List.partition is_gated stats.Merlin.cmt_miss_files
   in
-  let _unavailable_stale, outdated =
-    List.partition is_gated stats.cmt_stale_files
-  in
+  let outdated = stats.Merlin.cmt_stale_files in
   let pp_sample ppf files =
     let sample = List.filteri (fun i _ -> i < 10) files in
     List.iter (fun file -> Fmt.pf ppf "@,%s" file) sample;

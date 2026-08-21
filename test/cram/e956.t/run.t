@@ -12,7 +12,7 @@ Build bad fixture project:
   $ (cd bad && dune build @check)
 
   $ merlint --build --json -r E956 bad/
-  {"project_root":"$TESTCASE_ROOT/bad/","files_analyzed":4,"rules_applied":1,"total_issues":1,"passed":false,"issues":[{"code":"E956","title":"Dead library dependency","category":"Project Structure","message":"spy is linked by stanza consumer but never imported: no compilation unit of spy appears in the stanza's .cmt imports. Remove it from (libraries ...).","location":{"file":"bad/consumer/dune","start":{"line":1,"column":0},"end":{"line":1,"column":0}}}],"excluded":[]}
+  {"project_root":"$TESTCASE_ROOT/bad/","files_analyzed":4,"rules_applied":1,"total_issues":1,"unchecked":0,"passed":false,"issues":[{"code":"E956","title":"Dead library dependency","category":"Project Structure","message":"spy is linked by stanza consumer but never imported: no compilation unit of spy appears in the stanza's .cmt imports. Remove it from (libraries ...).","location":{"file":"bad/consumer/dune","start":{"line":1,"column":0},"end":{"line":1,"column":0}}}],"excluded":[]}
   [1]
 
 Test good example - both libraries are imported by the consumer, and the
