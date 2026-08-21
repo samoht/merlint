@@ -4,7 +4,23 @@ type payload = { function_name : string; expected : string }
 
 (** A type-variable [Ptyp_var "a"] means merlin couldn't resolve the type; skip
     the rule rather than guess. *)
-let issue_for_return_shape ~loc ~name ~is_option ~is_collection =
+
+(** A [('a option, 'e) result] answers absence as plainly as a bare option does:
+    the [Ok] payload IS the option, and the [Error] arm is the other axis --
+    whether the lookup could be made at all, not whether it found something. A
+    [find_] over that shape promises exactly what it delivers, so it joins the
+    collection return as a shape that legitimises the name rather than
+    contradicting it. Only that arm consults this: whether the option or the
+    failure is the salient half of such an answer is a judgement about a
+    [get_]'s intent, which this rule cannot make from a type. *)
+let answers_absence ret =
+  File_view.Type_view.is_constr ret ~path:[ "Stdlib"; "result" ]
+  &&
+  match File_view.Type_view.constr ret with
+  | Some (_, [ ok; _ ]) -> File_view.Type_view.returns_option ok
+  | _ -> false
+
+let issue_for_return_shape ~loc ~name ~is_option ~is_collection ~is_absence =
   if (String.starts_with ~prefix:"get_" name || name = "get") && is_option then
     Some
       (Issue.v ~loc
@@ -18,7 +34,7 @@ let issue_for_return_shape ~loc ~name ~is_option ~is_collection =
          })
   else if
     (String.starts_with ~prefix:"find_" name || name = "find")
-    && (not is_option) && not is_collection
+    && (not is_option) && (not is_collection) && not is_absence
   then
     Some
       (Issue.v ~loc
@@ -45,7 +61,8 @@ let check_single_function item loc =
           issue_for_return_shape ~loc ~name:n
             ~is_option:(File_view.Type_view.returns_option typ)
             ~is_collection:
-              (File_view.Type_view.is_list ret ~elem:(Fun.const true)))
+              (File_view.Type_view.is_list ret ~elem:(Fun.const true))
+            ~is_absence:(answers_absence ret))
   | _ -> None
 
 let check (ctx : Context.file) =

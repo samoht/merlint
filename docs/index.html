@@ -1110,6 +1110,8 @@ and replace each call site with [err_x &quot;...&quot; args] / [fail_x &quot;...
   <pre><code><span class="kw">let</span> find_user () = <span class="cn">None</span>  <span class="cm">(* returns option, correctly named *)</span>
 <span class="kw">let</span> find_users_by_email () = []  <span class="cm">(* collection searches may return many *)</span>
 <span class="kw">let</span> get_name () = &quot;<span class="cn">John</span>&quot;  <span class="cm">(* returns string, correctly named *)</span>
+<span class="kw">let</span> find_config () : (string option, string) result = <span class="cn">Ok</span> <span class="cn">None</span>
+<span class="cm">(* the Ok payload is the option, correctly named *)</span>
 </code></pre>
 </div>
 </div></div>
