@@ -398,16 +398,18 @@ let unchecked_remedy ~project_root =
           Fpath.pp main Fpath.pp root
     | Some _ | None -> None
 
-(* A run that could not read an artefact for every file it was given examined
-   less than it was asked to, so it reports what it could not reach and, when
-   the tree says why, what to do about it. *)
+(* A run that examined less than it was asked to reports what it could not
+   reach and, when the tree says why, what to do about it. A file gets here two
+   ways: nothing said what to type it against, or its interface was typechecked
+   rather than read from an artefact and so carried no doc comments. A build
+   answers both. *)
 let print_incomplete ?remedy unchecked =
   let plural = if unchecked = 1 then "" else "s" in
   let it = if unchecked = 1 then "it" else "them" in
   Fmt.pr
-    "%s No issues found, but %d file%s could not be checked: the .cmt/.cmti \
-     was missing or out of date, so the rules that read a typedtree did not \
-     run on %s. Re-run with -v to name %s.@."
+    "%s No issues found, but %d file%s could not be fully checked, so some of \
+     the rules that read a typedtree did not run on %s. Re-run with -v to name \
+     %s and say why.@."
     (Merlint.Report.print_color false "✗")
     unchecked plural it it;
   match remedy with Some remedy -> Fmt.pr "%s@." remedy | None -> ()

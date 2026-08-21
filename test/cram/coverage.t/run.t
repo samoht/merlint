@@ -1,12 +1,16 @@
-A run whose typedtree-backed rules could not read a .cmt has examined less
-than it was asked to. Reporting that as "0 issues" makes it indistinguishable
-from a complete run that found nothing, so the summary has to say so.
+A typedtree describes source. One read from a .cmt describes the source the
+compiler read, which is the source on disk only until someone edits the file.
+Where no artefact describes the file as it is now, merlint typechecks it instead
+and the rules run on what is there; where nothing says what to typecheck it
+against, the run has examined less than it was asked to and reports that rather
+than passing.
 
-Without building, no .cmt exists and those rules cannot run:
+Nothing is built, so no artefact describes lib.mli and the build system, which
+has never built this project, can name no stanza that compiles it either:
 
   $ merlint -r E425 lib.mli
   Dune root: $TESTCASE_ROOT/
-  ! 1 typedtree-backed query found a missing or stale .cmt/.cmti file; the affected rule runs were skipped for those files. Run [dune build @check] (or pass [--build]) before merlint so the build artefacts are present and up to date.
+  ! 1 file has no typedtree: no build artefact describes it and the build system names no stanza that compiles it, so nothing says what to type it against and the rules that read a typedtree were skipped. Run [dune build @check] (or pass [--build]) before merlint.
   ! $TESTCASE_ROOT/lib.mli
   Running merlint analysis...
   
@@ -22,7 +26,15 @@ Without building, no .cmt exists and those rules cannot run:
   ✓ Code Generation (0 total issues)
   
   Summary: ✗ 0 total issues (applied 1 rule, 1 file unchecked)
-  ✗ No issues found, but 1 file could not be checked: the .cmt/.cmti was missing or out of date, so the rules that read a typedtree did not run on it. Re-run with -v to name it.
+  ✗ No issues found, but 1 file could not be fully checked, so some of the rules that read a typedtree did not run on it. Re-run with -v to name it and say why.
+  [1]
+
+The JSON document reports the verdict the exit status reports, and says how many
+files the run could not reach. Nothing but the document goes to stdout, so the
+output parses:
+
+  $ merlint --json -r E425 lib.mli 2>/dev/null
+  {"project_root":"$TESTCASE_ROOT/","files_analyzed":1,"rules_applied":1,"total_issues":0,"unchecked":1,"passed":false,"issues":[],"excluded":[]}
   [1]
 
 With the artefacts present the run is complete and the verdict is clean:
@@ -47,20 +59,61 @@ With the artefacts present the run is complete and the verdict is clean:
 
 An artefact newer than its source is not therefore an artefact of that source:
 dune restores cached .cmt files by hardlink, so one compiled from different
-content can carry the later timestamp. Reading it would report on source nobody
-has, under a clean summary. Edit the interface and give the stale artefact the
-newer mtime:
+content can carry the later timestamp. Edit the implementation, give the stale
+artefact the newer mtime, and put an issue on the new line:
+
+  $ chmod +w lib.ml
+  $ printf '\nlet parse s = try int_of_string s with _ -> 0\n' >> lib.ml
+  $ touch _build/default/.lib.objs/byte/lib.cmt
+
+The digest the compiler recorded still names the source it read, so the artefact
+is refused -- and the source is typechecked in its place. The rule runs on what
+is on disk and points at the line that is there now, which no artefact
+describes:
+
+  $ merlint -r E105 lib.ml
+  Dune root: $TESTCASE_ROOT/
+  Running merlint analysis...
+  
+  Analyzing 1 files
+  
+  ✗ Code Quality (1 total issues)
+    [E105] Catch-all Exception Handler (1 issue)
+    Catch-all exception handlers (with _ ->) can hide unexpected errors and make
+    debugging difficult. Always handle specific exceptions explicitly. If you must
+    catch all exceptions, log them or re-raise after cleanup.
+    - lib.ml:5:39: Catch-all exception handler found. This can hide unexpected errors.
+  ✓ Code Style (0 total issues)
+  ✓ Naming Conventions (0 total issues)
+  ✓ Documentation (0 total issues)
+  ✓ Project Structure (0 total issues)
+  ✓ Test Quality (0 total issues)
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
+  
+  ╭──────────────┬───────────────────────────────────╮
+  │ Category     │ Issues                            │
+  ├──────────────┼───────────────────────────────────┤
+  │ Code Quality │ 1 (1 catch-all exception handler) │
+  ╰──────────────┴───────────────────────────────────╯
+  
+  
+  Summary: ✗ 1 total issue (applied 1 rule)
+  ✗ Some checks failed. See details above.
+    Run `merlint help E105` for the rule's description, hint, and good/bad examples.
+  [1]
+
+An interface is the exception. The compiler records doc comments as attributes
+in the artefact it writes; merlin's lexer does not emit doc comments at all, so
+a typechecked interface carries none and the four rules that read one cannot
+run. The other rules do, and the run says which four did not:
 
   $ chmod +w lib.mli
   $ printf '\n(** A note the .cmti predates. *)\n' >> lib.mli
   $ touch _build/default/.lib.objs/byte/lib.cmti
-
-The digest the compiler recorded still names the source it read, so the run
-knows it examined less than it was asked to:
-
   $ merlint -r E425 lib.mli
   Dune root: $TESTCASE_ROOT/
-  ! 1 typedtree-backed query found a missing or stale .cmt/.cmti file; the affected rule runs were skipped for those files. Run [dune build @check] (or pass [--build]) before merlint so the build artefacts are present and up to date.
+  ! 1 interface was typechecked rather than read from an artefact, which loses the doc comments: E405, E410, E420 and E425 could not run on it. Run [dune build @check] (or pass [--build]) before merlint.
   ! $TESTCASE_ROOT/lib.mli
   Running merlint analysis...
   
@@ -76,19 +129,19 @@ knows it examined less than it was asked to:
   ✓ Code Generation (0 total issues)
   
   Summary: ✗ 0 total issues (applied 1 rule, 1 file unchecked)
-  ✗ No issues found, but 1 file could not be checked: the .cmt/.cmti was missing or out of date, so the rules that read a typedtree did not run on it. Re-run with -v to name it.
+  ✗ No issues found, but 1 file could not be fully checked, so some of the rules that read a typedtree did not run on it. Re-run with -v to name it and say why.
   [1]
 
-A stanza carrying an (enabled_if ...) field is one Dune may not build here, so
-a .cmt it never produced is nothing the user can fix. A .cmt that exists with
-the wrong digest is the opposite: the host did build the stanza, and the
-artefact is merely out of date. The gate belongs to the absent case only.
+A stanza Dune does not build here is one the build system has nothing to say
+about, so a file of it can never be placed and no build the user runs will
+change that. It is gated out of the report; the ungated file at the top of this
+run was not.
 
   $ mkdir -p gated
   $ cat > gated/dune <<'EOF'
   > (library
   >  (name glib)
-  >  (enabled_if (= %{context_name} default)))
+  >  (enabled_if (= %{context_name} never-a-real-context)))
   > EOF
   $ cat > gated/glib.mli <<'EOF'
   > (** A gated module. *)
@@ -116,42 +169,6 @@ artefact is merely out of date. The gate belongs to the absent case only.
   
   Summary: ✓ 0 total issues (applied 1 rule)
   ✓ All checks passed!
-
-That build proves the host builds this stanza. Now give it a stale artefact:
-the digest the compiler recorded no longer names the source on disk, so the
-typedtree-backed rules cannot run and the run examined less than it was asked
-to -- gated stanza or not.
-
-  $ printf '\n(** A note the .cmti predates. *)\n' >> gated/glib.mli
-  $ touch _build/default/gated/.glib.objs/byte/glib.cmti
-  $ merlint -r E425 gated/glib.mli
-  Dune root: $TESTCASE_ROOT/
-  ! 1 typedtree-backed query found a missing or stale .cmt/.cmti file; the affected rule runs were skipped for those files. Run [dune build @check] (or pass [--build]) before merlint so the build artefacts are present and up to date.
-  ! $TESTCASE_ROOT/gated/glib.mli
-  Running merlint analysis...
-  
-  Analyzing 1 files
-  
-  ✓ Code Quality (0 total issues)
-  ✓ Code Style (0 total issues)
-  ✓ Naming Conventions (0 total issues)
-  ✓ Documentation (0 total issues)
-  ✓ Project Structure (0 total issues)
-  ✓ Test Quality (0 total issues)
-  ✓ Interop Testing (0 total issues)
-  ✓ Code Generation (0 total issues)
-  
-  Summary: ✗ 0 total issues (applied 1 rule, 1 file unchecked)
-  ✗ No issues found, but 1 file could not be checked: the .cmt/.cmti was missing or out of date, so the rules that read a typedtree did not run on it. Re-run with -v to name it.
-  [1]
-
-The JSON document reports the verdict the exit status reports. A run that could
-not check every file it was given has not passed, and says how many it could
-not reach. Nothing but the document goes to stdout, so the output parses:
-
-  $ merlint --json -r E425 gated/glib.mli 2>/dev/null
-  {"project_root":"$TESTCASE_ROOT/","files_analyzed":1,"rules_applied":1,"total_issues":0,"unchecked":1,"passed":false,"issues":[],"excluded":[]}
-  [1]
 
 A build and its analysis must use the same source snapshot. This Dune adapter
 lands a new source immediately after the build finishes. The current run must

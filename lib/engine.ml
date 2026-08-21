@@ -15,14 +15,36 @@ type result = {
   unchecked_files : string list;
 }
 
-(* A typedtree query missing its [.cmt] falls into one of three actionable-or-not
-   buckets (a present, fresh [.cmt] is the silent Ok case):
-   - Outdated: the [.cmt] exists but its source digest is stale.
-   - Missing: no [.cmt] at all for a stanza the host does build.
-   - Unavailable: the file belongs to a platform- or config-gated stanza the host
-     does not build, so no [.cmt] is expected -- not the user's to fix.
-   Only Outdated and Missing warrant the "run dune build" warning. *)
-let warn_missing_cmts ~index stats =
+(* The compiler records a source's doc comments as [ocaml.doc] attributes in the
+   artefact it writes; merlin's own lexer does not emit doc comments at all, so
+   a typedtree recovered by typechecking has none of them. Every rule that reads
+   a doc comment (E405, E410, E420, E425) reads it off the typedtree and applies
+   to interfaces, so a recovered interface is examined by every other rule and
+   by none of those -- less than the run was asked for, and it says so rather
+   than letting four rules report a clean absence they cannot see. An
+   implementation has no doc rules and is fully examined. *)
+let partly_examined stats =
+  List.filter File_kind.is_mli stats.Merlin.recovered_files
+
+(* A bounded sample: naming every file of a whole-repo run buries the message
+   the warning is carrying. *)
+let pp_sample ppf files =
+  let sample = List.filteri (fun i _ -> i < 10) files in
+  List.iter (fun file -> Fmt.pf ppf "@,%s" file) sample;
+  let extra = List.length files - List.length sample in
+  if extra > 0 then Fmt.pf ppf "@,... and %d more" extra
+
+(* A file whose artefact no longer describes it is typechecked instead, so the
+   only files a run cannot look at are the ones nothing could say what to type
+   against. Those split two ways:
+   - Missing: the build system knows no stanza that compiles the file, for a
+     stanza the host does build -- it has simply never been built, and one
+     [dune build] fixes it.
+   - Unavailable: the file belongs to a platform- or config-gated stanza the
+     host does not build, so the build system has nothing to say about it and
+     never will here -- not the user's to fix.
+   Only Missing warrants the "run dune build" warning. *)
+let warn_unresolved ~index stats =
   let norm s = Fpath.(v s |> normalize |> to_string) in
   let is_gated =
     let tbl = Hashtbl.create 64 in
@@ -30,35 +52,25 @@ let warn_missing_cmts ~index stats =
     |> List.iter (fun p -> Hashtbl.replace tbl (norm (Fpath.to_string p)) ());
     fun f -> Hashtbl.mem tbl (norm f)
   in
-  (* A gated stanza (platform- or config-conditional) is one the host may not
-     build, so an artefact it never produced is legitimately absent here --
-     nothing the user can do about it, and dropped from the Missing bucket. An
-     artefact that exists with the wrong digest is the opposite evidence: only a
-     compilation on this host writes one, so the stanza does build here and the
-     staleness is the user's to fix. Outdated is therefore never gated. *)
   let _unavailable, missing =
-    List.partition is_gated stats.Merlin.cmt_miss_files
+    List.partition is_gated stats.Merlin.unresolved_files
   in
-  let outdated = stats.Merlin.cmt_stale_files in
-  let pp_sample ppf files =
-    let sample = List.filteri (fun i _ -> i < 10) files in
-    List.iter (fun file -> Fmt.pf ppf "@,%s" file) sample;
-    let extra = List.length files - List.length sample in
-    if extra > 0 then Fmt.pf ppf "@,... and %d more" extra
-  in
-  let actionable = outdated @ missing in
-  (if actionable <> [] then
-     let n = List.length actionable in
+  (if missing <> [] then
+     let n = List.length missing in
      Log.warn (fun m ->
          m
-           "@[<v>%d typedtree-backed quer%s found a missing or stale \
-            .cmt/.cmti file; the affected rule runs were skipped for those \
-            files. Run [dune build @check] (or pass [--build]) before merlint \
-            so the build artefacts are present and up to date.%a@]"
+           "@[<v>%d file%s has no typedtree: no build artefact describes %s \
+            and the build system names no stanza that compiles %s, so nothing \
+            says what to type %s against and the rules that read a typedtree \
+            were skipped. Run [dune build @check] (or pass [--build]) before \
+            merlint.%a@]"
            n
-           (if n = 1 then "y" else "ies")
-           pp_sample actionable));
-  actionable
+           (if n = 1 then "" else "s")
+           (if n = 1 then "it" else "them")
+           (if n = 1 then "it" else "them")
+           (if n = 1 then "it" else "them")
+           pp_sample missing));
+  missing
 
 let log_fs_stats () =
   let s = Fs.stats () in
@@ -72,9 +84,35 @@ let log_fs_stats () =
 let log_backend_stats ~index backend =
   let s = Merlin.stats backend in
   Log.info (fun m ->
-      m "Merlin stats: cmt_hits=%d cmt_misses=%d cmt_reads=%d source_parses=%d"
-        s.cmt_hits s.cmt_misses s.cmt_reads s.source_parses);
-  warn_missing_cmts ~index s
+      m
+        "Merlin stats: cmt_hits=%d cmt_misses=%d cmt_reads=%d typechecks=%d \
+         source_parses=%d"
+        s.cmt_hits s.cmt_misses s.cmt_reads s.typechecks s.source_parses);
+  (* Typechecking a file costs about ten times an artefact read, so a run that
+     did many of them was working from a tree nobody had built. Worth saying,
+     but not a warning: the files were examined. *)
+  (match s.recovered_files with
+  | [] -> ()
+  | recovered ->
+      Log.info (fun m ->
+          m "Typechecked %d file%s whose build artefact did not describe %s"
+            (List.length recovered)
+            (if List.length recovered = 1 then "" else "s")
+            (if List.length recovered = 1 then "it" else "them")));
+  let partly = partly_examined s in
+  (if partly <> [] then
+     let n = List.length partly in
+     Log.warn (fun m ->
+         m
+           "@[<v>%d interface%s typechecked rather than read from an artefact, \
+            which loses the doc comments: E405, E410, E420 and E425 could not \
+            run on %s. Run [dune build @check] (or pass [--build]) before \
+            merlint.%a@]"
+           n
+           (if n = 1 then " was" else "s were")
+           (if n = 1 then "it" else "them")
+           pp_sample partly));
+  warn_unresolved ~index s @ partly
 
 (* The whole-repo index builders are meant to run a handful of times per
    analysis (roughly once per project rule). A count orders of magnitude higher
