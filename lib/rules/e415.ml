@@ -32,7 +32,7 @@ let check_type items t_item =
 let check (ctx : Context.file) =
   if not (File_kind.is_mli (Context.filename ctx)) then []
   else
-    let items = File_view.items (Context.view ctx) in
+    let items = File_view.typed_items (Context.view ctx) in
     match List.find_opt (item_named File_view.Item.Type "t") items with
     | None -> []
     | Some t_item -> check_type items t_item

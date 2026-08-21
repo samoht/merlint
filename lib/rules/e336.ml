@@ -62,7 +62,7 @@ let check (ctx : Context.file) =
                 (Issue.v ~loc:(Item.loc item)
                    { function_name = Item.name item; expected }))
       | _ -> None)
-    (File_view.items (Context.view ctx))
+    (File_view.typed_items (Context.view ctx))
 
 let pp ppf { function_name; expected } =
   Fmt.pf ppf

@@ -74,7 +74,7 @@ let check (ctx : Context.file) =
       let name = File_view.Item.name item in
       if Config.allows ctx.config ~bare:name ~qualified:name then None
       else check_single_function item (File_view.Item.loc item))
-    (File_view.items (Context.view ctx))
+    (File_view.typed_items (Context.view ctx))
 
 let pp ppf { function_name; expected } =
   Fmt.pf ppf "Function '%s' naming convention: consider '%s'" function_name

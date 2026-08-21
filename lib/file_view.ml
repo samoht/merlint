@@ -479,6 +479,11 @@ type file_item = {
   deprecated : bool;
   deriving : string list;
   type_ : Typed_types.type_expr option;
+  arg_labels : Asttypes.arg_label list;
+      (** The argument labels of the declaration's type, outermost first, and
+          [[]] when it takes none. A parsetree item has them from the type
+          written in the source, a typed item from the type the compiler gave
+          it, so both tiers answer for a labelled argument. *)
   children : file_item list;
   mutable_field : bool;  (** [true] for a [mutable] record field. *)
 }
@@ -486,11 +491,11 @@ type file_item = {
 type t = {
   filename : string;
   lock : Eio.Mutex.t;
-  docstrings : Doc_comments.t Lazy.t;
-      (** The file's doc comments, from a parse of the source. A doc comment is
-          in the parsetree, so reading them needs neither an artefact nor a
-          typechecker, and the rules that read one answer for the file on disk.
-      *)
+  parsed : (Doc_comments.t * file_item list) Lazy.t;
+      (** What one parse of the source yields: the file's doc comments and its
+          outline. Both are in the parsetree, so reading them needs neither an
+          artefact nor a typechecker, and the rules that read one answer for the
+          file on disk. The tree itself is dropped once these are out of it. *)
   typedtree : Merlin.typedtree option Lazy.t;
   docs : Merlin.docs Lazy.t;
       (** Whether the typedtree carries the source's doc comments. A tree
@@ -499,7 +504,7 @@ type t = {
           a doc comment consult this first. *)
   values : Function_metrics.value list Lazy.t;
   reference_outline : collected_refs Lazy.t;
-  items : file_item list Lazy.t;
+  typed_items : file_item list Lazy.t;
   resolved : collected_refs option Lazy.t;
   module_names : string list Lazy.t;
   applications : application_site list Lazy.t;
@@ -614,9 +619,25 @@ let deriving_names attrs =
       | _ -> [])
     attrs
 
+let rec typed_arg_labels ty =
+  match Typed_types.get_desc ty with
+  | Typed_types.Tarrow (label, _, rest, _) -> label :: typed_arg_labels rest
+  | _ -> []
+
 let typed_item ~name ~kind ?type_ ?(children = []) ?(deriving = [])
     ?(deprecated = false) ?(mutable_field = false) loc =
-  { name; kind; loc; deprecated; deriving; type_; children; mutable_field }
+  {
+    name;
+    kind;
+    loc;
+    deprecated;
+    deriving;
+    type_;
+    arg_labels =
+      (match type_ with Some ty -> typed_arg_labels ty | None -> []);
+    children;
+    mutable_field;
+  }
 
 let rec typed_pattern_items ?loc (pat : Typedtree.pattern) =
   let loc = Option.value loc ~default:pat.pat_loc in
@@ -859,12 +880,45 @@ and typed_signature_item (item : Typedtree.signature_item) =
   | Tsig_modtypesubst _ ->
       []
 
-let lazy_items typedtree =
+let lazy_typed_items typedtree =
   lazy
     (match Lazy.force typedtree with
     | Some (`Implementation structure) -> typed_structure_items structure
     | Some (`Interface signature) -> typed_signature_items signature
     | None -> [])
+
+(* {2 The outline the parse gives} *)
+
+let source_kind : Outline.kind -> file_item_kind = function
+  | Outline.Value -> Value
+  | Outline.Type -> Type
+  | Outline.Module -> Module
+  | Outline.Module_type -> Module_type
+  | Outline.Class -> Class
+  | Outline.Class_type -> Class_type
+  | Outline.Constructor -> Constructor
+  | Outline.Exception -> Exception
+  | Outline.Extension -> Extension
+  | Outline.Field -> Field
+  | Outline.Method -> Method
+  | Outline.Instance_variable -> Instance_variable
+
+(* A parsed declaration carries no type: an interface writes one for every
+   value, but an implementation infers most of them, and only the typedtree
+   knows what it inferred. What the source does write -- the labels of an arrow
+   -- comes through. *)
+let rec source_item (item : Outline.item) =
+  {
+    name = item.name;
+    kind = source_kind item.kind;
+    loc = item.loc;
+    deprecated = item.deprecated;
+    deriving = item.deriving;
+    type_ = None;
+    arg_labels = item.arg_labels;
+    children = List.map source_item item.children;
+    mutable_field = item.mutable_field;
+  }
 
 let lazy_values typedtree =
   lazy
@@ -901,15 +955,18 @@ let lazy_module_names reference_outline =
      List.sort_uniq String.compare names)
 
 let v ~filename ~content ~typedtree () =
-  let docstrings =
+  let parsed =
     lazy
-      (match Lazy.force content with
-      | content -> Doc_comments.v ~filename ~content
-      | exception exn ->
-          Log.warn (fun m ->
-              m "Failed to read %s for its doc comments: %s" filename
-                (Printexc.to_string exn));
-          Doc_comments.v ~filename ~content:"")
+      (let ast =
+         match Lazy.force content with
+         | content -> Ast.v ~filename ~content
+         | exception exn ->
+             Log.warn (fun m ->
+                 m "Failed to read %s for its declarations: %s" filename
+                   (Printexc.to_string exn));
+             Ast.v ~filename ~content:""
+       in
+       (Doc_comments.v ~filename ast, List.map source_item (Outline.v ast)))
   in
   let loaded = lazy_loaded ~filename typedtree in
   let docs = lazy_docs loaded in
@@ -917,7 +974,7 @@ let v ~filename ~content ~typedtree () =
   let values = lazy_values typedtree in
   let walk = lazy_walk ~filename ~typedtree in
   let reference_outline = lazy_reference_outline walk in
-  let items = lazy_items typedtree in
+  let typed_items = lazy_typed_items typedtree in
   let resolved = lazy_resolved walk in
   let module_names = lazy_module_names reference_outline in
   let applications = lazy_applications walk in
@@ -926,12 +983,12 @@ let v ~filename ~content ~typedtree () =
   {
     filename;
     lock = Eio.Mutex.create ();
-    docstrings;
+    parsed;
     typedtree;
     docs;
     values;
     reference_outline;
-    items;
+    typed_items;
     resolved;
     module_names;
     applications;
@@ -1132,6 +1189,7 @@ module Item = struct
 
   let derives (t : t) name = List.mem name t.item.deriving
   let type_sig (t : t) = t.item.type_
+  let arg_labels (t : t) = t.item.arg_labels
   let is_mutable_field (t : t) = t.item.mutable_field
 
   let children (t : t) =
@@ -1202,16 +1260,18 @@ end
 
 (* {2 Top-level accessors} *)
 
-let items t =
-  let docstrings = force t t.docstrings in
-  List.map
-    (fun item -> { Item.item; filename = t.filename; docstrings })
-    (force t t.items)
+let view_items t items =
+  let docstrings, _ = force t t.parsed in
+  List.map (fun item -> { Item.item; filename = t.filename; docstrings }) items
+
+let items t = view_items t (snd (force t t.parsed))
+let typed_items t = view_items t (force t t.typed_items)
 
 let rec flatten_items items =
   List.concat_map (fun item -> item :: flatten_items (Item.children item)) items
 
 let all_items t = flatten_items (items t)
+let typed_all_items t = flatten_items (typed_items t)
 
 let value_items t =
   List.filter (fun item -> Item.kind item = Item.Value) (all_items t)

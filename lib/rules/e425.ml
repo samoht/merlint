@@ -62,10 +62,6 @@ let check_type item =
 let is_type item =
   File_view.Item.equal_kind (File_view.Item.kind item) File_view.Item.Type
 
-(* Doc comments live in the artefact the compiler wrote; a typedtree
-     typechecked from source carries none, so every declaration would look
-     undocumented. Skip the file rather than report an absence nobody can see;
-     the engine reports it as not fully examined. *)
 let check (ctx : Context.file) =
   if not (File_kind.is_mli (Context.filename ctx)) then []
   else

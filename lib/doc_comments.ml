@@ -1,7 +1,6 @@
-(* Bare [Parse], [Parsetree], [Location] and [Ast_iterator] here are
-   compiler-libs': this module deliberately does not [open Ocaml_parsing],
-   because merlin's vendored lexer has docstring handling switched off and would
-   return a parsetree with no doc comments in it at all. *)
+(* Bare [Parsetree] and [Ast_iterator] here are compiler-libs': the tree walked
+   is the one {!Ast} parsed with the stock parser, which is the only parser that
+   emits docstrings at all -- merlin's vendored lexer has them switched off. *)
 
 let payload_string (payload : Parsetree.payload) =
   match payload with
@@ -106,31 +105,12 @@ let iterator t ~filename =
         default_iterator.module_binding this mb);
   }
 
-let is_interface filename = Filename.check_suffix filename ".mli"
-
-let v ~filename ~content =
+let v ~filename ast =
   let t = { by_range = Hashtbl.create 64 } in
-  let lexbuf = Lexing.from_string content in
-  lexbuf.lex_curr_p <- { lexbuf.lex_curr_p with pos_fname = filename };
   let it = iterator t ~filename in
-  (* The lexer and the docstring collector are process-global: the lexer keeps
-     the comment it is inside and the buffer it is filling, the collector keeps
-     the docstrings seen so far and which declaration they are waiting for. Two
-     domains parsing at once walk over each other's -- the lexer trips its own
-     assertion, and the doc comments that survive land on the wrong
-     declarations. So a parse runs under the mutex every entry into
-     compiler-libs runs under, and starts from a reset state. *)
-  Merlin.Cl_lock.with_lock (fun () ->
-      Lexer.init ();
-      Docstrings.init ();
-      (* Source that does not parse has no declarations to attach a doc comment
-         to, which is the same answer as source that carries none: a file
-         mid-edit is not a reason to fail, and the rules that read a doc comment
-         simply find nothing to report on it. *)
-      try
-        if is_interface filename then it.signature it (Parse.interface lexbuf)
-        else it.structure it (Parse.implementation lexbuf)
-      with Syntaxerr.Error _ | Lexer.Error _ -> ());
+  (match ast with
+  | Ast.Interface signature -> it.signature it signature
+  | Ast.Implementation structure -> it.structure it structure);
   t
 
 let find t ~start ~stop = Hashtbl.find_opt t.by_range (start, stop)

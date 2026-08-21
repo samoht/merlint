@@ -108,7 +108,7 @@ let t_aliases items =
         | Some typ -> core_type_constrs typ
         | None -> []
       else [])
-    (File_view.all_items items)
+    (File_view.typed_all_items items)
 
 (** A [Ptyp_constr] whose argument list contains a type variable, e.g.
     ['a list], ['a option], ['a Hashtbl.t]. These cases stay flagged ([to_<X>]
@@ -261,7 +261,7 @@ let check (ctx : Context.file) =
     Filename.check_suffix filename ".ml"
     || Filename.check_suffix filename ".mli"
   then
-    let items = File_view.items (Context.view ctx) in
+    let items = File_view.typed_items (Context.view ctx) in
     let module_name =
       Filename.basename filename |> Filename.remove_extension
       |> String.lowercase_ascii

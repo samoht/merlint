@@ -58,7 +58,7 @@ let check (ctx : Context.file) =
   else
     List.filter_map
       (issue_of_item ~config ~metrics:(metric_by_name ctx))
-      (File_view.items (Context.view ctx))
+      (File_view.typed_items (Context.view ctx))
 
 let pp ppf { name; length; threshold } =
   Fmt.pf ppf "Function '%s' is %d lines long (threshold: %d)" name length

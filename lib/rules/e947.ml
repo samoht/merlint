@@ -83,7 +83,7 @@ let check (ctx : Context.project) (m : Protocol_modules.machine_module) =
   | view ->
       if not (FV.is_resolved view) then []
       else
-        FV.all_items view
+        FV.typed_all_items view
         |> List.concat_map (fun item ->
             match FV.Item.kind item with
             | FV.Item.Type ->

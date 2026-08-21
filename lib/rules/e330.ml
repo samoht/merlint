@@ -51,7 +51,7 @@ let check (ctx : Context.file) =
             Some (redundant_name_issue name module_name loc "type")
         | _ -> None
       else None)
-    (File_view.items (Context.view ctx))
+    (File_view.typed_items (Context.view ctx))
 
 let pp ppf { item_name; module_name; item_type } =
   Fmt.pf ppf "%s '%s' has redundant module prefix from %s"

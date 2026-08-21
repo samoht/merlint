@@ -1,10 +1,18 @@
 (** Unified per-file view for rules.
 
-    File_view is typedtree-backed. The engine supplies a lazy [.cmt]/[.cmti]
-    load, and all rule-facing derived data is memoized from that typedtree. If
-    no fresh typedtree is available, typedtree-derived accessors return [None]
-    or an empty collection so the corresponding rule run is skipped for that
-    file rather than falling back to source parsing. *)
+    File_view has two tiers, and which one a rule reads decides what it needs on
+    disk.
+
+    The parsetree tier is the source: {!items} and the doc comments hanging off
+    them come from a parse of the file, so a rule reading nothing else answers
+    for a file no build has ever touched.
+
+    The typedtree tier is the artefact. The engine supplies a lazy
+    [.cmt]/[.cmti] load, and everything derived from it is memoized from that
+    typedtree. Where no fresh typedtree is available, its accessors return
+    [None] or an empty collection -- {!typed_items} included -- so the
+    corresponding rule run is skipped for that file rather than falling back to
+    names the compiler never resolved. *)
 
 exception Analysis_error of string
 (** Raised by the lazy accessors when the underlying source cannot be read (file
@@ -24,8 +32,8 @@ val v :
   t
 (** [v ~filename ~content ~typedtree ()] builds a fresh view over [filename].
     The [typedtree] thunk is called on first access and never twice; [content]
-    is forced only if something asks for a doc comment, which is read from a
-    parse of the source rather than from the typedtree. *)
+    is forced only if something asks for a declaration or a doc comment, both of
+    which are read from a parse of the source rather than from the typedtree. *)
 
 val filename : t -> string
 (** [filename t] is the source file this view describes. *)
@@ -123,7 +131,7 @@ module Type_view : sig
       in a function arrow whose domain satisfies [match_]. *)
 end
 
-(** {2 Items — top-level outline structure, always available} *)
+(** {2 Items — declarations, from the source or from the artefact} *)
 module Doc : sig
   type t
 
@@ -180,7 +188,14 @@ module Item : sig
       module, fields of a record, ...). *)
 
   val type_sig : t -> Type_view.t option
-  (** [type_sig i] is the parsed type of [i] when one was declared. *)
+  (** [type_sig i] is the type the compiler gave [i]. Only an item from
+      {!typed_items} has one: an implementation writes no type for most of its
+      bindings, and what it does write is in {!arg_labels}. *)
+
+  val arg_labels : t -> Ocaml_parsing.Asttypes.arg_label list
+  (** [arg_labels i] is the labels of the arguments [i]'s type takes, outermost
+      first, and [[]] when it takes none -- so a value that is not a function
+      has none. Written arrows are syntactic, so this answers on both tiers. *)
 
   val is_mutable_field : t -> bool
   (** [is_mutable_field i] is [true] when [i] is a record field declared
@@ -263,18 +278,27 @@ module Message_match : sig
   (** [loc m] is the source location of the whole [match] expression. *)
 end
 
-(** {2 Top-level accessors}
-
-    Outline accessors are always available. *)
+(** {2 Top-level accessors} *)
 
 val items : t -> Item.t list
-(** [items t] is the file's top-level outline. *)
+(** [items t] is the file's top-level declarations, from a parse of the source.
+    Available for any file that can be read. *)
 
 val all_items : t -> Item.t list
-(** [all_items t] returns top-level and nested outline items. *)
+(** [all_items t] is {!items} together with everything nested inside them. *)
 
 val value_items : t -> Item.t list
-(** [value_items t] returns all value declarations from {!all_items}. *)
+(** [value_items t] is the value declarations among {!all_items}. *)
+
+val typed_items : t -> Item.t list
+(** [typed_items t] is the file's top-level declarations as the compiler typed
+    them, so {!Item.type_sig} answers on each. Empty when no fresh typedtree is
+    available, which is how a rule that needs a type skips a file rather than
+    reporting on one it could not type. *)
+
+val typed_all_items : t -> Item.t list
+(** [typed_all_items t] is {!typed_items} together with everything nested inside
+    them. *)
 
 (** {3 Resolved typedtree accessors}
 

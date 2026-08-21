@@ -1,4 +1,5 @@
-(** Tests for File_view's typedtree-backed lazy cache. *)
+(** Tests for File_view's two tiers: the outline a parse of the source gives,
+    and the typedtree-backed lazy cache. *)
 
 let empty_implementation =
   `Implementation
@@ -44,6 +45,9 @@ let test_typedtree_loaded_once () =
     (Option.is_some (Merlint.File_view.typedtree v));
   Alcotest.(check int) "loaded once" 1 !typedtree_calls
 
+(* Where no typedtree describes the file, the tier built from one is empty --
+   which is how a rule that needs a type skips the file rather than reporting
+   on one it could not type. *)
 let test_missing_typedtree_is_empty () =
   with_eio @@ fun () ->
   let typedtree_calls = ref 0 in
@@ -53,8 +57,38 @@ let test_missing_typedtree_is_empty () =
         Ok None)
   in
   Alcotest.(check bool) "not resolved" false (Merlint.File_view.is_resolved v);
-  Alcotest.(check int) "no items" 0 (List.length (Merlint.File_view.items v));
+  Alcotest.(check int)
+    "no typed items" 0
+    (List.length (Merlint.File_view.typed_items v));
   Alcotest.(check int) "loaded once" 1 !typedtree_calls
+
+(* The other tier answers from the source, and asking it must not reach for an
+   artefact at all: a view whose typedtree thunk is never called is a file
+   merlint never had to have built, and never reports as unexamined either. *)
+let test_items_read_the_source () =
+  with_eio @@ fun () ->
+  let typedtree_calls = ref 0 in
+  let v =
+    Merlint.File_view.v ~filename:"source.mli"
+      ~content:
+        (lazy "type t\n\nval v : label:int -> t\n(** [v n] is a value. *)\n")
+      ~typedtree:(fun () ->
+        incr typedtree_calls;
+        Ok None)
+      ()
+  in
+  let items = Merlint.File_view.items v in
+  Alcotest.(check (list string))
+    "declarations" [ "t"; "v" ]
+    (List.map Merlint.File_view.Item.name items);
+  let value = List.nth items 1 in
+  Alcotest.(check bool)
+    "documented" true
+    (Option.is_some (Merlint.File_view.Item.doc value));
+  Alcotest.(check int)
+    "labelled argument" 1
+    (List.length (Merlint.File_view.Item.arg_labels value));
+  Alcotest.(check int) "no typedtree asked for" 0 !typedtree_calls
 
 let test_interface_has_no_values () =
   with_eio @@ fun () ->
@@ -121,6 +155,7 @@ let tests =
     ("no_typedtree_load_without_access", `Quick, test_lazy_without_access);
     ("typedtree_loaded_once", `Quick, test_typedtree_loaded_once);
     ("missing_typedtree_is_empty", `Quick, test_missing_typedtree_is_empty);
+    ("items_read_the_source", `Quick, test_items_read_the_source);
     ("interface_has_no_values", `Quick, test_interface_has_no_values);
     ( "application_cache_empty_without_implementation",
       `Quick,

@@ -35,7 +35,7 @@ let check (ctx : Context.project) (m : Protocol_modules.machine_module) =
   | view ->
       if not (FV.is_resolved view) then []
       else
-        let top = FV.items view in
+        let top = FV.typed_items view in
         let nested = List.filter_map nested_machine top in
         let roles =
           if List.exists is_machine_type top then m.module_name :: nested

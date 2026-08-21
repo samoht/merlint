@@ -18,7 +18,10 @@ type level = Debug | Info | Error
 (** The type for the severity of a log entry. *)
 |}
 
-let docs = lazy (Merlint.Doc_comments.v ~filename:"lib.mli" ~content:interface)
+let docs_of ~filename ~content =
+  Merlint.Doc_comments.v ~filename (Merlint.Ast.v ~filename ~content)
+
+let docs = lazy (docs_of ~filename:"lib.mli" ~content:interface)
 
 (* Offsets of a declaration in [interface], found the way a caller finds them:
    from the span of the declaration itself. *)
@@ -85,8 +88,7 @@ let test_floating_comment_is_not_a_declaration_doc () =
    caught mid-edit is not an error, it simply has nothing to say. *)
 let test_unparseable_source_has_no_docs () =
   let broken =
-    Merlint.Doc_comments.v ~filename:"broken.mli"
-      ~content:"val v : (** oops *) let"
+    docs_of ~filename:"broken.mli" ~content:"val v : (** oops *) let"
   in
   check bool "no comments" true
     (Option.is_none (Merlint.Doc_comments.find broken ~start:0 ~stop:5))
@@ -94,7 +96,7 @@ let test_unparseable_source_has_no_docs () =
 (* Implementations carry doc comments too, on their bindings. *)
 let test_implementation_bindings () =
   let content = "let answer = 42\n(** The answer. *)\n" in
-  let docs = Merlint.Doc_comments.v ~filename:"lib.ml" ~content in
+  let docs = docs_of ~filename:"lib.ml" ~content in
   let start, stop = (0, String.length "let answer = 42") in
   match Merlint.Doc_comments.find docs ~start ~stop with
   | None -> fail "no doc comment attached to the binding"
@@ -112,7 +114,7 @@ let test_concurrent_parses_agree () =
   let wrong = Atomic.make 0 in
   let run () =
     for _ = 1 to 200 do
-      let t = Merlint.Doc_comments.v ~filename:"lib.mli" ~content:interface in
+      let t = docs_of ~filename:"lib.mli" ~content:interface in
       match Merlint.Doc_comments.find t ~start ~stop with
       | Some (c : Merlint.Doc_comments.comment)
         when c.text = "[v n] is the value carrying [n]." ->

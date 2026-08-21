@@ -189,7 +189,7 @@ let is_compliant_view ~expected view =
   | Some expected -> (
       if not (File_view.is_resolved view) then Unresolved
       else
-        match File_view.items view with
+        match File_view.typed_items view with
         | [ item ] when File_view.Item.kind item = File_view.Item.Value ->
             Resolved (is_value_suite expected item)
         | _ -> Resolved false)

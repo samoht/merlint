@@ -1,0 +1,4 @@
+(** Tests for the Outline module. *)
+
+val suite : string * unit Alcotest.test_case list
+(** Test suite for the Outline module. *)

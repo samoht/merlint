@@ -24,7 +24,7 @@ let exposed_symbol_issues ctx pkg_name mli_path =
   try
     let names =
       Context.file_view ctx mli_path
-      |> File_view.items
+      |> File_view.typed_items
       |> List.filter_map (fun item ->
           match File_view.Item.kind item with
           | Value -> Some (File_view.Item.name item)

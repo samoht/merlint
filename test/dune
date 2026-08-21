@@ -13,10 +13,12 @@
   project-index
   alcotest
   alcotest.engine
+  astring
   compiler-libs.common
   eio
   eio_main
   fpath
+  merlin-lib.ocaml_parsing
   merlin-lib.ocaml_typing
   unix
   logs.fmt

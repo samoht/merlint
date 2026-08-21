@@ -132,6 +132,18 @@ changes no answer:
     - lib.mli:10:0: Type 'level' has no documentation: the comment after its last constructor documents 'Error'. Put the type's doc before 'type level'
   Summary: ✗ 1 total issue (applied 1 rule)
 
+An artefact deleted is not the same as an artefact that never existed: merlint
+typechecks a source no artefact describes, and it can only do that where the
+build system names a configuration for the file. A parse needs no such
+configuration, so with nothing built at all the answer is still the same one:
+
+  $ rm -rf _build
+  $ find . -name '*.cmt*' | wc -l | tr -d ' '
+  0
+  $ merlint -r E425 lib.mli | grep -E "lib.mli:|Summary"
+    - lib.mli:10:0: Type 'level' has no documentation: the comment after its last constructor documents 'Error'. Put the type's doc before 'type level'
+  Summary: ✗ 1 total issue (applied 1 rule)
+
 A stanza Dune does not build here is one the build system has nothing to say
 about, so a file of it can never be placed and no build the user runs will
 change that. It is gated out of the report; the ungated file at the top of this
@@ -196,15 +208,3 @@ analyse it normally:
   
   Summary: ✓ 0 total issues (applied 1 rule)
   ✓ All checks passed!
-
-An artefact deleted is not the same as an artefact that never existed: merlint
-typechecks a source no artefact describes, and it can only do that where the
-build system names a configuration for the file. A parse needs no such
-configuration, so with nothing built at all the answer is still the same one:
-
-  $ rm -rf _build
-  $ find . -name '*.cmt*' | wc -l | tr -d ' '
-  0
-  $ merlint -r E425 lib.mli | grep -E "lib.mli:|Summary"
-    - lib.mli:10:0: Type 'level' has no documentation: the comment after its last constructor documents 'Error'. Put the type's doc before 'type level'
-  Summary: ✗ 1 total issue (applied 1 rule)
