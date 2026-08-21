@@ -65,3 +65,20 @@ Test good example - should find no issues:
   
   Summary: ✓ 0 total issues (applied 1 rule)
   ✓ All checks passed!
+
+A declaration is in the parsetree: its name, its kind and where it is are read
+from the source itself, so answering this rule needs nothing the compiler ever
+wrote. Record the answer with the artefacts present, take every one of them
+away, and the answer does not move -- not the findings and not the verdict,
+which would report the run incomplete if a rule had wanted a typedtree:
+
+  $ merlint --build -r E334 bad.ml > built.txt
+  [1]
+  $ merlint --build -r E334 good.ml > built-good.txt
+  $ rm -rf _build
+  $ find . -name '*.cmt*'
+  $ merlint -r E334 bad.ml > unbuilt.txt
+  [1]
+  $ merlint -r E334 good.ml > unbuilt-good.txt
+  $ diff built.txt unbuilt.txt
+  $ diff built-good.txt unbuilt-good.txt

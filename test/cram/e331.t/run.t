@@ -104,3 +104,20 @@ binding; create_widget is still flagged:
   ✗ Some checks failed. See details above.
     Run `merlint help E331` for the rule's description, hint, and good/bad examples.
   [1]
+
+A declaration is in the parsetree: its name, its kind and where it is are read
+from the source itself, so answering this rule needs nothing the compiler ever
+wrote. Record the answer with the artefacts present, take every one of them
+away, and the answer does not move -- not the findings and not the verdict,
+which would report the run incomplete if a rule had wanted a typedtree:
+
+  $ merlint --build -r E331 bad.ml > built.txt
+  [1]
+  $ merlint --build -r E331 good.ml > built-good.txt
+  $ rm -rf _build
+  $ find . -name '*.cmt*'
+  $ merlint -r E331 bad.ml > unbuilt.txt
+  [1]
+  $ merlint -r E331 good.ml > unbuilt-good.txt
+  $ diff built.txt unbuilt.txt
+  $ diff built-good.txt unbuilt-good.txt

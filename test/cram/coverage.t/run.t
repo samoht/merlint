@@ -8,7 +8,7 @@ than passing.
 Nothing is built, so no artefact describes lib.mli and the build system, which
 has never built this project, can name no stanza that compiles it either:
 
-  $ merlint -r E425 lib.mli
+  $ merlint -r E105 lib.mli
   Dune root: $TESTCASE_ROOT/
   ! 1 file has no typedtree: no build artefact describes it and the build system names no stanza that compiles it, so nothing says what to type it against and the rules that read a typedtree were skipped. Run [dune build @check] (or pass [--build]) before merlint.
   ! $TESTCASE_ROOT/lib.mli
@@ -33,13 +33,13 @@ The JSON document reports the verdict the exit status reports, and says how many
 files the run could not reach. Nothing but the document goes to stdout, so the
 output parses:
 
-  $ merlint --json -r E425 lib.mli 2>/dev/null
+  $ merlint --json -r E105 lib.mli 2>/dev/null
   {"project_root":"$TESTCASE_ROOT/","files_analyzed":1,"rules_applied":1,"total_issues":0,"unchecked":1,"passed":false,"issues":[],"excluded":[]}
   [1]
 
 With the artefacts present the run is complete and the verdict is clean:
 
-  $ merlint --build -r E425 lib.mli
+  $ merlint --build -r E105 lib.mli
   Dune root: $TESTCASE_ROOT/
   Running merlint analysis...
   
@@ -196,3 +196,15 @@ analyse it normally:
   
   Summary: ✓ 0 total issues (applied 1 rule)
   ✓ All checks passed!
+
+An artefact deleted is not the same as an artefact that never existed: merlint
+typechecks a source no artefact describes, and it can only do that where the
+build system names a configuration for the file. A parse needs no such
+configuration, so with nothing built at all the answer is still the same one:
+
+  $ rm -rf _build
+  $ find . -name '*.cmt*' | wc -l | tr -d ' '
+  0
+  $ merlint -r E425 lib.mli | grep -E "lib.mli:|Summary"
+    - lib.mli:10:0: Type 'level' has no documentation: the comment after its last constructor documents 'Error'. Put the type's doc before 'type level'
+  Summary: ✗ 1 total issue (applied 1 rule)
