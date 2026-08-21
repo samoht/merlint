@@ -208,3 +208,55 @@ analyse it normally:
   
   Summary: ✓ 0 total issues (applied 1 rule)
   ✓ All checks passed!
+
+A run reports on what it was asked to analyse. A file argument scopes the
+warm-up to the directory holding it, so a sibling directory of the same project
+stays unbuilt, and a project-wide rule reaches it anyway: E610's reference scan
+reads every library source in the project to learn which module names are
+referenced. Reaching past the scope is that rule's business -- it says in its
+own finding which sources it could not read -- and not the run's completeness.
+Nothing was asked of scope/test/helpers/, so nothing there can leave the run
+incomplete:
+
+  $ merlint --build -r E610 scope/lib/mylib.ml
+  Dune root: $TESTCASE_ROOT/scope
+  Running merlint analysis...
+  
+  Analyzing 1 files
+  
+  ✓ Code Quality (0 total issues)
+  ✓ Code Style (0 total issues)
+  ✓ Naming Conventions (0 total issues)
+  ✓ Documentation (0 total issues)
+  ✓ Project Structure (0 total issues)
+  ✓ Test Quality (0 total issues)
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
+  
+  Summary: ✓ 0 total issues (applied 1 rule)
+  ✓ All checks passed!
+
+The very same file, still unbuilt, named on the command line is one the run was
+asked to analyse. Nothing says what to type it against, so the run examined less
+than it was asked to and reports that rather than passing:
+
+  $ merlint -r E105 scope/test/helpers/helper.ml
+  Dune root: $TESTCASE_ROOT/scope
+  ! 1 file has no typedtree: no build artefact describes it and the build system names no stanza that compiles it, so nothing says what to type it against and the rules that read a typedtree were skipped. Run [dune build @check] (or pass [--build]) before merlint.
+  ! $TESTCASE_ROOT/scope/test/helpers/helper.ml
+  Running merlint analysis...
+  
+  Analyzing 1 files
+  
+  ✓ Code Quality (0 total issues)
+  ✓ Code Style (0 total issues)
+  ✓ Naming Conventions (0 total issues)
+  ✓ Documentation (0 total issues)
+  ✓ Project Structure (0 total issues)
+  ✓ Test Quality (0 total issues)
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
+  
+  Summary: ✗ 0 total issues (applied 1 rule, 1 file unchecked)
+  ✗ No issues found, but 1 file could not be fully checked, so some of the rules that read a typedtree did not run on it. Re-run with -v to name it and say why.
+  [1]
