@@ -560,14 +560,6 @@ let ensure_project_built ~path mgr =
       Fmt.epr "Function type analysis may not work properly.@.";
       Fmt.epr "Continuing with analysis...@."
 
-let refresh_stale_cmt_targets ~path ~files mgr =
-  match Merlint.Build.refresh_stale_cmt_targets ~path ~files mgr with
-  | Ok () -> ()
-  | Error msg ->
-      Fmt.epr "Warning: %s@." msg;
-      Fmt.epr "Some typedtree-backed rules may be skipped.@.";
-      Fmt.epr "Continuing with analysis...@."
-
 let is_ocaml_source path =
   Filename.check_suffix path ".ml" || Filename.check_suffix path ".mli"
 
@@ -660,26 +652,20 @@ let redirect_analysis files =
       in
       Some (files, Fpath.to_string workspace)
 
-let maybe_build_project mgr ~project_root ~analyze_set ~analyze_roots ~index
-    ~build =
+let maybe_build_project mgr ~project_root ~analyze_roots ~index ~build =
   if build then (
     Log.info (fun m -> m "Building project...");
     (* Freeze the analysis set before starting Dune. A source added while the
        build is running cannot have been part of that build; discovering it
-       afterwards would make this run reject an artefact it never asked Dune to
-       produce. The following run will include and build the new source. *)
+       afterwards would make this run analyse a file the build never saw. The
+       following run will include and build the new source. Walking the sources
+       is what freezes them: the index scans on demand, so forcing it alone
+       settles nothing. *)
     let frozen_index = Lazy.force index in
-    let files =
-      match (analyze_set, analyze_roots) with
-      | Some files, None -> files
-      | None, roots -> Project_index.source_files ?roots frozen_index
-      | Some files, Some roots ->
-          Project_index.source_files ~roots frozen_index
-          |> List.rev_append files
-          |> List.sort_uniq Fpath.compare
-    in
+    ignore
+      (Project_index.source_files ?roots:analyze_roots frozen_index
+        : Fpath.t list);
     ensure_project_built ~path:project_root mgr;
-    refresh_stale_cmt_targets ~path:project_root ~files mgr;
     Log.info (fun m -> m "Build done."))
 
 let monorepo_for_index project_root =
@@ -737,8 +723,7 @@ let analyze_files mgr fs domain_mgr ?(exclude_patterns = []) ?rule_filter
     build_project_index ~fs ~monorepo ?roots:index_roots ~installed ?pool ()
   in
   let lazy_index = lazy (build_index ()) in
-  maybe_build_project mgr ~project_root ~analyze_set ~analyze_roots
-    ~index:lazy_index ~build;
+  maybe_build_project mgr ~project_root ~analyze_roots ~index:lazy_index ~build;
   let analysis_index ?pool () =
     if build then Lazy.force lazy_index else build_index ?pool ()
   in

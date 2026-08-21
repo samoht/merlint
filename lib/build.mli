@@ -1,10 +1,10 @@
 (** Shell out to [dune build] for the artefacts typedtree-backed rules need.
 
-    Two operations:
-    - whole-project warm-up before a run ([ensure_project_built]) so [@check]
-      has produced [.cmt] / [.cmti] for every module;
-    - per-file refresh ([refresh_stale_cmt_targets]) when only a handful of
-      sources changed since the last warm-up. *)
+    One operation: a whole-project warm-up before a run, so [@check] has
+    produced the [.cmi] files a file is typed against and the [.cmt] / [.cmti]
+    that answer for it directly. An artefact left describing source that has
+    since changed needs no attention here -- the source is typechecked in its
+    place. *)
 
 val ensure_project_built :
   path:string -> _ Eio.Process.mgr -> (unit, string) result
@@ -13,18 +13,6 @@ val ensure_project_built :
     wrapped executables and tests where a plain [dune build] only emits native
     code). Stderr is suppressed unless the [merlint.build] log source is at
     debug level. Returns [Ok ()] on dune exit 0, [Error msg] otherwise. *)
-
-val refresh_stale_cmt_targets :
-  path:string ->
-  files:Fpath.t list ->
-  _ Eio.Process.mgr ->
-  (unit, string) result
-(** [refresh_stale_cmt_targets ~path ~files mgr] re-builds the [.cmt] / [.cmti]
-    targets whose recorded source digest does not match the current source. Each
-    proven-stale artefact is invalidated before building with Dune's cache
-    disabled, then checked again before returning [Ok ()]. Files whose artefact
-    already describes the current source, or whose artefact cannot be located in
-    [_build/default], are skipped. *)
 
 val cmt_artefact : root:string -> Fpath.t -> (string * bool) option
 (** [cmt_artefact ~root file] is the [.cmt] / [.cmti] path for [file] under

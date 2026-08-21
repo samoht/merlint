@@ -1,8 +1,0 @@
-#!/bin/sh
-set -eu
-
-if [ -n "${STALE_CMT:-}" ] && [ -e "$STALE_CMT" ]; then
-  exit 0
-fi
-
-exec "$REAL_DUNE" "$@"
