@@ -1,5 +1,3 @@
-x-quality-build: "2026-04-15"
-x-quality-test: "2026-04-15"
 pin-depends: [
   ["bytesrw.0.3.0" "git+https://github.com/samoht/bytesrw.git#8944bbaa1d142bfe28af0cb04d2a28bf4d53cafd"]
 ]
