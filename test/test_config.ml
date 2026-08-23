@@ -120,6 +120,20 @@ let test_documented_keys_accepted () =
     Alcotest.(list string)
     "disallowed_modules applied" [ "Stdlib.Printf" ] loaded.disallowed_modules
 
+(* [merlint help config] is where a reader learns which keys exist, and merlint
+   now refuses the ones it does not know. So every example the man page shows
+   must load, not merely parse: an example naming a key merlint would reject
+   documents a config the tool refuses to start on. Test_config_doc parses the
+   same examples; this loads them. *)
+let test_documented_examples_load () =
+  List.iter
+    (fun (label, content) ->
+      match with_config content (fun dir -> ignore (Config.load dir)) with
+      | () -> ()
+      | exception Failure msg ->
+          Alcotest.failf "config example %S does not load: %s" label msg)
+    Merlint_doc.Config_doc.examples
+
 let tests =
   [
     Alcotest.test_case "default_config" `Quick test_default_config;
@@ -131,6 +145,8 @@ let tests =
       test_misspelled_toggle_refused;
     Alcotest.test_case "documented keys accepted" `Quick
       test_documented_keys_accepted;
+    Alcotest.test_case "documented examples load" `Quick
+      test_documented_examples_load;
   ]
 
 let suite = ("config", tests)
