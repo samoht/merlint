@@ -82,10 +82,16 @@ val file : string -> string option
 val load : string -> t
 (** [load path] loads and merges all merlint.toml config files from [path] up to
     the workspace root. Settings from closer files override outer ones; rule
-    exclusions accumulate. *)
+    exclusions accumulate.
+
+    @raise Failure
+      on a key merlint does not know, naming the key, the file it came from and
+      the known key it is closest to. A typo would otherwise read as
+      configuration that is in force when none of it is. *)
 
 val for_file : string -> t
 (** [for_file file] returns the config that applies to [file], merging
     merlint.toml files from [file]'s directory up to the workspace root.
     Settings from closer files override outer ones; rule exclusions accumulate.
-*)
+
+    @raise Failure on an unknown key, as {!load} does. *)

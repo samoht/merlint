@@ -76,6 +76,12 @@ let man_settings =
        example $(b,create_table) would normally trigger E331 (redundant \
        prefix) but can be exempted:";
     `Pre example_allowed_words;
+    `P
+      "A key $(mname) does not know stops the run, naming the key, the file it \
+       came from, and the known key it is closest to. A misspelt key would \
+       otherwise be discarded in silence, leaving the rule it configures at \
+       its default while the file reads as though the setting had taken \
+       effect.";
   ]
 
 let man_linked_checkouts =

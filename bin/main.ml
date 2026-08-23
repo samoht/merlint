@@ -798,6 +798,20 @@ let build_flag =
   in
   Arg.(value & flag & info [ "build" ] ~doc)
 
+(* Load the merlint.toml governing this run before anything else does, so a
+   file merlint refuses -- an unknown key, malformed TOML -- ends the run as
+   the user error it is. Left to the first rule that happens to read the
+   config, the same refusal surfaces as an uncaught exception and reads as a
+   merlint bug. *)
+let check_configuration files =
+  let path = match files with [] -> Sys.getcwd () | path :: _ -> path in
+  match Merlint.Config.load path with
+  | _ -> ()
+  | exception Failure msg ->
+      (* The message already opens with "merlint config: <file>:". *)
+      Fmt.epr "%s@." msg;
+      Stdlib.exit 1
+
 let show_configuration files =
   let path = match files with [] -> Sys.getcwd () | path :: _ -> path in
   let project_root = Merlint.Project.root path in
@@ -840,6 +854,7 @@ let parse_rule_filter rules_spec =
 
 let main exclude_patterns rules_spec ~show_profile ~show_config ~build ~bail
     ~include_vendored files () =
+  check_configuration files;
   if show_config then show_configuration files
   else
     let rule_filter = parse_rule_filter rules_spec in

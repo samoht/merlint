@@ -80,6 +80,83 @@ let parse_int value =
 (** Normalize config key from kebab-case to snake_case *)
 let normalize_key key = String.map (function '-' -> '_' | c -> c) key
 
+(* Every key a [merlint.toml] may set, normalized. Only used to suggest the key
+   a rejected one is a near miss of; [apply_config] below is what decides
+   whether a key is known. *)
+let known_keys =
+  [
+    "max_complexity";
+    "max_function_length";
+    "max_nesting";
+    "exempt_data_definitions";
+    "max_underscores_in_name";
+    "min_name_length_underscore";
+    "allowed_words";
+    "acronyms";
+    "topics";
+    "allowed_states";
+    "allowed_names";
+    "disallowed_modules";
+    "disallowed_libraries";
+    "allow_obj_magic";
+    "allow_str_module";
+    "allow_catch_all_exceptions";
+    "require_ocamlformat_file";
+    "require_mli_files";
+    "workspace";
+  ]
+
+(* Levenshtein distance between [a] and [b], over two rolling rows. *)
+let distance a b =
+  let la = String.length a and lb = String.length b in
+  let prev = Array.init (lb + 1) Fun.id and curr = Array.make (lb + 1) 0 in
+  for i = 1 to la do
+    curr.(0) <- i;
+    for j = 1 to lb do
+      let subst = prev.(j - 1) + if a.[i - 1] = b.[j - 1] then 0 else 1 in
+      curr.(j) <- min (min (curr.(j - 1) + 1) (prev.(j) + 1)) subst
+    done;
+    Array.blit curr 0 prev 0 (lb + 1)
+  done;
+  prev.(lb)
+
+(* The known key [normalized] is closest to, when close enough that a typo is
+   the likely explanation. Rendered with the separator the author used, so the
+   suggestion can be pasted straight back into the file. *)
+let nearest_key ~raw normalized =
+  let render key =
+    if String.contains raw '-' then
+      String.map (function '_' -> '-' | c -> c) key
+    else key
+  in
+  let near =
+    List.filter_map
+      (fun known ->
+        let d = distance normalized known in
+        if d <= 2 then Some (d, render known) else None)
+      known_keys
+  in
+  match List.stable_sort (fun (a, _) (b, _) -> Int.compare a b) near with
+  | [] -> None
+  | (_, closest) :: _ -> Some closest
+
+(* A key merlint has no case for is a typo, a key that was renamed, or one from
+   a merlint that never existed. Reading past it leaves the file looking like
+   configuration that is in force when none of it is: a misspelt
+   [disallowed-modules] leaves E221's ban list empty and the rule the author
+   configured never runs. Refuse, and name the key merlint knows that it is
+   closest to. *)
+let err_unknown_key ~file ~raw normalized =
+  match nearest_key ~raw normalized with
+  | Some closest ->
+      Fmt.failwith "merlint config: %s: unknown key %S -- did you mean %S?" file
+        raw closest
+  | None ->
+      Fmt.failwith
+        "merlint config: %s: unknown key %S. Run `merlint help config` for the \
+         keys merlint accepts."
+        file raw
+
 (** Parse comma or space separated list, optionally wrapped in [...] *)
 let parse_list value =
   let stripped =
@@ -93,7 +170,7 @@ let parse_list value =
   |> List.filter (fun s -> s <> "")
 
 (** Apply a configuration key-value pair to the config *)
-let apply_config config key value : t =
+let apply_config ~file config key value : t =
   match normalize_key key with
   (* Complexity rules *)
   | "max_complexity" -> { config with max_complexity = parse_int value }
@@ -140,19 +217,20 @@ let apply_config config key value : t =
   | "require_ocamlformat_file" ->
       { config with require_ocamlformat_file = parse_bool value }
   | "require_mli_files" -> { config with require_mli_files = parse_bool value }
-  | _ ->
-      (* Unknown key - ignore for forward compatibility *)
-      config
+  (* Read by {!Project}, which resolves the path against the file that declares
+     it; nothing here consumes it. *)
+  | "workspace" -> config
+  | normalized -> err_unknown_key ~file ~raw:key normalized
 
 let load path =
   let config_files = Project.config_files path in
   List.fold_left
-    (fun acc path ->
-      match Config_parser.parse_file path with
+    (fun acc file ->
+      match Config_parser.parse_file file with
       | Some parsed ->
           let config =
             List.fold_left
-              (fun c (key, value) -> apply_config c key value)
+              (fun c (key, value) -> apply_config ~file c key value)
               acc parsed.Config_parser.settings
           in
           {
