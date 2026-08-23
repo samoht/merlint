@@ -16,8 +16,10 @@
     [(foreign_stubs ...)] (C code can reach their symbols without an OCaml
     import); virtual-library implementations ([(implements ...)] resolves at
     link time); builtin compiler-distributed libraries; libraries whose units
-    are unknown (not indexed or not built). A stanza with a missing or stale
-    [.cmt] for any of its sources is skipped rather than guessed at. *)
+    are unknown (not indexed or not built). A stanza with a missing, stale or
+    partial [.cmt] for any of its sources is skipped rather than guessed at -- a
+    partial one is what the compiler leaves when the unit does not compile, and
+    its import list stops at the error. *)
 
 type payload = { stanza : string; library : string }
 
@@ -30,10 +32,12 @@ let pp ppf { stanza; library } =
 module String_set = Set.Make (String)
 
 (* Union of the imports of every unit in [files]; [None] when any unit's
-   artefact is missing or no longer describes its source -- the stanza is
-   skipped, not judged. Deciding a dependency is dead from an artefact built
-   before the import was written would have this rule recommend removing a
-   library the code goes on to call. *)
+   artefact is missing, no longer describes its source, or is the truncated one
+   the compiler leaves when the unit does not compile -- the stanza is skipped,
+   not judged. Deciding a dependency is dead from an artefact built before the
+   import was written, or from one that stops at the line the compiler gave up
+   on, would have this rule recommend removing a library the code goes on to
+   call. *)
 let stanza_imports ~root files =
   List.fold_left
     (fun acc file ->
@@ -41,8 +45,8 @@ let stanza_imports ~root files =
       | None -> None
       | Some set -> (
           match Merlin.Cmt.imports ~root_dir:root (Fpath.to_string file) with
-          | None -> None
-          | Some units ->
+          | Error _ -> None
+          | Ok units ->
               Some
                 (List.fold_left (fun set u -> String_set.add u set) set units)))
     (Some String_set.empty) files
@@ -153,6 +157,7 @@ let rule =
        comments and source-basename collisions cannot mask a dead entry. \
        Remove the entry or use the library. [(re_export ...)] entries, stanzas \
        with [-linkall], C-shipping libraries under [(foreign_stubs ...)] \
-       stanzas, virtual-library implementations, and stanzas with missing or \
-       stale artefacts are not flagged."
+       stanzas, virtual-library implementations, and stanzas with missing, \
+       stale or partial artefacts (the truncated ones a failed compilation \
+       leaves) are not flagged."
     ~category:Rule.Project_structure ~examples:[] ~pp (Project check)

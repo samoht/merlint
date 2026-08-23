@@ -73,6 +73,29 @@ let warn_unresolved ~index ~analyzed stats =
            pp_sample missing));
   missing
 
+(* The other way a run can be left without a typedtree for a file it was asked
+   to analyse: the compiler read the source in full and refused it. That is not
+   the warning above -- [dune build] is what the user would be sent to there,
+   and here it reaches the same error -- so it gets its own, and says the one
+   thing that does clear it. Asked of [analyzed] alone, for the same reason. *)
+let warn_uncompilable ~analyzed stats =
+  let in_scope = path_mem analyzed in
+  let broken = List.filter in_scope stats.Merlin.uncompilable_files in
+  (if broken <> [] then
+     let n = List.length broken in
+     Log.warn (fun m ->
+         m
+           "@[<v>%d file%s not compile, so the compiler left only the part of \
+            the unit it typed before the error and the rules that read a \
+            typedtree were skipped. Fix the compile error%s; no build produces \
+            an artefact for %s until then.%a@]"
+           n
+           (if n = 1 then " does" else "s do")
+           (if n = 1 then "" else "s")
+           (if n = 1 then "it" else "them")
+           pp_sample broken));
+  broken
+
 let log_fs_stats () =
   let s = Fs.stats () in
   if
@@ -100,7 +123,7 @@ let log_backend_stats ~index ~analyzed backend =
             (List.length recovered)
             (if List.length recovered = 1 then "" else "s")
             (if List.length recovered = 1 then "it" else "them")));
-  warn_unresolved ~index ~analyzed s
+  warn_unresolved ~index ~analyzed s @ warn_uncompilable ~analyzed s
 
 (* The whole-repo index builders are meant to run a handful of times per
    analysis (roughly once per project rule). A count orders of magnitude higher

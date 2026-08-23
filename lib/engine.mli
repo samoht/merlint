@@ -13,15 +13,17 @@ type result = {
     engine actually iterated -- either the [?analyze_set] supplied by the caller
     or every source file the project index found.
 
-    {!field-unchecked_files} are the analysed files nothing could say what to
-    type against, so the rules that read a typedtree could not run on them. A
-    run with a non-empty list examined less than it was asked to, and a caller
-    that reports "no issues" without saying so is reporting a different result
-    than the one it obtained. Two kinds of file are not listed: one belonging to
-    a platform- or config-gated stanza the host does not build, since no
-    artefact is expected for it, and one outside the analysed set, since a
-    project rule reaching past that set answers for its own evidence and no rule
-    of this run was going to examine the file. *)
+    {!field-unchecked_files} are the analysed files no typedtree could be had
+    for, so the rules that read one could not run on them. They arrive two ways:
+    nothing could say what to type the file against, which a build fixes, or the
+    compiler read the source and refused it, which only editing the source
+    fixes. A run with a non-empty list examined less than it was asked to, and a
+    caller that reports "no issues" without saying so is reporting a different
+    result than the one it obtained. Two kinds of file are not listed: one
+    belonging to a platform- or config-gated stanza the host does not build,
+    since no artefact is expected for it, and one outside the analysed set,
+    since a project rule reaching past that set answers for its own evidence and
+    no rule of this run was going to examine the file. *)
 
 val run :
   ?domain_mgr:[> Eio.Domain_manager.ty ] Eio.Resource.t ->

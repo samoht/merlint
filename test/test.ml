@@ -11,6 +11,17 @@ let setup_log log_level =
 
 let () = setup_log (Some Debug)
 
+(* Suites here build a synthetic dune project in a temp directory and put its
+   artefacts where dune puts them, under the project's own [_build]. An absolute
+   [DUNE_BUILD_DIR] names one tree for every project at once -- the build
+   directory of the run executing these tests -- and artefact lookup honours it
+   for whatever root it is asked about, so the fixtures get looked for in a tree
+   they were never written to. The relative form says the same thing dune's
+   default does -- resolve [_build] against each project's own root -- so pin
+   that for the process. An empty value would not do: dune refuses it outright,
+   and the suites that shell out to dune need it to keep meaning something. *)
+let () = Unix.putenv "DUNE_BUILD_DIR" "_build"
+
 let () =
   let suites =
     [

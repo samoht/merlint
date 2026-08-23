@@ -74,7 +74,7 @@ let ensure_project_built ~root ~scopes mgr =
       | Ok _ -> Ok ()
       | Error msg -> err_build_failed msg)
 
-(* [.cmt]/[.cmti] for [file] with [true] when it describes the current source.
+(* [.cmt]/[.cmti] for [file] with what it can answer for the current source.
    Whether an artefact still describes its source is {!Merlin.Cmt}'s to answer,
    so a rebuild decision here and a rule's reading of the same artefact cannot
    disagree about which files a run actually examined. *)
@@ -83,15 +83,30 @@ let cmt_artefact ~root file =
   match Merlin.Project.cmt ~root_dir:root file with
   | None -> None
   | Some cmt when not (Sys.file_exists cmt) -> None
-  | Some cmt -> Some (cmt, Merlin.Cmt.describes ~root_dir:root file)
+  | Some cmt -> Some (cmt, Merlin.Cmt.status ~root_dir:root file)
 
-type source_status = Compiled | Not_compiled | Skipped | Missing
+type source_status =
+  | Compiled
+  | Not_compiled
+  | Uncompilable
+  | Skipped
+  | Missing
 
+(* A source the compiler refused is its own answer, not a variety of
+   [Not_compiled]. The artefact left for it looks current -- it carries the
+   digest of the whole file -- while describing only the part typed before the
+   error, so reading it as the record of the unit reports on code the compiler
+   never accepted. And no build clears it: [dune build] will fail on the same
+   error, which is what [Not_compiled] would have the caller recommend. *)
 let source_status ~root ~index file =
   match Project_index.source_presence index file with
   | Project_index.Absent -> Missing
   | Project_index.Unindexed -> Skipped
   | Project_index.Indexed -> (
       match cmt_artefact ~root file with
-      | Some (_, true) -> Compiled
-      | None | Some (_, false) -> Not_compiled)
+      | Some (_, Ok ()) -> Compiled
+      | Some (_, Error Merlin.Cmt.Unusable.Partial) -> Uncompilable
+      | None
+      | Some (_, Error (Merlin.Cmt.Unusable.Absent | Merlin.Cmt.Unusable.Stale))
+        ->
+          Not_compiled)
