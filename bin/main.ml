@@ -399,16 +399,16 @@ let unchecked_remedy ~project_root =
     | Some _ | None -> None
 
 (* A run that examined less than it was asked to reports what it could not
-   reach and, when the tree says why, what to do about it. A file gets here one
-   way: it was named for analysis and nothing said what to type it against. A
-   build answers that. *)
+   reach and, when the tree says why, what to do about it. A file gets here two
+   ways: it was named for analysis and nothing said what to type it against,
+   which a build answers, or no dune stanza claims it at all, in which case no
+   rule ran on it and a build changes nothing. *)
 let print_incomplete ?remedy unchecked =
   let plural = if unchecked = 1 then "" else "s" in
   let it = if unchecked = 1 then "it" else "them" in
   Fmt.pr
-    "%s No issues found, but %d file%s could not be fully checked, so some of \
-     the rules that read a typedtree did not run on %s. Re-run with -v to name \
-     %s and say why.@."
+    "%s No issues found, but %d file%s could not be checked, so some or all of \
+     the rules did not run on %s. Re-run with -v to name %s and say why.@."
     (Merlint.Report.print_color false "✗")
     unchecked plural it it;
   match remedy with Some remedy -> Fmt.pr "%s@." remedy | None -> ()
@@ -473,6 +473,7 @@ let run_engine ?domain_mgr ~load_file ?profiling ~bail ~exclude
             excluded = [];
             files_analyzed = 0;
             unchecked_files = [];
+            unclaimed_files = [];
           })
 
 let print_exclusion_stats all_excluded =
@@ -493,6 +494,27 @@ let print_exclusion_stats all_excluded =
     Fmt.pr "@]@."
   end
 
+(* The human-readable report: the file count, the findings by category, the
+   summary line, and the profiling tables when asked for. *)
+let print_text_report ~project_root ~files_analyzed ~enabled_rule_count
+    ~unchecked ~excluded ~profiling issues =
+  (match files_analyzed with
+  | 0 -> Fmt.pr "Running merlint analysis...@.@."
+  | n -> Fmt.pr "Running merlint analysis...@.@.Analyzing %d files@.@." n);
+  print_exclusion_stats excluded;
+  let issues_by_category = group_issues_by_category issues in
+  print_categorized_issues issues_by_category;
+  print_summary_table issues_by_category;
+  print_summary ~unchecked
+    ?remedy:(unchecked_remedy ~project_root)
+    issues enabled_rule_count;
+  match profiling with
+  | Some state ->
+      Merlint.Profiling.print_summary state;
+      Merlint.Profiling.print_rule_summary state;
+      Merlint.Profiling.print_file_summary state
+  | None -> ()
+
 let run_analysis ?domain_mgr ~load_file ~json_output project_root analyze_set
     analyze_roots
     (build_index : ?pool:Eio.Executor_pool.t -> unit -> Project_index.t)
@@ -509,6 +531,7 @@ let run_analysis ?domain_mgr ~load_file ~json_output project_root analyze_set
     excluded = all_excluded;
     files_analyzed;
     unchecked_files;
+    unclaimed_files;
   } =
     run_engine ?domain_mgr ~load_file ?profiling:profiling_state rule_filter
       ~bail ~exclude ~include_vendored analyze_set analyze_roots build_index
@@ -516,40 +539,17 @@ let run_analysis ?domain_mgr ~load_file ~json_output project_root analyze_set
   in
   let enabled_rules = enabled_rules rule_filter in
   let enabled_rule_count = List.length enabled_rules in
+  (* One number, two reasons. A file the rules could not read and a file no
+     stanza compiles are both files this run says nothing about, and a summary
+     that counted only the first would report a discovery gap as a clean run. *)
+  let unchecked = List.length unchecked_files + List.length unclaimed_files in
   if json_output then
     print_json_report ~project_root ~files_analyzed ~enabled_rule_count
-      ~unchecked:(List.length unchecked_files)
-      ~excluded:all_excluded all_issues
-  else (
-    (match files_analyzed with
-    | 0 -> Fmt.pr "Running merlint analysis...@.@."
-    | n -> Fmt.pr "Running merlint analysis...@.@.Analyzing %d files@.@." n);
-    print_exclusion_stats all_excluded;
-
-    (* Group issues by category for reporting *)
-    let issues_by_category = group_issues_by_category all_issues in
-
-    (* Process each category *)
-    print_categorized_issues issues_by_category;
-
-    (* Print summary table *)
-    print_summary_table issues_by_category;
-
-    (* Print custom summary *)
-    print_summary
-      ~unchecked:(List.length unchecked_files)
-      ?remedy:(unchecked_remedy ~project_root)
-      all_issues enabled_rule_count;
-
-    (* Print profiling summary if enabled *)
-    match profiling_state with
-    | Some state ->
-        Merlint.Profiling.print_summary state;
-        Merlint.Profiling.print_rule_summary state;
-        Merlint.Profiling.print_file_summary state
-    | None -> ());
-
-  print_fix_hints ~unchecked:(List.length unchecked_files) all_issues
+      ~unchecked ~excluded:all_excluded all_issues
+  else
+    print_text_report ~project_root ~files_analyzed ~enabled_rule_count
+      ~unchecked ~excluded:all_excluded ~profiling:profiling_state all_issues;
+  print_fix_hints ~unchecked all_issues
 
 let ensure_project_built ~root ~scopes mgr =
   match Merlint.Build.ensure_project_built ~root ~scopes mgr with

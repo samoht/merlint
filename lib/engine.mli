@@ -8,6 +8,7 @@ type result = {
   excluded : exclusion_stats list;
   files_analyzed : int;
   unchecked_files : string list;
+  unclaimed_files : string list;
 }
 (** Analysis result. {!field-files_analyzed} is the size of the file set the
     engine actually iterated -- either the [?analyze_set] supplied by the caller
@@ -23,7 +24,16 @@ type result = {
     belonging to a platform- or config-gated stanza the host does not build,
     since no artefact is expected for it, and one outside the analysed set,
     since a project rule reaching past that set answers for its own evidence and
-    no rule of this run was going to examine the file. *)
+    no rule of this run was going to examine the file.
+
+    {!field-unclaimed_files} are the source files under what the run was pointed
+    at that no dune stanza claims, so the engine never iterated them and no rule
+    saw them at all. Reporting them is what makes the run's own numbers add up:
+    {!field-files_analyzed} plus this list accounts for every [.ml] / [.mli] in
+    the walked tree, so a discovery gap moves a number instead of passing
+    unnoticed. Only a run given directories reports them; an explicit
+    [?analyze_set] is the caller's own accounting of what it wants looked at,
+    and a file it did not name is not that run's to report. *)
 
 val run :
   ?domain_mgr:[> Eio.Domain_manager.ty ] Eio.Resource.t ->

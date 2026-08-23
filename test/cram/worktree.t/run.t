@@ -17,7 +17,7 @@ it, rather than leaving the reader with a count.
 
   $ cd ../tree
   $ merlint . 2>/dev/null | tail -3
-  ✗ No issues found, but 2 files could not be fully checked, so some of the rules that read a typedtree did not run on them. Re-run with -v to name them and say why.
+  ✗ No issues found, but 2 files could not be checked, so some or all of the rules did not run on them. Re-run with -v to name them and say why.
     This working tree has no opam switch of its own, so nothing here could be built. Link the switch of the tree it was branched from, then re-run:
       opam switch link $TESTCASE_ROOT/repo $TESTCASE_ROOT/tree
 
@@ -26,4 +26,4 @@ unchecked for the ordinary reason, that nobody has built them.
 
   $ cd ../repo
   $ merlint . 2>/dev/null | tail -1
-  ✗ No issues found, but 2 files could not be fully checked, so some of the rules that read a typedtree did not run on them. Re-run with -v to name them and say why.
+  ✗ No issues found, but 2 files could not be checked, so some or all of the rules did not run on them. Re-run with -v to name them and say why.

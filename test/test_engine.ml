@@ -116,10 +116,42 @@ let test_analyses_package_less_private_executable () =
         "library module and all three private-executable modules" 4
         result.Engine.files_analyzed)
 
+(* Every [.ml] / [.mli] under the scanned path is either analysed or named as
+   unclaimed. A file in neither half is one the run says nothing about while
+   reporting its verdict as the verdict of the directory, which is the failure
+   the accounting exists to make impossible: whatever the cause -- a stanza shape
+   discovery cannot attribute, a [(modules ...)] spec excluding a sibling, a
+   directory holding no dune file at all -- the numbers stop adding up and say
+   so. Here two files are claimed by nothing: [snippets/] has no dune file, and
+   [lib/shared.ml] is outside the library's [(modules ...)] spec. *)
+let test_accounts_for_every_source_file () =
+  with_temp_dir (fun root ->
+      fuzz_shape_project root;
+      write (Filename.concat root "snippets/example.ml") "let z = 3\n";
+      write (Filename.concat root "lib/shared.ml") "let s = 4\n";
+      write
+        (Filename.concat root "lib/dune")
+        "(library (name alpha) (public_name alpha) (modules alpha))\n";
+      let result = run_on root in
+      let on_disk = 6 in
+      Alcotest.(check int)
+        "analysed plus unclaimed accounts for every source file" on_disk
+        (result.Engine.files_analyzed
+        + List.length result.Engine.unclaimed_files);
+      Alcotest.(check (list string))
+        "and the unclaimed half names them"
+        [ "lib/shared.ml"; "snippets/example.ml" ]
+        (result.Engine.unclaimed_files
+        |> List.filter_map (fun f ->
+            Fpath.rem_prefix (Fpath.v root) (Fpath.v f))
+        |> List.map Fpath.to_string |> List.sort String.compare))
+
 let suite =
   ( "engine",
     [
       Alcotest.test_case "run with empty filter" `Quick test_run_empty_filter;
       Alcotest.test_case "analyses a package-less private executable" `Quick
         test_analyses_package_less_private_executable;
+      Alcotest.test_case "accounts for every source file" `Quick
+        test_accounts_for_every_source_file;
     ] )

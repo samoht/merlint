@@ -13,6 +13,7 @@ type result = {
   excluded : exclusion_stats list;
   files_analyzed : int;
   unchecked_files : string list;
+  unclaimed_files : string list;
 }
 
 (* A bounded sample: naming every file of a whole-repo run buries the message
@@ -95,6 +96,29 @@ let warn_uncompilable ~analyzed stats =
            (if n = 1 then "it" else "them")
            pp_sample broken));
   broken
+
+(* The third way a run can be incomplete, and the only one that leaves no trace
+   in what it did: a source file no dune stanza claims is never analysed at all,
+   so no rule reports on it and no artefact is looked for. Left silent, the run
+   reports the verdict of the files it happened to reach as the verdict of the
+   directory it was pointed at. Naming them is what makes "Analyzing N files"
+   add up against the tree. *)
+let warn_unclaimed unclaimed =
+  (if unclaimed <> [] then
+     let n = List.length unclaimed in
+     let it = if n = 1 then "it" else "them" in
+     let belongs =
+       if n = 1 then "it no longer belongs" else "they no longer belong"
+     in
+     Log.warn (fun m ->
+         m
+           "@[<v>%d file%s claimed by no dune stanza, so nothing compiles %s \
+            and no rule examined %s. Either a stanza should name %s -- a \
+            [(modules ...)] spec may be excluding %s -- or %s in the tree.%a@]"
+           n
+           (if n = 1 then " is" else "s are")
+           it it it it belongs pp_sample unclaimed));
+  unclaimed
 
 let log_fs_stats () =
   let s = Fs.stats () in
@@ -467,6 +491,21 @@ let drop_excluded_files ~project_root ~exclude files =
       in
       List.filter (fun f -> not (excluded f)) files
 
+(* The source files under what the run was pointed at that no dune stanza
+   claims, so [analysis_files] never saw them. Asked only of a run given
+   directories: an explicit [analyze_set] is the caller's own accounting of what
+   it wants looked at, and a file it did not name is not this run's to report.
+   The same exclusion globs apply, so a path the user asked to skip is not then
+   reported as skipped. *)
+let unclaimed_files ~project_root ~exclude ~include_vendored ~analyze_set
+    ~analyze_roots index =
+  match (analyze_set, analyze_roots) with
+  | Some _, None -> []
+  | (None | Some _), roots ->
+      Project_index.unclaimed_source_files ~include_vendored ?roots index
+      |> drop_excluded_files ~project_root ~exclude
+      |> List.map Fpath.to_string
+
 let run_enabled_rules ?pool ?profiling ~project_ctx ~project_root ~enabled_rules
     analyze_set =
   let file_rules = List.filter Rule.is_direct_file_scoped enabled_rules in
@@ -483,7 +522,7 @@ let run_enabled_rules ?pool ?profiling ~project_ctx ~project_root ~enabled_rules
       |> Eio.Promise.resolve file_resolver);
   (Eio.Promise.await project_promise, Eio.Promise.await file_promise)
 
-let build_result ?(bail = false) ?(unchecked_files = [])
+let build_result ?(bail = false) ?(unchecked_files = []) ?(unclaimed_files = [])
     (project_issues, project_excluded) file_results files_analyzed =
   let file_issues = List.concat_map fst file_results in
   let file_excluded = List.concat_map snd file_results in
@@ -497,52 +536,61 @@ let build_result ?(bail = false) ?(unchecked_files = [])
     excluded = project_excluded @ file_excluded;
     files_analyzed;
     unchecked_files;
+    unclaimed_files;
   }
 
+(* One whole analysis pass over [backend], optionally on [pool]. It returns the
+   finished result, so the caller is left holding the backend's lifetime and
+   nothing else. [requested_set] is the caller's [?analyze_set] as given, which
+   the derived file set below shadows and the unclaimed accounting still needs.
+*)
+let analyse ?pool ?profiling ?bail ~load_file ~filter ~requested_set
+    ~analyze_roots ~index ~exclude ~include_vendored ~backend project_root =
+  let idx = lazy (index ?pool ()) in
+  let idx_value = Lazy.force idx in
+  let analyze_set =
+    analysis_files ?analyze_set:requested_set ?analyze_roots ~include_vendored
+      idx_value
+    |> drop_excluded_files ~project_root ~exclude
+  in
+  let file_view = file_view ?profiling ~load_file ~backend in
+  let _config, project_ctx, enabled_rules =
+    setup_analysis ~filter ~analyze_set ~index:idx ~file_view project_root
+  in
+  Fs.reset_stats ();
+  let files_analyzed = List.length analyze_set in
+  let project_results, file_results =
+    Probe_events.analysis ~project_root ~files:files_analyzed
+      ~rules:(List.length enabled_rules)
+    @@ fun () ->
+    run_enabled_rules ?pool ?profiling ~project_ctx ~project_root ~enabled_rules
+      analyze_set
+  in
+  log_index_stats idx_value;
+  let unchecked_files =
+    log_backend_stats ~index:idx_value ~analyzed:analyze_set backend
+  in
+  let unclaimed_files =
+    warn_unclaimed
+      (unclaimed_files ~project_root ~exclude ~include_vendored
+         ~analyze_set:requested_set ~analyze_roots idx_value)
+  in
+  build_result ?bail ~unchecked_files ~unclaimed_files project_results
+    file_results files_analyzed
+
 let run ?domain_mgr ~load_file ~filter ?analyze_set ?analyze_roots ~index
-    ?profiling ?(bail = false) ?(exclude = []) ?(include_vendored = false)
-    project_root =
+    ?profiling ?bail ?(exclude = []) ?(include_vendored = false) project_root =
   Log.info (fun m -> m "Starting analysis of %s" project_root);
   let backend = Merlin.v ~root_dir:project_root () in
-  let run_with_pool ?pool () =
-    let idx = lazy (index ?pool ()) in
-    let idx_value = Lazy.force idx in
-    let analyze_set =
-      analysis_files ?analyze_set ?analyze_roots ~include_vendored idx_value
-      |> drop_excluded_files ~project_root ~exclude
-    in
-    let file_view = file_view ?profiling ~load_file ~backend in
-    let _config, project_ctx, enabled_rules =
-      setup_analysis ~filter ~analyze_set ~index:idx ~file_view project_root
-    in
-    Fs.reset_stats ();
-    let files_analyzed = List.length analyze_set in
-    let project_results, file_results =
-      Probe_events.analysis ~project_root ~files:files_analyzed
-        ~rules:(List.length enabled_rules)
-      @@ fun () ->
-      run_enabled_rules ?pool ?profiling ~project_ctx ~project_root
-        ~enabled_rules analyze_set
-    in
-    log_index_stats idx_value;
-    let unchecked_files =
-      log_backend_stats ~index:idx_value ~analyzed:analyze_set backend
-    in
-    (project_results, file_results, files_analyzed, unchecked_files)
+  let analyse ?pool () =
+    analyse ?pool ?profiling ?bail ~load_file ~filter ~requested_set:analyze_set
+      ~analyze_roots ~index ~exclude ~include_vendored ~backend project_root
   in
   Fun.protect
     ~finally:(fun () ->
       log_fs_stats ();
       Merlin.close backend)
     (fun () ->
-      let ( (project_issues, project_excluded),
-            file_results,
-            files_analyzed,
-            unchecked_files ) =
-        match domain_mgr with
-        | None -> run_with_pool ()
-        | Some dm -> Fs.with_pool dm (fun pool -> run_with_pool ~pool ())
-      in
-      build_result ~bail ~unchecked_files
-        (project_issues, project_excluded)
-        file_results files_analyzed)
+      match domain_mgr with
+      | None -> analyse ()
+      | Some dm -> Fs.with_pool dm (fun pool -> analyse ~pool ()))

@@ -5,7 +5,7 @@ E727 requires an explicit [(package ...)] field on the runtest and fuzz rules.
   Dune root: $TESTCASE_ROOT/bad/
   Running merlint analysis...
   
-  Analyzing 1 files
+  Analyzing 2 files
   
   ✓ Code Quality (0 total issues)
   ✓ Code Style (0 total issues)
@@ -38,7 +38,7 @@ E727 requires an explicit [(package ...)] field on the runtest and fuzz rules.
   Dune root: $TESTCASE_ROOT/good/
   Running merlint analysis...
   
-  Analyzing 1 files
+  Analyzing 2 files
   
   ✓ Code Quality (0 total issues)
   ✓ Code Style (0 total issues)
