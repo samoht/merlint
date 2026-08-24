@@ -140,9 +140,10 @@ let warn_unclaimed unclaimed =
             %s (a [(modules ...)] spec may be excluding %s); %s in the tree; \
             or a stanza does name %s and merlint's project index could not \
             read that stanza, which is a defect in merlint and not one of \
-            yours. Check which with [project-index stanzas -p <pkg>] and \
-            [project-index libraries -p <pkg>]: a stanza that is in the dune \
-            file and in neither listing is the third.%a@]"
+            yours. Check which with [dune exec -- project-index stanzas -p \
+            <dir>] and [dune exec -- project-index libraries -p <dir>], where \
+            <dir> is the package directory a named file sits under: a stanza \
+            that is in the dune file and in neither listing is the third.%a@]"
            n
            (if n = 1 then " is" else "s are")
            it it it it belongs it pp_sample unclaimed));

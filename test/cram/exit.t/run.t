@@ -64,7 +64,7 @@ coverage, and on its own -- no finding anywhere -- it answers 2:
   $ printf 'let x = 1\n' > t/lib/orphan.ml
   $ merlint -r E425 t/lib
   Dune root: $TESTCASE_ROOT/t
-  ! 1 file is claimed by no dune stanza, so nothing compiles it and no rule examined it. Three ways that happens: no stanza names it (a [(modules ...)] spec may be excluding it); it no longer belongs in the tree; or a stanza does name it and merlint's project index could not read that stanza, which is a defect in merlint and not one of yours. Check which with [project-index stanzas -p <pkg>] and [project-index libraries -p <pkg>]: a stanza that is in the dune file and in neither listing is the third.
+  ! 1 file is claimed by no dune stanza, so nothing compiles it and no rule examined it. Three ways that happens: no stanza names it (a [(modules ...)] spec may be excluding it); it no longer belongs in the tree; or a stanza does name it and merlint's project index could not read that stanza, which is a defect in merlint and not one of yours. Check which with [dune exec -- project-index stanzas -p <dir>] and [dune exec -- project-index libraries -p <dir>], where <dir> is the package directory a named file sits under: a stanza that is in the dune file and in neither listing is the third.
   ! $TESTCASE_ROOT/t/lib/orphan.ml
   Running merlint analysis...
   
