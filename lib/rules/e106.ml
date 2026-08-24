@@ -136,24 +136,30 @@ and dangerous_row ~root ~locals ~lib ~seen row =
    unresolved, or if any type argument or - when transparent - any member is
    itself dangerous. A short sibling name that does not resolve on its own is
    retried as a sub-unit of the enclosing [lib]. Members are resolved against
-   the named type's own library (it owns them). [seen] breaks recursion on
-   cyclic type definitions. *)
+   the named type's own library (it owns them), except for a type read from one
+   of this unit's own modules: its members are written in this unit's scope, so
+   they keep [locals] and no library. Members read out of another unit's
+   interface drop [locals] instead, so a module bound here cannot capture a
+   short sibling name that unit meant for its own neighbour. [seen] breaks
+   recursion on cyclic type definitions. *)
 and dangerous_named ~root ~locals ~lib ~seen name args =
   if List.mem name seen then false
   else
     let seen = name :: seen in
+    let local = Type_kind.names_local locals name in
     List.exists (dangerous ~root ~locals ~lib ~seen) args
     ||
-    match Type_kind.classify ~root ~locals ?lib ~path:name () with
+    match Type_kind.classify ~root ?locals ?lib ~path:name () with
     | Type_kind.Abstract | Type_kind.Unknown -> true
     | Type_kind.Transparent members ->
-        let member_lib = Type_kind.library_of ?enclosing:lib name in
-        List.exists
-          (dangerous ~root ~locals ~lib:(Some member_lib) ~seen)
-          members
+        let locals, lib =
+          if local then (locals, lib)
+          else (None, Some (Type_kind.library_of ?enclosing:lib name))
+        in
+        List.exists (dangerous ~root ~locals ~lib ~seen) members
 
 let flaggable ~root ~locals (operand : T.expression) =
-  dangerous ~root ~locals ~lib:None ~seen:[] operand.exp_type
+  dangerous ~root ~locals:(Some locals) ~lib:None ~seen:[] operand.exp_type
 
 (* The type-specific function the caller should reach for instead. *)
 let replacement = function

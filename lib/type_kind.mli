@@ -32,6 +32,13 @@ val locals :
     of its own: it is reached by navigating the enclosing binding's module type.
 *)
 
+val names_local : locals option -> string -> bool
+(** [names_local locals path] is [true] when [path]'s head is one of the modules
+    [locals] records, so {!classify} will read [path] out of that binding. A
+    caller uses it to decide whether a resolved type's members are written in
+    this unit's scope (they are, when it holds) or in the scope of the interface
+    they were read from (when it does not). *)
+
 val mangle_lib : string -> string
 (** [mangle_lib m] maps the first component of a type path to its library's
     compilation-unit prefix: it lowercases an ordinary module ([X509] ->
