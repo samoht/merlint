@@ -7,6 +7,8 @@ Build bad fixture project:
 
   $ merlint --build -r E523 bad/
   Dune root: $TESTCASE_ROOT/bad/
+  ! 1 file is claimed by no dune stanza, so nothing compiles it and no rule examined it. Three ways that happens: no stanza names it (a [(modules ...)] spec may be excluding it); it no longer belongs in the tree; or a stanza does name it and merlint's project index could not read that stanza, which is a defect in merlint and not one of yours. Check which with [project-index stanzas -p <pkg>] and [project-index libraries -p <pkg>]: a stanza that is in the dune file and in neither listing is the third.
+  ! $TESTCASE_ROOT/bad/uncovered/c.ml
   Running merlint analysis...
   
   Analyzing 4 files
@@ -36,10 +38,10 @@ Build bad fixture project:
   ╰───────────────────┴─────────────────────────────────────────────────────╯
   
   
-  Summary: ✗ 2 total issues (applied 1 rule)
+  Summary: ✗ 2 total issues (applied 1 rule, 1 file unchecked)
   ✗ Some checks failed. See details above.
     Run `merlint help E523` for the rule's description, hint, and good/bad examples.
-  [1]
+  [3]
 
 
 
@@ -57,6 +59,13 @@ Build good fixture project:
 
   $ merlint --build -r E523 good/
   Dune root: $TESTCASE_ROOT/good/
+  ! 6 files are claimed by no dune stanza, so nothing compiles them and no rule examined them. Three ways that happens: no stanza names them (a [(modules ...)] spec may be excluding them); they no longer belong in the tree; or a stanza does name them and merlint's project index could not read that stanza, which is a defect in merlint and not one of yours. Check which with [project-index stanzas -p <pkg>] and [project-index libraries -p <pkg>]: a stanza that is in the dune file and in neither listing is the third.
+  ! $TESTCASE_ROOT/good/include_subdirs/sub/baz.ml
+  ! $TESTCASE_ROOT/good/select/chooser_default.ml
+  ! $TESTCASE_ROOT/good/select/chooser_re.ml
+  ! $TESTCASE_ROOT/good/select_dotted/c_tier.everparse.ml
+  ! $TESTCASE_ROOT/good/select_dotted/c_tier.none.ml
+  ! $TESTCASE_ROOT/good/src/helpers.ml
   Running merlint analysis...
   
   Analyzing 18 files
@@ -70,8 +79,9 @@ Build good fixture project:
   ✓ Interop Testing (0 total issues)
   ✓ Code Generation (0 total issues)
   
-  Summary: ✓ 0 total issues (applied 1 rule)
-  ✓ All checks passed!
+  Summary: ✗ 0 total issues (applied 1 rule, 6 files unchecked)
+  ✗ No issues found, but 6 files could not be checked, so some or all of the rules did not run on them. Re-run with -v to name them and say why.
+  [2]
 
 
 
