@@ -5,7 +5,13 @@ val is_in_examples : string -> bool
 *)
 
 val is_in_fuzz_dir : Fpath.t -> bool
-(** [is_in_fuzz_dir file] returns [true] if [file] is in a fuzz directory. *)
+(** [is_in_fuzz_dir file] returns [true] if [file] is below a directory named
+    [fuzz], at any depth: [fuzz/eio/fuzz_chaos.ml] is in a fuzz directory as
+    much as [fuzz/fuzz_chaos.ml] is, because a package that fuzzes an Eio
+    adapter separately from its pure core puts the adapter's driver there. The
+    path should be relative to the analyzed project root, as for
+    {!is_test_path}: the answer is read off the path's segments, so a segment
+    named [fuzz] above that root would count. *)
 
 val is_in_test_dir : Fpath.t -> bool
 (** [is_in_test_dir file] returns [true] if [file] is in a test directory. *)

@@ -4,9 +4,14 @@ let is_in_examples path =
   Astring.String.is_infix ~affix:"/examples/" path
   || Astring.String.is_infix ~affix:"/example/" path
 
+(* Under a directory named [fuzz], at any depth below it -- not only as its
+   immediate child. A package that fuzzes an Eio adapter separately from its
+   pure core puts the adapter's driver in [fuzz/eio/], and the fuzz-layout rules
+   govern that directory exactly as they govern [fuzz/] itself. Keyed on the
+   immediate parent alone, every such directory was exempt from all of them by
+   accident. *)
 let is_in_fuzz_dir file =
-  let dir = Fpath.parent file |> Fpath.basename in
-  String.equal dir "fuzz"
+  Fpath.parent file |> Fpath.segs |> List.exists (String.equal "fuzz")
 
 let is_in_test_dir file =
   let dir = Fpath.parent file |> Fpath.basename in
