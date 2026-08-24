@@ -103,11 +103,29 @@ let group_issues_by_code issues =
       (error_code, issue :: current) :: List.remove_assoc error_code acc)
     [] issues
 
-(* An incomplete run exits non-zero even with no findings: a caller that treats
-   exit 0 as "this code is clean" would otherwise be told so by a run that
-   never read part of it. *)
-let print_fix_hints ?(unchecked = 0) all_issues =
-  if all_issues <> [] || unchecked > 0 then exit 1
+(* A run answers two independent questions, so the status carries two bits. Bit
+   0: the code merlint read has findings. Bit 1: merlint could not look at part
+   of what it was pointed at, which is work on a dune file or on merlint itself
+   and says nothing about the code. Summed into one number, a caller could not
+   tell them apart; as bits it can, and a caller that only wants pass or fail
+   still reads any non-zero -- which is what the pre-commit hook does.
+
+   Both bits, status 3, is the worst of the three outcomes rather than a third
+   kind of outcome: the findings are real, and the list they came from is also
+   short, so it is strictly above either alone.
+
+   An incomplete run is never merely a warning. A run that exits 0 having read
+   half of what it was given is read as "this code is clean", and that reading
+   is what hid three discovery defects until the status made it impossible. *)
+let exit_findings = 1
+let exit_incomplete = 2
+
+let exit_status ~unchecked issues =
+  (if issues <> [] then exit_findings else 0)
+  lor if unchecked > 0 then exit_incomplete else 0
+
+let exit_with_status ~unchecked all_issues =
+  match exit_status ~unchecked all_issues with 0 -> () | status -> exit status
 
 let rule_category_name code =
   match
@@ -138,6 +156,8 @@ module Json_report = struct
     rules_applied : int;
     total_issues : int;
     unchecked : int;
+    unchecked_files : string list;
+    unclaimed_files : string list;
     passed : bool;
     issues : issue list;
     excluded : exclusion list;
@@ -151,14 +171,16 @@ module Json_report = struct
 
   let exclusion rule file = ({ rule; file } : exclusion)
 
-  let v project_root files_analyzed rules_applied total_issues unchecked passed
-      issues excluded =
+  let v project_root files_analyzed rules_applied total_issues unchecked
+      unchecked_files unclaimed_files passed issues excluded =
     {
       project_root;
       files_analyzed;
       rules_applied;
       total_issues;
       unchecked;
+      unchecked_files;
+      unclaimed_files;
       passed;
       issues;
       excluded;
@@ -204,6 +226,10 @@ module Json_report = struct
         t.rules_applied)
     |> C.Object.member "total_issues" C.int ~enc:(fun (t : t) -> t.total_issues)
     |> C.Object.member "unchecked" C.int ~enc:(fun (t : t) -> t.unchecked)
+    |> C.Object.member "unchecked_files" (C.list C.string) ~enc:(fun (t : t) ->
+        t.unchecked_files)
+    |> C.Object.member "unclaimed_files" (C.list C.string) ~enc:(fun (t : t) ->
+        t.unclaimed_files)
     |> C.Object.member "passed" C.bool ~enc:(fun (t : t) -> t.passed)
     |> C.Object.member "issues" (C.list issue_json) ~enc:(fun (t : t) ->
         t.issues)
@@ -233,17 +259,25 @@ module Json_report = struct
   let exclusion_of_engine (e : Merlint.Engine.exclusion_stats) =
     exclusion e.rule e.file
 
-  (* A run that could not read an artefact for every file it was given examined
-     less than it was asked to, and the process exits 1 for it. The document
-     carries that count and reports the same verdict, so a caller reading the
-     JSON and a caller reading the exit status never disagree. *)
-  let v ~project_root ~files_analyzed ~enabled_rule_count ~unchecked ~excluded
-      issues =
+  let report_path file =
+    Fpath.v file |> Merlint.Loc.current_dir_relative |> Fpath.to_string
+
+  (* A run that examined less than it was asked to reports a non-zero status for
+     it, and the document says so too, so a caller reading the JSON and a caller
+     reading the exit status never disagree. It names the files as well as
+     counting them, in the two sets the count is the sum of: a caller whose
+     question is "what did this run not look at" reads the answer here instead
+     of rediscovering it a directory at a time. *)
+  let v ~project_root ~files_analyzed ~enabled_rule_count ~unchecked_files
+      ~unclaimed_files ~excluded issues =
     let issues =
       issues |> List.sort Merlint.Rule.Run.compare |> List.map issue_of_run
     in
     let total_issues = List.length issues in
+    let unchecked = List.length unchecked_files + List.length unclaimed_files in
     v project_root files_analyzed enabled_rule_count total_issues unchecked
+      (List.map report_path unchecked_files)
+      (List.map report_path unclaimed_files)
       (total_issues = 0 && unchecked = 0)
       issues
       (List.map exclusion_of_engine excluded)
@@ -252,9 +286,9 @@ module Json_report = struct
 end
 
 let print_json_report ~project_root ~files_analyzed ~enabled_rule_count
-    ~unchecked ~excluded issues =
-  Json_report.v ~project_root ~files_analyzed ~enabled_rule_count ~unchecked
-    ~excluded issues
+    ~unchecked_files ~unclaimed_files ~excluded issues =
+  Json_report.v ~project_root ~files_analyzed ~enabled_rule_count
+    ~unchecked_files ~unclaimed_files ~excluded issues
   |> Json_report.print
 
 (* Group issues by category for visual reporting *)
@@ -545,11 +579,11 @@ let run_analysis ?domain_mgr ~load_file ~json_output project_root analyze_set
   let unchecked = List.length unchecked_files + List.length unclaimed_files in
   if json_output then
     print_json_report ~project_root ~files_analyzed ~enabled_rule_count
-      ~unchecked ~excluded:all_excluded all_issues
+      ~unchecked_files ~unclaimed_files ~excluded:all_excluded all_issues
   else
     print_text_report ~project_root ~files_analyzed ~enabled_rule_count
       ~unchecked ~excluded:all_excluded ~profiling:profiling_state all_issues;
-  print_fix_hints ~unchecked all_issues
+  exit_with_status ~unchecked all_issues
 
 let ensure_project_built ~root ~scopes mgr =
   match Merlint.Build.ensure_project_built ~root ~scopes mgr with
@@ -881,6 +915,24 @@ let analyze_term =
     $ build_flag $ include_vendored_flag $ files
     $ Observe.setup ~json_reporter:(Some json_log_reporter) "merlint")
 
+(* The status is the only thing a scripted caller reads, so it is documented in
+   the manual of every command that produces one. [Cmd.Exit.defaults] documents
+   0 with "on success", which a run reporting an incomplete analysis is not, so
+   0 is described here and the defaults are not reused. *)
+let exits =
+  [
+    Cmd.Exit.info 0 ~doc:"on a complete run with no findings.";
+    Cmd.Exit.info exit_findings
+      ~doc:"findings: the code merlint read has issues to fix.";
+    Cmd.Exit.info exit_incomplete
+      ~doc:"incomplete coverage: merlint could not read part of it.";
+    Cmd.Exit.info
+      (exit_findings lor exit_incomplete)
+      ~doc:"both: findings, over a run that read only part of the tree.";
+    Cmd.Exit.info Cmd.Exit.cli_error ~doc:"on command line parsing errors.";
+    Cmd.Exit.info Cmd.Exit.internal_error ~doc:"on unexpected internal errors.";
+  ]
+
 let scan =
   let doc = "Scan OCaml code for style issues" in
   let man =
@@ -902,7 +954,7 @@ let scan =
       `P "Run $(b,merlint help config) for the configuration file format.";
     ]
   in
-  let info = Cmd.info "scan" ~version:Version.string ~doc ~man in
+  let info = Cmd.info "scan" ~version:Version.string ~doc ~man ~exits in
   Cmd.v info analyze_term
 
 let cmd =
@@ -936,7 +988,7 @@ let cmd =
       `P "$(mname)-scan(1), $(mname)-config(1), $(mname)-help(1)";
     ]
   in
-  let info = Cmd.info "merlint" ~version:Version.string ~doc ~man in
+  let info = Cmd.info "merlint" ~version:Version.string ~doc ~man ~exits in
   Cmd.group ~default:analyze_term info [ scan; Cmd_config.cmd; Cmd_help.cmd ]
 
 (* Cmdliner's [Cmd.group] only invokes the default term when argv has zero

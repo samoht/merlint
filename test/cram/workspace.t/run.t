@@ -13,9 +13,9 @@ The exit status reports the incomplete run rather than a clean one.
   $ mv merlint.toml declared.toml
   $ merlint --build . 2>/dev/null | tail -2
   Summary: ✗ 0 total issues (applied 119 rules, 2 files unchecked)
-  ✗ No issues found, but 2 files could not be fully checked, so some of the rules that read a typedtree did not run on them. Re-run with -v to name them and say why.
+  ✗ No issues found, but 2 files could not be checked, so some or all of the rules did not run on them. Re-run with -v to name them and say why.
   $ merlint . > /dev/null 2>&1
-  [1]
+  [2]
 
 Nothing in the checkout points back at the workspace, and more than one
 workspace may link the same sources, so the checkout names the one that builds
@@ -63,7 +63,7 @@ declaration at all.
   $ merlint . 2>&1 >/dev/null
   Note: merlint.toml declares workspace $TESTCASE_ROOT/ws/, whose source tree does not reach $TESTCASE_ROOT/pkg/. The workspace builds this checkout only if one of its directories is this one.
   Analysing this tree where it stands.
-  [1]
+  [2]
   $ merlint . 2>/dev/null | tail -2
   Summary: ✗ 0 total issues (applied 119 rules, 2 files unchecked)
-  ✗ No issues found, but 2 files could not be fully checked, so some of the rules that read a typedtree did not run on them. Re-run with -v to name them and say why.
+  ✗ No issues found, but 2 files could not be checked, so some or all of the rules did not run on them. Re-run with -v to name them and say why.

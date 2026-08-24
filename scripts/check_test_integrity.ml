@@ -48,7 +48,15 @@ let re_dune_error =
   Re.compile
     (Re.seq [ Re.str "ERROR"; Re.rep Re.any; Re.str "Dune build failed" ])
 
-let re_exit_1 = Re.compile (Re.str "[1]")
+(* A cram exit-status line, which cram writes as the status in brackets on its
+   own line and omits altogether for 0. Merlint's status is a bit set -- 1
+   findings, 2 incomplete coverage, 3 both -- so the question a transcript
+   answers is whether merlint reported failure at all, not whether it reported
+   exactly 1. Keyed on the literal [1], a transcript pinning an incomplete run
+   read as a success and the checks below drew the opposite conclusion from the
+   one the transcript states. *)
+let re_nonzero_exit =
+  Re.compile (Re.seq [ Re.bos; Re.str "  ["; Re.rep1 Re.digit; Re.str "]" ])
 
 let re_zero_issues =
   Re.compile
@@ -466,14 +474,14 @@ let check_test_directory_structure cram_dir defined_rules test_dirs errors =
 let has_line re lines = List.exists (fun line -> Re.execp re line) lines
 
 type output_kind = {
-  has_exit_1 : bool;
+  exits_nonzero : bool;
   shows_zero : bool;
   shows_failure : bool;
 }
 
 let test_output_kind lines =
   {
-    has_exit_1 = has_line re_exit_1 lines;
+    exits_nonzero = has_line re_nonzero_exit lines;
     shows_zero = has_line re_zero_issues lines;
     shows_failure = has_line re_failing_summary lines;
   }
@@ -493,28 +501,28 @@ let output_has_build_error lines =
 let add_error errors msg = errors := msg :: !errors
 
 let check_merlint_edge_output cram_dir rule_code errors kind =
-  if kind.has_exit_1 && not kind.shows_failure then
+  if kind.exits_nonzero && not kind.shows_failure then
     Fmt.kstr (add_error errors)
-      "Error: %s/%s.t/run.t: merlint edge test exits [1] without a failing \
-       summary"
+      "Error: %s/%s.t/run.t: merlint edge test exits non-zero without a \
+       failing summary"
       cram_dir rule_code
-  else if (not kind.has_exit_1) && not kind.shows_zero then
+  else if (not kind.exits_nonzero) && not kind.shows_zero then
     Fmt.kstr (add_error errors)
       "Error: %s/%s.t/run.t: merlint edge test exits successfully without \
        showing 0 issues"
       cram_dir rule_code
 
 let check_bad_output cram_dir rule_code errors kind =
-  if not kind.has_exit_1 then
+  if not kind.exits_nonzero then
     Fmt.kstr (add_error errors)
-      "Error: %s/%s.t/run.t: bad.ml test doesn't show exit code [1] - should \
-       find issues"
+      "Error: %s/%s.t/run.t: bad.ml test doesn't show a non-zero exit status - \
+       should find issues"
       cram_dir rule_code
 
 let check_good_output cram_dir rule_code errors kind =
-  if kind.has_exit_1 && kind.shows_zero then
+  if kind.exits_nonzero && kind.shows_zero then
     Fmt.kstr (add_error errors)
-      "Error: %s/%s.t/run.t: good.ml test shows exit [1] but claims 0 issues"
+      "Error: %s/%s.t/run.t: good.ml test exits non-zero but claims 0 issues"
       cram_dir rule_code
 
 (* Check a single test output for build errors or incorrect exit behavior *)

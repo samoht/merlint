@@ -26,16 +26,16 @@ has never built this project, can name no stanza that compiles it either:
   ✓ Code Generation (0 total issues)
   
   Summary: ✗ 0 total issues (applied 1 rule, 1 file unchecked)
-  ✗ No issues found, but 1 file could not be fully checked, so some of the rules that read a typedtree did not run on it. Re-run with -v to name it and say why.
-  [1]
+  ✗ No issues found, but 1 file could not be checked, so some or all of the rules did not run on it. Re-run with -v to name it and say why.
+  [2]
 
 The JSON document reports the verdict the exit status reports, and says how many
 files the run could not reach. Nothing but the document goes to stdout, so the
 output parses:
 
   $ merlint --json -r E105 lib.mli 2>/dev/null
-  {"project_root":"$TESTCASE_ROOT/","files_analyzed":1,"rules_applied":1,"total_issues":0,"unchecked":1,"passed":false,"issues":[],"excluded":[]}
-  [1]
+  {"project_root":"$TESTCASE_ROOT/","files_analyzed":1,"rules_applied":1,"total_issues":0,"unchecked":1,"unchecked_files":["lib.mli"],"unclaimed_files":[],"passed":false,"issues":[],"excluded":[]}
+  [2]
 
 With the artefacts present the run is complete and the verdict is clean:
 
@@ -258,5 +258,5 @@ than it was asked to and reports that rather than passing:
   ✓ Code Generation (0 total issues)
   
   Summary: ✗ 0 total issues (applied 1 rule, 1 file unchecked)
-  ✗ No issues found, but 1 file could not be fully checked, so some of the rules that read a typedtree did not run on it. Re-run with -v to name it and say why.
-  [1]
+  ✗ No issues found, but 1 file could not be checked, so some or all of the rules did not run on it. Re-run with -v to name it and say why.
+  [2]

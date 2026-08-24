@@ -104,11 +104,35 @@ automatically), and `--bail` reports only the first issue in normal
 report order, for a quick pass/fail signal.
 
 `--json` prints a single JSON object with the file and rule counts, a
-`passed` boolean, and the `issues` (each with its location) and
-`excluded` arrays. It suppresses the human `Dune root:` banner and the
-summary tables, leaving the exit code unchanged -- `1` when any issue is
-found, `0` otherwise -- so it stays usable as a gate. This is the format
-to consume from editors, CI, and git hooks.
+`passed` boolean, the `issues` (each with its location) and `excluded`
+arrays, and the two sets of files the run could not look at:
+`unclaimed_files` (no dune stanza compiles them, so no rule ran on them)
+and `unchecked_files` (a rule asked for a typedtree and no artefact
+described the source). Both are complete, whatever the verbosity, so a
+repo-wide run can enumerate its own blind spot in one pass; the
+human-readable warning samples ten of each and `-v` names them all.
+`--json` suppresses the human `Dune root:` banner and the summary tables,
+leaving the exit status unchanged, so it stays usable as a gate. This is
+the format to consume from editors, CI, and git hooks.
+
+## Exit status
+
+Merlint answers two independent questions -- does the code have
+findings, and did merlint read all of what it was pointed at -- so the
+status is a bit set rather than one number:
+
+| Status | Meaning                                                       |
+|--------|---------------------------------------------------------------|
+| `0`    | complete run, no findings                                     |
+| `1`    | findings: the code merlint read has issues to fix             |
+| `2`    | incomplete coverage: merlint could not read part of it        |
+| `3`    | both: findings, over a run that read only part of the tree    |
+
+`2` is not a warning. A run that exits `0` having read half of what it
+was given is read as "this code is clean", and a source no stanza claims
+is a source no rule ever examined. `3` is the worst of the three: the
+findings are real and the list they came from is also short. A gate that
+only wants pass or fail reads any non-zero and needs no change.
 
 To see what a rule means and how to fix it, and to render the rule
 reference, ask `merlint help`:

@@ -18,11 +18,27 @@ type result = {
 
 (* A bounded sample: naming every file of a whole-repo run buries the message
    the warning is carrying. *)
+let sample_limit = 10
+
+(* The cap is a default, not a ceiling. A run whose whole blind spot is the
+   answer -- enumerating what a repo-wide scan could not look at -- asks for
+   more detail, and that is what raising the log level means; the JSON document
+   carries the same sets in full whatever the level. Without this a caller had
+   to rediscover the rest by hand, one directory at a time. *)
+let names_every_file () =
+  match Logs.level () with Some (Logs.Info | Logs.Debug) -> true | _ -> false
+
 let pp_sample ppf files =
-  let sample = List.filteri (fun i _ -> i < 10) files in
+  let sample =
+    if names_every_file () then files
+    else List.filteri (fun i _ -> i < sample_limit) files
+  in
   List.iter (fun file -> Fmt.pf ppf "@,%s" file) sample;
   let extra = List.length files - List.length sample in
-  if extra > 0 then Fmt.pf ppf "@,... and %d more" extra
+  if extra > 0 then
+    Fmt.pf ppf
+      "@,... and %d more (-v names every one; --json carries the whole set)"
+      extra
 
 (* Membership over a set of paths, compared after normalisation: the backend
    names a file as it was handed it and the index as it walked to it, and the
@@ -102,7 +118,14 @@ let warn_uncompilable ~analyzed stats =
    so no rule reports on it and no artefact is looked for. Left silent, the run
    reports the verdict of the files it happened to reach as the verdict of the
    directory it was pointed at. Naming them is what makes "Analyzing N files"
-   add up against the tree. *)
+   add up against the tree.
+
+   The first two explanations put the fault in the tree, and for three of the
+   four packages this blocked in one week the fault was here: a stanza did name
+   the file and the project index could not read the shape it was written in. A
+   message offering only the first two sends a reader hunting a defect in a dune
+   file that is correct, so it names the third and says how to tell them apart --
+   what the index sees for the package, against what the dune file says. *)
 let warn_unclaimed unclaimed =
   (if unclaimed <> [] then
      let n = List.length unclaimed in
@@ -113,11 +136,16 @@ let warn_unclaimed unclaimed =
      Log.warn (fun m ->
          m
            "@[<v>%d file%s claimed by no dune stanza, so nothing compiles %s \
-            and no rule examined %s. Either a stanza should name %s -- a \
-            [(modules ...)] spec may be excluding %s -- or %s in the tree.%a@]"
+            and no rule examined %s. Three ways that happens: no stanza names \
+            %s (a [(modules ...)] spec may be excluding %s); %s in the tree; \
+            or a stanza does name %s and merlint's project index could not \
+            read that stanza, which is a defect in merlint and not one of \
+            yours. Check which with [project-index stanzas -p <pkg>] and \
+            [project-index libraries -p <pkg>]: a stanza that is in the dune \
+            file and in neither listing is the third.%a@]"
            n
            (if n = 1 then " is" else "s are")
-           it it it it belongs pp_sample unclaimed));
+           it it it it belongs it pp_sample unclaimed));
   unclaimed
 
 let log_fs_stats () =

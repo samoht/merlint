@@ -81,8 +81,8 @@ different facts and both belong in the output:
   ✓ Code Generation (0 total issues)
   
   Summary: ✗ 0 total issues (applied 1 rule, 1 file unchecked)
-  ✗ No issues found, but 1 file could not be fully checked, so some of the rules that read a typedtree did not run on it. Re-run with -v to name it and say why.
-  [1]
+  ✗ No issues found, but 1 file could not be checked, so some or all of the rules did not run on it. Re-run with -v to name it and say why.
+  [2]
 
 An interface that exports more than the suite is still reported, so the skip
 above cannot be mistaken for the rule going quiet altogether:
