@@ -1,0 +1,11 @@
+; The test compiles the library's own [shared.ml] a second time, as a private
+; module of its own, which is what copy_files is for. The source stays in lib/;
+; the test stanza is declared in test/.
+
+(copy_files#
+ (files ../lib/shared.ml))
+
+(test
+ (name test_data)
+ (modules test_data shared)
+ (libraries data))

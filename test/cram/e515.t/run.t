@@ -63,3 +63,32 @@ Build good fixture project:
 
 
 
+
+
+
+
+A source one directory imports from another is compiled where the importing
+stanza is declared, not where the file sits. The test below copies the
+library's shared.ml in with copy_files# and compiles it as a private module of
+its own, so the file is claimed by a library in lib/ and by a test in test/ at
+once -- and the two stanzas are still in separate directories, which is all
+this rule is about:
+  $ (cd imported && dune build @check)
+
+  $ merlint --build -r E515 imported/
+  Dune root: $TESTCASE_ROOT/imported/
+  Running merlint analysis...
+  
+  Analyzing 3 files
+  
+  ✓ Code Quality (0 total issues)
+  ✓ Code Style (0 total issues)
+  ✓ Naming Conventions (0 total issues)
+  ✓ Documentation (0 total issues)
+  ✓ Project Structure (0 total issues)
+  ✓ Test Quality (0 total issues)
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
+  
+  Summary: ✓ 0 total issues (applied 1 rule)
+  ✓ All checks passed!

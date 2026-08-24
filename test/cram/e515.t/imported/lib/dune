@@ -1,0 +1,3 @@
+(library
+ (name data)
+ (modules data shared))
