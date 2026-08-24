@@ -9,17 +9,21 @@ let log_src = Logs.Src.create "merlint.rules.e605" ~doc:"E605 rule diagnostics"
 
 module Log = (val Logs.src_log log_src : Logs.LOG)
 
-(** Compute expected test file path from source file. For [lib] and [src] source
-    directories, the directory is replaced with [test]. For any other source
-    directory, it is preserved under [test/]. The basename is always prefixed
-    with [test_]. Subdirectories within the source dir are preserved.
+(** Compute the expected test file path for the module [module_name] that
+    [source_file] belongs to. For [lib] and [src] source directories, the
+    directory is replaced with [test]. For any other source directory, it is
+    preserved under [test/]. The basename is the module's name prefixed with
+    [test_], which is the file's own stem except where a stanza compiles it
+    under another name. Subdirectories within the source dir are preserved.
 
     - [proj/lib/foo.ml] -> [proj/test/test_foo.ml]
     - [proj/src/foo.ml] -> [proj/test/test_foo.ml]
     - [proj/proto/foo.ml] -> [proj/test/proto/test_foo.ml]
     - [proj/lib/sub/bar.ml] -> [proj/test/sub/test_bar.ml]
-    - [proj/foo/sub/bar.ml] -> [proj/test/foo/sub/test_bar.ml] *)
-let expected_test_path source_file =
+    - [proj/foo/sub/bar.ml] -> [proj/test/foo/sub/test_bar.ml]
+    - [proj/lib/pick.unix.ml] compiling as [pick] -> [proj/test/test_pick.ml] *)
+let expected_test_path ~module_name source_file =
+  let basename = "test_" ^ module_name ^ Filename.extension source_file in
   let parts = String.split_on_char '/' source_file in
   let rec find_lib_dir prefix = function
     | [] -> None
@@ -29,18 +33,14 @@ let expected_test_path source_file =
   in
   match find_lib_dir [] parts with
   | Some (project_prefix, _lib_or_src, rest) ->
-      let after = String.concat "/" rest in
-      let dirname = Filename.dirname after in
-      let basename = Filename.basename after |> String.lowercase_ascii in
-      let test_name = "test_" ^ basename in
+      let dirname = Filename.dirname (String.concat "/" rest) in
       let test_after =
-        if dirname = "." then test_name else Filename.concat dirname test_name
+        if dirname = "." then basename else Filename.concat dirname basename
       in
       Fmt.str "%s/test/%s" project_prefix test_after
   | None ->
       let dir = Filename.dirname source_file in
-      let base = Filename.basename source_file in
-      Filename.concat (Filename.concat dir "test") ("test_" ^ base)
+      Filename.concat (Filename.concat dir "test") basename
 
 let missing_test_issue module_name source_file =
   let loc =
@@ -48,10 +48,10 @@ let missing_test_issue module_name source_file =
       ~end_col:0
   in
   Issue.v ~loc
-    { module_name; expected_test_file = expected_test_path source_file }
-
-let module_name_of_path file =
-  Fpath.basename file |> Filename.remove_extension |> String.lowercase_ascii
+    {
+      module_name;
+      expected_test_file = expected_test_path ~module_name source_file;
+    }
 
 let skipped_by_dir file_path =
   File.is_in_test_dir (Fpath.v file_path) || File.is_in_examples file_path
@@ -67,19 +67,28 @@ let test_scope_libraries idx =
         group.stanzas)
   |> String_set.of_list
 
+(* One module, one issue: several files can carry the same module -- every
+   branch of a [(select ...)] is a body of the target -- and the gap they report
+   is the module's, not each file's. *)
+let one_issue_per_module gaps =
+  List.fold_left
+    (fun (seen, issues) (m, path) ->
+      if String_set.mem m seen then (seen, issues)
+      else (String_set.add m seen, missing_test_issue m path :: issues))
+    (String_set.empty, []) gaps
+  |> snd |> List.rev
+
+(* [file] belongs to a library some package-less test or fuzz stanza exercises,
+   under either the name that stanza spells or the library's own local one. *)
+let covered_by_test_scope idx scope file =
+  Project_index.libraries_of_file idx file
+  |> List.exists (fun lib ->
+      String_set.mem (Project_index.Library.name lib) scope
+      || String_set.mem (Project_index.Library.local_name lib) scope)
+
 let check (ctx : Context.project) =
   let idx = Context.index ctx in
-  let unattributed_test_scope_libraries = test_scope_libraries idx in
-  let covered_by_unattributed_test_scope file =
-    Project_index.libraries_of_file idx file
-    |> List.exists (fun lib ->
-        String_set.mem
-          (Project_index.Library.name lib)
-          unattributed_test_scope_libraries
-        || String_set.mem
-             (Project_index.Library.local_name lib)
-             unattributed_test_scope_libraries)
-  in
+  let test_scope = test_scope_libraries idx in
   let private_modules =
     Project_index.private_module_names idx |> String_set.of_list
   in
@@ -94,26 +103,32 @@ let check (ctx : Context.project) =
     || String_set.mem m private_modules
     || skipped_by_dir path
     || String_set.mem ("test_" ^ m) test_modules
-    || covered_by_unattributed_test_scope file
+    || covered_by_test_scope idx test_scope file
   in
-  let needs_test file =
+  let untested_module file =
     let path = Fpath.to_string file in
     if not (File_kind.is_ml path) then None
     else if not (selected (Context.resolve ctx file)) then None
     else
-      let m = module_name_of_path file in
+      (* The name the module reaches the build under, which is the file's own
+         stem unless a stanza compiles it as something else: every branch of one
+         [(select ...)] is a body of the target, so the gap is the target's. *)
+      let m = Project_index.module_name_of_file idx file in
       if exempt_module file path m then None
       else
         (* Ask the index whether the expected test file exists, rather than
            stat-ing it: [Unindexed] (present on disk but not captured by a
            file-scoped scan) counts as present, only [Absent] is missing. *)
         match
-          Project_index.source_presence idx (Fpath.v (expected_test_path path))
+          Project_index.source_presence idx
+            (Fpath.v (expected_test_path ~module_name:m path))
         with
         | Project_index.Indexed | Project_index.Unindexed -> None
-        | Project_index.Absent -> Some (missing_test_issue m path)
+        | Project_index.Absent -> Some (m, path)
   in
-  Project_index.public_library_source_files idx |> List.filter_map needs_test
+  Project_index.public_library_source_files idx
+  |> List.filter_map untested_module
+  |> one_issue_per_module
 
 let pp ppf { module_name; expected_test_file } =
   Fmt.pf ppf
