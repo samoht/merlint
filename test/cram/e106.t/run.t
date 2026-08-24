@@ -6,8 +6,8 @@ Test bad example - polymorphic comparison on non-scalar types:
   
   Analyzing 1 files
   
-  ✗ Code Quality (7 total issues)
-    [E106] Polymorphic comparison (7 issues)
+  ✗ Code Quality (9 total issues)
+    [E106] Polymorphic comparison (9 issues)
     OCaml's structural (=), (<>), (<), (>), (<=), (>=), compare, min, max and
     Hashtbl.hash compare values by walking their runtime representation. On a type
     from the current module that is fine - you can see its representation, and you
@@ -29,6 +29,8 @@ Test bad example - polymorphic comparison on non-scalar types:
     - bad.ml:26:33: Polymorphic (=) - comparing a function value raises Invalid_argument at runtime
     - bad.ml:29:22: Polymorphic (>) - use Id.compare instead
     - bad.ml:34:43: Polymorphic (=) - use the type's own equal, compare or hash instead
+    - bad.ml:61:33: Polymorphic (=) - use Entry.equal instead
+    - bad.ml:81:29: Polymorphic (=) - use Msg.equal instead
   ✓ Code Style (0 total issues)
   ✓ Naming Conventions (0 total issues)
   ✓ Documentation (0 total issues)
@@ -40,11 +42,11 @@ Test bad example - polymorphic comparison on non-scalar types:
   ╭──────────────┬──────────────────────────────╮
   │ Category     │ Issues                       │
   ├──────────────┼──────────────────────────────┤
-  │ Code Quality │ 7 (7 polymorphic comparison) │
+  │ Code Quality │ 9 (9 polymorphic comparison) │
   ╰──────────────┴──────────────────────────────╯
   
   
-  Summary: ✗ 7 total issues (applied 1 rule)
+  Summary: ✗ 9 total issues (applied 1 rule)
   ✗ Some checks failed. See details above.
     Run `merlint help E106` for the rule's description, hint, and good/bad examples.
   [1]

@@ -115,6 +115,53 @@ let gt (a : Id.t) b = a > b
    equal - unlike a tag check against [Ok ()], which never walks the error. *)
 let same_res (a : (unit, Id.t) result) b = a = b
 
+(* Handle keeps its representation to itself, so the table it keys has an
+   abstract key and a record carrying that key is as hidden as the key is: the
+   walk reaches Handle's contents through the field. Same locally-applied
+   functor shape as good.ml's Streams, and the opposite verdict - reading the
+   local module's own signature is what tells the two apart. *)
+module Handle : sig
+  type t
+
+  val v : int -> t
+  val compare : t -> t -> int
+end = struct
+  type t = int
+
+  let v x = x
+  let compare = Int.compare
+end
+
+module Table = Map.Make (Handle)
+
+module Entry : sig
+  type t = { key : Table.key; hits : int }
+end = struct
+  type t = { key : Table.key; hits : int }
+end
+
+let same_entry (a : Entry.t) b = a = b
+
+(* The same through a plain abstract type rather than a functor: an address
+   promises compare alone, so a message carrying one needs its own equal. *)
+module Addr : sig
+  type t
+
+  val v : string -> t
+end = struct
+  type t = string
+
+  let v x = x
+end
+
+module Msg : sig
+  type t = { src : Addr.t; ttl : int }
+end = struct
+  type t = { src : Addr.t; ttl : int }
+end
+
+let same_msg (a : Msg.t) b = a = b
+
 ```
 
 **Good:**
@@ -180,6 +227,32 @@ end = struct
 end
 
 let positive (p : Money.t) = Money.(p > zero)
+
+(* A functor applied in this file. [Streams.key] is whatever the argument module
+   says its [t] is, and [Counted.t] is an int, so the loop index below is an int
+   and comparing it is comparing an int. A module bound here is not a
+   compilation unit and has no interface on disk, so this only reads as an int
+   through the module type the typechecker recorded for the binding. *)
+module Counted = struct
+  type t = int
+
+  let compare = Int.compare
+end
+
+module Streams = Map.Make (Counted)
+
+let build n =
+  let rec go i acc = if i >= n then acc else go (i + 1) (Streams.add i i acc) in
+  go 0 Streams.empty
+
+(* The same shape through [Set.Make], with the argument taken straight from the
+   stdlib: [Bound.elt] is [Int.t]. *)
+module Bound = Set.Make (Int)
+
+let routed set port =
+  match if Bound.mem port set then `Port port else `Unbound with
+  | `Port p -> p <> port
+  | `Unbound -> false
 
 ```
 

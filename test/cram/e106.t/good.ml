@@ -59,3 +59,29 @@ end = struct
 end
 
 let positive (p : Money.t) = Money.(p > zero)
+
+(* A functor applied in this file. [Streams.key] is whatever the argument module
+   says its [t] is, and [Counted.t] is an int, so the loop index below is an int
+   and comparing it is comparing an int. A module bound here is not a
+   compilation unit and has no interface on disk, so this only reads as an int
+   through the module type the typechecker recorded for the binding. *)
+module Counted = struct
+  type t = int
+
+  let compare = Int.compare
+end
+
+module Streams = Map.Make (Counted)
+
+let build n =
+  let rec go i acc = if i >= n then acc else go (i + 1) (Streams.add i i acc) in
+  go 0 Streams.empty
+
+(* The same shape through [Set.Make], with the argument taken straight from the
+   stdlib: [Bound.elt] is [Int.t]. *)
+module Bound = Set.Make (Int)
+
+let routed set port =
+  match if Bound.mem port set then `Port port else `Unbound with
+  | `Port p -> p <> port
+  | `Unbound -> false

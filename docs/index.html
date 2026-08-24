@@ -643,6 +643,53 @@ pre code {
    <span class="cn">Error</span> the walk reaches the hidden <span class="cn">Id</span>.t, so this must go through its own
    equal - unlike a tag check against [<span class="cn">Ok</span> ()], which never walks the error. *)
 <span class="kw">let</span> same_res (a : (unit, <span class="cn">Id</span>.t) result) b = a = b
+
+(* <span class="cn">Handle</span> keeps its representation <span class="kw">to</span> itself, so the table it keys has an
+   abstract key <span class="kw">and</span> a record carrying that key is <span class="kw">as</span> hidden <span class="kw">as</span> the key is: the
+   walk reaches <span class="cn">Handle's</span> contents through the field. <span class="cn">Same</span> locally-applied
+   functor shape <span class="kw">as</span> good.ml's <span class="cn">Streams</span>, <span class="kw">and</span> the opposite verdict - reading the
+   local <span class="kw">module</span>'s own signature is what tells the two apart. *)
+<span class="kw">module</span> <span class="cn">Handle</span> : <span class="kw">sig</span>
+  <span class="kw">type</span> t
+
+  <span class="kw">val</span> v : int -&gt; t
+  <span class="kw">val</span> compare : t -&gt; t -&gt; int
+<span class="kw">end</span> = <span class="kw">struct</span>
+  <span class="kw">type</span> t = int
+
+  <span class="kw">let</span> v x = x
+  <span class="kw">let</span> compare = <span class="cn">Int</span>.compare
+<span class="kw">end</span>
+
+<span class="kw">module</span> <span class="cn">Table</span> = <span class="cn">Map</span>.<span class="cn">Make</span> (<span class="cn">Handle</span>)
+
+<span class="kw">module</span> <span class="cn">Entry</span> : <span class="kw">sig</span>
+  <span class="kw">type</span> t = { key : <span class="cn">Table</span>.key; hits : int }
+<span class="kw">end</span> = <span class="kw">struct</span>
+  <span class="kw">type</span> t = { key : <span class="cn">Table</span>.key; hits : int }
+<span class="kw">end</span>
+
+<span class="kw">let</span> same_entry (a : <span class="cn">Entry</span>.t) b = a = b
+
+(* <span class="cn">The</span> same through a plain abstract <span class="kw">type</span> rather than a functor: an address
+   promises compare alone, so a message carrying one needs its own equal. *)
+<span class="kw">module</span> <span class="cn">Addr</span> : <span class="kw">sig</span>
+  <span class="kw">type</span> t
+
+  <span class="kw">val</span> v : string -&gt; t
+<span class="kw">end</span> = <span class="kw">struct</span>
+  <span class="kw">type</span> t = string
+
+  <span class="kw">let</span> v x = x
+<span class="kw">end</span>
+
+<span class="kw">module</span> <span class="cn">Msg</span> : <span class="kw">sig</span>
+  <span class="kw">type</span> t = { src : <span class="cn">Addr</span>.t; ttl : int }
+<span class="kw">end</span> = <span class="kw">struct</span>
+  <span class="kw">type</span> t = { src : <span class="cn">Addr</span>.t; ttl : int }
+<span class="kw">end</span>
+
+<span class="kw">let</span> same_msg (a : <span class="cn">Msg</span>.t) b = a = b
 </code></pre>
 </div>
 <div class="example good">
@@ -708,6 +755,32 @@ pre code {
 <span class="kw">end</span>
 
 <span class="kw">let</span> positive (p : <span class="cn">Money</span>.t) = <span class="cn">Money</span>.(p &gt; zero)
+
+(* <span class="cn">A</span> functor applied <span class="kw">in</span> this file. [<span class="cn">Streams</span>.key] is whatever the argument <span class="kw">module</span>
+   says its [t] is, <span class="kw">and</span> [<span class="cn">Counted</span>.t] is an int, so the loop index below is an int
+   <span class="kw">and</span> comparing it is comparing an int. <span class="cn">A</span> <span class="kw">module</span> bound here is <span class="kw">not</span> a
+   compilation unit <span class="kw">and</span> has no interface on disk, so this only reads <span class="kw">as</span> an int
+   through the <span class="kw">module</span> <span class="kw">type</span> the typechecker recorded <span class="kw">for</span> the binding. *)
+<span class="kw">module</span> <span class="cn">Counted</span> = <span class="kw">struct</span>
+  <span class="kw">type</span> t = int
+
+  <span class="kw">let</span> compare = <span class="cn">Int</span>.compare
+<span class="kw">end</span>
+
+<span class="kw">module</span> <span class="cn">Streams</span> = <span class="cn">Map</span>.<span class="cn">Make</span> (<span class="cn">Counted</span>)
+
+<span class="kw">let</span> build n =
+  <span class="kw">let</span> <span class="kw">rec</span> go i acc = <span class="kw">if</span> i &gt;= n <span class="kw">then</span> acc <span class="kw">else</span> go (i + <span class="nu">1</span>) (<span class="cn">Streams</span>.add i i acc) <span class="kw">in</span>
+  go <span class="nu">0</span> <span class="cn">Streams</span>.empty
+
+(* <span class="cn">The</span> same shape through [<span class="cn">Set</span>.<span class="cn">Make</span>], <span class="kw">with</span> the argument taken straight from the
+   stdlib: [<span class="cn">Bound</span>.elt] is [<span class="cn">Int</span>.t]. *)
+<span class="kw">module</span> <span class="cn">Bound</span> = <span class="cn">Set</span>.<span class="cn">Make</span> (<span class="cn">Int</span>)
+
+<span class="kw">let</span> routed set port =
+  <span class="kw">match</span> <span class="kw">if</span> <span class="cn">Bound</span>.mem port set <span class="kw">then</span> `<span class="cn">Port</span> port <span class="kw">else</span> `<span class="cn">Unbound</span> <span class="kw">with</span>
+  | `<span class="cn">Port</span> p -&gt; p &lt;&gt; port
+  | `<span class="cn">Unbound</span> -&gt; <span class="kw">false</span>
 </code></pre>
 </div>
 </div></div>
@@ -2511,7 +2584,7 @@ and replace each call site with [err_x &quot;...&quot; args] / [fail_x &quot;...
         <span class="error-code">E956</span>
         <span class="error-title">Dead library dependency</span>
     </div>
-    <div class="error-hint"><p>A stanza's [(libraries ...)] entry is dead when no compilation unit of that library appears in the imports the compiler recorded in the stanza's [.cmt] files. Imports are matched by object name (an internal [wire.ml] of library [spy] is [Spy__Wire], never [Wire]), so doc comments and source-basename collisions cannot mask a dead entry. Remove the entry or use the library. [(re_export ...)] entries, stanzas with [-linkall], C-shipping libraries under [(foreign_stubs ...)] stanzas, virtual-library implementations, and stanzas with missing or stale artefacts are not flagged.</p></div>
+    <div class="error-hint"><p>A stanza's [(libraries ...)] entry is dead when no compilation unit of that library appears in the imports the compiler recorded in the stanza's [.cmt] files. Imports are matched by object name (an internal [wire.ml] of library [spy] is [Spy__Wire], never [Wire]), so doc comments and source-basename collisions cannot mask a dead entry. Remove the entry or use the library. [(re_export ...)] entries, stanzas with [-linkall], C-shipping libraries under [(foreign_stubs ...)] stanzas, virtual-library implementations, and stanzas with missing, stale or partial artefacts (the truncated ones a failed compilation leaves) are not flagged.</p></div>
 </div>
 
     <a href="#top" class="back-to-top">↑ Top</a>
