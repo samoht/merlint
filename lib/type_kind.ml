@@ -9,6 +9,34 @@ module Ident = Ocaml_typing.Ident
 
 type t = Abstract | Transparent of Types.type_expr list | Unknown
 
+(* The modules and module types the compilation unit under analysis defines
+   itself. A module bound here is not a compilation unit and has no interface on
+   disk - a functor applied here writes no artefact at all - so a type it names
+   resolves only from the module type the typechecker recorded for the binding.
+   Keyed by the binding's source name, which is how [Path.name] spells the head
+   of such a type's path ("Streams.key", "Id.t"). *)
+type locals = {
+  modules : (string, Types.module_type) Hashtbl.t;
+  module_types : (string, Types.module_type) Hashtbl.t;
+  memo : (string option * string, t) Hashtbl.t;
+}
+
+let local_module locals name =
+  match locals with None -> None | Some l -> Hashtbl.find_opt l.modules name
+
+let local_module_type locals name =
+  match locals with
+  | None -> None
+  | Some l -> Hashtbl.find_opt l.module_types name
+
+let head path =
+  match String.split_on_char '.' path with first :: _ -> first | [] -> path
+
+let names_local locals path =
+  match locals with
+  | None -> false
+  | Some l -> Hashtbl.mem l.modules (head path)
+
 (* [.cmti] basename without extension (e.g. "x509__Key_type") -> path, scanned
    once per project root from both the project's install layout and the opam
    switch, so external (e.g. eio, bytesrw, cmarkit) types resolve too. *)
@@ -123,6 +151,47 @@ let collapse_underscores s =
 
 let path_parts p = String.split_on_char '.' (Ocaml_typing.Path.name p)
 
+(* Read the unit's own module and module-type bindings. Only the top level is
+   recorded: a nested module is reached by navigating the enclosing binding's
+   module type, which the resolver below already does for a submodule path. *)
+let locals tree =
+  let modules = Hashtbl.create 16 and module_types = Hashtbl.create 8 in
+  let add tbl name mty =
+    match name with Some n -> Hashtbl.replace tbl n mty | None -> ()
+  in
+  let add_modtype (mtd : T.module_type_declaration) =
+    match mtd.mtd_type with
+    | Some mty -> add module_types (Some mtd.mtd_name.txt) mty.T.mty_type
+    | None -> ()
+  in
+  let structure_item (item : T.structure_item) =
+    match item.str_desc with
+    | T.Tstr_module mb -> add modules mb.mb_name.txt mb.mb_expr.mod_type
+    | T.Tstr_recmodule mbs ->
+        List.iter
+          (fun (mb : T.module_binding) ->
+            add modules mb.mb_name.txt mb.mb_expr.mod_type)
+          mbs
+    | T.Tstr_modtype mtd -> add_modtype mtd
+    | _ -> ()
+  in
+  let signature_item (item : T.signature_item) =
+    match item.sig_desc with
+    | T.Tsig_module md -> add modules md.md_name.txt md.md_type.mty_type
+    | T.Tsig_recmodule mds ->
+        List.iter
+          (fun (md : T.module_declaration) ->
+            add modules md.md_name.txt md.md_type.mty_type)
+          mds
+    | T.Tsig_modtype mtd -> add_modtype mtd
+    | _ -> ()
+  in
+  (match tree with
+  | None -> ()
+  | Some (`Implementation str) -> List.iter structure_item str.T.str_items
+  | Some (`Interface sg) -> List.iter signature_item sg.T.sig_items);
+  { modules; module_types; memo = Hashtbl.create 64 }
+
 (* A wrapped library records a reference to a sibling compilation unit by its
    short alias - [Css.declaration] is [type declaration = Declaration.declaration],
    stored as ["Declaration.declaration"], not ["Cascade__Declaration.declaration"].
@@ -158,43 +227,60 @@ let library_of ?enclosing path =
    "lib__M1__...__Mk" that exists and navigate the remaining modules. A module
    alias ([module M = N]) is followed to the aliased module, bounded by [fuel]
    so a cyclic alias cannot loop forever. *)
-let rec resolve_module ~fuel index module_path mods name =
+let rec resolve_module ~fuel ~locals index module_path mods name =
   if fuel <= 0 then Unknown
   else
     match module_path with
     | [] -> Unknown
-    | first :: rest ->
-        let lib = mangle_lib first in
-        let nav = rest @ mods in
-        let rec try_depth taken remaining =
-          let mangled =
-            collapse_underscores (String.concat "__" (lib :: List.rev taken))
-          in
-          let here =
-            match Hashtbl.find_opt index mangled with
-            | Some cmti -> read_cmti ~fuel index cmti remaining name
-            | None -> Unknown
-          in
-          match (here, remaining) with
-          | Unknown, m :: more -> try_depth (m :: taken) more
-          | k, _ -> k
-        in
-        try_depth [] nav
+    | first :: rest -> (
+        (* A module this unit binds itself: read the module type the
+           typechecker recorded for it rather than looking for an interface
+           that cannot exist. Falls through to the index when that walk stops
+           short, so a local alias to a real compilation unit still resolves. *)
+        match local_module locals first with
+        | Some mty -> (
+            match
+              resolve_in_tmty ~fuel:(fuel - 1) ~locals index mty (rest @ mods)
+                name
+            with
+            | Unknown ->
+                resolve_in_index ~fuel ~locals index first rest mods name
+            | k -> k)
+        | None -> resolve_in_index ~fuel ~locals index first rest mods name)
 
-and read_cmti ~fuel index cmti mods name =
+and resolve_in_index ~fuel ~locals index first rest mods name =
+  let lib = mangle_lib first in
+  let nav = rest @ mods in
+  let rec try_depth taken remaining =
+    let mangled =
+      collapse_underscores (String.concat "__" (lib :: List.rev taken))
+    in
+    let here =
+      match Hashtbl.find_opt index mangled with
+      | Some cmti -> read_cmti ~fuel ~locals index cmti remaining name
+      | None -> Unknown
+    in
+    match (here, remaining) with
+    | Unknown, m :: more -> try_depth (m :: taken) more
+    | k, _ -> k
+  in
+  try_depth [] nav
+
+and read_cmti ~fuel ~locals index cmti mods name =
   match Cmt.read_cmt cmti with
   | exception _ -> Unknown
   | cmt -> (
       match cmt.Cmt.cmt_annots with
-      | Cmt.Interface sg -> resolve_in_sig ~fuel index sg mods name
-      | Cmt.Implementation str -> resolve_in_str ~fuel index str mods name
+      | Cmt.Interface sg -> resolve_in_sig ~fuel ~locals index sg mods name
+      | Cmt.Implementation str ->
+          resolve_in_str ~fuel ~locals index str mods name
       | _ -> Unknown)
 
 (* Same as [resolve_in_sig], but over a [.cmt] implementation's structure, for
    modules that ship no [.mli] (their inferred interface is the structure). An
    [include M] brings M's items into this module ([Tstr_include]); search its
    expanded signature so a type re-exported that way still resolves. *)
-and resolve_in_str ~fuel index (str : T.structure) mods name =
+and resolve_in_str ~fuel ~locals index (str : T.structure) mods name =
   let from_item (item : T.structure_item) =
     match (item.str_desc, mods) with
     | T.Tstr_type (_, decls), [] ->
@@ -208,21 +294,22 @@ and resolve_in_str ~fuel index (str : T.structure) mods name =
       when match mb.mb_name.txt with
            | Some n -> String.equal n m
            | None -> false ->
-        Some (resolve_in_mod ~fuel index mb.mb_expr rest name)
+        Some (resolve_in_mod ~fuel ~locals index mb.mb_expr rest name)
     | T.Tstr_include incl, _ -> (
-        match resolve_in_tsig ~fuel index incl.incl_type mods name with
+        match resolve_in_tsig ~fuel ~locals index incl.incl_type mods name with
         | Unknown -> None
         | k -> Some k)
     | _ -> None
   in
   Option.value ~default:Unknown (List.find_map from_item str.str_items)
 
-and resolve_in_mod ~fuel index (me : T.module_expr) mods name =
+and resolve_in_mod ~fuel ~locals index (me : T.module_expr) mods name =
   match me.mod_desc with
-  | T.Tmod_structure str -> resolve_in_str ~fuel index str mods name
-  | T.Tmod_constraint (me, _, _, _) -> resolve_in_mod ~fuel index me mods name
+  | T.Tmod_structure str -> resolve_in_str ~fuel ~locals index str mods name
+  | T.Tmod_constraint (me, _, _, _) ->
+      resolve_in_mod ~fuel ~locals index me mods name
   | T.Tmod_ident (p, _) ->
-      resolve_module ~fuel:(fuel - 1) index (path_parts p) mods name
+      resolve_module ~fuel:(fuel - 1) ~locals index (path_parts p) mods name
   | _ -> Unknown
 
 (* Walk into nested submodules [mods] then read the named type's declaration. An
@@ -230,7 +317,7 @@ and resolve_in_mod ~fuel index (me : T.module_expr) mods name =
    an [.ml]-only [M_intf], re-exported here) appears as a single [Tsig_include]
    whose [incl_type] holds the expanded signature; search it so a type or
    submodule surfaced that way still resolves instead of reading as abstract. *)
-and resolve_in_sig ~fuel index (sg : T.signature) mods name =
+and resolve_in_sig ~fuel ~locals index (sg : T.signature) mods name =
   let from_item (item : T.signature_item) =
     match (item.sig_desc, mods) with
     | T.Tsig_type (_, decls), [] ->
@@ -244,28 +331,28 @@ and resolve_in_sig ~fuel index (sg : T.signature) mods name =
       when match md.md_name.txt with
            | Some n -> String.equal n m
            | None -> false ->
-        Some (resolve_in_mty ~fuel index md.md_type rest name)
+        Some (resolve_in_mty ~fuel ~locals index md.md_type rest name)
     | T.Tsig_include incl, _ -> (
-        match resolve_in_tsig ~fuel index incl.incl_type mods name with
+        match resolve_in_tsig ~fuel ~locals index incl.incl_type mods name with
         | Unknown -> None
         | k -> Some k)
     | _ -> None
   in
   Option.value ~default:Unknown (List.find_map from_item sg.sig_items)
 
-and resolve_in_mty ~fuel index (mty : T.module_type) mods name =
+and resolve_in_mty ~fuel ~locals index (mty : T.module_type) mods name =
   match mty.mty_desc with
-  | T.Tmty_signature sg -> resolve_in_sig ~fuel index sg mods name
+  | T.Tmty_signature sg -> resolve_in_sig ~fuel ~locals index sg mods name
   (* [module M = N]: M is the module at path N, so resolve N afresh and navigate
      the rest of the chain inside it. *)
   | T.Tmty_alias (p, _) ->
-      resolve_module ~fuel:(fuel - 1) index (path_parts p) mods name
+      resolve_module ~fuel:(fuel - 1) ~locals index (path_parts p) mods name
   | _ -> Unknown
 
 (* The expanded signature carried by an include is a [Types.signature], not a
    Typedtree one, so it needs its own walk: navigate the remaining submodules
    then read the named type's declaration the same way. *)
-and resolve_in_tsig ~fuel index (sg : Types.signature) mods name =
+and resolve_in_tsig ~fuel ~locals index (sg : Types.signature) mods name =
   match mods with
   | [] ->
       List.find_map
@@ -286,36 +373,55 @@ and resolve_in_tsig ~fuel index (sg : Types.signature) mods name =
             | _ -> None)
           sg
       with
-      | Some mty -> resolve_in_tmty ~fuel index mty rest name
+      | Some mty -> resolve_in_tmty ~fuel ~locals index mty rest name
       | None -> Unknown)
 
-and resolve_in_tmty ~fuel index (mty : Types.module_type) mods name =
+and resolve_in_tmty ~fuel ~locals index (mty : Types.module_type) mods name =
   match mty with
-  | Types.Mty_signature sg -> resolve_in_tsig ~fuel index sg mods name
+  | Types.Mty_signature sg -> resolve_in_tsig ~fuel ~locals index sg mods name
   | Types.Mty_alias p ->
-      resolve_module ~fuel:(fuel - 1) index (path_parts p) mods name
+      resolve_module ~fuel:(fuel - 1) ~locals index (path_parts p) mods name
+  (* [module M : S = ...] records the named signature, so read what S declares.
+     Only a module type declared in this unit is reachable this way; one named
+     from another unit stays unresolved. *)
+  | Types.Mty_ident p -> (
+      match local_module_type locals (Ocaml_typing.Path.name p) with
+      | Some mty -> resolve_in_tmty ~fuel:(fuel - 1) ~locals index mty mods name
+      | None -> Unknown)
   | _ -> Unknown
 
-let resolve ~root ~path =
+let resolve ~root ~locals ~path =
   let index = cmti_index root in
   match List.rev (String.split_on_char '.' path) with
   | type_name :: (_ :: _ as module_rev) ->
-      resolve_module ~fuel:10 index (List.rev module_rev) [] type_name
+      resolve_module ~fuel:10 ~locals index (List.rev module_rev) [] type_name
   | _ -> Unknown
 
-let classify ~root ?lib ~path () =
-  match Hashtbl.find_opt memo (root, lib, path) with
-  | Some k -> k
-  | None ->
-      let k =
-        match (resolve ~root ~path, lib) with
-        (* a short sibling that did not resolve on its own: retry it as a
-           sub-unit of the enclosing library *)
-        | Unknown, Some l -> resolve ~root ~path:(qualify l path)
-        | k, _ -> k
-      in
-      Hashtbl.replace memo (root, lib, path) k;
-      k
+let classify ~root ?locals ?lib ~path () =
+  let compute () =
+    match (resolve ~root ~locals ~path, lib) with
+    (* a short sibling that did not resolve on its own: retry it as a sub-unit
+       of the enclosing library *)
+    | Unknown, Some l -> resolve ~root ~locals ~path:(qualify l path)
+    | k, _ -> k
+  in
+  (* A path headed by one of this unit's own modules answers differently per
+     unit, so it is memoised in that unit's own table, not the shared one. *)
+  match locals with
+  | Some l when names_local locals path -> (
+      match Hashtbl.find_opt l.memo (lib, path) with
+      | Some k -> k
+      | None ->
+          let k = compute () in
+          Hashtbl.replace l.memo (lib, path) k;
+          k)
+  | _ -> (
+      match Hashtbl.find_opt memo (root, lib, path) with
+      | Some k -> k
+      | None ->
+          let k = compute () in
+          Hashtbl.replace memo (root, lib, path) k;
+          k)
 
 let pp ppf = function
   | Abstract -> Fmt.string ppf "abstract"

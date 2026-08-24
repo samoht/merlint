@@ -15,6 +15,23 @@ type t =
 val pp : t Fmt.t
 (** [pp] prints the classification name (for debugging). *)
 
+type locals
+(** The modules and module types one compilation unit defines itself. A module
+    bound in a source file is not a compilation unit and has no interface on
+    disk - a functor applied there writes no artefact at all - so a type it
+    names ([Streams.key] for a local [Map.Make (Counted)]) resolves only from
+    the module type the typechecker recorded for the binding. *)
+
+val locals :
+  [ `Interface of Ocaml_typing.Typedtree.signature
+  | `Implementation of Ocaml_typing.Typedtree.structure ]
+  option ->
+  locals
+(** [locals tree] reads the top-level module and module-type bindings of
+    [tree]'s compilation unit, empty for [None]. A nested module needs no entry
+    of its own: it is reached by navigating the enclosing binding's module type.
+*)
+
 val mangle_lib : string -> string
 (** [mangle_lib m] maps the first component of a type path to its library's
     compilation-unit prefix: it lowercases an ordinary module ([X509] ->
@@ -35,12 +52,16 @@ val library_of : ?enclosing:string -> string -> string
     when [enclosing] is set (taking that library) or a library of its own
     otherwise (["Re.t"] -> ["re"]). *)
 
-val classify : root:string -> ?lib:string -> path:string -> unit -> t
+val classify :
+  root:string -> ?locals:locals -> ?lib:string -> path:string -> unit -> t
 (** [classify ~root ~path ()] resolves the fully qualified type [path] (e.g.
     ["X509.Key_type.t"]) against the project's built interfaces under [root],
     memoised. Follows module aliases, reads a type re-exported via
     [include module type of], and reads a [.cmt] implementation for modules that
     ship no [.mli]. [?lib] resolves a short sibling reference that does not
     resolve on its own (a wrapped library records cross-unit aliases by their
-    short name) by retrying it as a sub-unit of library [lib]. Reads cmt files
-    purely; never touches [Env] / [Load_path]. *)
+    short name) by retrying it as a sub-unit of library [lib]. [?locals]
+    resolves a path headed by one of the citing unit's own modules from the
+    module type the typechecker recorded for that binding, since no interface
+    for it exists on disk; such a path is memoised per unit rather than per
+    project. Reads cmt files purely; never touches [Env] / [Load_path]. *)

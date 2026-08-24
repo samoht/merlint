@@ -99,35 +99,37 @@ let operator fn =
    nothing to walk, but a tag whose payload is a function or an abstract handle
    is as dangerous as that payload. [lib] is the library whose internal short
    sibling references the recursion is currently resolving against (none at the
-   top, the cross-module type's own library once we descend into it). *)
-let rec dangerous ~root ~lib ~seen ty =
+   top, the cross-module type's own library once we descend into it). [locals]
+   holds this file's own module bindings, which have no interface on disk to
+   read. *)
+let rec dangerous ~root ~locals ~lib ~seen ty =
   match Types.get_desc ty with
   | Types.Tvar _ | Types.Tunivar _ -> false
   | Types.Tarrow _ -> true
   | Types.Ttuple fields ->
-      List.exists (fun (_, t) -> dangerous ~root ~lib ~seen t) fields
-  | Types.Tpoly (body, _) -> dangerous ~root ~lib ~seen body
-  | Types.Tvariant row -> dangerous_row ~root ~lib ~seen row
+      List.exists (fun (_, t) -> dangerous ~root ~locals ~lib ~seen t) fields
+  | Types.Tpoly (body, _) -> dangerous ~root ~locals ~lib ~seen body
+  | Types.Tvariant row -> dangerous_row ~root ~locals ~lib ~seen row
   | Types.Tconstr (path, args, _) -> (
       if is_scalar path || is_custom_compare path then false
       else if is_container path then
-        List.exists (dangerous ~root ~lib ~seen) args
+        List.exists (dangerous ~root ~locals ~lib ~seen) args
       else
         match path with
-        | Path.Pident _ -> List.exists (dangerous ~root ~lib ~seen) args
-        | _ -> dangerous_named ~root ~lib ~seen (Path.name path) args)
+        | Path.Pident _ -> List.exists (dangerous ~root ~locals ~lib ~seen) args
+        | _ -> dangerous_named ~root ~locals ~lib ~seen (Path.name path) args)
   | _ -> true
 
 (* A polymorphic variant is dangerous when any present tag carries a payload
    that is itself dangerous. Nullary and absent tags carry nothing to walk. *)
-and dangerous_row ~root ~lib ~seen row =
+and dangerous_row ~root ~locals ~lib ~seen row =
   List.exists
     (fun (_, field) ->
       match Types.row_field_repr field with
       | Types.Rpresent None | Types.Rabsent -> false
-      | Types.Rpresent (Some ty) -> dangerous ~root ~lib ~seen ty
+      | Types.Rpresent (Some ty) -> dangerous ~root ~locals ~lib ~seen ty
       | Types.Reither (_, tys, _) ->
-          List.exists (dangerous ~root ~lib ~seen) tys)
+          List.exists (dangerous ~root ~locals ~lib ~seen) tys)
     (Types.row_fields row)
 
 (* A type named by another module: dangerous if its declaration is abstract or
@@ -136,20 +138,22 @@ and dangerous_row ~root ~lib ~seen row =
    retried as a sub-unit of the enclosing [lib]. Members are resolved against
    the named type's own library (it owns them). [seen] breaks recursion on
    cyclic type definitions. *)
-and dangerous_named ~root ~lib ~seen name args =
+and dangerous_named ~root ~locals ~lib ~seen name args =
   if List.mem name seen then false
   else
     let seen = name :: seen in
-    List.exists (dangerous ~root ~lib ~seen) args
+    List.exists (dangerous ~root ~locals ~lib ~seen) args
     ||
-    match Type_kind.classify ~root ?lib ~path:name () with
+    match Type_kind.classify ~root ~locals ?lib ~path:name () with
     | Type_kind.Abstract | Type_kind.Unknown -> true
     | Type_kind.Transparent members ->
         let member_lib = Type_kind.library_of ?enclosing:lib name in
-        List.exists (dangerous ~root ~lib:(Some member_lib) ~seen) members
+        List.exists
+          (dangerous ~root ~locals ~lib:(Some member_lib) ~seen)
+          members
 
-let flaggable ~root (operand : T.expression) =
-  dangerous ~root ~lib:None ~seen:[] operand.exp_type
+let flaggable ~root ~locals (operand : T.expression) =
+  dangerous ~root ~locals ~lib:None ~seen:[] operand.exp_type
 
 (* The type-specific function the caller should reach for instead. *)
 let replacement = function
@@ -190,6 +194,7 @@ let rec is_tag_check (e : T.expression) =
 type state = {
   filename : string;
   root : string;
+  locals : Type_kind.locals;
   issues : payload Issue.t list ref;
 }
 
@@ -201,7 +206,7 @@ let visit_expr state (expr : T.expression) =
           let operands = Query.Expr.positional_args args in
           match operands with
           | operand :: _
-            when flaggable ~root:state.root operand
+            when flaggable ~root:state.root ~locals:state.locals operand
                  && not (List.exists is_tag_check operands) ->
               state.issues :=
                 Issue.v
@@ -216,6 +221,7 @@ let init ctx =
   {
     filename = Context.filename ctx;
     root = Context.project_root_string ctx;
+    locals = Type_kind.locals (File_view.typedtree (Context.view ctx));
     issues = ref [];
   }
 
