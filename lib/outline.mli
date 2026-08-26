@@ -26,6 +26,9 @@ type kind =
   | Method
   | Instance_variable
 
+val equal_kind : kind -> kind -> bool
+(** [equal_kind a b] is [true] when [a] and [b] name the same syntactic kind. *)
+
 type item = {
   name : string;  (** The unqualified name of the declaration. *)
   kind : kind;  (** The syntactic kind of the declaration. *)

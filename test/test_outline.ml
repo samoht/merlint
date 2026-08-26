@@ -50,7 +50,7 @@ let test_top_level_declarations () =
 let test_kinds () =
   let kind name = (named (Lazy.force items) name).kind in
   let k : Merlint.Outline.kind testable =
-    testable (fun ppf _ -> Fmt.string ppf "<kind>") (fun a b -> a = b)
+    testable (fun ppf _ -> Fmt.string ppf "<kind>") Merlint.Outline.equal_kind
   in
   check k "type" Merlint.Outline.Type (kind "t");
   check k "value" Merlint.Outline.Value (kind "v");

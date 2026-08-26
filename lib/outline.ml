@@ -20,6 +20,8 @@ type kind =
   | Method
   | Instance_variable
 
+let equal_kind a b = a = b
+
 type item = {
   name : string;
   kind : kind;
