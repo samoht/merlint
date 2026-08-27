@@ -105,16 +105,19 @@ report order, for a quick pass/fail signal.
 
 `--json` prints a single JSON object with the file and rule counts, a
 `passed` boolean, the `issues` (each with its location) and `excluded`
-arrays, and the three sets of paths the run could not look at:
-`unclaimed_files` (no dune stanza compiles them, so no rule ran on them),
-`unchecked_files` (a rule asked for a typedtree and no artefact
-described the source) and `skipped_paths` (named on the command line and
-neither `.ml` nor `.mli`, so merlint has no rule that reads one).
-`passed` is false while any of the three has a member. All three are
-complete, whatever the verbosity, so a repo-wide run can enumerate its
-own blind spot in one pass; the human-readable warning samples ten of
-the first two and `-v` names them all, while every skipped path is named
-under the summary.
+arrays, and the four sets a run reports when it answered for less than
+it was given: `unclaimed_files` (no dune stanza compiles them, so no
+rule ran on them), `unchecked_files` (a rule asked for a typedtree and
+no artefact described the source), `skipped_paths` (named on the command
+line and neither `.ml` nor `.mli`, so merlint has no rule that reads
+one), and `failed_checks` (a rule raised, so what it would have found is
+missing -- a defect in merlint, not in the code it read). The first two
+are disjoint: a file no stanza compiles is reported once, under the set
+whose remedy is the real one. `passed` is false while any of the four
+has a member. All are complete, whatever the verbosity, so a repo-wide
+run can enumerate its own blind spot in one pass; the human-readable
+warnings sample ten of each and `-v` names them all, while every skipped
+path is named under the summary.
 `--json` suppresses the human `Dune root:` banner and the summary tables,
 leaving the exit status unchanged, so it stays usable as a gate. This is
 the format to consume from editors, CI, and git hooks.
@@ -131,14 +134,26 @@ status is a bit set rather than one number:
 | `1`    | findings: the code merlint read has issues to fix             |
 | `2`    | incomplete coverage: merlint could not read part of it        |
 | `3`    | both: findings, over a run that read only part of the tree    |
+| `124`  | refused: nothing was analysed, so there is no verdict         |
 
 `2` is not a warning. A run that exits `0` having read half of what it
 was given is read as "this code is clean", and a source no stanza claims
 is a source no rule ever examined. A path merlint has no rule for sets
 the same bit: the run never opened it, and the verdict over the other
-arguments does not answer for it. `3` is the worst of the three: the
-findings are real and the list they came from is also short. A gate that
-only wants pass or fail reads any non-zero and needs no change.
+arguments does not answer for it. So does a rule that raised, and there
+the fault is merlint's. `3` is the worst of the three: the findings are
+real and the list they came from is also short. A gate that only wants
+pass or fail reads any non-zero and needs no change.
+
+`124` is not a verdict at all. Merlint refuses rather than analyses when
+a path it was given does not exist, and when the project does not build:
+without the artefacts its rules read it cannot tell a clean tree from an
+untypechecked one, and printing either answer would be printing a guess.
+A build another dune session is holding the root against is waited on --
+bounded, and saying which root and for how long each time -- so a busy
+tree stays committable by costing wall time rather than by buying a
+pass; a project that does not compile is refused at once, carrying what
+dune said about it.
 
 To see what a rule means and how to fix it, and to render the rule
 reference, ask `merlint help`:
