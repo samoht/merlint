@@ -105,12 +105,16 @@ report order, for a quick pass/fail signal.
 
 `--json` prints a single JSON object with the file and rule counts, a
 `passed` boolean, the `issues` (each with its location) and `excluded`
-arrays, and the two sets of files the run could not look at:
-`unclaimed_files` (no dune stanza compiles them, so no rule ran on them)
-and `unchecked_files` (a rule asked for a typedtree and no artefact
-described the source). Both are complete, whatever the verbosity, so a
-repo-wide run can enumerate its own blind spot in one pass; the
-human-readable warning samples ten of each and `-v` names them all.
+arrays, and the three sets of paths the run could not look at:
+`unclaimed_files` (no dune stanza compiles them, so no rule ran on them),
+`unchecked_files` (a rule asked for a typedtree and no artefact
+described the source) and `skipped_paths` (named on the command line and
+neither `.ml` nor `.mli`, so merlint has no rule that reads one).
+`passed` is false while any of the three has a member. All three are
+complete, whatever the verbosity, so a repo-wide run can enumerate its
+own blind spot in one pass; the human-readable warning samples ten of
+the first two and `-v` names them all, while every skipped path is named
+under the summary.
 `--json` suppresses the human `Dune root:` banner and the summary tables,
 leaving the exit status unchanged, so it stays usable as a gate. This is
 the format to consume from editors, CI, and git hooks.
@@ -130,7 +134,9 @@ status is a bit set rather than one number:
 
 `2` is not a warning. A run that exits `0` having read half of what it
 was given is read as "this code is clean", and a source no stanza claims
-is a source no rule ever examined. `3` is the worst of the three: the
+is a source no rule ever examined. A path merlint has no rule for sets
+the same bit: the run never opened it, and the verdict over the other
+arguments does not answer for it. `3` is the worst of the three: the
 findings are real and the list they came from is also short. A gate that
 only wants pass or fail reads any non-zero and needs no change.
 
