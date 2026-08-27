@@ -6,6 +6,8 @@ Build bad fixture project:
   Dune root: $TESTCASE_ROOT/bad/
   Running merlint analysis...
   
+  Analyzing 0 files
+  
   ✓ Code Quality (0 total issues)
   ✓ Code Style (0 total issues)
   ✓ Naming Conventions (0 total issues)
@@ -49,6 +51,8 @@ Build good fixture project:
   $ merlint --build -r E915 good/
   Dune root: $TESTCASE_ROOT/good/
   Running merlint analysis...
+  
+  Analyzing 0 files
   
   ✓ Code Quality (0 total issues)
   ✓ Code Style (0 total issues)

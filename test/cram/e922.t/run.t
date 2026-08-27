@@ -5,6 +5,8 @@ requires an explicit [(package ...)] field on each [(mdx ...)] stanza.
   Dune root: $TESTCASE_ROOT/bad/
   Running merlint analysis...
   
+  Analyzing 0 files
+  
   ✓ Code Quality (0 total issues)
   ✓ Code Style (0 total issues)
   ✓ Naming Conventions (0 total issues)
@@ -35,6 +37,8 @@ requires an explicit [(package ...)] field on each [(mdx ...)] stanza.
   $ merlint -r E922 good/
   Dune root: $TESTCASE_ROOT/good/
   Running merlint analysis...
+  
+  Analyzing 0 files
   
   ✓ Code Quality (0 total issues)
   ✓ Code Style (0 total issues)

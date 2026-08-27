@@ -36,7 +36,7 @@ Test bad example - should find catch-all exception handler:
 
 Test JSON report - should encode the scan report, not only logs:
   $ merlint --build --json -r E105 bad.ml
-  {"project_root":"$TESTCASE_ROOT/","files_analyzed":1,"rules_applied":1,"total_issues":1,"unchecked":0,"unchecked_files":[],"unclaimed_files":[],"passed":false,"issues":[{"code":"E105","title":"Catch-all Exception Handler","category":"Code Quality","message":"Catch-all exception handler found. This can hide unexpected errors.","location":{"file":"bad.ml","start":{"line":1,"column":29},"end":{"line":1,"column":30}}}],"excluded":[]}
+  {"project_root":"$TESTCASE_ROOT/","files_analyzed":1,"rules_applied":1,"total_issues":1,"unchecked":0,"unchecked_files":[],"unclaimed_files":[],"skipped_paths":[],"passed":false,"issues":[{"code":"E105","title":"Catch-all Exception Handler","category":"Code Quality","message":"Catch-all exception handler found. This can hide unexpected errors.","location":{"file":"bad.ml","start":{"line":1,"column":29},"end":{"line":1,"column":30}}}],"excluded":[]}
   [1]
 
 Test good example - should find no issues:

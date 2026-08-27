@@ -116,16 +116,23 @@ let group_issues_by_code issues =
 
    An incomplete run is never merely a warning. A run that exits 0 having read
    half of what it was given is read as "this code is clean", and that reading
-   is what hid three discovery defects until the status made it impossible. *)
+   is what hid three discovery defects until the status made it impossible.
+
+   A path merlint has no rule for reaches bit 1 the same way. It is not a file
+   the run failed to read, it is one the run was never going to read, and the
+   caller who named it is owed that answer rather than the verdict over the
+   other arguments. *)
 let exit_findings = 1
 let exit_incomplete = 2
 
-let exit_status ~unchecked issues =
+let exit_status ~unchecked ~skipped issues =
   (if issues <> [] then exit_findings else 0)
-  lor if unchecked > 0 then exit_incomplete else 0
+  lor if unchecked > 0 || skipped > 0 then exit_incomplete else 0
 
-let exit_with_status ~unchecked all_issues =
-  match exit_status ~unchecked all_issues with 0 -> () | status -> exit status
+let exit_with_status ~unchecked ~skipped all_issues =
+  match exit_status ~unchecked ~skipped all_issues with
+  | 0 -> ()
+  | status -> exit status
 
 let rule_category_name code =
   match
@@ -158,6 +165,7 @@ module Json_report = struct
     unchecked : int;
     unchecked_files : string list;
     unclaimed_files : string list;
+    skipped_paths : string list;
     passed : bool;
     issues : issue list;
     excluded : exclusion list;
@@ -172,7 +180,7 @@ module Json_report = struct
   let exclusion rule file = ({ rule; file } : exclusion)
 
   let v project_root files_analyzed rules_applied total_issues unchecked
-      unchecked_files unclaimed_files passed issues excluded =
+      unchecked_files unclaimed_files skipped_paths passed issues excluded =
     {
       project_root;
       files_analyzed;
@@ -181,6 +189,7 @@ module Json_report = struct
       unchecked;
       unchecked_files;
       unclaimed_files;
+      skipped_paths;
       passed;
       issues;
       excluded;
@@ -230,6 +239,8 @@ module Json_report = struct
         t.unchecked_files)
     |> C.Object.member "unclaimed_files" (C.list C.string) ~enc:(fun (t : t) ->
         t.unclaimed_files)
+    |> C.Object.member "skipped_paths" (C.list C.string) ~enc:(fun (t : t) ->
+        t.skipped_paths)
     |> C.Object.member "passed" C.bool ~enc:(fun (t : t) -> t.passed)
     |> C.Object.member "issues" (C.list issue_json) ~enc:(fun (t : t) ->
         t.issues)
@@ -265,11 +276,13 @@ module Json_report = struct
   (* A run that examined less than it was asked to reports a non-zero status for
      it, and the document says so too, so a caller reading the JSON and a caller
      reading the exit status never disagree. It names the files as well as
-     counting them, in the two sets the count is the sum of: a caller whose
-     question is "what did this run not look at" reads the answer here instead
-     of rediscovering it a directory at a time. *)
+     counting them: a caller whose question is "what did this run not look at"
+     reads the answer here instead of rediscovering it a directory at a time.
+     [unchecked] counts the two sets a build or an edit fixes; [skipped_paths]
+     is apart from them because nothing merlint does fixes it, and [passed] is
+     false while any of the three has a member. *)
   let v ~project_root ~files_analyzed ~rules_applied ~unchecked_files
-      ~unclaimed_files ~excluded issues =
+      ~unclaimed_files ~skipped ~excluded issues =
     let issues =
       issues |> List.sort Merlint.Rule.Run.compare |> List.map issue_of_run
     in
@@ -278,7 +291,8 @@ module Json_report = struct
     v project_root files_analyzed rules_applied total_issues unchecked
       (List.map report_path unchecked_files)
       (List.map report_path unclaimed_files)
-      (total_issues = 0 && unchecked = 0)
+      (List.map report_path skipped)
+      (total_issues = 0 && unchecked = 0 && skipped = [])
       issues
       (List.map exclusion_of_engine excluded)
 
@@ -286,9 +300,9 @@ module Json_report = struct
 end
 
 let print_json_report ~project_root ~files_analyzed ~rules_applied
-    ~unchecked_files ~unclaimed_files ~excluded issues =
+    ~unchecked_files ~unclaimed_files ~skipped ~excluded issues =
   Json_report.v ~project_root ~files_analyzed ~rules_applied ~unchecked_files
-    ~unclaimed_files ~excluded issues
+    ~unclaimed_files ~skipped ~excluded issues
   |> Json_report.print
 
 (* Group issues by category for visual reporting *)
@@ -452,16 +466,52 @@ let print_incomplete ?remedy unchecked =
     unchecked plural it it;
   match remedy with Some remedy -> Fmt.pr "%s@." remedy | None -> ()
 
+(* merlint has rules for .ml and .mli and for no other kind of file, so a path
+   of any other kind is one it read nothing of. The report answers for the
+   files it did read, and a caller reads that as the verdict over every
+   argument it gave, so the paths that carried no verdict are named here.
+
+   Named, not refused. A path that does not exist refuses the whole run because
+   the caller's list is wrong and no verdict computed from a wrong list means
+   anything. This list is not wrong: linting the files a change touched names
+   dune stanzas, cram transcripts and shell scripts beside the sources, and
+   refusing that would leave the caller nothing to run. So the run answers for
+   what it can read and says, in the summary and in the status, that it read
+   less than it was given. *)
+let print_skipped skipped =
+  let n = List.length skipped in
+  Fmt.pr
+    "%s merlint reads .ml and .mli only, so nothing above is a verdict on %d \
+     path%s it was given:@."
+    (Merlint.Report.print_color false "✗")
+    n
+    (if n = 1 then "" else "s");
+  List.iter (fun path -> Fmt.pr "    %s@." path) skipped
+
+(* What the summary line adds when the run answered for less than it was given.
+   The two reasons are counted apart because they are fixed apart: an unchecked
+   file is one merlint was going to read and could not, which a build or an
+   edit answers, and a skipped path is one it has no rule for, which only
+   dropping it from the arguments answers. *)
+let incomplete_clauses ~unchecked ~skipped =
+  let clause n singular plural =
+    if n = 0 then []
+    else [ Fmt.str "%d %s" n (if n = 1 then singular else plural) ]
+  in
+  clause unchecked "file unchecked" "files unchecked"
+  @ clause skipped "path skipped" "paths skipped"
+
 (* Print summary and status *)
-(* A run whose typedtree-backed rules could not read an artefact examined less
-   than it was asked to. Saying only "0 issues" would report that as the same
-   outcome as a complete run, so the count of unchecked files goes in the
-   summary line itself, where a caller reading the last line of output sees
-   it. *)
-let print_summary ?(unchecked = 0) ?remedy all_issues rules_applied =
+(* A run whose typedtree-backed rules could not read an artefact, or that was
+   handed a path it has no rule for, examined less than it was asked to. Saying
+   only "0 issues" would report that as the same outcome as a complete run, so
+   what it did not answer for goes in the summary line itself, where a caller
+   reading the last line of output sees it. *)
+let print_summary ?(unchecked = 0) ?(skipped = []) ?remedy all_issues
+    rules_applied =
   let total_issues = List.length all_issues in
-  let complete = unchecked = 0 in
-  let all_passed = total_issues = 0 && complete in
+  let clauses = incomplete_clauses ~unchecked ~skipped:(List.length skipped) in
+  let all_passed = total_issues = 0 && clauses = [] in
   let rule_word = if rules_applied = 1 then "rule" else "rules" in
 
   Fmt.pr "@.Summary: %s %d total %s (applied %d %s%s)@."
@@ -470,14 +520,15 @@ let print_summary ?(unchecked = 0) ?remedy all_issues rules_applied =
     total_issues
     (if total_issues = 1 then "issue" else "issues")
     rules_applied rule_word
-    (if complete then ""
-     else
-       Fmt.str ", %d file%s unchecked" unchecked
-         (if unchecked = 1 then "" else "s"));
+    (match clauses with
+    | [] -> ""
+    | clauses -> ", " ^ String.concat ", " clauses);
 
+  if skipped <> [] then print_skipped skipped;
   if all_passed then
     Fmt.pr "%s All checks passed!@." (Merlint.Report.print_color true "✓")
-  else if total_issues = 0 then print_incomplete ?remedy unchecked
+  else if total_issues = 0 then (
+    if unchecked > 0 then print_incomplete ?remedy unchecked)
   else begin
     Fmt.pr "%s Some checks failed. See details above.@."
       (Merlint.Report.print_color false "✗");
@@ -532,17 +583,20 @@ let print_exclusion_stats all_excluded =
   end
 
 (* The human-readable report: the file count, the findings by category, the
-   summary line, and the profiling tables when asked for. *)
+   summary line, and the profiling tables when asked for.
+
+   The count leads every run, zero included. It used to be omitted at zero, so
+   the only way to tell a verdict over nothing from a verdict over the tree was
+   to notice a line that was not there, and a reader who did not know to look
+   read "All checks passed" as the answer it appears to be. *)
 let print_text_report ~project_root ~files_analyzed ~rules_applied ~unchecked
-    ~repaired ~excluded ~profiling issues =
-  (match files_analyzed with
-  | 0 -> Fmt.pr "Running merlint analysis...@.@."
-  | n -> Fmt.pr "Running merlint analysis...@.@.Analyzing %d files@.@." n);
+    ~skipped ~repaired ~excluded ~profiling issues =
+  Fmt.pr "Running merlint analysis...@.@.Analyzing %d files@.@." files_analyzed;
   print_exclusion_stats excluded;
   let issues_by_category = group_issues_by_category issues in
   print_categorized_issues issues_by_category;
   print_summary_table issues_by_category;
-  print_summary ~unchecked
+  print_summary ~unchecked ~skipped
     ?remedy:(unchecked_remedy ~project_root ~repaired)
     issues rules_applied;
   match profiling with
@@ -552,8 +606,8 @@ let print_text_report ~project_root ~files_analyzed ~rules_applied ~unchecked
       Merlint.Profiling.print_file_summary state
   | None -> ()
 
-let run_analysis ?domain_mgr ~load_file ~json_output ~repair project_root
-    analyze_set analyze_roots
+let run_analysis ?domain_mgr ~load_file ~json_output ~repair ~skipped
+    project_root analyze_set analyze_roots
     (build_index : ?pool:Eio.Executor_pool.t -> unit -> Project_index.t)
     rule_filter show_profile ~bail ~exclude ~include_vendored =
   let profiling_state =
@@ -593,11 +647,13 @@ let run_analysis ?domain_mgr ~load_file ~json_output ~repair project_root
   let unchecked = List.length unchecked_files + List.length unclaimed_files in
   if json_output then
     print_json_report ~project_root ~files_analyzed ~rules_applied
-      ~unchecked_files ~unclaimed_files ~excluded:all_excluded all_issues
+      ~unchecked_files ~unclaimed_files ~skipped ~excluded:all_excluded
+      all_issues
   else
     print_text_report ~project_root ~files_analyzed ~rules_applied ~unchecked
-      ~repaired ~excluded:all_excluded ~profiling:profiling_state all_issues;
-  exit_with_status ~unchecked all_issues
+      ~skipped ~repaired ~excluded:all_excluded ~profiling:profiling_state
+      all_issues;
+  exit_with_status ~unchecked ~skipped:(List.length skipped) all_issues
 
 let ensure_project_built ~root ~scopes mgr =
   match Merlint.Build.ensure_project_built ~root ~scopes mgr with
@@ -662,6 +718,20 @@ let missing_paths files =
       | `Dir | `File | `Other -> false)
     files
 
+(* A path that is there, is not a directory and is not OCaml source. merlint
+   has no rule that reads one, so it is a path this run said nothing about, and
+   the summary names it rather than answering for it with the files it did
+   read. Reported where it is asked for -- the arguments -- and not inside the
+   walk of a directory argument, where a file of another kind is not something
+   the caller asked about at all. *)
+let skipped_paths files =
+  List.filter
+    (fun path ->
+      match classify_path path with
+      | `Other -> true
+      | `Dir | `File | `Missing -> false)
+    files
+
 let refuse_missing_paths files =
   match missing_paths files with
   | [] -> ()
@@ -680,27 +750,6 @@ let resolve_cli_path raw =
   if Fpath.is_abs p then Fpath.normalize p
   else Fpath.normalize Fpath.(v (Sys.getcwd ()) // p)
 
-(* Narrow [analyze_set] from CLI arguments. Bare-file arguments enumerate
-   the files to analyse directly; directory and no-arg invocations leave
-   [analyze_set = None], and the engine walks [Project_index.source_files]
-   instead. *)
-let analyze_set_of_files files =
-  match files with
-  | [] -> None
-  | _ ->
-      (* Asked again of the paths as they will be read, so a file that goes
-         away between the command line and here refuses too. *)
-      refuse_missing_paths files;
-      let explicit =
-        List.filter_map
-          (fun p ->
-            match classify_path p with
-            | `File -> Some (resolve_cli_path p)
-            | `Dir | `Other | `Missing -> None)
-          files
-      in
-      if explicit = [] then None else Some explicit
-
 let analyze_roots_of_files files =
   match
     List.filter_map
@@ -712,6 +761,37 @@ let analyze_roots_of_files files =
   with
   | [] -> None
   | roots -> Some roots
+
+(* Narrow [analyze_set] from CLI arguments. Bare-file arguments enumerate the
+   files to analyse directly; a directory argument leaves [analyze_set = None]
+   and rides in [analyze_roots], which the engine expands; no argument at all
+   leaves both empty and the engine walks [Project_index.source_files].
+
+   Arguments that name only paths merlint has no rule for are the fourth case,
+   and they enumerate the empty set rather than falling back to [None].
+   Falling back put the run back on the whole index: [merlint notes.txt]
+   answered with a verdict over every source in the project the path resolved a
+   root from, under a command that named one file and no source at all. That is
+   the reading a path naming nothing is refused for, arriving from a path that
+   is there. *)
+let analyze_set_of_files files =
+  match files with
+  | [] -> None
+  | _ -> (
+      (* Asked again of the paths as they will be read, so a file that goes
+         away between the command line and here refuses too. *)
+      refuse_missing_paths files;
+      let explicit =
+        List.filter_map
+          (fun p ->
+            match classify_path p with
+            | `File -> Some (resolve_cli_path p)
+            | `Dir | `Other | `Missing -> None)
+          files
+      in
+      match (explicit, analyze_roots_of_files files) with
+      | [], Some _ -> None
+      | explicit, _ -> Some explicit)
 
 (* The directories whose [check] alias the [--build] warm-up must build. A
    directory argument is its own scope; a file argument is scoped by the
@@ -837,6 +917,7 @@ let analyze_files mgr fs domain_mgr ?(exclude_patterns = []) ?rule_filter
   Log.info (fun m -> m "Scanning project structure...");
   let analyze_set = analyze_set_of_files files in
   let analyze_roots = analyze_roots_of_files files in
+  let skipped = skipped_paths files in
   let build_scopes = build_scopes_of_files files in
   let monorepo = monorepo_for_index project_root in
   let index_roots = index_roots_of_files files in
@@ -852,7 +933,7 @@ let analyze_files mgr fs domain_mgr ?(exclude_patterns = []) ?rule_filter
   in
   run_analysis ~domain_mgr ~load_file ~json_output
     ~repair:(repair_unresolved ~built:build mgr)
-    project_root analyze_set analyze_roots analysis_index rule_filter
+    ~skipped project_root analyze_set analyze_roots analysis_index rule_filter
     show_profile ~bail ~exclude:exclude_patterns ~include_vendored
 
 let files =
