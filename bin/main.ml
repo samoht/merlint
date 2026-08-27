@@ -440,30 +440,34 @@ let print_summary_table issues_by_category =
 
 let has_switch dir = Sys.file_exists Fpath.(to_string (dir / "_opam"))
 
-(* What to do about files nothing could be read for. A linked working tree
-   holds only what is committed, so the local opam switch the main tree carries
-   is not in it and dune has none to build against; naming the tree it was
-   branched from turns the verdict into the one command that fixes it. Where
-   the tree has its own switch the artefacts are missing for some other reason,
-   and the only thing left to say is that merlint already tried the build --
-   which it does whenever a file it was asked to read has no artefact -- so the
-   build itself is what needs looking at. *)
+(* A linked working tree holds only what is committed, so the local opam switch
+   the main tree carries is not in it and dune has none to build against. That
+   is a condition merlint can recognise and name the one command that clears,
+   which is worth more to a reader than whatever dune said on its way out. Its
+   own producer, because both a refused build and a run that merely came up
+   short want to say it. *)
+let switch_link_remedy ~project_root =
+  let root = Fpath.(v project_root |> normalize |> rem_empty_seg) in
+  if has_switch root then None
+  else
+    match Merlint.Worktree.main root with
+    | Some main when has_switch main ->
+        Fmt.kstr
+          (fun s -> Some s)
+          "  This working tree has no opam switch of its own, so nothing here \
+           could be built. Link the switch of the tree it was branched from, \
+           then re-run:@.    opam switch link %a %a"
+          Fpath.pp main Fpath.pp root
+    | Some _ | None -> None
+
+(* What to do about files nothing could be read for. Where the tree has its own
+   switch the artefacts are missing for some other reason, and the only thing
+   left to say is that merlint already tried the build -- which it does whenever
+   a file it was asked to read has no artefact -- so the build itself is what
+   needs looking at. *)
 let unchecked_remedy ~project_root ~repaired =
   let root = Fpath.(v project_root |> normalize |> rem_empty_seg) in
-  let switch_link =
-    if has_switch root then None
-    else
-      match Merlint.Worktree.main root with
-      | Some main when has_switch main ->
-          Fmt.kstr
-            (fun s -> Some s)
-            "  This working tree has no opam switch of its own, so nothing \
-             here could be built. Link the switch of the tree it was branched \
-             from, then re-run:@.    opam switch link %a %a"
-            Fpath.pp main Fpath.pp root
-      | Some _ | None -> None
-  in
-  match switch_link with
+  match switch_link_remedy ~project_root with
   | Some remedy -> Some remedy
   | None when repaired ->
       Fmt.kstr
@@ -705,13 +709,61 @@ let run_analysis ?domain_mgr ~load_file ~json_output ~repair ~skipped
   exit_with_status ~unchecked ~skipped:(List.length skipped)
     ~failed:(List.length failed) all_issues
 
-let ensure_project_built ~root ~scopes mgr =
-  match Merlint.Build.ensure_project_built ~root ~scopes mgr with
-  | Ok () -> ()
-  | Error msg ->
-      Fmt.epr "Warning: %s@." msg;
-      Fmt.epr "Function type analysis may not work properly.@.";
-      Fmt.epr "Continuing with analysis...@."
+(* merlint asked dune for the artefacts its typedtree-backed rules read, and did
+   not get them. What it used to print was a warning, then "Function type
+   analysis may not work properly", then "Continuing with analysis..." -- which
+   is the sentence "this verdict was computed without the artefacts it rests
+   on", written in a register nobody re-reads. It was read as advisory: a
+   pre-commit hook over 233 files printed "All checks passed!" and exited 0 on a
+   build that never ran, while another session held the dune root.
+
+   There is no continuing. A run that could not build cannot tell a clean tree
+   from an untypechecked one, and either answer it printed would be a guess. So
+   the whole run is refused, the way a path that does not exist is refused: no
+   partial verdict is reported, and no number is produced that a caller could
+   read as one.
+
+   The two causes differ in what merlint does before giving up, never in where
+   it ends up. A build that could not start because another dune holds the root
+   is waited on -- bounded, and saying each time what it is waiting for and for
+   how long, because a silent wait reads exactly like a hung process. A project
+   that does not compile is refused at once, with what dune said about it.
+   Neither ends in green: a busy tree stays committable by costing wall time,
+   not by buying a pass. *)
+let build_attempts = 6
+let build_wait = 10.0
+
+let refuse_unbuilt ~project_root reason =
+  Fmt.epr "merlint: %s@." (Merlint.Build.message reason);
+  (match switch_link_remedy ~project_root with
+  | Some remedy -> Fmt.epr "%s@." remedy
+  | None -> ());
+  Fmt.epr
+    "merlint: nothing was analysed, because a verdict computed without the \
+     artefacts its rules read is not a verdict about this code.@.";
+  Stdlib.exit Cmd.Exit.cli_error
+
+let ensure_project_built ~clock ~root ~scopes mgr =
+  let started = Eio.Time.now clock in
+  let rec attempt n =
+    match Merlint.Build.ensure_project_built ~root ~scopes mgr with
+    | Ok () -> ()
+    | Error (Merlint.Build.Contended _ as reason) ->
+        if n >= build_attempts then
+          refuse_unbuilt ~project_root:(Fpath.to_string root) reason
+        else begin
+          Fmt.epr
+            "merlint: another dune session holds %a, so the build has not \
+             started. Waiting %gs and trying again (attempt %d of %d, %.0fs so \
+             far).@."
+            Fpath.pp root build_wait (n + 1) build_attempts
+            (Eio.Time.now clock -. started);
+          Eio.Time.sleep clock build_wait;
+          attempt (n + 1)
+        end
+    | Error reason -> refuse_unbuilt ~project_root:(Fpath.to_string root) reason
+  in
+  attempt 1
 
 (* A file nothing could say what to type against is a file the typedtree-backed
    rules did not run on, and one [dune build] is what produces the artefact
@@ -728,7 +780,7 @@ let ensure_project_built ~root ~scopes mgr =
 
    Once per run. A run that warmed the build already had its build, and a
    second identical one produces the same artefacts it just produced. *)
-let repair_unresolved ~built mgr ~project_root files =
+let repair_unresolved ~built ~clock mgr ~project_root files =
   match files with
   | [] -> false
   | _ :: _ when built -> false
@@ -741,7 +793,7 @@ let repair_unresolved ~built mgr ~project_root files =
         List.map (fun file -> Fpath.parent (Fpath.v file)) files
         |> List.sort_uniq Fpath.compare
       in
-      ensure_project_built ~root:(Fpath.v project_root) ~scopes mgr;
+      ensure_project_built ~clock ~root:(Fpath.v project_root) ~scopes mgr;
       true
 
 let is_ocaml_source path =
@@ -902,8 +954,8 @@ let redirect_analysis files =
       in
       Some (files, Fpath.to_string workspace)
 
-let maybe_build_project mgr ~project_root ~analyze_roots ~build_scopes ~index
-    ~build =
+let maybe_build_project mgr ~clock ~project_root ~analyze_roots ~build_scopes
+    ~index ~build =
   if build then (
     Log.info (fun m -> m "Building project...");
     (* Freeze the analysis set before starting Dune. A source added while the
@@ -916,7 +968,8 @@ let maybe_build_project mgr ~project_root ~analyze_roots ~build_scopes ~index
     ignore
       (Project_index.source_files ?roots:analyze_roots frozen_index
         : Fpath.t list);
-    ensure_project_built ~root:(Fpath.v project_root) ~scopes:build_scopes mgr;
+    ensure_project_built ~clock ~root:(Fpath.v project_root)
+      ~scopes:build_scopes mgr;
     Log.info (fun m -> m "Build done."))
 
 let monorepo_for_index project_root =
@@ -953,7 +1006,7 @@ let installed_index_mode rule_filter =
   in
   if dep_rule_enabled then Project_index.Referenced else Project_index.Skip
 
-let analyze_files mgr fs domain_mgr ?(exclude_patterns = []) ?rule_filter
+let analyze_files mgr clock fs domain_mgr ?(exclude_patterns = []) ?rule_filter
     ?(show_profile = false) ?(build = false) ?(bail = false)
     ?(include_vendored = false) ?(json_output = false) files =
   let load_file = load_file_via_eio fs in
@@ -976,13 +1029,13 @@ let analyze_files mgr fs domain_mgr ?(exclude_patterns = []) ?rule_filter
     build_project_index ~fs ~monorepo ?roots:index_roots ~installed ?pool ()
   in
   let lazy_index = lazy (build_index ()) in
-  maybe_build_project mgr ~project_root ~analyze_roots ~build_scopes
+  maybe_build_project mgr ~clock ~project_root ~analyze_roots ~build_scopes
     ~index:lazy_index ~build;
   let analysis_index ?pool () =
     if build then Lazy.force lazy_index else build_index ?pool ()
   in
   run_analysis ~domain_mgr ~load_file ~json_output
-    ~repair:(repair_unresolved ~built:build mgr)
+    ~repair:(repair_unresolved ~built:build ~clock mgr)
     ~skipped project_root analyze_set analyze_roots analysis_index rule_filter
     show_profile ~bail ~exclude:exclude_patterns ~include_vendored
 
@@ -1108,8 +1161,8 @@ let main exclude_patterns rules_spec ~show_profile ~show_config ~build ~bail
     let mgr = Eio.Stdenv.process_mgr env in
     let fs = Eio.Stdenv.fs env in
     let domain_mgr = Eio.Stdenv.domain_mgr env in
-    analyze_files mgr fs domain_mgr ~exclude_patterns ?rule_filter ~show_profile
-      ~build ~bail ~include_vendored ~json_output files
+    analyze_files mgr clock fs domain_mgr ~exclude_patterns ?rule_filter
+      ~show_profile ~build ~bail ~include_vendored ~json_output files
 
 let analyze_term =
   let json_log_reporter ~app:_ ~base:_ () = Observe.reporter () in
@@ -1136,7 +1189,7 @@ let exits =
       (exit_findings lor exit_incomplete)
       ~doc:"both: findings, over a run that read only part of the tree.";
     Cmd.Exit.info Cmd.Exit.cli_error
-      ~doc:"on command line parsing errors, and on a path that does not exist.";
+      ~doc:"refused: nothing was analysed, so there is no verdict.";
     Cmd.Exit.info Cmd.Exit.internal_error ~doc:"on unexpected internal errors.";
   ]
 

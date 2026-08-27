@@ -5,11 +5,48 @@ let src = Logs.Src.create "merlint.build" ~doc:"Build helpers"
 
 module Log = (val Logs.src_log src : Logs.LOG)
 
-let err fmt = Fmt.kstr (fun s -> Error s) fmt
-let err_build_failed msg = err "Failed to build project: %s" msg
+type unbuilt = Contended of string | Broken of string | Unscoped of string
+
+let message = function
+  | Contended msg ->
+      Fmt.str
+        "another dune session holds this build root, so the build has not run: \
+         %s"
+        msg
+  | Broken msg -> Fmt.str "the project does not build: %s" msg
+  | Unscoped msg -> msg
+
+(* Dune answers a root another instance holds and code that does not compile
+   with the same exit code, and says which on stderr. These are the shapes it
+   prints when the build never started: a client that reached a server and got
+   no build out of it, one whose connection to it died, and the plain lock
+   refusal. Anything else is read as the project not building.
+
+   The direction of a misreading is the reason this is a list of markers rather
+   than a parse. Contention read as breakage refuses immediately instead of
+   waiting; breakage read as contention waits and then refuses. Both end in a
+   refusal, so neither costs a verdict -- only wall time. *)
+let contention_markers =
+  [
+    "error kind: Code_error";
+    "Connection_dead";
+    "Server returned error";
+    "lock the build directory";
+    "Another instance of dune";
+  ]
+
+let classify msg =
+  if
+    List.exists
+      (fun affix -> Astring.String.is_infix ~affix msg)
+      contention_markers
+  then Contended msg
+  else Broken msg
 
 let err_outside_root ~root scope =
-  err "%a is outside the dune root %a, so it has no [@@check] alias there"
+  Fmt.kstr
+    (fun s -> Error (Unscoped s))
+    "%a is outside the dune root %a, so it has no [@@check] alias there"
     Fpath.pp scope Fpath.pp root
 
 let log_command cmd =
@@ -58,21 +95,15 @@ let ensure_project_built ~root ~scopes mgr =
       let aliases =
         match aliases with [] -> [ "@check" ] | aliases -> aliases
       in
-      let suppress_stderr =
-        match Logs.Src.level src with
-        | Some Logs.Debug -> ""
-        | _ -> " 2>/dev/null"
-      in
       let cmd =
-        Fmt.str "dune build --root %s %s%s"
+        Fmt.str "dune build --root %s %s"
           (Filename.quote (Fpath.to_string root))
           (String.concat " " (List.map Filename.quote aliases))
-          suppress_stderr
       in
       log_command cmd;
       match Command.run mgr cmd with
       | Ok _ -> Ok ()
-      | Error msg -> err_build_failed msg)
+      | Error msg -> Error (classify msg))
 
 (* [.cmt]/[.cmti] for [file] with what it can answer for the current source.
    Whether an artefact still describes its source is {!Merlin.Cmt}'s to answer,

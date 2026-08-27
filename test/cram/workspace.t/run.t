@@ -12,10 +12,9 @@ The exit status reports the incomplete run rather than a clean one.
 
   $ mv merlint.toml declared.toml
   $ merlint --build . 2>/dev/null | sed -E 's/applied [0-9]+ rules/applied N rules/' | tail -2
-  Summary: ✗ 0 total issues (applied N rules, 2 files unchecked)
-  ✗ No issues found, but 2 files could not be checked, so some or all of the rules did not run on them. The warnings above name them and say why; -v names every one.
+  Dune root: $TESTCASE_ROOT/pkg/
   $ merlint . > /dev/null 2>&1
-  [2]
+  [124]
 
 Nothing in the checkout points back at the workspace, and more than one
 workspace may link the same sources, so the checkout names the one that builds
@@ -64,12 +63,17 @@ declaration at all.
   Note: merlint.toml declares workspace $TESTCASE_ROOT/ws/, whose source tree does not reach $TESTCASE_ROOT/pkg/. The workspace builds this checkout only if one of its directories is this one.
   Analysing this tree where it stands.
   Building the 2 files above, then analysing them again.
-  Warning: Failed to build project: Command failed with exit code 1
-  Function type analysis may not work properly.
-  Continuing with analysis...
-  [2]
+  merlint: the project does not build: Command failed with exit code 1: File "lib/dune", line 3, characters 12-18:
+  3 |  (libraries helper))
+                  ^^^^^^
+  Error: Library "helper" not found.
+  -> required by library "demo" in _build/default/lib
+  -> required by _build/default/lib/.demo.objs/byte/demo.cmi
+  -> required by alias lib/check
+  merlint: nothing was analysed, because a verdict computed without the artefacts its rules read is not a verdict about this code.
+  [124]
   $ merlint . 2>/dev/null | sed -E 's/applied [0-9]+ rules/applied N rules/' | tail -4
-  Summary: ✗ 0 total issues (applied N rules, 2 files unchecked)
-  ✗ No issues found, but 2 files could not be checked, so some or all of the rules did not run on them. The warnings above name them and say why; -v names every one.
-    merlint ran the build for this and no artefact appeared, so the build itself is what needs fixing. Run it and read what it reports:
-      dune build --root $TESTCASE_ROOT/pkg @check
+  Dune root: $TESTCASE_ROOT/pkg/
+  ! 2 files have no typedtree: no build artefact describes them and the build system names no stanza that compiles them, so nothing says what to type them against and the rules that read a typedtree were skipped.
+  ! $TESTCASE_ROOT/pkg/lib/demo.ml
+  ! $TESTCASE_ROOT/pkg/lib/demo.mli

@@ -14,37 +14,38 @@ outer one:
 A directory argument builds that directory's alias, and only that one:
 
   $ merlint -v --build -r E100 alpha 2>&1 | grep '^Running: '
-  Running: dune build --root '$TESTCASE_ROOT/proj/' '@alpha/check' 2>/dev/null
+  Running: dune build --root '$TESTCASE_ROOT/proj/' '@alpha/check'
 
 A file argument is scoped by the directory holding it, which is the directory
 whose alias compiles it:
 
   $ merlint -v --build -r E100 alpha/alpha.ml 2>&1 | grep '^Running: '
-  Running: dune build --root '$TESTCASE_ROOT/proj/' '@alpha/check' 2>/dev/null
+  Running: dune build --root '$TESTCASE_ROOT/proj/' '@alpha/check'
 
 Several scopes are several alias targets in a single Dune invocation, and two
 files of one directory name that directory once:
 
   $ merlint -v --build -r E100 alpha beta/beta.ml beta/beta.mli 2>&1 | grep '^Running: '
-  Running: dune build --root '$TESTCASE_ROOT/proj/' '@alpha/check' '@beta/check' 2>/dev/null
+  Running: dune build --root '$TESTCASE_ROOT/proj/' '@alpha/check' '@beta/check'
 
 Asked for the whole project, the whole project is what is built:
 
   $ merlint -v --build -r E100 2>&1 | grep '^Running: '
-  Running: dune build --root '$TESTCASE_ROOT/proj/' '@check' 2>/dev/null
+  Running: dune build --root '$TESTCASE_ROOT/proj/' '@check'
 
 The dune root named explicitly is that same whole project, and the bare alias
 is its alias: Dune has no @./check to build.
 
   $ merlint -v --build -r E100 . 2>&1 | grep '^Running: '
-  Running: dune build --root '$TESTCASE_ROOT/proj/' '@check' 2>/dev/null
+  Running: dune build --root '$TESTCASE_ROOT/proj/' '@check'
 
 A directory outside the dune root has no alias under that root. Building the
 whole tree instead would do something other than what was asked without saying
-so, so the warm-up refuses and names the scope it cannot place. The analysis
-carries on with whatever artefacts are already there:
+so, so the warm-up refuses and names the scope it cannot place. The run refuses
+with it: merlint was asked to build before it read, it did not build, and a
+verdict computed without the artefacts its rules read answers for nothing.
 
   $ merlint --build -r E100 alpha ../outside 2>&1 >/dev/null
-  Warning: $TESTCASE_ROOT/outside/ is outside the dune root $TESTCASE_ROOT/proj/, so it has no [@check] alias there
-  Function type analysis may not work properly.
-  Continuing with analysis...
+  merlint: $TESTCASE_ROOT/outside/ is outside the dune root $TESTCASE_ROOT/proj/, so it has no [@check] alias there
+  merlint: nothing was analysed, because a verdict computed without the artefacts its rules read is not a verdict about this code.
+  [124]

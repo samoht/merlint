@@ -114,5 +114,5 @@ this transcript to find them out:
   1   findings: the code merlint read has issues to fix.
   2   incomplete coverage: merlint could not read part of it.
   3   both: findings, over a run that read only part of the tree.
-  124 on command line parsing errors, and on a path that does not exist.
+  124 refused: nothing was analysed, so there is no verdict.
   125 on unexpected internal errors.

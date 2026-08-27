@@ -6,11 +6,33 @@
     describing source that has since changed needs no attention here -- the
     source is typechecked in its place. *)
 
+(** Why a build did not produce the artefacts that were asked for.
+
+    The three are apart because a caller does different things about them, and
+    dune tells them apart only on stderr: it reports a busy root and code that
+    does not compile with the same exit code. *)
+type unbuilt =
+  | Contended of string
+      (** Another dune holds this root, so the build never started. Nothing is
+          wrong with the tree and nothing about it has been established; the
+          same command run later does the work. *)
+  | Broken of string
+      (** The build ran and the project did not build. What dune said is the
+          message, and it is the thing to fix. *)
+  | Unscoped of string
+      (** A scope [root] does not contain, so there is no [check] alias under it
+          to ask for. merlint's own argument is wrong, and the whole-tree alias
+          would build past it without saying so. *)
+
+val message : unbuilt -> string
+(** [message unbuilt] is the sentence to show a user: what did not happen, and
+    what dune said about it. *)
+
 val ensure_project_built :
   root:Fpath.t ->
   scopes:Fpath.t list ->
   _ Eio.Process.mgr ->
-  (unit, string) result
+  (unit, unbuilt) result
 (** [ensure_project_built ~root ~scopes mgr] runs a single
     [dune build --root <root>] over the [check] alias of every directory in
     [scopes]: [@<dir>/check] for a directory below [root], and the bare [@check]
@@ -18,11 +40,12 @@ val ensure_project_built :
     against the whole workspace, so cross-package dependencies still build and
     only the targets narrow. The [check] alias is what produces [.cmt] artefacts
     for every module (including wrapped executables and tests where a plain
-    [dune build] only emits native code). Stderr is suppressed unless the
-    [merlint.build] log source is at debug level. Returns [Ok ()] on dune exit
-    0, and [Error msg] on a scope [root] does not contain -- which has no alias
-    under it, and which the whole-tree alias would build past without saying so
-    -- or on any other dune exit. *)
+    [dune build] only emits native code).
+
+    Dune's stderr is captured rather than discarded, because it is the only
+    place the difference between {!constructor-Contended} and
+    {!constructor-Broken} is written: both exit 1. It never reaches the terminal
+    from here either way -- the caller decides what to show. *)
 
 val cmt_artefact :
   root:string ->

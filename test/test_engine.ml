@@ -53,12 +53,14 @@ let write path contents =
     ~finally:(fun () -> close_out oc)
     (fun () -> output_string oc contents)
 
-(* Run with every rule disabled: the file set the engine iterates is what is
-   under test, and no rule reading an artefact means nothing lands in
-   [unchecked_files] for the unrelated reason that this fixture was never
-   built. *)
-let run_on root =
-  match Filter.parse "none" with
+let read_file f = In_channel.with_open_text f In_channel.input_all
+
+(* One run over [root]. [spec] defaults to every rule disabled, which is what
+   the file-accounting cases want: no rule reading an artefact means nothing
+   lands in [unchecked_files] for the unrelated reason that this fixture was
+   never built. [load_file] is what the rules read a source through. *)
+let run_on ?(spec = "none") ?(load_file = read_file) ?analyze_set root =
+  match Filter.parse spec with
   | Error msg -> Alcotest.failf "Failed to create filter: %s" msg
   | Ok filter ->
       Eio_main.run @@ fun env ->
@@ -68,9 +70,7 @@ let run_on root =
         Project_index.build ~installed:Project_index.Skip ?pool ~fs
           ~monorepo:(Fpath.v root) ()
       in
-      Engine.run
-        ~load_file:(fun f -> In_channel.with_open_text f In_channel.input_all)
-        ~filter ~index root
+      Engine.run ~load_file ~filter ?analyze_set ~index root
 
 (* A two-package source root whose [fuzz/] holds a private executable: the shape
    every fuzz and bench directory in a multi-package repository has. Dune
@@ -146,6 +146,66 @@ let test_accounts_for_every_source_file () =
             Fpath.rem_prefix (Fpath.v root) (Fpath.v f))
         |> List.map Fpath.to_string |> List.sort String.compare))
 
+(* A check that raises returns the empty list, which is exactly what a check that
+   ran and found nothing returns, so the two are told apart by the failure set or
+   not at all. The same fixture is run twice with the same rules, and what raises
+   the second time is a source the process may not open -- a condition merlint
+   does not create and cannot pre-empt, so this stays a test of the accounting
+   rather than of whichever traversal happens to overflow today. *)
+let test_records_a_check_that_raised () =
+  with_temp_dir (fun root ->
+      fuzz_shape_project root;
+      let source = Filename.concat root "lib/alpha.ml" in
+      (* One file, so [rules_applied] -- a union of codes over the whole run --
+         answers for that file rather than for whatever its siblings still
+         managed. *)
+      let run () = run_on ~spec:"all" ~analyze_set:[ Fpath.v source ] root in
+      let clean = run () in
+      Alcotest.(check int)
+        "a run that read every source it was given has nothing to report" 0
+        (List.length clean.Engine.failed);
+      Unix.chmod source 0o000;
+      let result =
+        Fun.protect ~finally:(fun () -> Unix.chmod source 0o644) run
+      in
+      Alcotest.(check bool)
+        "a run that could not open one reports it" true
+        (result.Engine.failed <> []);
+      Alcotest.(check bool)
+        "every failure names the exception and the file it was reading" true
+        (List.for_all
+           (fun (f : Engine.failure) -> f.error <> "" && f.file <> None)
+           result.Engine.failed);
+      Alcotest.(check bool)
+        "and a check that raised is not counted as applied" true
+        (result.Engine.rules_applied < clean.Engine.rules_applied))
+
+(* A file named on the command line that no dune stanza claims. The run has one
+   file to look at and no stanza to place it in, so no rule that needs one ran
+   on it and the verdict answers for nothing. Naming the file is what the caller
+   asked about, which is the whole difference from a directory's orphans. *)
+let test_names_an_unclaimed_file_given_explicitly () =
+  with_temp_dir (fun root ->
+      fuzz_shape_project root;
+      write (Filename.concat root "lib/shared.ml") "let s = 4\n";
+      write
+        (Filename.concat root "lib/dune")
+        "(library (name alpha) (public_name alpha) (modules alpha))\n";
+      let relative result =
+        result.Engine.unclaimed_files
+        |> List.filter_map (fun f ->
+            Fpath.rem_prefix (Fpath.v root) (Fpath.v f))
+        |> List.map Fpath.to_string |> List.sort String.compare
+      in
+      let orphan = Fpath.v (Filename.concat root "lib/shared.ml") in
+      Alcotest.(check (list string))
+        "the file the caller named, and only it" [ "lib/shared.ml" ]
+        (relative (run_on ~analyze_set:[ orphan ] root));
+      let claimed = Fpath.v (Filename.concat root "lib/alpha.ml") in
+      Alcotest.(check (list string))
+        "a named file a stanza does claim leaves the set empty" []
+        (relative (run_on ~analyze_set:[ claimed ] root)))
+
 let suite =
   ( "engine",
     [
@@ -154,4 +214,8 @@ let suite =
         test_analyses_package_less_private_executable;
       Alcotest.test_case "accounts for every source file" `Quick
         test_accounts_for_every_source_file;
+      Alcotest.test_case "records a check that raised" `Quick
+        test_records_a_check_that_raised;
+      Alcotest.test_case "names an unclaimed file given explicitly" `Quick
+        test_names_an_unclaimed_file_given_explicitly;
     ] )

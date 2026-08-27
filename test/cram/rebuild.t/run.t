@@ -77,14 +77,14 @@ itself asks Dune for the same alias a run given [--build] asks for:
 
   $ rm -rf t/_build
   $ merlint -v -r E205 t/lib/mylib.ml 2>&1 | grep '^Running: '
-  Running: dune build --root '$TESTCASE_ROOT/t/' '@lib/check' 2>/dev/null
+  Running: dune build --root '$TESTCASE_ROOT/t/' '@lib/check'
 
 A run given [--build] has already had its build. The repair does not run a
 second one on top of it:
 
   $ rm -rf t/_build
   $ merlint -v --build -r E205 t/lib/mylib.ml 2>&1 | grep '^Running: '
-  Running: dune build --root '$TESTCASE_ROOT/t/' '@lib/check' 2>/dev/null
+  Running: dune build --root '$TESTCASE_ROOT/t/' '@lib/check'
 
 Refusing is what is left when a build cannot produce the artefact. This project
 names a library that does not exist, so Dune can configure nothing for it and
@@ -104,40 +104,28 @@ no build merlint runs will change that:
   > EOF
 
 E105 runs in the shared typedtree pass, so a file without one is a file it did
-not examine. merlint builds, the build fails, and the second pass finds the
-file no more readable than the first did. The count of rules applied says what
-that leaves: this run applied none of them, and the catch-all handler in the
-source goes unreported rather than being called clean.
+not examine. merlint builds, the build fails, and there is no second pass: a
+project that does not build is refused at once, with what dune said about it,
+rather than analysed against artefacts that describe something else. No verdict
+is printed, because none was computed -- the catch-all handler in the source is
+neither reported nor called clean.
 
   $ merlint -r E105 u/lib/ulib.ml
   Dune root: $TESTCASE_ROOT/u
   ! 1 file has no typedtree: no build artefact describes it and the build system names no stanza that compiles it, so nothing says what to type it against and the rules that read a typedtree were skipped.
   ! $TESTCASE_ROOT/u/lib/ulib.ml
   Building the file above, then analysing it again.
-  x Command failed with exit code 1
-  Warning: Failed to build project: Command failed with exit code 1
-  Function type analysis may not work properly.
-  Continuing with analysis...
-  ! 1 file has no typedtree: no build artefact describes it and the build system names no stanza that compiles it, so nothing says what to type it against and the rules that read a typedtree were skipped.
-  ! $TESTCASE_ROOT/u/lib/ulib.ml
-  Running merlint analysis...
-  
-  Analyzing 1 files
-  
-  ✓ Code Quality (0 total issues)
-  ✓ Code Style (0 total issues)
-  ✓ Naming Conventions (0 total issues)
-  ✓ Documentation (0 total issues)
-  ✓ Project Structure (0 total issues)
-  ✓ Test Quality (0 total issues)
-  ✓ Interop Testing (0 total issues)
-  ✓ Code Generation (0 total issues)
-  
-  Summary: ✗ 0 total issues (applied 0 rules, 1 file unchecked)
-  ✗ No issues found, but 1 file could not be checked, so some or all of the rules did not run on it. The warnings above name it and say why; -v names every one.
-    merlint ran the build for this and no artefact appeared, so the build itself is what needs fixing. Run it and read what it reports:
-      dune build --root $TESTCASE_ROOT/u @check
-  [2]
+  merlint: the project does not build: Command failed with exit code 1: Entering directory 'u'
+  File "lib/dune", line 3, characters 12-36:
+  3 |  (libraries no-such-library-anywhere))
+                  ^^^^^^^^^^^^^^^^^^^^^^^^
+  Error: Library "no-such-library-anywhere" not found.
+  -> required by library "ulib" in _build/default/lib
+  -> required by _build/default/lib/.ulib.objs/byte/ulib.cmi
+  -> required by alias lib/check
+  Leaving directory 'u'
+  merlint: nothing was analysed, because a verdict computed without the artefacts its rules read is not a verdict about this code.
+  [124]
 
 Once per run, there too. A run given [--build] whose build failed does not get
 a second build out of the repair: one failing build is the answer, and running

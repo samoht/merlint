@@ -13,9 +13,13 @@ let with_diagnosis message = function
   | "" -> message
   | diagnosis -> Fmt.str "%s: %s" message (String.trim diagnosis)
 
+(* The failure is returned, not announced. Its one caller decides what to do
+   about it and says so in its own words; logging it here as well put the same
+   sentence on the terminal twice, once in a voice that reads as the last word
+   on it and once in the voice that actually is. *)
 let err_exit_code ~diagnosis code =
   let message = Fmt.str "Command failed with exit code %d" code in
-  Log.err (fun m -> m "%s" (with_diagnosis message diagnosis));
+  Log.info (fun m -> m "%s" (with_diagnosis message diagnosis));
   err "%s" (with_diagnosis message diagnosis)
 
 let err_signal n =

@@ -31,12 +31,28 @@
 ; -- the one carrying dune-project, .ocamlformat and the dune-warnings env stanza
 ; -- and the project-structure rules (E500, E940) see them instead of the test
 ; sandbox. These root files are listed as deps so they are materialised there.
+;
+; The check aliases are deps because the .cmt files under lib/.merlint.objs are
+; what the typedtree-backed rules read, and (source_tree ../lib) does not
+; produce them: it materialises sources, and whatever artefacts happened to be
+; beside them from an earlier build came along unasked. This gate read those --
+; so an edit to any merlint source left it linting the previous version and
+; saying nothing, which is the failure it exists to catch.
+;
+; lib/examples.ml is excluded because it is generated: the root this runs from
+; is a copy in which the generated file sits beside the rule that generates it,
+; so a dune build there refuses with "Multiple rules generated" and merlint
+; refuses with it. Nothing is lost -- the file is 120 kB of cram transcripts
+; emitted by generate_examples_ml, and the generator is what would carry a
+; defect in it.
 
 (rule
  (alias runtest)
  (deps
   (sandbox none)
   %{bin:merlint}
+  (alias ../lib/check)
+  (alias ../bin/check)
   (source_tree ../lib)
   (source_tree ../bin)
   ../.ocamlformat
@@ -47,4 +63,4 @@
  (action
   (chdir
    ..
-   (run %{bin:merlint} lib bin))))
+   (run %{bin:merlint} --exclude lib/examples.ml lib bin))))
