@@ -3,6 +3,12 @@
 type exclusion_stats = { rule : string; file : string }
 (** A single suppressed issue. *)
 
+type failure = { rule : string option; file : string option; error : string }
+(** One unit of work a run started and did not finish. [rule] is the code of the
+    rule whose body raised, and [None] when what raised was the whole file's
+    analysis, which is every rule of the run over that file. [file] is the
+    source being read, and [error] the exception. *)
+
 type result = {
   issues : Rule.Run.result list;
   excluded : exclusion_stats list;
@@ -11,6 +17,7 @@ type result = {
   unresolved_files : string list;
   uncompilable_files : string list;
   unclaimed_files : string list;
+  failed : failure list;
 }
 (** Analysis result. {!field-files_analyzed} is the size of the file set the
     engine actually iterated -- either the [?analyze_set] supplied by the caller
@@ -37,14 +44,26 @@ type result = {
     analysed set, since a project rule reaching past that set answers for its
     own evidence and no rule of this run was going to examine the file.
 
-    {!field-unclaimed_files} are the source files under what the run was pointed
-    at that no dune stanza claims, so the engine never iterated them and no rule
-    saw them at all. Reporting them is what makes the run's own numbers add up:
+    {!field-unclaimed_files} are the source files the run was pointed at that no
+    dune stanza claims, so the engine never iterated them and no rule saw them
+    at all. Reporting them is what makes the run's own numbers add up:
     {!field-files_analyzed} plus this list accounts for every [.ml] / [.mli] in
     the walked tree, so a discovery gap moves a number instead of passing
-    unnoticed. Only a run given directories reports them; an explicit
-    [?analyze_set] is the caller's own accounting of what it wants looked at,
-    and a file it did not name is not that run's to report. *)
+    unnoticed. A directory the run was pointed at contributes the sources under
+    it nothing compiles; a file named in [?analyze_set] contributes itself when
+    no stanza claims it. The orphans of a directory the caller did not name stay
+    out of a file-scoped run, which is the part of "an explicit set is the
+    caller's own accounting" that holds -- a file the caller did name is
+    precisely the one it is owed an answer about.
+
+    {!field-failed} is the work this run began and did not finish: a rule whose
+    body raised, or a file whose whole analysis did. The result of a rule that
+    crashed and the result of a rule that ran and found nothing are the same
+    empty list, so a run that counted only findings reported the two the same
+    way; a crashed rule is also not counted in {!field-rules_applied}, since it
+    did not apply to anything. Nothing here is a statement about the code: it is
+    a defect in merlint, and it leaves the run's verdict short by however much
+    the missing rule would have said. *)
 
 val run :
   ?domain_mgr:[> Eio.Domain_manager.ty ] Eio.Resource.t ->

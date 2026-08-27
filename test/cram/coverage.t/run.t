@@ -56,7 +56,7 @@ files the run could not reach. Nothing but the document goes to stdout, so the
 output parses:
 
   $ merlint --json -r E105 lib.mli 2>/dev/null
-  {"project_root":"$TESTCASE_ROOT/","files_analyzed":1,"rules_applied":1,"total_issues":0,"unchecked":0,"unchecked_files":[],"unclaimed_files":[],"skipped_paths":[],"passed":true,"issues":[],"excluded":[]}
+  {"project_root":"$TESTCASE_ROOT/","files_analyzed":1,"rules_applied":1,"total_issues":0,"unchecked":0,"unchecked_files":[],"unclaimed_files":[],"skipped_paths":[],"failed_checks":[],"passed":true,"issues":[],"excluded":[]}
 
 With the artefacts already present the run reads them and builds nothing:
 

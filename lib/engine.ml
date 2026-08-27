@@ -7,6 +7,7 @@ module T = Ocaml_typing.Typedtree
 module Tast_iterator = Ocaml_typing.Tast_iterator
 
 type exclusion_stats = { rule : string; file : string }
+type failure = { rule : string option; file : string option; error : string }
 
 type result = {
   issues : Rule.Run.result list;
@@ -16,6 +17,7 @@ type result = {
   unresolved_files : string list;
   uncompilable_files : string list;
   unclaimed_files : string list;
+  failed : failure list;
 }
 
 (* What one unit of work produced: one analysed file, or one project-rule job.
@@ -28,9 +30,25 @@ type outcome = {
   found : Rule.Run.result list;
   dropped : exclusion_stats list;
   applied : string list;
+  failed : failure list;
 }
 
-let no_outcome = { found = []; dropped = []; applied = [] }
+let no_outcome = { found = []; dropped = []; applied = []; failed = [] }
+
+(* What a rule that raised leaves behind. The exception's own text is what the
+   report shows; the backtrace goes to the debug log, because which traversal
+   overflowed is the first question asked of a crash and reproducing it to find
+   out is the record this should have left. It is only recorded when the
+   program was started with backtraces on ([OCAMLRUNPARAM=b]), which costs
+   nothing to the runs that are not debugging one. *)
+let failure_of_exn ?rule ?file exn =
+  let error = Printexc.to_string exn in
+  let backtrace = Printexc.get_backtrace () in
+  Log.debug (fun m ->
+      m "%s raised %s:@\n%s"
+        (match rule with Some code -> code | None -> "file analysis")
+        error backtrace);
+  { rule; file; error }
 
 (* A bounded sample: naming every file of a whole-repo run buries the message
    the warning is carrying. *)
@@ -81,12 +99,20 @@ let path_mem paths =
    every library source in the project -- and one of those it cannot read
    weakens that rule's evidence, which the rule reports in its own finding. It
    cannot leave this run incomplete: no rule of this run was going to examine
-   the file. *)
-let warn_unresolved ~index ~analyzed stats =
+   the file.
+
+   [unclaimed] is subtracted, so the two sets stay disjoint and one file is one
+   unchecked file. It is also the right answer on its own terms: this warning
+   sends the reader to [dune build], and no build produces an artefact for a
+   file no stanza compiles. *)
+let warn_unresolved ~index ~analyzed ~unclaimed stats =
   let in_scope = path_mem analyzed in
+  let is_unclaimed = path_mem unclaimed in
   let is_gated = path_mem (Project_index.gated_source_files index) in
   let _unavailable, missing =
-    List.filter in_scope stats.Merlin.unresolved_files
+    List.filter
+      (fun f -> in_scope f && not (is_unclaimed f))
+      stats.Merlin.unresolved_files
     |> List.partition is_gated
   in
   (if missing <> [] then
@@ -110,9 +136,14 @@ let warn_unresolved ~index ~analyzed stats =
    the warning above -- [dune build] is what the user would be sent to there,
    and here it reaches the same error -- so it gets its own, and says the one
    thing that does clear it. Asked of [analyzed] alone, for the same reason. *)
-let warn_uncompilable ~analyzed stats =
+let warn_uncompilable ~analyzed ~unclaimed stats =
   let in_scope = path_mem analyzed in
-  let broken = List.filter in_scope stats.Merlin.uncompilable_files in
+  let is_unclaimed = path_mem unclaimed in
+  let broken =
+    List.filter
+      (fun f -> in_scope f && not (is_unclaimed f))
+      stats.Merlin.uncompilable_files
+  in
   (if broken <> [] then
      let n = List.length broken in
      Log.warn (fun m ->
@@ -164,6 +195,41 @@ let warn_unclaimed unclaimed =
            it it it it belongs it pp_sample unclaimed));
   unclaimed
 
+(* The fourth way a run can be incomplete, and the only one that is a defect in
+   merlint rather than in the tree it was reading: a rule's body raised. What a
+   rule that crashed returns is the empty list, which is what a rule that ran
+   and found nothing returns, so the run carried on and reported the findings of
+   the rules that survived as the findings of the whole set. Five rules raised
+   [Stack_overflow] on one 129-line file and the run still printed a pass.
+
+   One producer for this fact: the crashes are collected and named here, at the
+   end of the run, rather than logged where they are caught, so the set the
+   summary counts and the set the reader is shown cannot differ. *)
+let failure_line failure =
+  let what =
+    match failure.rule with Some code -> code | None -> "whole-file analysis"
+  in
+  let where =
+    match failure.file with Some file -> " on " ^ file | None -> ""
+  in
+  Fmt.str "%s%s: %s" what where failure.error
+
+let warn_failed failed =
+  (if failed <> [] then
+     let n = List.length failed in
+     let they = if n = 1 then "it" else "they" in
+     Log.warn (fun m ->
+         m
+           "@[<v>%d check%s raised, so %s never finished and this run's \
+            findings are short by whatever %s would have reported. That is a \
+            defect in merlint, not in the code it was reading; \
+            [OCAMLRUNPARAM=b merlint -vv] logs the backtrace.%a@]"
+           n
+           (if n = 1 then "" else "s")
+           they they pp_sample
+           (List.map failure_line failed)));
+  failed
+
 let log_fs_stats () =
   let s = Fs.stats () in
   if
@@ -173,7 +239,7 @@ let log_fs_stats () =
         m "FS stats: readdirs=%d is_directory=%d file_exists=%d file_opens=%d"
           s.readdirs s.is_directory_checks s.file_exists_checks s.file_opens)
 
-let log_backend_stats ~index ~analyzed backend =
+let log_backend_stats ~index ~analyzed ~unclaimed backend =
   let s = Merlin.stats backend in
   Log.info (fun m ->
       m
@@ -191,7 +257,8 @@ let log_backend_stats ~index ~analyzed backend =
             (List.length recovered)
             (if List.length recovered = 1 then "" else "s")
             (if List.length recovered = 1 then "it" else "them")));
-  (warn_unresolved ~index ~analyzed s, warn_uncompilable ~analyzed s)
+  ( warn_unresolved ~index ~analyzed ~unclaimed s,
+    warn_uncompilable ~analyzed ~unclaimed s )
 
 (* The whole-repo index builders are meant to run a handful of times per
    analysis (roughly once per project rule). A count orders of magnitude higher
@@ -212,12 +279,10 @@ let run_file_rule ?profiling ctx rule =
   let start_time = Unix.gettimeofday () in
   let res =
     try
-      Probe_events.file_rule ~rule:code ~file:filename (fun () ->
-          Rule.Run.file rule ctx)
-    with exn ->
-      Log.err (fun m ->
-          m "Rule %s failed on %s: %s" code filename (Printexc.to_string exn));
-      []
+      Ok
+        (Probe_events.file_rule ~rule:code ~file:filename (fun () ->
+             Rule.Run.file rule ctx))
+    with exn -> Error (failure_of_exn ~rule:code ~file:filename exn)
   in
   let duration = Unix.gettimeofday () -. start_time in
   (match profiling with
@@ -236,11 +301,10 @@ let run_project_job ?profiling job =
   let start_time = Unix.gettimeofday () in
   let res =
     try
-      Probe_events.project_rule ~rule:code (fun () -> Rule.Run.project_job job)
-    with exn ->
-      Log.err (fun m ->
-          m "Project rule job %s failed: %s" code (Printexc.to_string exn));
-      []
+      Ok
+        (Probe_events.project_rule ~rule:code (fun () ->
+             Rule.Run.project_job job))
+    with exn -> Error (failure_of_exn ~rule:code exn)
   in
   let duration = Unix.gettimeofday () -. start_time in
   (match profiling with
@@ -346,9 +410,11 @@ let split_excluded ~config_for ~code issues =
 
 let run_one_project_job ?profiling ~config_for job =
   let code = Rule.Run.project_job_code job in
-  let issues = run_project_job ?profiling job in
-  let found, dropped = split_excluded ~config_for ~code issues in
-  { found; dropped; applied = [ code ] }
+  match run_project_job ?profiling job with
+  | Error failure -> { no_outcome with failed = [ failure ] }
+  | Ok issues ->
+      let found, dropped = split_excluded ~config_for ~code issues in
+      { found; dropped; applied = [ code ]; failed = [] }
 
 let pass_iterator passes =
   let on_attribute = List.filter_map Rule.Run.pass_attribute passes in
@@ -425,12 +491,17 @@ let run_project_rules ?pool ?profiling enabled_rules project_ctx =
     found = List.concat_map (fun o -> o.found) results;
     dropped = List.concat_map (fun o -> o.dropped) results;
     applied = List.concat_map (fun o -> o.applied) results;
+    failed = List.concat_map (fun o -> o.failed) results;
   }
 
 (* Every file-scoped rule this run enables, over one file: the shared typedtree
    pass first, then the rules that read the file on their own. The codes come
    back beside the findings, because a rule that ran and found nothing and a
-   rule that never ran are the same empty list. *)
+   rule that never ran are the same empty list. A rule that raised is the third
+   member of that set and reads the same as the other two, so it comes back
+   under its own name and out of the applied codes: it did not apply to this
+   file, and counting it would report a check that never finished as one that
+   passed. *)
 let run_file_scoped_rules ?profiling ~file_rules ~pass_rules file_ctx =
   let active_passes =
     List.filter_map
@@ -441,11 +512,21 @@ let run_file_scoped_rules ?profiling ~file_rules ~pass_rules file_ctx =
       pass_rules
   in
   let shared_results, passes_applied = run_passes active_passes file_ctx in
-  let direct_results =
-    List.concat_map (run_file_rule ?profiling file_ctx) file_rules
+  let direct =
+    List.map
+      (fun rule -> (Rule.code rule, run_file_rule ?profiling file_ctx rule))
+      file_rules
   in
-  ( shared_results @ direct_results,
-    passes_applied @ List.map Rule.code file_rules )
+  let found_of (_, res) = match res with Ok found -> found | Error _ -> [] in
+  let applied_of (code, res) =
+    match res with Ok _ -> Some code | Error _ -> None
+  in
+  let failed_of (_, res) =
+    match res with Ok _ -> None | Error failure -> Some failure
+  in
+  ( shared_results @ List.concat_map found_of direct,
+    passes_applied @ List.filter_map applied_of direct,
+    List.filter_map failed_of direct )
 
 let analyze_single_file ?profiling ~project_ctx ~config_for ~project_root:_
     ~file_rules ~pass_rules filepath =
@@ -469,7 +550,7 @@ let analyze_single_file ?profiling ~project_ctx ~config_for ~project_root:_
           ~project_index:(Some (Context.index project_ctx))
           ~load_content:(fun () -> Context.file_content project_ctx filename)
       in
-      let all_results, applied =
+      let all_results, applied, failed =
         run_file_scoped_rules ?profiling ~file_rules ~pass_rules file_ctx
       in
       let found =
@@ -485,11 +566,9 @@ let analyze_single_file ?profiling ~project_ctx ~config_for ~project_root:_
             not skip)
           all_results
       in
-      { found; dropped = []; applied }
+      { found; dropped = []; applied; failed }
     with exn ->
-      Log.err (fun m ->
-          m "Failed to analyze %s: %s" filename_s (Printexc.to_string exn));
-      no_outcome
+      { no_outcome with failed = [ failure_of_exn ~file:filename_s exn ] }
   in
   { outcome with dropped = List.rev !excluded_acc }
 
@@ -562,20 +641,45 @@ let drop_excluded_files ~project_root ~exclude files =
       in
       List.filter (fun f -> not (excluded f)) files
 
-(* The source files under what the run was pointed at that no dune stanza
-   claims, so [analysis_files] never saw them. Asked only of a run given
-   directories: an explicit [analyze_set] is the caller's own accounting of what
-   it wants looked at, and a file it did not name is not this run's to report.
+(* The source files the run was pointed at that no dune stanza claims, so
+   [analysis_files] handed them to rules that had nothing to type them against
+   and no stanza to place them in. They arrive two ways, and both are the
+   caller's own question: a directory argument brings the sources under it that
+   nothing compiles, and a file argument brings itself.
+
+   The second used to answer nothing at all, on the grounds that an explicit
+   [analyze_set] is the caller's accounting of what it wants looked at. That
+   holds for a file the caller did not name -- which is why a directory's
+   orphans stay out of a file-scoped run -- and inverts for one it did: naming
+   a file no stanza compiles is exactly the case the caller is owed an answer
+   about, and answering nothing reported it as a clean pass over a file no rule
+   could examine. Membership is asked including vendored sources, because a
+   vendored file is claimed by a stanza whether or not this run analyses it.
+
    The same exclusion globs apply, so a path the user asked to skip is not then
    reported as skipped. *)
 let unclaimed_files ~project_root ~exclude ~include_vendored ~analyze_set
     ~analyze_roots index =
-  match (analyze_set, analyze_roots) with
-  | Some _, None -> []
-  | (None | Some _), roots ->
-      Project_index.unclaimed_source_files ~include_vendored ?roots index
-      |> drop_excluded_files ~project_root ~exclude
-      |> List.map Fpath.to_string
+  let named =
+    match analyze_set with
+    | None -> []
+    | Some files ->
+        List.filter
+          (fun file ->
+            not
+              (Project_index.mem_source_file ~include_vendored:true index file))
+          files
+  in
+  let walked =
+    match (analyze_set, analyze_roots) with
+    | Some _, None -> []
+    | (None | Some _), roots ->
+        Project_index.unclaimed_source_files ~include_vendored ?roots index
+  in
+  List.rev_append named walked
+  |> List.sort_uniq Fpath.compare
+  |> drop_excluded_files ~project_root ~exclude
+  |> List.map Fpath.to_string
 
 let run_enabled_rules ?pool ?profiling ~project_ctx ~project_root ~enabled_rules
     analyze_set =
@@ -616,6 +720,7 @@ let build_result ?(bail = false) ?(unresolved_files = [])
     unresolved_files;
     uncompilable_files;
     unclaimed_files;
+    failed = warn_failed (List.concat_map (fun o -> o.failed) outcomes);
   }
 
 (* One whole analysis pass over [backend], optionally on [pool]. It returns the
@@ -646,13 +751,18 @@ let analyse ?pool ?profiling ?bail ~load_file ~filter ~requested_set
       analyze_set
   in
   log_index_stats idx_value;
-  let unresolved_files, uncompilable_files =
-    log_backend_stats ~index:idx_value ~analyzed:analyze_set backend
-  in
+  (* Unclaimed first: a file no stanza compiles is that set's to report, and
+     subtracting it here is what keeps one file from counting as two unchecked
+     ones and from sending the caller to a build that cannot help it. *)
   let unclaimed_files =
     warn_unclaimed
       (unclaimed_files ~project_root ~exclude ~include_vendored
          ~analyze_set:requested_set ~analyze_roots idx_value)
+  in
+  let unresolved_files, uncompilable_files =
+    log_backend_stats ~index:idx_value ~analyzed:analyze_set
+      ~unclaimed:(List.map Fpath.v unclaimed_files)
+      backend
   in
   build_result ?bail ~unresolved_files ~uncompilable_files ~unclaimed_files
     project_results file_results files_analyzed

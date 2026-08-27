@@ -69,4 +69,4 @@ described. Their lengths sum to [unchecked], so a caller reading either never
 disagrees with the exit status that [exit.t] pins:
 
   $ merlint --json -r E425 t/lib 2>/dev/null | sed 's|"[^"]*/lib/|"lib/|g'
-  {"project_root":"$TESTCASE_ROOT/t","files_analyzed":2,"rules_applied":1,"total_issues":0,"unchecked":12,"unchecked_files":[],"unclaimed_files":["lib/orphan_01.ml","lib/orphan_02.ml","lib/orphan_03.ml","lib/orphan_04.ml","lib/orphan_05.ml","lib/orphan_06.ml","lib/orphan_07.ml","lib/orphan_08.ml","lib/orphan_09.ml","lib/orphan_10.ml","lib/orphan_11.ml","lib/orphan_12.ml"],"skipped_paths":[],"passed":false,"issues":[],"excluded":[]}
+  {"project_root":"$TESTCASE_ROOT/t","files_analyzed":2,"rules_applied":1,"total_issues":0,"unchecked":12,"unchecked_files":[],"unclaimed_files":["lib/orphan_01.ml","lib/orphan_02.ml","lib/orphan_03.ml","lib/orphan_04.ml","lib/orphan_05.ml","lib/orphan_06.ml","lib/orphan_07.ml","lib/orphan_08.ml","lib/orphan_09.ml","lib/orphan_10.ml","lib/orphan_11.ml","lib/orphan_12.ml"],"skipped_paths":[],"failed_checks":[],"passed":false,"issues":[],"excluded":[]}

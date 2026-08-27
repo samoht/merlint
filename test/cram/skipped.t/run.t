@@ -117,7 +117,7 @@ The document a scripted caller reads carries the same answer, so the JSON and
 the status never disagree:
 
   $ merlint --json -r E425 t/notes.txt
-  {"project_root":"$TESTCASE_ROOT/t","files_analyzed":0,"rules_applied":0,"total_issues":0,"unchecked":0,"unchecked_files":[],"unclaimed_files":[],"skipped_paths":["t/notes.txt"],"passed":false,"issues":[],"excluded":[]}
+  {"project_root":"$TESTCASE_ROOT/t","files_analyzed":0,"rules_applied":0,"total_issues":0,"unchecked":0,"unchecked_files":[],"unclaimed_files":[],"skipped_paths":["t/notes.txt"],"failed_checks":[],"passed":false,"issues":[],"excluded":[]}
   [2]
 
 A directory argument is unaffected, and that is the shape the pre-commit hook
