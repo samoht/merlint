@@ -1,2 +1,6 @@
+; The library needs a package the switch provides, so a tree with no switch
+; cannot build it. That is what a linked working tree looks like: the sources
+; are all there and nothing can be compiled.
 (library
- (name demo))
+ (name demo)
+ (libraries only-the-switch-has-this))

@@ -12,9 +12,25 @@ type result = {
   issues : Rule.Run.result list;
   excluded : exclusion_stats list;
   files_analyzed : int;
-  unchecked_files : string list;
+  rules_applied : int;
+  unresolved_files : string list;
+  uncompilable_files : string list;
   unclaimed_files : string list;
 }
+
+(* What one unit of work produced: one analysed file, or one project-rule job.
+   [applied] is the codes of the rules that actually ran over that unit, which
+   is what the run's rule count is summed from. A rule the filter enabled and
+   nothing ran -- no file to run it on, no unit to enumerate, no typedtree for
+   the pass it belongs to -- did not apply to this run, and counting it would
+   report a rule set that shrank as one that did not. *)
+type outcome = {
+  found : Rule.Run.result list;
+  dropped : exclusion_stats list;
+  applied : string list;
+}
+
+let no_outcome = { found = []; dropped = []; applied = [] }
 
 (* A bounded sample: naming every file of a whole-repo run buries the message
    the warning is carrying. *)
@@ -80,8 +96,7 @@ let warn_unresolved ~index ~analyzed stats =
            "@[<v>%d file%s no typedtree: no build artefact describes %s and \
             the build system names no stanza that compiles %s, so nothing says \
             what to type %s against and the rules that read a typedtree were \
-            skipped. Run [dune build @check] (or pass [--build]) before \
-            merlint.%a@]"
+            skipped.%a@]"
            n
            (if n = 1 then " has" else "s have")
            (if n = 1 then "it" else "them")
@@ -176,7 +191,7 @@ let log_backend_stats ~index ~analyzed backend =
             (List.length recovered)
             (if List.length recovered = 1 then "" else "s")
             (if List.length recovered = 1 then "it" else "them")));
-  warn_unresolved ~index ~analyzed s @ warn_uncompilable ~analyzed s
+  (warn_unresolved ~index ~analyzed s, warn_uncompilable ~analyzed s)
 
 (* The whole-repo index builders are meant to run a handful of times per
    analysis (roughly once per project rule). A count orders of magnitude higher
@@ -332,7 +347,8 @@ let split_excluded ~config_for ~code issues =
 let run_one_project_job ?profiling ~config_for job =
   let code = Rule.Run.project_job_code job in
   let issues = run_project_job ?profiling job in
-  split_excluded ~config_for ~code issues
+  let found, dropped = split_excluded ~config_for ~code issues in
+  { found; dropped; applied = [ code ] }
 
 let pass_iterator passes =
   let on_attribute = List.filter_map Rule.Run.pass_attribute passes in
@@ -357,18 +373,23 @@ let pass_iterator passes =
         Tast_iterator.default_iterator.value_binding this value_binding);
   }
 
+(* [passes] pairs each active pass with the code of the rule it belongs to. A
+   pass runs over a typedtree or not at all, so a file without one is a file
+   none of these rules examined: they are reported as not applied rather than
+   as having found nothing. *)
 let run_passes passes ctx =
   match passes with
-  | [] -> []
+  | [] -> ([], [])
   | _ -> (
       match File_view.typedtree (Context.view ctx) with
-      | None -> []
+      | None -> ([], [])
       | Some tree ->
+          let actives = List.map snd passes in
           let on_structure_item =
-            List.filter_map Rule.Run.pass_structure_item passes
+            List.filter_map Rule.Run.pass_structure_item actives
           in
           let on_signature_item =
-            List.filter_map Rule.Run.pass_signature_item passes
+            List.filter_map Rule.Run.pass_signature_item actives
           in
           let dispatch_structure_item item =
             List.iter (fun f -> f item) on_structure_item
@@ -376,7 +397,7 @@ let run_passes passes ctx =
           let dispatch_signature_item item =
             List.iter (fun f -> f item) on_signature_item
           in
-          let iterator = pass_iterator passes in
+          let iterator = pass_iterator actives in
           (match tree with
           | `Implementation structure ->
               List.iter dispatch_structure_item structure.T.str_items;
@@ -384,7 +405,7 @@ let run_passes passes ctx =
           | `Interface signature ->
               List.iter dispatch_signature_item signature.T.sig_items;
               iterator.signature iterator signature);
-          List.concat_map Rule.Run.pass_finish passes)
+          (List.concat_map Rule.Run.pass_finish actives, List.map fst passes))
 
 let run_project_rules ?pool ?profiling enabled_rules project_ctx =
   let config_for = config_lookup () in
@@ -400,9 +421,31 @@ let run_project_rules ?pool ?profiling enabled_rules project_ctx =
     | None -> List.map run jobs
     | Some pool -> Fs.parallel_map pool jobs run
   in
-  let issues = List.concat_map fst results in
-  let excluded = List.concat_map snd results in
-  (issues, excluded)
+  {
+    found = List.concat_map (fun o -> o.found) results;
+    dropped = List.concat_map (fun o -> o.dropped) results;
+    applied = List.concat_map (fun o -> o.applied) results;
+  }
+
+(* Every file-scoped rule this run enables, over one file: the shared typedtree
+   pass first, then the rules that read the file on their own. The codes come
+   back beside the findings, because a rule that ran and found nothing and a
+   rule that never ran are the same empty list. *)
+let run_file_scoped_rules ?profiling ~file_rules ~pass_rules file_ctx =
+  let active_passes =
+    List.filter_map
+      (fun rule ->
+        Option.map
+          (fun pass -> (Rule.code rule, pass))
+          (Rule.Run.pass rule file_ctx))
+      pass_rules
+  in
+  let shared_results, passes_applied = run_passes active_passes file_ctx in
+  let direct_results =
+    List.concat_map (run_file_rule ?profiling file_ctx) file_rules
+  in
+  ( shared_results @ direct_results,
+    passes_applied @ List.map Rule.code file_rules )
 
 let analyze_single_file ?profiling ~project_ctx ~config_for ~project_root:_
     ~file_rules ~pass_rules filepath =
@@ -410,7 +453,7 @@ let analyze_single_file ?profiling ~project_ctx ~config_for ~project_root:_
   let filename_s = Context.string_of_path filename in
   let config = config_for filename_s in
   let excluded_acc = ref [] in
-  let issues =
+  let outcome =
     Probe_events.file_analysis ~file:filename_s
       ~file_rules:(List.length file_rules) ~pass_rules:(List.length pass_rules)
     @@ fun () ->
@@ -426,30 +469,29 @@ let analyze_single_file ?profiling ~project_ctx ~config_for ~project_root:_
           ~project_index:(Some (Context.index project_ctx))
           ~load_content:(fun () -> Context.file_content project_ctx filename)
       in
-      let active_passes =
-        List.filter_map (fun rule -> Rule.Run.pass rule file_ctx) pass_rules
+      let all_results, applied =
+        run_file_scoped_rules ?profiling ~file_rules ~pass_rules file_ctx
       in
-      let shared_results = run_passes active_passes file_ctx in
-      let direct_results =
-        List.concat_map (run_file_rule ?profiling file_ctx) file_rules
+      let found =
+        List.filter
+          (fun r ->
+            let code = Rule.Run.code r in
+            let skip, count =
+              exclusion_decision config.exclusions ~code ~file:filename_s
+            in
+            if count then
+              excluded_acc :=
+                { rule = code; file = filename_s } :: !excluded_acc;
+            not skip)
+          all_results
       in
-      let all_results = shared_results @ direct_results in
-      List.filter
-        (fun r ->
-          let code = Rule.Run.code r in
-          let skip, count =
-            exclusion_decision config.exclusions ~code ~file:filename_s
-          in
-          if count then
-            excluded_acc := { rule = code; file = filename_s } :: !excluded_acc;
-          not skip)
-        all_results
+      { found; dropped = []; applied }
     with exn ->
       Log.err (fun m ->
           m "Failed to analyze %s: %s" filename_s (Printexc.to_string exn));
-      []
+      no_outcome
   in
-  (issues, List.rev !excluded_acc)
+  { outcome with dropped = List.rev !excluded_acc }
 
 (** Walk [files] in parallel across [domain_mgr]'s executor pool. Each file is
     its own work unit; the pool decides how to spread them across domains. The
@@ -551,20 +593,28 @@ let run_enabled_rules ?pool ?profiling ~project_ctx ~project_root ~enabled_rules
       |> Eio.Promise.resolve file_resolver);
   (Eio.Promise.await project_promise, Eio.Promise.await file_promise)
 
-let build_result ?(bail = false) ?(unchecked_files = []) ?(unclaimed_files = [])
-    (project_issues, project_excluded) file_results files_analyzed =
-  let file_issues = List.concat_map fst file_results in
-  let file_excluded = List.concat_map snd file_results in
-  let issues = List.sort Rule.Run.compare (project_issues @ file_issues) in
+let build_result ?(bail = false) ?(unresolved_files = [])
+    ?(uncompilable_files = []) ?(unclaimed_files = []) project file_outcomes
+    files_analyzed =
+  let outcomes = project :: file_outcomes in
+  let issues =
+    List.sort Rule.Run.compare (List.concat_map (fun o -> o.found) outcomes)
+  in
   let issues =
     if bail then match issues with [] -> [] | issue :: _ -> [ issue ]
     else issues
   in
+  let applied =
+    List.concat_map (fun o -> o.applied) outcomes
+    |> List.sort_uniq String.compare
+  in
   {
     issues;
-    excluded = project_excluded @ file_excluded;
+    excluded = List.concat_map (fun o -> o.dropped) outcomes;
     files_analyzed;
-    unchecked_files;
+    rules_applied = List.length applied;
+    unresolved_files;
+    uncompilable_files;
     unclaimed_files;
   }
 
@@ -596,7 +646,7 @@ let analyse ?pool ?profiling ?bail ~load_file ~filter ~requested_set
       analyze_set
   in
   log_index_stats idx_value;
-  let unchecked_files =
+  let unresolved_files, uncompilable_files =
     log_backend_stats ~index:idx_value ~analyzed:analyze_set backend
   in
   let unclaimed_files =
@@ -604,8 +654,8 @@ let analyse ?pool ?profiling ?bail ~load_file ~filter ~requested_set
       (unclaimed_files ~project_root ~exclude ~include_vendored
          ~analyze_set:requested_set ~analyze_roots idx_value)
   in
-  build_result ?bail ~unchecked_files ~unclaimed_files project_results
-    file_results files_analyzed
+  build_result ?bail ~unresolved_files ~uncompilable_files ~unclaimed_files
+    project_results file_results files_analyzed
 
 let run ?domain_mgr ~load_file ~filter ?analyze_set ?analyze_roots ~index
     ?profiling ?bail ?(exclude = []) ?(include_vendored = false) project_root =

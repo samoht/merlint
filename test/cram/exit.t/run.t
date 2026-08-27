@@ -80,7 +80,7 @@ coverage, and on its own -- no finding anywhere -- it answers 2:
   ✓ Code Generation (0 total issues)
   
   Summary: ✗ 0 total issues (applied 1 rule, 1 file unchecked)
-  ✗ No issues found, but 1 file could not be checked, so some or all of the rules did not run on it. Re-run with -v to name it and say why.
+  ✗ No issues found, but 1 file could not be checked, so some or all of the rules did not run on it. The warnings above name it and say why; -v names every one.
   [2]
 
 Give the same run a finding as well -- a doc comment after the last constructor,
@@ -114,5 +114,5 @@ this transcript to find them out:
   1   findings: the code merlint read has issues to fix.
   2   incomplete coverage: merlint could not read part of it.
   3   both: findings, over a run that read only part of the tree.
-  124 on command line parsing errors.
+  124 on command line parsing errors, and on a path that does not exist.
   125 on unexpected internal errors.

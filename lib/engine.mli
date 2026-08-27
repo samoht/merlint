@@ -7,24 +7,35 @@ type result = {
   issues : Rule.Run.result list;
   excluded : exclusion_stats list;
   files_analyzed : int;
-  unchecked_files : string list;
+  rules_applied : int;
+  unresolved_files : string list;
+  uncompilable_files : string list;
   unclaimed_files : string list;
 }
 (** Analysis result. {!field-files_analyzed} is the size of the file set the
     engine actually iterated -- either the [?analyze_set] supplied by the caller
     or every source file the project index found.
 
-    {!field-unchecked_files} are the analysed files no typedtree could be had
-    for, so the rules that read one could not run on them. They arrive two ways:
-    nothing could say what to type the file against, which a build fixes, or the
-    compiler read the source and refused it, which only editing the source
-    fixes. A run with a non-empty list examined less than it was asked to, and a
-    caller that reports "no issues" without saying so is reporting a different
-    result than the one it obtained. Two kinds of file are not listed: one
-    belonging to a platform- or config-gated stanza the host does not build,
-    since no artefact is expected for it, and one outside the analysed set,
-    since a project rule reaching past that set answers for its own evidence and
-    no rule of this run was going to examine the file.
+    {!field-rules_applied} is how many distinct rules this run actually ran: a
+    project rule that enumerated at least one unit, a file rule that had a file
+    to read, a pass rule whose file carried a typedtree. It is not the number of
+    rules the filter enabled. A run whose typedtree-backed rules were all
+    skipped applied fewer rules than one that read every file, and reporting the
+    enabled count for both would report a rule set that shrank as one that did
+    not.
+
+    {!field-unresolved_files} and {!field-uncompilable_files} are the analysed
+    files no typedtree could be had for, so the rules that read one could not
+    run on them. They are apart because the remedy differs: nothing could say
+    what to type an unresolved file against, which a build fixes, while the
+    compiler read an uncompilable one and refused it, which only editing the
+    source fixes. A run with either list non-empty examined less than it was
+    asked to, and a caller that reports "no issues" without saying so is
+    reporting a different result than the one it obtained. Two kinds of file are
+    not listed: one belonging to a platform- or config-gated stanza the host
+    does not build, since no artefact is expected for it, and one outside the
+    analysed set, since a project rule reaching past that set answers for its
+    own evidence and no rule of this run was going to examine the file.
 
     {!field-unclaimed_files} are the source files under what the run was pointed
     at that no dune stanza claims, so the engine never iterated them and no rule

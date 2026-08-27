@@ -59,14 +59,15 @@ Build good fixture project:
 A correct fuzz interface must not be reported just because its .cmti was
 never built. Without a typedtree the expected type cannot be resolved, and a
 rule that reads that as "does not match" turns every compliant fuzz module in
-a stale tree into a finding. Same sources as good/, never built -- so the rule
-reports nothing AND the run says it could not check the file, which are two
-different facts and both belong in the output:
+a stale tree into a finding. Same sources as good/, never built -- so the first
+pass has no typedtree to read, merlint builds the directory holding the file,
+and the rule answers on the artefact rather than on the absence of one:
 
   $ merlint -r E705 unbuilt/
   Dune root: $TESTCASE_ROOT/unbuilt/
-  ! 1 file has no typedtree: no build artefact describes it and the build system names no stanza that compiles it, so nothing says what to type it against and the rules that read a typedtree were skipped. Run [dune build @check] (or pass [--build]) before merlint.
+  ! 1 file has no typedtree: no build artefact describes it and the build system names no stanza that compiles it, so nothing says what to type it against and the rules that read a typedtree were skipped.
   ! $TESTCASE_ROOT/unbuilt/fuzz/fuzz_parser.mli
+  Building the file above, then analysing it again.
   Running merlint analysis...
   
   Analyzing 4 files
@@ -80,12 +81,11 @@ different facts and both belong in the output:
   ✓ Interop Testing (0 total issues)
   ✓ Code Generation (0 total issues)
   
-  Summary: ✗ 0 total issues (applied 1 rule, 1 file unchecked)
-  ✗ No issues found, but 1 file could not be checked, so some or all of the rules did not run on it. Re-run with -v to name it and say why.
-  [2]
+  Summary: ✓ 0 total issues (applied 1 rule)
+  ✓ All checks passed!
 
-An interface that exports more than the suite is still reported, so the skip
-above cannot be mistaken for the rule going quiet altogether:
+An interface that exports more than the suite is still reported, so the clean
+run above cannot be mistaken for the rule going quiet altogether:
 
   $ (cd bad_type && dune build @check)
 

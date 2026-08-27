@@ -11,9 +11,9 @@ artefact for any of its files and every rule that reads a typedtree is skipped.
 The exit status reports the incomplete run rather than a clean one.
 
   $ mv merlint.toml declared.toml
-  $ merlint --build . 2>/dev/null | tail -2
-  Summary: ✗ 0 total issues (applied 119 rules, 2 files unchecked)
-  ✗ No issues found, but 2 files could not be checked, so some or all of the rules did not run on them. Re-run with -v to name them and say why.
+  $ merlint --build . 2>/dev/null | sed -E 's/applied [0-9]+ rules/applied N rules/' | tail -2
+  Summary: ✗ 0 total issues (applied N rules, 2 files unchecked)
+  ✗ No issues found, but 2 files could not be checked, so some or all of the rules did not run on them. The warnings above name them and say why; -v names every one.
   $ merlint . > /dev/null 2>&1
   [2]
 
@@ -63,7 +63,13 @@ declaration at all.
   $ merlint . 2>&1 >/dev/null
   Note: merlint.toml declares workspace $TESTCASE_ROOT/ws/, whose source tree does not reach $TESTCASE_ROOT/pkg/. The workspace builds this checkout only if one of its directories is this one.
   Analysing this tree where it stands.
+  Building the 2 files above, then analysing them again.
+  Warning: Failed to build project: Command failed with exit code 1
+  Function type analysis may not work properly.
+  Continuing with analysis...
   [2]
-  $ merlint . 2>/dev/null | tail -2
-  Summary: ✗ 0 total issues (applied 119 rules, 2 files unchecked)
-  ✗ No issues found, but 2 files could not be checked, so some or all of the rules did not run on them. Re-run with -v to name them and say why.
+  $ merlint . 2>/dev/null | sed -E 's/applied [0-9]+ rules/applied N rules/' | tail -4
+  Summary: ✗ 0 total issues (applied N rules, 2 files unchecked)
+  ✗ No issues found, but 2 files could not be checked, so some or all of the rules did not run on them. The warnings above name them and say why; -v names every one.
+    merlint ran the build for this and no artefact appeared, so the build itself is what needs fixing. Run it and read what it reports:
+      dune build --root $TESTCASE_ROOT/pkg @check

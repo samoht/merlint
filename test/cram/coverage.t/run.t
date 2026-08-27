@@ -2,16 +2,39 @@ A typedtree describes source. One read from a .cmt describes the source the
 compiler read, which is the source on disk only until someone edits the file.
 Where no artefact describes the file as it is now, merlint typechecks it instead
 and the rules run on what is there; where nothing says what to typecheck it
-against, the run has examined less than it was asked to and reports that rather
-than passing.
+against, merlint builds what it was asked to read and reads it again. The run
+reports an examined file either way, and reports having examined less than it
+was asked to only where the build changes nothing (rebuild.t).
+
+The sandbox keeps whatever a test leaves behind, and every run below edits the
+sources and builds them, so both are put back to a known state first:
+
+  $ rm -rf _build scope/_build race/_build gated
+  $ chmod +w lib.ml lib.mli
+  $ cat > lib.mli <<'EOF'
+  > (** A module whose typedtree-backed rules need a .cmt to run. *)
+  > 
+  > type t
+  > (** The type for a value. *)
+  > 
+  > val v : int -> t
+  > (** [v n] is the value carrying [n]. *)
+  > EOF
+  $ cat > lib.ml <<'EOF'
+  > type t = int
+  > 
+  > let v n = n
+  > EOF
 
 Nothing is built, so no artefact describes lib.mli and the build system, which
-has never built this project, can name no stanza that compiles it either:
+has never built this project, can name no stanza that compiles it either. One
+build settles both, and the verdict is over a file that was read:
 
   $ merlint -r E105 lib.mli
   Dune root: $TESTCASE_ROOT/
-  ! 1 file has no typedtree: no build artefact describes it and the build system names no stanza that compiles it, so nothing says what to type it against and the rules that read a typedtree were skipped. Run [dune build @check] (or pass [--build]) before merlint.
+  ! 1 file has no typedtree: no build artefact describes it and the build system names no stanza that compiles it, so nothing says what to type it against and the rules that read a typedtree were skipped.
   ! $TESTCASE_ROOT/lib.mli
+  Building the file above, then analysing it again.
   Running merlint analysis...
   
   Analyzing 1 files
@@ -25,19 +48,17 @@ has never built this project, can name no stanza that compiles it either:
   ✓ Interop Testing (0 total issues)
   ✓ Code Generation (0 total issues)
   
-  Summary: ✗ 0 total issues (applied 1 rule, 1 file unchecked)
-  ✗ No issues found, but 1 file could not be checked, so some or all of the rules did not run on it. Re-run with -v to name it and say why.
-  [2]
+  Summary: ✓ 0 total issues (applied 1 rule)
+  ✓ All checks passed!
 
 The JSON document reports the verdict the exit status reports, and says how many
 files the run could not reach. Nothing but the document goes to stdout, so the
 output parses:
 
   $ merlint --json -r E105 lib.mli 2>/dev/null
-  {"project_root":"$TESTCASE_ROOT/","files_analyzed":1,"rules_applied":1,"total_issues":0,"unchecked":1,"unchecked_files":["lib.mli"],"unclaimed_files":[],"passed":false,"issues":[],"excluded":[]}
-  [2]
+  {"project_root":"$TESTCASE_ROOT/","files_analyzed":1,"rules_applied":1,"total_issues":0,"unchecked":0,"unchecked_files":[],"unclaimed_files":[],"passed":true,"issues":[],"excluded":[]}
 
-With the artefacts present the run is complete and the verdict is clean:
+With the artefacts already present the run reads them and builds nothing:
 
   $ merlint --build -r E105 lib.mli
   Dune root: $TESTCASE_ROOT/
@@ -211,12 +232,9 @@ analyse it normally:
 
 A run reports on what it was asked to analyse. A file argument scopes the
 warm-up to the directory holding it, so a sibling directory of the same project
-stays unbuilt, and a project-wide rule reaches it anyway: E610's reference scan
-reads every library source in the project to learn which module names are
-referenced. Reaching past the scope is that rule's business -- it says in its
-own finding which sources it could not read -- and not the run's completeness.
-Nothing was asked of scope/test/helpers/, so nothing there can leave the run
-incomplete:
+stays unbuilt. Nothing was asked of scope/test/helpers/, so nothing there can
+leave this run incomplete -- and E610 enumerates no unit for a run scoped to one
+library file, which the count of rules applied says outright:
 
   $ merlint --build -r E610 scope/lib/mylib.ml
   Dune root: $TESTCASE_ROOT/scope
@@ -233,17 +251,18 @@ incomplete:
   ✓ Interop Testing (0 total issues)
   ✓ Code Generation (0 total issues)
   
-  Summary: ✓ 0 total issues (applied 1 rule)
+  Summary: ✓ 0 total issues (applied 0 rules)
   ✓ All checks passed!
 
 The very same file, still unbuilt, named on the command line is one the run was
-asked to analyse. Nothing says what to type it against, so the run examined less
-than it was asked to and reports that rather than passing:
+asked to analyse. Nothing says what to type it against, so merlint builds the
+directory holding it and reads it:
 
   $ merlint -r E105 scope/test/helpers/helper.ml
   Dune root: $TESTCASE_ROOT/scope
-  ! 1 file has no typedtree: no build artefact describes it and the build system names no stanza that compiles it, so nothing says what to type it against and the rules that read a typedtree were skipped. Run [dune build @check] (or pass [--build]) before merlint.
+  ! 1 file has no typedtree: no build artefact describes it and the build system names no stanza that compiles it, so nothing says what to type it against and the rules that read a typedtree were skipped.
   ! $TESTCASE_ROOT/scope/test/helpers/helper.ml
+  Building the file above, then analysing it again.
   Running merlint analysis...
   
   Analyzing 1 files
@@ -257,6 +276,5 @@ than it was asked to and reports that rather than passing:
   ✓ Interop Testing (0 total issues)
   ✓ Code Generation (0 total issues)
   
-  Summary: ✗ 0 total issues (applied 1 rule, 1 file unchecked)
-  ✗ No issues found, but 1 file could not be checked, so some or all of the rules did not run on it. Re-run with -v to name it and say why.
-  [2]
+  Summary: ✓ 0 total issues (applied 1 rule)
+  ✓ All checks passed!

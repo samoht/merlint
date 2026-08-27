@@ -80,7 +80,7 @@ Build good fixture project:
   ✓ Code Generation (0 total issues)
   
   Summary: ✗ 0 total issues (applied 1 rule, 6 files unchecked)
-  ✗ No issues found, but 6 files could not be checked, so some or all of the rules did not run on them. Re-run with -v to name them and say why.
+  ✗ No issues found, but 6 files could not be checked, so some or all of the rules did not run on them. The warnings above name them and say why; -v names every one.
   [2]
 
 

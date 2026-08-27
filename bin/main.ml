@@ -268,14 +268,14 @@ module Json_report = struct
      counting them, in the two sets the count is the sum of: a caller whose
      question is "what did this run not look at" reads the answer here instead
      of rediscovering it a directory at a time. *)
-  let v ~project_root ~files_analyzed ~enabled_rule_count ~unchecked_files
+  let v ~project_root ~files_analyzed ~rules_applied ~unchecked_files
       ~unclaimed_files ~excluded issues =
     let issues =
       issues |> List.sort Merlint.Rule.Run.compare |> List.map issue_of_run
     in
     let total_issues = List.length issues in
     let unchecked = List.length unchecked_files + List.length unclaimed_files in
-    v project_root files_analyzed enabled_rule_count total_issues unchecked
+    v project_root files_analyzed rules_applied total_issues unchecked
       (List.map report_path unchecked_files)
       (List.map report_path unclaimed_files)
       (total_issues = 0 && unchecked = 0)
@@ -285,10 +285,10 @@ module Json_report = struct
   let print t = Fmt.pr "%s@." (Json.to_string json t)
 end
 
-let print_json_report ~project_root ~files_analyzed ~enabled_rule_count
+let print_json_report ~project_root ~files_analyzed ~rules_applied
     ~unchecked_files ~unclaimed_files ~excluded issues =
-  Json_report.v ~project_root ~files_analyzed ~enabled_rule_count
-    ~unchecked_files ~unclaimed_files ~excluded issues
+  Json_report.v ~project_root ~files_analyzed ~rules_applied ~unchecked_files
+    ~unclaimed_files ~excluded issues
   |> Json_report.print
 
 (* Group issues by category for visual reporting *)
@@ -346,16 +346,6 @@ let print_categorized_issues issues_by_category =
         in
         List.iter print_issue_group sorted_groups)
     issues_by_category
-
-(* Get enabled rules based on filter *)
-let enabled_rules rule_filter =
-  match rule_filter with
-  | Some filter ->
-      List.filter
-        (fun rule ->
-          Merlint.Filter.is_enabled_by_code filter (Merlint.Rule.code rule))
-        Merlint.Data.all_rules
-  | None -> Merlint.Data.all_rules
 
 (* Title of the rule with the given code, or the code itself if unknown. *)
 let rule_title_of_code code =
@@ -415,22 +405,36 @@ let has_switch dir = Sys.file_exists Fpath.(to_string (dir / "_opam"))
 (* What to do about files nothing could be read for. A linked working tree
    holds only what is committed, so the local opam switch the main tree carries
    is not in it and dune has none to build against; naming the tree it was
-   branched from turns the verdict into the one command that fixes it. Silent
-   when the tree has its own switch, since then the artefacts are missing for
-   some other reason and a switch is not it. *)
-let unchecked_remedy ~project_root =
+   branched from turns the verdict into the one command that fixes it. Where
+   the tree has its own switch the artefacts are missing for some other reason,
+   and the only thing left to say is that merlint already tried the build --
+   which it does whenever a file it was asked to read has no artefact -- so the
+   build itself is what needs looking at. *)
+let unchecked_remedy ~project_root ~repaired =
   let root = Fpath.(v project_root |> normalize |> rem_empty_seg) in
-  if has_switch root then None
-  else
-    match Merlint.Worktree.main root with
-    | Some main when has_switch main ->
-        Fmt.kstr
-          (fun s -> Some s)
-          "  This working tree has no opam switch of its own, so nothing here \
-           could be built. Link the switch of the tree it was branched from, \
-           then re-run:@.    opam switch link %a %a"
-          Fpath.pp main Fpath.pp root
-    | Some _ | None -> None
+  let switch_link =
+    if has_switch root then None
+    else
+      match Merlint.Worktree.main root with
+      | Some main when has_switch main ->
+          Fmt.kstr
+            (fun s -> Some s)
+            "  This working tree has no opam switch of its own, so nothing \
+             here could be built. Link the switch of the tree it was branched \
+             from, then re-run:@.    opam switch link %a %a"
+            Fpath.pp main Fpath.pp root
+      | Some _ | None -> None
+  in
+  match switch_link with
+  | Some remedy -> Some remedy
+  | None when repaired ->
+      Fmt.kstr
+        (fun s -> Some s)
+        "  merlint ran the build for this and no artefact appeared, so the \
+         build itself is what needs fixing. Run it and read what it \
+         reports:@.    dune build --root %a @@check"
+        Fpath.pp root
+  | None -> None
 
 (* A run that examined less than it was asked to reports what it could not
    reach and, when the tree says why, what to do about it. A file gets here two
@@ -442,7 +446,8 @@ let print_incomplete ?remedy unchecked =
   let it = if unchecked = 1 then "it" else "them" in
   Fmt.pr
     "%s No issues found, but %d file%s could not be checked, so some or all of \
-     the rules did not run on %s. Re-run with -v to name %s and say why.@."
+     the rules did not run on %s. The warnings above name %s and say why; -v \
+     names every one.@."
     (Merlint.Report.print_color false "✗")
     unchecked plural it it;
   match remedy with Some remedy -> Fmt.pr "%s@." remedy | None -> ()
@@ -453,18 +458,18 @@ let print_incomplete ?remedy unchecked =
    outcome as a complete run, so the count of unchecked files goes in the
    summary line itself, where a caller reading the last line of output sees
    it. *)
-let print_summary ?(unchecked = 0) ?remedy all_issues enabled_rule_count =
+let print_summary ?(unchecked = 0) ?remedy all_issues rules_applied =
   let total_issues = List.length all_issues in
   let complete = unchecked = 0 in
   let all_passed = total_issues = 0 && complete in
-  let rule_word = if enabled_rule_count = 1 then "rule" else "rules" in
+  let rule_word = if rules_applied = 1 then "rule" else "rules" in
 
   Fmt.pr "@.Summary: %s %d total %s (applied %d %s%s)@."
     (Merlint.Report.print_color all_passed
        (Merlint.Report.print_status all_passed))
     total_issues
     (if total_issues = 1 then "issue" else "issues")
-    enabled_rule_count rule_word
+    rules_applied rule_word
     (if complete then ""
      else
        Fmt.str ", %d file%s unchecked" unchecked
@@ -501,14 +506,12 @@ let run_engine ?domain_mgr ~load_file ?profiling ~bail ~exclude
           Merlint.Engine.run ?domain_mgr ~load_file ~filter ?analyze_set
             ?analyze_roots ~index:build_index ?profiling ~bail ~exclude
             ~include_vendored project_root
-      | Error _ ->
-          {
-            Merlint.Engine.issues = [];
-            excluded = [];
-            files_analyzed = 0;
-            unchecked_files = [];
-            unclaimed_files = [];
-          })
+      | Error msg ->
+          (* An empty result here would report a run that examined nothing as a
+             clean one. The filter is merlint's own literal, so a parse failure
+             is a defect in merlint and it says so rather than passing. *)
+          Fmt.epr "merlint: the default rule filter does not parse: %s@." msg;
+          Stdlib.exit Cmd.Exit.internal_error)
 
 let print_exclusion_stats all_excluded =
   if all_excluded <> [] then begin
@@ -530,8 +533,8 @@ let print_exclusion_stats all_excluded =
 
 (* The human-readable report: the file count, the findings by category, the
    summary line, and the profiling tables when asked for. *)
-let print_text_report ~project_root ~files_analyzed ~enabled_rule_count
-    ~unchecked ~excluded ~profiling issues =
+let print_text_report ~project_root ~files_analyzed ~rules_applied ~unchecked
+    ~repaired ~excluded ~profiling issues =
   (match files_analyzed with
   | 0 -> Fmt.pr "Running merlint analysis...@.@."
   | n -> Fmt.pr "Running merlint analysis...@.@.Analyzing %d files@.@." n);
@@ -540,8 +543,8 @@ let print_text_report ~project_root ~files_analyzed ~enabled_rule_count
   print_categorized_issues issues_by_category;
   print_summary_table issues_by_category;
   print_summary ~unchecked
-    ?remedy:(unchecked_remedy ~project_root)
-    issues enabled_rule_count;
+    ?remedy:(unchecked_remedy ~project_root ~repaired)
+    issues rules_applied;
   match profiling with
   | Some state ->
       Merlint.Profiling.print_summary state;
@@ -549,8 +552,8 @@ let print_text_report ~project_root ~files_analyzed ~enabled_rule_count
       Merlint.Profiling.print_file_summary state
   | None -> ()
 
-let run_analysis ?domain_mgr ~load_file ~json_output project_root analyze_set
-    analyze_roots
+let run_analysis ?domain_mgr ~load_file ~json_output ~repair project_root
+    analyze_set analyze_roots
     (build_index : ?pool:Eio.Executor_pool.t -> unit -> Project_index.t)
     rule_filter show_profile ~bail ~exclude ~include_vendored =
   let profiling_state =
@@ -560,29 +563,40 @@ let run_analysis ?domain_mgr ~load_file ~json_output project_root analyze_set
   Log.info (fun m ->
       m "Analysing %s files"
         (match files_count with None -> "all" | Some n -> string_of_int n));
-  let {
-    Merlint.Engine.issues = all_issues;
-    excluded = all_excluded;
-    files_analyzed;
-    unchecked_files;
-    unclaimed_files;
-  } =
+  let analyse () =
     run_engine ?domain_mgr ~load_file ?profiling:profiling_state rule_filter
       ~bail ~exclude ~include_vendored analyze_set analyze_roots build_index
       project_root
   in
-  let enabled_rules = enabled_rules rule_filter in
-  let enabled_rule_count = List.length enabled_rules in
-  (* One number, two reasons. A file the rules could not read and a file no
-     stanza compiles are both files this run says nothing about, and a summary
-     that counted only the first would report a discovery gap as a clean run. *)
+  let result = analyse () in
+  let repaired, result =
+    match repair ~project_root result.Merlint.Engine.unresolved_files with
+    | false -> (false, result)
+    | true -> (true, analyse ())
+  in
+  let {
+    Merlint.Engine.issues = all_issues;
+    excluded = all_excluded;
+    files_analyzed;
+    rules_applied;
+    unresolved_files;
+    uncompilable_files;
+    unclaimed_files;
+  } =
+    result
+  in
+  (* One number, three reasons. A file nothing said what to type against, one
+     the compiler refused, and one no stanza compiles are all files this run
+     says nothing about, and a summary that counted only some of them would
+     report a gap as a clean run. *)
+  let unchecked_files = unresolved_files @ uncompilable_files in
   let unchecked = List.length unchecked_files + List.length unclaimed_files in
   if json_output then
-    print_json_report ~project_root ~files_analyzed ~enabled_rule_count
+    print_json_report ~project_root ~files_analyzed ~rules_applied
       ~unchecked_files ~unclaimed_files ~excluded:all_excluded all_issues
   else
-    print_text_report ~project_root ~files_analyzed ~enabled_rule_count
-      ~unchecked ~excluded:all_excluded ~profiling:profiling_state all_issues;
+    print_text_report ~project_root ~files_analyzed ~rules_applied ~unchecked
+      ~repaired ~excluded:all_excluded ~profiling:profiling_state all_issues;
   exit_with_status ~unchecked all_issues
 
 let ensure_project_built ~root ~scopes mgr =
@@ -593,6 +607,37 @@ let ensure_project_built ~root ~scopes mgr =
       Fmt.epr "Function type analysis may not work properly.@.";
       Fmt.epr "Continuing with analysis...@."
 
+(* A file nothing could say what to type against is a file the typedtree-backed
+   rules did not run on, and one [dune build] is what produces the artefact
+   they read. Merlint runs that build itself and looks again: the condition is
+   not one the caller created, and repairing it costs a scoped build where
+   refusing costs the caller the same build plus a round trip. Refusal is what
+   is left when the build changes nothing, and the summary then says so.
+
+   It runs after a pass rather than before one, so it fires on the files a run
+   really failed to read rather than on every artefact that looks out of date.
+   An artefact that no longer describes its source is not one of these: the
+   source is typechecked in its place and every rule still runs on it, so
+   building for that would spend a build to learn nothing.
+
+   Once per run. A run that warmed the build already had its build, and a
+   second identical one produces the same artefacts it just produced. *)
+let repair_unresolved ~built mgr ~project_root files =
+  match files with
+  | [] -> false
+  | _ :: _ when built -> false
+  | files ->
+      let n = List.length files in
+      if n = 1 then
+        Fmt.epr "Building the file above, then analysing it again.@."
+      else Fmt.epr "Building the %d files above, then analysing them again.@." n;
+      let scopes =
+        List.map (fun file -> Fpath.parent (Fpath.v file)) files
+        |> List.sort_uniq Fpath.compare
+      in
+      ensure_project_built ~root:(Fpath.v project_root) ~scopes mgr;
+      true
+
 let is_ocaml_source path =
   Filename.check_suffix path ".ml" || Filename.check_suffix path ".mli"
 
@@ -601,6 +646,34 @@ let classify_path path =
   else if Sys.is_directory path then `Dir
   else if is_ocaml_source path then `File
   else `Other
+
+(* A path merlint cannot find is a path it read nothing of. Reporting the rest
+   of the run and leaving that one out ends in "All checks passed" over a file
+   nobody looked at, which is the sentence a caller acts on. The whole run is
+   refused instead, and a missing path beside paths that are there refuses just
+   the same: the summary is one verdict over every argument, so a partial run
+   carries the same false reading, and it is the caller's list that has to be
+   fixed before any of it means anything. *)
+let missing_paths files =
+  List.filter
+    (fun path ->
+      match classify_path path with
+      | `Missing -> true
+      | `Dir | `File | `Other -> false)
+    files
+
+let refuse_missing_paths files =
+  match missing_paths files with
+  | [] -> ()
+  | missing ->
+      List.iter
+        (fun path -> Fmt.epr "merlint: %s: no such file or directory@." path)
+        missing;
+      Fmt.epr
+        "merlint: nothing was analysed, because a run that skipped %s would \
+         report the files it did read as the whole answer.@."
+        (if List.length missing = 1 then "it" else "them");
+      Stdlib.exit Cmd.Exit.cli_error
 
 let resolve_cli_path raw =
   let p = Fpath.v raw in
@@ -615,15 +688,15 @@ let analyze_set_of_files files =
   match files with
   | [] -> None
   | _ ->
+      (* Asked again of the paths as they will be read, so a file that goes
+         away between the command line and here refuses too. *)
+      refuse_missing_paths files;
       let explicit =
         List.filter_map
           (fun p ->
             match classify_path p with
             | `File -> Some (resolve_cli_path p)
-            | `Dir | `Other -> None
-            | `Missing ->
-                Fmt.epr "Warning: %s does not exist@." p;
-                None)
+            | `Dir | `Other | `Missing -> None)
           files
       in
       if explicit = [] then None else Some explicit
@@ -777,9 +850,10 @@ let analyze_files mgr fs domain_mgr ?(exclude_patterns = []) ?rule_filter
   let analysis_index ?pool () =
     if build then Lazy.force lazy_index else build_index ?pool ()
   in
-  run_analysis ~domain_mgr ~load_file ~json_output project_root analyze_set
-    analyze_roots analysis_index rule_filter show_profile ~bail
-    ~exclude:exclude_patterns ~include_vendored
+  run_analysis ~domain_mgr ~load_file ~json_output
+    ~repair:(repair_unresolved ~built:build mgr)
+    project_root analyze_set analyze_roots analysis_index rule_filter
+    show_profile ~bail ~exclude:exclude_patterns ~include_vendored
 
 let files =
   let doc =
@@ -889,6 +963,7 @@ let parse_rule_filter rules_spec =
 let main exclude_patterns rules_spec ~show_profile ~show_config ~build ~bail
     ~include_vendored files () =
   check_configuration files;
+  refuse_missing_paths files;
   if show_config then show_configuration files
   else
     let rule_filter = parse_rule_filter rules_spec in
@@ -929,7 +1004,8 @@ let exits =
     Cmd.Exit.info
       (exit_findings lor exit_incomplete)
       ~doc:"both: findings, over a run that read only part of the tree.";
-    Cmd.Exit.info Cmd.Exit.cli_error ~doc:"on command line parsing errors.";
+    Cmd.Exit.info Cmd.Exit.cli_error
+      ~doc:"on command line parsing errors, and on a path that does not exist.";
     Cmd.Exit.info Cmd.Exit.internal_error ~doc:"on unexpected internal errors.";
   ]
 
