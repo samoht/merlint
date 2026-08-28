@@ -20,9 +20,9 @@ let parse_dune_file ctx path =
   with
   | None -> None
   | Some content -> (
-      match Dune.File.of_string content with
+      match Dune.of_string (Dune.Codec.file ()) content with
       | Ok file -> Some file
-      | Error _ -> Some (Dune.File.of_string_exn ""))
+      | Error _ -> Some (Dune.of_string_exn (Dune.Codec.file ()) ""))
 
 let dune_warning_status ctx dune_path =
   match parse_dune_file ctx dune_path with

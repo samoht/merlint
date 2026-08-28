@@ -107,7 +107,7 @@ let check_dune path contents =
     Issue.v ~loc:(Loc.in_file display_path)
       { dune = Fpath.to_string display_path; kind }
   in
-  match Dune.File.of_string contents with
+  match Dune.of_string (Dune.Codec.file ()) contents with
   | Error _ -> None
   | Ok dune when Dune.File.has_nontrivial_include_subdirs dune -> None
   | Ok dune -> (

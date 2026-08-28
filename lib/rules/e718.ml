@@ -62,7 +62,7 @@ let has_fuzz_modules files =
 let dune_has_gen_corpus ctx dir =
   try
     let content = Context.file_content ctx Path.(dir / "dune") in
-    match Dune.File.of_string content with
+    match Dune.of_string (Dune.Codec.file ()) content with
     | Error _ -> false
     | Ok dune ->
         Dune.File.rules dune

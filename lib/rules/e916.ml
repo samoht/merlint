@@ -24,7 +24,7 @@ let pins ctx dune_project =
   match read ctx dune_project with
   | None -> []
   | Some content -> (
-      match Dune.Project.of_string content with
+      match Dune.of_string Dune.Codec.project content with
       | Ok project -> Dune.Project.pins project
       | Error _ -> [])
 
@@ -56,7 +56,7 @@ let entries ctx root names =
       match read ctx (Context.resolve ctx Fpath.(dir / file_name)) with
       | None -> None
       | Some content -> (
-          match Dune.Lock.Pkg.of_string content with
+          match Dune.of_string Dune.Codec.lock_package content with
           | Error _ -> None
           | Ok e ->
               Option.map

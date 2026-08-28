@@ -13,13 +13,13 @@
 type finding = Missing of string | Undeclared of string
 type payload = { package : string; findings : finding list }
 
-let string_of = function Opam.Value.String s -> Some s | _ -> None
+let string_of = function Opam.Value.String (s, _) -> Some s | _ -> None
 
 let quality_from_raw_opam content =
   match Opam.field "x-quality" content with
   | None -> []
-  | Some (Opam.Value.String s) -> [ s ]
-  | Some (Opam.Value.List xs) -> List.filter_map string_of xs
+  | Some (Opam.Value.String (s, _)) -> [ s ]
+  | Some (Opam.Value.List (xs, _)) -> List.filter_map string_of xs
   | Some _ -> []
 
 let dir_exists path = try Fs.is_directory path with Sys_error _ -> false

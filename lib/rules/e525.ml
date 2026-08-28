@@ -53,7 +53,7 @@ let dune_issue ctx name dune_path =
   else
     match content ctx dune_path with
     | Some c -> (
-        match Dune.File.of_string c with
+        match Dune.of_string (Dune.Codec.file ()) c with
         | Ok file when Dune.File.has_dune_warnings file -> []
         | Ok _ | Error _ ->
             [ Issue.v ~loc { package = name; kind = Missing_warnings } ])
@@ -62,7 +62,7 @@ let dune_issue ctx name dune_path =
 let lang_issue ctx name dp_path =
   match content ctx dp_path with
   | Some c -> (
-      match Dune.Project.of_string c with
+      match Dune.of_string Dune.Codec.project c with
       | Error _ -> []
       | Ok project -> (
           let _lang, version = Dune.Project.lang project in

@@ -1,10 +1,10 @@
 (** Helpers shared by rules that read the [tags:] field of an opam file. *)
 
-let string_of = function Opam.Value.String s -> Some s | _ -> None
+let string_of = function Opam.Value.String (s, _) -> Some s | _ -> None
 
 let tags_of_value = function
-  | Opam.Value.String s -> Some [ s ]
-  | Opam.Value.List xs -> Some (List.filter_map string_of xs)
+  | Opam.Value.String (s, _) -> Some [ s ]
+  | Opam.Value.List (xs, _) -> Some (List.filter_map string_of xs)
   | _ -> Some []
 
 (** Read the [tags:] field from [opam_path]. Handles both the list form

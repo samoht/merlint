@@ -3,7 +3,9 @@
 type payload = { dir : string; file : string }
 
 let parse ctx path =
-  try Context.file_content ctx path |> Dune.File.of_string |> Result.to_option
+  try
+    Context.file_content ctx path
+    |> Dune.of_string (Dune.Codec.file ()) |> Result.to_option
   with File_view.Analysis_error _ -> None
 
 (* The rule that runs scripts/generate.sh regenerates the committed traces. It

@@ -40,7 +40,7 @@ let check_package pkg =
     match Project_index.Package.raw_dune_project pkg with
     | None -> []
     | Some c -> (
-        match Dune.Project.of_string c with
+        match Dune.of_string Dune.Codec.project c with
         | Error _ -> []
         | Ok project ->
             let name = Project_index.Package.name pkg in

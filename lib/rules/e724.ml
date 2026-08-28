@@ -91,7 +91,7 @@ let fuzz_content_issues ~loc dir dune =
 let check_dir ctx dir =
   try
     let content = Context.file_content ctx Path.(dir / "dune") in
-    match Dune.File.of_string content with
+    match Dune.of_string (Dune.Codec.file ()) content with
     | Error _ -> []
     | Ok dune ->
         let has_runtest = Dune.File.has_rule_alias dune "runtest" in
