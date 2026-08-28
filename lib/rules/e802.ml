@@ -5,7 +5,8 @@ type payload = { dir : string; reason : string }
 let dune_file ctx (dir : Interop.oracle_dir) =
   try
     Context.file_content ctx Path.(dir.path / "dune")
-    |> Dune.of_string (Dune.Codec.file ()) |> Result.to_option
+    |> Dune.of_string (Dune.Codec.file ())
+    |> Result.to_option
   with File_view.Analysis_error _ -> None
 
 let check (ctx : Context.project) =

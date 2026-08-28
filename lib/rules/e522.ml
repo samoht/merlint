@@ -23,8 +23,7 @@ let is_dir p = try Fs.is_directory p with Sys_error _ -> false
 let modules_explicitly_claimed ctx dune_path =
   try
     match
-      Context.file_content ctx dune_path
-      |> Dune.of_string (Dune.Codec.file ())
+      Context.file_content ctx dune_path |> Dune.of_string (Dune.Codec.file ())
     with
     | Ok file -> Dune.File.explicitly_claimed_modules file
     | Error _ -> []

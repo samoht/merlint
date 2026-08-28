@@ -5,7 +5,8 @@ type payload = { dir : string }
 let dune_file ctx (dir : Interop.oracle_dir) =
   try
     Context.file_content ctx Path.(dir.path / "dune")
-    |> Dune.of_string (Dune.Codec.file ()) |> Result.to_option
+    |> Dune.of_string (Dune.Codec.file ())
+    |> Result.to_option
   with File_view.Analysis_error _ -> None
 
 (* Match either the library name [csv] or its public name [nox-csv] (the

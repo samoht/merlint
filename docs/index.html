@@ -2353,14 +2353,14 @@ and replace each call site with [err_x &quot;...&quot; args] / [fail_x &quot;...
         <span class="error-code">E820</span>
         <span class="error-title">Hand-rolled CSV parsing</span>
     </div>
-    <div class="error-hint"><p>Use csv (Csv.decode_file with a Csv.Row codec) for CSV trace parsing. Never hand-roll CSV readers with open_in/input_line/split_on_char.</p></div>
+    <div class="error-hint"><p>Use csv (Csv.of_file with a Csv.Row codec) for CSV trace parsing. Never hand-roll CSV readers with open_in/input_line/split_on_char.</p></div>
 </div>
 <div class="error-card" id="E825">
     <div>
         <span class="error-code">E825</span>
         <span class="error-title">Missing csv dependency</span>
     </div>
-    <div class="error-hint"><p>Interop tests with CSV traces should use csv for parsing. Add csv to the (libraries ...) in the dune file and use Csv.decode_file with a Row codec.</p></div>
+    <div class="error-hint"><p>Interop tests with CSV traces should use csv for parsing. Add csv to the (libraries ...) in the dune file and use Csv.of_file with a Row codec.</p></div>
 </div>
 <div class="error-card" id="E830">
     <div>
@@ -2417,6 +2417,13 @@ and replace each call site with [err_x &quot;...&quot; args] / [fail_x &quot;...
         <span class="error-title">Opam tag metadata</span>
     </div>
     <div class="error-hint"><p>Runs only when the project root has a sources.toml (monopam monorepo marker) or a categories.toml (the tag vocabulary). When it does run, every *.opam must declare tags: [&quot;org:&lt;your-org&gt;&quot; &quot;&lt;topic&gt;&quot; ...] where each topic is a slug from categories.toml / merlint.toml's topics list. Edit the package's dune-project so dune regenerates the opam file.</p></div>
+</div>
+<div class="error-card" id="E916">
+    <div>
+        <span class="error-code">E916</span>
+        <span class="error-title">Unhonoured source pin</span>
+    </div>
+    <div class="error-hint"><p>A (pin ...) stanza names the exact revision its packages are built from, and `dune pkg lock` resolves the package from somewhere else rather than failing when it cannot honour one -- an overlay's copy, or the released archive, which beats a pin that names no version. Re-run `dune pkg lock` and check the entry again; if the pinned revision still does not win, give the pin's (package ...) a (version ...) so the release cannot outrank it, or point the pin at a revision that exists.</p></div>
 </div>
 <div class="error-card" id="E920">
     <div>
