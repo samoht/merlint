@@ -1,0 +1,23 @@
+(lang dune 3.24)
+
+(name bad)
+
+; Four pins, and the lock honours none of them. A pin providing no version
+; makes the package .dev, which satisfies no version constraint and loses to
+; the released package: tw's entry is the release archive.
+
+(pin
+ (url "git+https://github.com/samoht/tw.git#43f7afe60f28539b6ccba7c97c690139de55ca79")
+ (package (name tw)))
+
+(pin
+ (url "git+https://github.com/samoht/cascade.git#cc6b4238b98d75eb574a66dd29c85532312a1c75")
+ (package (name cascade)))
+
+(pin
+ (url "git+https://github.com/odis-labs/helix.git#34c387c488bea28197f8c7d2db1a813d31c5d8f6")
+ (package (name helix)))
+
+(pin
+ (url "git+https://github.com/dbuenzli/uutf.git#main")
+ (package (name uutf)))

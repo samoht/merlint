@@ -1,0 +1,15 @@
+(lang dune 3.24)
+
+(name good)
+
+; Every pin below names a revision, and every lock entry records that same
+; revision, so the build links the source the project declares.
+
+(pin
+ (url "git+https://github.com/samoht/tw.git#43f7afe60f28539b6ccba7c97c690139de55ca79")
+ (package (name tw) (version 1.0.1)))
+
+(pin
+ (url "git+https://github.com/ocaml-multicore/eio.git#085cce2e110b53aa3002a2cdb28502c3f297d374")
+ (package (name eio) (version 2.0.0))
+ (package (name eio_main) (version 2.0.0)))
