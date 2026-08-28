@@ -7,7 +7,14 @@ module T = Ocaml_typing.Typedtree
 module Tast_iterator = Ocaml_typing.Tast_iterator
 
 type exclusion_stats = { rule : string; file : string }
-type failure = { rule : string option; file : string option; error : string }
+type incomplete = Crashed | Unevaluated
+
+type failure = {
+  rule : string option;
+  file : string option;
+  kind : incomplete;
+  error : string;
+}
 
 type result = {
   issues : Rule.Run.result list;
@@ -48,7 +55,15 @@ let failure_of_exn ?rule ?file exn =
       m "%s raised %s:@\n%s"
         (match rule with Some code -> code | None -> "file analysis")
         error backtrace);
-  { rule; file; error }
+  { rule; file; kind = Crashed; error }
+
+(* A rule that consulted the index for a fact it does not hold ran to the end
+   and still could not decide, so it comes back beside the crashes rather than
+   beside the findings: same shape of gap, different remedy. It stays in
+   [applied] -- unlike a crash -- because the rule did run, and over most of
+   what it was given it decided; what it could not decide is named here. *)
+let unevaluated_of (rule, question) =
+  { rule = Some rule; file = None; kind = Unevaluated; error = question }
 
 (* A bounded sample: naming every file of a whole-repo run buries the message
    the warning is carrying. *)
@@ -214,20 +229,41 @@ let failure_line failure =
   in
   Fmt.str "%s%s: %s" what where failure.error
 
+let warn_crashed crashed =
+  if crashed <> [] then
+    let n = List.length crashed in
+    let they = if n = 1 then "it" else "they" in
+    Log.warn (fun m ->
+        m
+          "@[<v>%d check%s raised, so %s never finished and this run's \
+           findings are short by whatever %s would have reported. That is a \
+           defect in merlint, not in the code it was reading; [OCAMLRUNPARAM=b \
+           merlint -vv] logs the backtrace.%a@]"
+          n
+          (if n = 1 then "" else "s")
+          they they pp_sample
+          (List.map failure_line crashed))
+
+let warn_unevaluated unevaluated =
+  if unevaluated <> [] then
+    let n = List.length unevaluated in
+    Log.warn (fun m ->
+        m
+          "@[<v>%d question%s went undecided: a rule asked the project index \
+           for a fact it does not hold, so what it returned is neither a \
+           finding nor a clean result. Point the run at the tree the fact \
+           lives in, or build the project, and ask again.%a@]"
+          n
+          (if n = 1 then "" else "s")
+          pp_sample
+          (List.map failure_line unevaluated))
+
 let warn_failed failed =
-  (if failed <> [] then
-     let n = List.length failed in
-     let they = if n = 1 then "it" else "they" in
-     Log.warn (fun m ->
-         m
-           "@[<v>%d check%s raised, so %s never finished and this run's \
-            findings are short by whatever %s would have reported. That is a \
-            defect in merlint, not in the code it was reading; \
-            [OCAMLRUNPARAM=b merlint -vv] logs the backtrace.%a@]"
-           n
-           (if n = 1 then "" else "s")
-           they they pp_sample
-           (List.map failure_line failed)));
+  let crashed, unevaluated =
+    List.partition (fun f -> f.kind = Crashed) failed
+  in
+  warn_crashed crashed;
+  warn_unevaluated unevaluated;
   failed
 
 let log_fs_stats () =
@@ -340,7 +376,8 @@ let file_view ?profiling ~load_file ~backend filename =
   in
   File_view.v ~filename:source_filename ~content ~typedtree ()
 
-let setup_analysis ~filter ~analyze_set ~index ~file_view project_root =
+let setup_analysis ~filter ~analyze_set ~index ~index_is_partial ~file_view
+    project_root =
   (* Resolve a relative root (e.g. ".") against the cwd: the analyze_set paths
      derive from it via [Context.path_under], and [Context.project] requires
      those to be absolute so the file-view cache keys canonicalize. *)
@@ -359,7 +396,7 @@ let setup_analysis ~filter ~analyze_set ~index ~file_view project_root =
   in
   let project_ctx =
     Context.project ~config ~project_root:project_root_path ~analyze_set ~index
-      ~file_view ()
+      ~index_is_partial ~file_view ()
   in
   let enabled_rules =
     Data.all_rules
@@ -698,8 +735,8 @@ let run_enabled_rules ?pool ?profiling ~project_ctx ~project_root ~enabled_rules
   (Eio.Promise.await project_promise, Eio.Promise.await file_promise)
 
 let build_result ?(bail = false) ?(unresolved_files = [])
-    ?(uncompilable_files = []) ?(unclaimed_files = []) project file_outcomes
-    files_analyzed =
+    ?(uncompilable_files = []) ?(unclaimed_files = []) ?(unevaluated = [])
+    project file_outcomes files_analyzed =
   let outcomes = project :: file_outcomes in
   let issues =
     List.sort Rule.Run.compare (List.concat_map (fun o -> o.found) outcomes)
@@ -720,7 +757,10 @@ let build_result ?(bail = false) ?(unresolved_files = [])
     unresolved_files;
     uncompilable_files;
     unclaimed_files;
-    failed = warn_failed (List.concat_map (fun o -> o.failed) outcomes);
+    failed =
+      warn_failed
+        (List.concat_map (fun o -> o.failed) outcomes
+        @ List.map unevaluated_of unevaluated);
   }
 
 (* One whole analysis pass over [backend], optionally on [pool]. It returns the
@@ -729,7 +769,8 @@ let build_result ?(bail = false) ?(unresolved_files = [])
    the derived file set below shadows and the unclaimed accounting still needs.
 *)
 let analyse ?pool ?profiling ?bail ~load_file ~filter ~requested_set
-    ~analyze_roots ~index ~exclude ~include_vendored ~backend project_root =
+    ~analyze_roots ~index ~index_is_partial ~exclude ~include_vendored ~backend
+    project_root =
   let idx = lazy (index ?pool ()) in
   let idx_value = Lazy.force idx in
   let analyze_set =
@@ -739,7 +780,8 @@ let analyse ?pool ?profiling ?bail ~load_file ~filter ~requested_set
   in
   let file_view = file_view ?profiling ~load_file ~backend in
   let _config, project_ctx, enabled_rules =
-    setup_analysis ~filter ~analyze_set ~index:idx ~file_view project_root
+    setup_analysis ~filter ~analyze_set ~index:idx ~index_is_partial ~file_view
+      project_root
   in
   Fs.reset_stats ();
   let files_analyzed = List.length analyze_set in
@@ -765,15 +807,18 @@ let analyse ?pool ?profiling ?bail ~load_file ~filter ~requested_set
       backend
   in
   build_result ?bail ~unresolved_files ~uncompilable_files ~unclaimed_files
+    ~unevaluated:(Context.unevaluated_questions project_ctx)
     project_results file_results files_analyzed
 
 let run ?domain_mgr ~load_file ~filter ?analyze_set ?analyze_roots ~index
-    ?profiling ?bail ?(exclude = []) ?(include_vendored = false) project_root =
+    ?(index_is_partial = false) ?profiling ?bail ?(exclude = [])
+    ?(include_vendored = false) project_root =
   Log.info (fun m -> m "Starting analysis of %s" project_root);
   let backend = Merlin.v ~root_dir:project_root () in
   let analyse ?pool () =
     analyse ?pool ?profiling ?bail ~load_file ~filter ~requested_set:analyze_set
-      ~analyze_roots ~index ~exclude ~include_vendored ~backend project_root
+      ~analyze_roots ~index ~index_is_partial ~exclude ~include_vendored
+      ~backend project_root
   in
   Fun.protect
     ~finally:(fun () ->

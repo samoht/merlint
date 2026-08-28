@@ -21,16 +21,20 @@ type payload = {
 
 module P = Project_index.Package
 
+let code = "E941"
+
 let is_exempt_pkg used_pkg =
   Dep_deps.String_set.mem used_pkg Dep_deps.build_tools
   || Dep_deps.is_conf_pkg used_pkg
 
-let check_used_lib ~package ~depends_set ~own used_lib =
+let check_used_lib ~note ~package ~depends_set ~own used_lib =
   if Dep_deps.is_builtin used_lib then `Skip
   else if Dep_deps.String_set.mem used_lib own then `Skip
   else
     match Project_index.library_used_by package used_lib with
-    | None -> `Skip
+    | None ->
+        Dep_deps.note_unresolved ~note ~package ~what:"library" used_lib;
+        `Skip
     | Some lib ->
         let used_pkg = P.name (Project_index.Library.package lib) in
         if
@@ -40,11 +44,11 @@ let check_used_lib ~package ~depends_set ~own used_lib =
         then `Skip
         else `Missing used_pkg
 
-let check_lib ~package ~depends_set ~own lib =
+let check_lib ~note ~package ~depends_set ~own lib =
   let lib_name = Project_index.Library.name lib in
   Project_index.Library.deps lib
   |> List.filter_map (fun used_lib ->
-      match check_used_lib ~package ~depends_set ~own used_lib with
+      match check_used_lib ~note ~package ~depends_set ~own used_lib with
       | `Skip -> None
       | `Missing used_pkg ->
           Some
@@ -55,8 +59,8 @@ let check_lib ~package ~depends_set ~own lib =
               source_lib = lib_name;
             })
 
-let check_runtime_use ~package ~depends_set ~own used_lib =
-  match check_used_lib ~package ~depends_set ~own used_lib with
+let check_runtime_use ~note ~package ~depends_set ~own used_lib =
+  match check_used_lib ~note ~package ~depends_set ~own used_lib with
   | `Skip -> None
   | `Missing used_pkg ->
       Some
@@ -71,24 +75,36 @@ let check_runtime_use ~package ~depends_set ~own used_lib =
    cram test fires (build or test time), not linked at runtime. So it is
    satisfied by the providing package appearing in any dependency scope --
    runtime [depends:], build, or [{with-test}] -- not only runtime. *)
-let check_bin_use ~package ~depends_set ~build_set ~test_set bin =
-  match Project_index.package_of_binary (P.index package) bin with
-  | None -> None
-  | Some used_pkg
-    when used_pkg = P.name package
-         || Dep_deps.String_set.mem used_pkg Dep_deps.build_tools
-         || Dep_deps.String_set.mem used_pkg depends_set
-         || Dep_deps.String_set.mem used_pkg build_set
-         || Dep_deps.String_set.mem used_pkg test_set ->
-      None
-  | Some used_pkg ->
-      Some
-        {
-          package = P.name package;
-          missing_dep = used_pkg;
-          used_via = Fmt.str "%%{bin:%s}" bin;
-          source_lib = "(rule)";
-        }
+(* [%{bin:NAME}] and [%{exe:PATH.exe}] reach this rule as one set of names, and
+   a name carrying a path separator came from the second: it points at a build
+   target of this project by path, not at a binary some package installs. A
+   [(public_name ...)] never contains one, so such a name is not a dependency
+   candidate and "the index names no package providing it" is an answer for it
+   however narrow this run's scan was. *)
+let is_target_path bin = String.contains bin '/'
+
+let check_bin_use ~note ~package ~depends_set ~build_set ~test_set bin =
+  if is_target_path bin then None
+  else
+    match Project_index.package_of_binary (P.index package) bin with
+    | None ->
+        Dep_deps.note_unresolved ~note ~package ~what:"binary" bin;
+        None
+    | Some used_pkg
+      when used_pkg = P.name package
+           || Dep_deps.String_set.mem used_pkg Dep_deps.build_tools
+           || Dep_deps.String_set.mem used_pkg depends_set
+           || Dep_deps.String_set.mem used_pkg build_set
+           || Dep_deps.String_set.mem used_pkg test_set ->
+        None
+    | Some used_pkg ->
+        Some
+          {
+            package = P.name package;
+            missing_dep = used_pkg;
+            used_via = Fmt.str "%%{bin:%s}" bin;
+            source_lib = "(rule)";
+          }
 
 (* E941 should fire only for libraries that [opam install] actually builds,
    i.e. those reachable from a public (installed) artifact. A stanza is
@@ -136,14 +152,16 @@ let install_reachable_libs package =
   List.iter visit (public_libs @ public_exe_libs);
   List.filter (fun lib -> Dep_deps.String_set.mem (name lib) !reachable) libs
 
-let check_package package =
+let check_package ~note package =
   let depends = P.depends package |> Dep_deps.String_set.of_list in
   let build_depends = P.build_depends package |> Dep_deps.String_set.of_list in
   let test_depends = P.test_depends package |> Dep_deps.String_set.of_list in
   let own = Dep_deps.own_libs package in
   let runtime_libs = install_reachable_libs package in
   let lib_findings =
-    List.concat_map (check_lib ~package ~depends_set:depends ~own) runtime_libs
+    List.concat_map
+      (check_lib ~note ~package ~depends_set:depends ~own)
+      runtime_libs
   in
   let libs_checked =
     runtime_libs
@@ -159,18 +177,21 @@ let check_package package =
     |> List.sort_uniq String.compare
     |> List.filter (fun used_lib ->
         not (Dep_deps.String_set.mem used_lib libs_checked))
-    |> List.filter_map (check_runtime_use ~package ~depends_set:depends ~own)
+    |> List.filter_map
+         (check_runtime_use ~note ~package ~depends_set:depends ~own)
   in
   let bin_findings =
     P.bin_uses package
     |> List.filter_map
-         (check_bin_use ~package ~depends_set:depends ~build_set:build_depends
-            ~test_set:test_depends)
+         (check_bin_use ~note ~package ~depends_set:depends
+            ~build_set:build_depends ~test_set:test_depends)
   in
   lib_findings @ executable_findings @ bin_findings
 
 let check (ctx : Context.project) =
-  Dep_deps.run_per_package ~check_package (Context.index ctx)
+  let note = Dep_deps.resolution_note ctx ~rule:code in
+  Dep_deps.run_per_package ~check_package:(check_package ~note)
+    (Context.index ctx)
 
 let pp ppf p =
   Fmt.pf ppf
@@ -179,7 +200,7 @@ let pp ppf p =
     p.package p.used_via p.missing_dep p.source_lib p.missing_dep p.package
 
 let rule =
-  Rule.v ~code:"E941" ~title:"Missing runtime dependency"
+  Rule.v ~code ~title:"Missing runtime dependency"
     ~category:Rule.Project_structure
     ~hint:
       "When a library in your package's [(libraries L)] resolves to opam \

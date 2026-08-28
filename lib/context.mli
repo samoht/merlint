@@ -31,6 +31,15 @@ type 'a memo
 (** Opaque project memo. Values are forced only through Context accessors, so
     project rules cannot accidentally bypass the shared cache lock. *)
 
+type unevaluated
+(** What this run's rules could not decide. A rule that consulted the project
+    index for a fact the index does not hold cannot say either "this is a
+    finding" or "this is clean", and the empty list it returns is the same list
+    a rule that checked everything and found nothing returns. It records the
+    undecided question here instead, under its own code, and the run reports it
+    apart from the findings. Shared across the project rules, which run
+    concurrently, so it carries its own lock. *)
+
 type file = {
   filename : path;  (** The current file being analyzed. *)
   config : Config.t;  (** The merlint configuration. *)
@@ -70,6 +79,12 @@ type project = {
           file-scoped rules. *)
   file_content_cache : path -> string;
       (** Project-wide memoized raw file bytes for text-format rules. *)
+  unevaluated : unevaluated;
+      (** The questions this run's rules could not answer. Written through
+          {!cannot_evaluate}, read through {!unevaluated_questions}. *)
+  index_is_partial : bool;
+      (** Whether {!field-index} was built over part of the tree only. See
+          {!index_is_partial}. *)
 }
 
 val file :
@@ -102,6 +117,7 @@ val file_with_view :
 val project :
   ?file_view:(path -> File_view.t) ->
   ?file_content:(path -> string) ->
+  ?index_is_partial:bool ->
   config:Config.t ->
   project_root:path ->
   analyze_set:path list ->
@@ -115,6 +131,34 @@ val project :
 
 val index : project -> Project_index.t
 (** [index p] forces and returns the monopam package/library index. *)
+
+val index_is_partial : project -> bool
+(** [index_is_partial p] is [true] when this run built its project index over
+    part of the source tree only, because the caller named directories or files
+    rather than the whole project. A lookup that resolves to nothing then says
+    two different things -- nothing provides this name, or nothing this scan
+    read provides it -- and a rule cannot tell which. Over a whole-project index
+    the same lookup is an answer: every in-tree package was read, and anything
+    else would have to come from the switch, which is scanned for exactly the
+    names the sources reference. *)
+
+val cannot_evaluate : project -> rule:string -> string -> unit
+(** [cannot_evaluate p ~rule question] records that [rule] could not decide
+    [question] on this run, because a fact it needed is not in the project
+    index. [question] is one sentence naming what could not be resolved and what
+    it was needed for; it is shown to the user verbatim.
+
+    Call it where a resolution query answers "nothing" for a reason that is not
+    an answer -- a library or binary whose providing package this run's index
+    never scanned, an installed root that was not populated. Do not call it
+    where "nothing" is the answer: a rule that looked and found the tree clean
+    reports that by returning no issues, which is what it means. *)
+
+val unevaluated_questions : project -> (string * string) list
+(** [unevaluated_questions p] is every question recorded by {!cannot_evaluate},
+    as [(rule code, question)], deduplicated and sorted. One rule asking the
+    same undecidable question of forty packages is one thing the run could not
+    do, not forty. *)
 
 (** {2 File context accessors} *)
 

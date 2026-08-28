@@ -26,6 +26,13 @@ let force_memo memo =
     ~finally:(fun () -> Eio.Mutex.unlock memo.lock)
     (fun () -> Lazy.force memo.value)
 
+type unevaluated = {
+  notes_lock : Eio.Mutex.t;
+  mutable notes : (string * string) list;
+}
+
+let no_unevaluated () = { notes_lock = Eio.Mutex.create (); notes = [] }
+
 type file = {
   filename : path;
   config : Config.t;
@@ -48,6 +55,8 @@ type project = {
   index : Project_index.t memo;
   file_view_cache : path -> File_view.t;
   file_content_cache : path -> string;
+  unevaluated : unevaluated;
+  index_is_partial : bool;
 }
 
 let file ~analyze_set ~selected_file ~project_index ~filename ~config
@@ -205,8 +214,8 @@ let discover_test_stanzas ~index =
   |> List.concat_map Project_index.Package.test_stanzas
   |> List.sort_uniq compare
 
-let project ?file_view ?file_content ~config ~project_root ~analyze_set ~index
-    () =
+let project ?file_view ?file_content ?(index_is_partial = false) ~config
+    ~project_root ~analyze_set ~index () =
   let index_memo = memo (fun () -> Lazy.force index) in
   let analyze_set_tbl = Hashtbl.create (List.length analyze_set) in
   List.iter (fun file -> Hashtbl.replace analyze_set_tbl file ()) analyze_set;
@@ -239,7 +248,26 @@ let project ?file_view ?file_content ~config ~project_root ~analyze_set ~index
     index = index_memo;
     file_view_cache;
     file_content_cache;
+    unevaluated = no_unevaluated ();
+    index_is_partial;
   }
+
+let index_is_partial ctx = ctx.index_is_partial
+
+(* Project rules run concurrently on the executor pool, so the sink takes the
+   lock for the append. It is taken per undecidable question, and a run that
+   records one at all is a run already reporting less than it was asked for, so
+   the contention is not on any path that matters. *)
+let cannot_evaluate ctx ~rule question =
+  let u = ctx.unevaluated in
+  Eio.Mutex.use_rw ~protect:false u.notes_lock (fun () ->
+      u.notes <- (rule, question) :: u.notes)
+
+let unevaluated_questions ctx =
+  let u = ctx.unevaluated in
+  Eio.Mutex.use_ro u.notes_lock (fun () -> u.notes)
+  |> List.sort_uniq (fun (r1, q1) (r2, q2) ->
+      match String.compare r1 r2 with 0 -> String.compare q1 q2 | n -> n)
 
 let index ctx = force_memo ctx.index
 

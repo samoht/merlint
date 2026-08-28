@@ -3,11 +3,25 @@
 type exclusion_stats = { rule : string; file : string }
 (** A single suppressed issue. *)
 
-type failure = { rule : string option; file : string option; error : string }
+(** Why a unit of work did not finish. {!constructor-Crashed} is a defect in
+    merlint: the rule's body raised. {!constructor-Unevaluated} is a fact the
+    rule needed and the project index did not hold, so the rule ran to the end
+    and still could not decide. The two are apart because they are fixed apart
+    -- one by changing merlint, the other by pointing this run at the tree the
+    missing fact lives in. *)
+type incomplete = Crashed | Unevaluated
+
+type failure = {
+  rule : string option;
+  file : string option;
+  kind : incomplete;
+  error : string;
+}
 (** One unit of work a run started and did not finish. [rule] is the code of the
-    rule whose body raised, and [None] when what raised was the whole file's
-    analysis, which is every rule of the run over that file. [file] is the
-    source being read, and [error] the exception. *)
+    rule whose body raised or could not decide, and [None] when what raised was
+    the whole file's analysis, which is every rule of the run over that file.
+    [file] is the source being read, and [error] the exception or the question
+    that went undecided. *)
 
 type result = {
   issues : Rule.Run.result list;
@@ -57,13 +71,15 @@ type result = {
     precisely the one it is owed an answer about.
 
     {!field-failed} is the work this run began and did not finish: a rule whose
-    body raised, or a file whose whole analysis did. The result of a rule that
-    crashed and the result of a rule that ran and found nothing are the same
-    empty list, so a run that counted only findings reported the two the same
-    way; a crashed rule is also not counted in {!field-rules_applied}, since it
-    did not apply to anything. Nothing here is a statement about the code: it is
-    a defect in merlint, and it leaves the run's verdict short by however much
-    the missing rule would have said. *)
+    body raised, a file whose whole analysis did, or a rule that could not
+    decide because the project index did not hold a fact it needed. The result
+    of a rule that crashed, of a rule that could not evaluate, and of a rule
+    that ran and found nothing are all the same empty list, so a run that
+    counted only findings reported the three the same way; a crashed rule is
+    also not counted in {!field-rules_applied}, since it did not apply to
+    anything. Nothing here is a statement about the code, and each member leaves
+    the run's verdict short by however much the rule would have said. See
+    {!type-incomplete} for which of the two reasons a member carries. *)
 
 val run :
   ?domain_mgr:[> Eio.Domain_manager.ty ] Eio.Resource.t ->
@@ -72,6 +88,7 @@ val run :
   ?analyze_set:Fpath.t list ->
   ?analyze_roots:Fpath.t list ->
   index:(?pool:Eio.Executor_pool.t -> unit -> Project_index.t) ->
+  ?index_is_partial:bool ->
   ?profiling:Profiling.t ->
   ?bail:bool ->
   ?exclude:string list ->
@@ -94,6 +111,12 @@ val run :
     [analyze_roots] adds every indexed source file below those directories. If
     both are omitted, iteration defaults to every source file the project index
     knows about.
+
+    [index_is_partial] says that [index] scans part of the source tree only, so
+    a lookup that resolves to nothing may be a fact this scan never gathered
+    rather than one that does not exist. Rules read it through
+    {!Context.index_is_partial}. Defaults to [false]: a caller that narrows the
+    index is the one that knows it did.
 
     [include_vendored] keeps files under Dune [(vendored_dirs ...)] subtrees in
     the analysis set. They are dropped by default (the index scans them only so

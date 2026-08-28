@@ -158,7 +158,13 @@ module Json_report = struct
   }
 
   type exclusion = { rule : string; file : string }
-  type failure = { rule : string option; file : string option; error : string }
+
+  type failure = {
+    rule : string option;
+    file : string option;
+    kind : string;
+    error : string;
+  }
 
   type t = {
     project_root : string;
@@ -182,7 +188,7 @@ module Json_report = struct
     { code; title; category; message; location }
 
   let exclusion rule file = ({ rule; file } : exclusion)
-  let failure rule file error = ({ rule; file; error } : failure)
+  let failure rule file kind error = ({ rule; file; kind; error } : failure)
 
   let v project_root files_analyzed rules_applied total_issues unchecked
       unchecked_files unclaimed_files skipped_paths failed_checks passed issues
@@ -238,6 +244,7 @@ module Json_report = struct
         t.rule)
     |> C.Object.member "file" (C.option C.string) ~enc:(fun (t : failure) ->
         t.file)
+    |> C.Object.member "kind" C.string ~enc:(fun (t : failure) -> t.kind)
     |> C.Object.member "error" C.string ~enc:(fun (t : failure) -> t.error)
     |> C.Object.seal
 
@@ -292,7 +299,12 @@ module Json_report = struct
     Fpath.v file |> Merlint.Loc.current_dir_relative |> Fpath.to_string
 
   let failure_of_engine (f : Merlint.Engine.failure) =
-    failure f.rule (Option.map report_path f.file) f.error
+    let kind =
+      match f.kind with
+      | Merlint.Engine.Crashed -> "crashed"
+      | Merlint.Engine.Unevaluated -> "unevaluated"
+    in
+    failure f.rule (Option.map report_path f.file) kind f.error
 
   (* A run that examined less than it was asked to reports a non-zero status for
      it, and the document says so too, so a caller reading the JSON and a caller
@@ -301,9 +313,11 @@ module Json_report = struct
      reads the answer here instead of rediscovering it a directory at a time.
      [unchecked] counts the two sets a build or an edit fixes; [skipped_paths]
      is apart from them because nothing merlint does fixes it;
-     [failed_checks] is apart from both because it is a defect in merlint
-     rather than in the tree, and it counts checks rather than files. [passed]
-     is false while any of the four has a member. *)
+     [failed_checks] is apart from both because nothing in the tree it was
+     reading caused it, and it counts checks rather than files: a [crashed]
+     member is a defect in merlint, an [unevaluated] one a question the rule
+     could not decide because this run's project index does not hold the fact
+     it needed. [passed] is false while any of the four has a member. *)
   let v ~project_root ~files_analyzed ~rules_applied ~unchecked_files
       ~unclaimed_files ~skipped ~failed ~excluded issues =
     let issues =
@@ -521,7 +535,7 @@ let print_skipped skipped =
    of what a caller reading "0 issues" is entitled to know, so the summary says
    which of them this was. The engine's warning already names each one, and
    naming them twice would leave two lists to disagree. *)
-let print_failed failures =
+let print_crashed failures =
   let n = List.length failures in
   Fmt.pr
     "%s %d check%s crashed, so %s did not run and nothing above answers for \
@@ -534,20 +548,60 @@ let print_failed failures =
     (if n = 1 then "it" else "they")
     (if n = 1 then "it" else "them")
 
+(* A rule that could not evaluate is the third way an empty finding list is
+   produced, beside a rule that found nothing and a rule that crashed. It is
+   named here, by code, because that is the whole difference between "E941 says
+   this package is fine" and "E941 could not tell": a summary that printed the
+   same line for both would be reporting the second as the first, which is what
+   let a scoped run print a clean pass over a package with a real missing
+   dependency. The questions are listed, not just counted, because the fix is
+   per question -- widen the run, or build the tree the provider lives in. *)
+let unevaluated_sample = 10
+
+let print_unevaluated failures =
+  let n = List.length failures in
+  let codes =
+    List.filter_map (fun (f : Merlint.Engine.failure) -> f.rule) failures
+    |> List.sort_uniq String.compare
+  in
+  Fmt.pr
+    "%s %d question%s went undecided, so nothing above answers for %s: %s ran \
+     and could not tell a clean result from a finding, because this run's \
+     project index does not hold a fact %s needed.@."
+    (Merlint.Report.print_color false "✗")
+    n
+    (if n = 1 then "" else "s")
+    (if n = 1 then "it" else "them")
+    (String.concat ", " codes)
+    (if List.length codes = 1 then "it" else "they");
+  let shown, rest =
+    ( List.filteri (fun i _ -> i < unevaluated_sample) failures,
+      List.length failures - unevaluated_sample )
+  in
+  List.iter
+    (fun (f : Merlint.Engine.failure) ->
+      Fmt.pr "    %s: %s@."
+        (match f.rule with Some code -> code | None -> "a rule")
+        f.error)
+    shown;
+  if rest > 0 then Fmt.pr "    ... and %d more; --json carries them all.@." rest
+
 (* What the summary line adds when the run answered for less than it was given.
-   The three reasons are counted apart because they are fixed apart: an
+   The four reasons are counted apart because they are fixed apart: an
    unchecked file is one merlint was going to read and could not, which a build
    or an edit answers; a skipped path is one it has no rule for, which only
-   dropping it from the arguments answers; and a crashed check is a defect in
-   merlint, which only merlint answers. *)
-let incomplete_clauses ~unchecked ~skipped ~failed =
+   dropping it from the arguments answers; a crashed check is a defect in
+   merlint, which only merlint answers; and an undecided question is a fact the
+   index does not hold, which widening the run or building the tree answers. *)
+let incomplete_clauses ~unchecked ~skipped ~crashed ~unevaluated =
   let clause n singular plural =
     if n = 0 then []
     else [ Fmt.str "%d %s" n (if n = 1 then singular else plural) ]
   in
   clause unchecked "file unchecked" "files unchecked"
   @ clause skipped "path skipped" "paths skipped"
-  @ clause failed "check crashed" "checks crashed"
+  @ clause crashed "check crashed" "checks crashed"
+  @ clause unevaluated "question undecided" "questions undecided"
 
 (* Print summary and status *)
 (* A run whose typedtree-backed rules could not read an artefact, or that was
@@ -558,9 +612,14 @@ let incomplete_clauses ~unchecked ~skipped ~failed =
 let print_summary ?(unchecked = 0) ?(skipped = []) ?(failed = []) ?remedy
     all_issues rules_applied =
   let total_issues = List.length all_issues in
+  let crashed, unevaluated =
+    List.partition
+      (fun (f : Merlint.Engine.failure) -> f.kind = Merlint.Engine.Crashed)
+      failed
+  in
   let clauses =
     incomplete_clauses ~unchecked ~skipped:(List.length skipped)
-      ~failed:(List.length failed)
+      ~crashed:(List.length crashed) ~unevaluated:(List.length unevaluated)
   in
   let all_passed = total_issues = 0 && clauses = [] in
   let rule_word = if rules_applied = 1 then "rule" else "rules" in
@@ -576,7 +635,8 @@ let print_summary ?(unchecked = 0) ?(skipped = []) ?(failed = []) ?remedy
     | clauses -> ", " ^ String.concat ", " clauses);
 
   if skipped <> [] then print_skipped skipped;
-  if failed <> [] then print_failed failed;
+  if crashed <> [] then print_crashed crashed;
+  if unevaluated <> [] then print_unevaluated unevaluated;
   if all_passed then
     Fmt.pr "%s All checks passed!@." (Merlint.Report.print_color true "✓")
   else if total_issues = 0 then (
@@ -596,19 +656,19 @@ let print_summary ?(unchecked = 0) ?(skipped = []) ?(failed = []) ?remedy
   end
 
 let run_engine ?domain_mgr ~load_file ?profiling ~bail ~exclude
-    ~include_vendored rule_filter analyze_set analyze_roots build_index
-    project_root =
+    ~include_vendored ~index_is_partial rule_filter analyze_set analyze_roots
+    build_index project_root =
   match rule_filter with
   | Some filter ->
       Merlint.Engine.run ?domain_mgr ~load_file ~filter ?analyze_set
-        ?analyze_roots ~index:build_index ?profiling ~bail ~exclude
-        ~include_vendored project_root
+        ?analyze_roots ~index:build_index ~index_is_partial ?profiling ~bail
+        ~exclude ~include_vendored project_root
   | None -> (
       match Merlint.Filter.parse "all" with
       | Ok filter ->
           Merlint.Engine.run ?domain_mgr ~load_file ~filter ?analyze_set
-            ?analyze_roots ~index:build_index ?profiling ~bail ~exclude
-            ~include_vendored project_root
+            ?analyze_roots ~index:build_index ~index_is_partial ?profiling ~bail
+            ~exclude ~include_vendored project_root
       | Error msg ->
           (* An empty result here would report a run that examined nothing as a
              clean one. The filter is merlint's own literal, so a parse failure
@@ -659,7 +719,7 @@ let print_text_report ~project_root ~files_analyzed ~rules_applied ~unchecked
   | None -> ()
 
 let run_analysis ?domain_mgr ~load_file ~json_output ~repair ~skipped
-    project_root analyze_set analyze_roots
+    ~index_is_partial project_root analyze_set analyze_roots
     (build_index : ?pool:Eio.Executor_pool.t -> unit -> Project_index.t)
     rule_filter show_profile ~bail ~exclude ~include_vendored =
   let profiling_state =
@@ -671,8 +731,8 @@ let run_analysis ?domain_mgr ~load_file ~json_output ~repair ~skipped
         (match files_count with None -> "all" | Some n -> string_of_int n));
   let analyse () =
     run_engine ?domain_mgr ~load_file ?profiling:profiling_state rule_filter
-      ~bail ~exclude ~include_vendored analyze_set analyze_roots build_index
-      project_root
+      ~bail ~exclude ~include_vendored ~index_is_partial analyze_set
+      analyze_roots build_index project_root
   in
   let result = analyse () in
   let repaired, result =
@@ -980,6 +1040,15 @@ let resolve_index_root raw =
   if Fpath.is_abs p then Fpath.normalize p
   else Fpath.normalize Fpath.(v (Sys.getcwd ()) // p)
 
+(* [root] covers [monorepo] when it is that directory or one above it: the scan
+   it selects then reaches every package. Both sides lose a trailing empty
+   segment first, because [.] resolves to a directory path and [monorepo] does
+   not, and comparing the two as written answers "different" for one directory.
+*)
+let root_covers ~monorepo root =
+  let root = normalize_fpath root and monorepo = normalize_fpath monorepo in
+  Fpath.equal root monorepo || Fpath.is_prefix root monorepo
+
 let index_roots_of_files = function
   | [] -> None
   | xs -> Some (List.map resolve_index_root xs)
@@ -1024,6 +1093,18 @@ let analyze_files mgr clock fs domain_mgr ?(exclude_patterns = []) ?rule_filter
   let build_scopes = build_scopes_of_files files in
   let monorepo = monorepo_for_index project_root in
   let index_roots = index_roots_of_files files in
+  (* Whether the index this run builds covers the whole source tree. A root
+     that is [monorepo] itself, or an ancestor of it, narrows nothing; anything
+     below it leaves packages unscanned, and a name they provide then resolves
+     to nothing exactly as a name nobody provides does. The caller that narrows
+     the scan is the only place that knows it did, so the fact is derived here,
+     once, and threaded down rather than re-derived from a directory listing by
+     whoever needs it. *)
+  let index_is_partial =
+    match index_roots with
+    | None -> false
+    | Some roots -> not (List.exists (root_covers ~monorepo) roots)
+  in
   let installed = installed_index_mode rule_filter in
   let build_index ?pool () =
     build_project_index ~fs ~monorepo ?roots:index_roots ~installed ?pool ()
@@ -1036,8 +1117,9 @@ let analyze_files mgr clock fs domain_mgr ?(exclude_patterns = []) ?rule_filter
   in
   run_analysis ~domain_mgr ~load_file ~json_output
     ~repair:(repair_unresolved ~built:build ~clock mgr)
-    ~skipped project_root analyze_set analyze_roots analysis_index rule_filter
-    show_profile ~bail ~exclude:exclude_patterns ~include_vendored
+    ~skipped ~index_is_partial project_root analyze_set analyze_roots
+    analysis_index rule_filter show_profile ~bail ~exclude:exclude_patterns
+    ~include_vendored
 
 let files =
   let doc =

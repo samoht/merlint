@@ -31,6 +31,29 @@ val opam_loc : Project_index.Package.t -> Location.t
 (** [opam_loc pkg] is a [Location.t] pointing at the start of [pkg]'s [.opam]
     file. *)
 
+val resolution_note : Context.project -> rule:string -> string -> unit
+(** [resolution_note ctx ~rule question] is the sink a dep rule hands its
+    unresolved names to, partially applied to the calling rule's code. Over a
+    whole-project index it discards them: every in-tree package was read, so "no
+    package provides this name" is an answer. Over a narrowed one
+    ({!Context.index_is_partial}) it records them through
+    {!Context.cannot_evaluate}, because there the same lookup cannot tell a name
+    nothing provides from one whose provider this run never scanned. *)
+
+val note_unresolved :
+  note:(string -> unit) ->
+  package:Project_index.Package.t ->
+  what:string ->
+  string ->
+  unit
+(** [note_unresolved ~note ~package ~what name] hands [note] one sentence saying
+    that this run's project index names no package providing [name] (a [what] --
+    "library", "binary"), so whether [package] declares it is undecided rather
+    than fine. The index answers "nothing provides it" both when nothing does
+    and when this run never scanned whatever does, and a rule reading the second
+    as the first reports a gap as a clean result. Pass
+    {!Context.cannot_evaluate} partially applied to the calling rule's code. *)
+
 val run_per_package :
   check_package:(Project_index.Package.t -> 'a list) ->
   Project_index.t ->
