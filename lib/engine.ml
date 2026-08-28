@@ -244,26 +244,11 @@ let warn_crashed crashed =
           they they pp_sample
           (List.map failure_line crashed))
 
-let warn_unevaluated unevaluated =
-  if unevaluated <> [] then
-    let n = List.length unevaluated in
-    Log.warn (fun m ->
-        m
-          "@[<v>%d question%s went undecided: a rule asked the project index \
-           for a fact it does not hold, so what it returned is neither a \
-           finding nor a clean result. Point the run at the tree the fact \
-           lives in, or build the project, and ask again.%a@]"
-          n
-          (if n = 1 then "" else "s")
-          pp_sample
-          (List.map failure_line unevaluated))
-
+(* A rule that could not evaluate is not warned about. The summary counts it
+   and the exit status carries it, and --json names the rule and the question.
+   A paragraph here would say a third time what those two already say. *)
 let warn_failed failed =
-  let crashed, unevaluated =
-    List.partition (fun f -> f.kind = Crashed) failed
-  in
-  warn_crashed crashed;
-  warn_unevaluated unevaluated;
+  warn_crashed (List.filter (fun f -> f.kind = Crashed) failed);
   failed
 
 let log_fs_stats () =

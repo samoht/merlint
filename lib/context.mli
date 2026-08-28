@@ -32,13 +32,12 @@ type 'a memo
     project rules cannot accidentally bypass the shared cache lock. *)
 
 type unevaluated
-(** What this run's rules could not decide. A rule that consulted the project
-    index for a fact the index does not hold cannot say either "this is a
-    finding" or "this is clean", and the empty list it returns is the same list
-    a rule that checked everything and found nothing returns. It records the
-    undecided question here instead, under its own code, and the run reports it
-    apart from the findings. Shared across the project rules, which run
-    concurrently, so it carries its own lock. *)
+(** What this run's rules could not decide. A rule that asked the project index
+    for a fact it does not hold returns the empty list a rule that checked
+    everything and found nothing returns. It records the question here instead,
+    under its own code, and the run counts it apart from the findings. The
+    project rules run concurrently and share this value, so it carries its own
+    lock. *)
 
 type file = {
   filename : path;  (** The current file being analyzed. *)
@@ -146,13 +145,14 @@ val cannot_evaluate : project -> rule:string -> string -> unit
 (** [cannot_evaluate p ~rule question] records that [rule] could not decide
     [question] on this run, because a fact it needed is not in the project
     index. [question] is one sentence naming what could not be resolved and what
-    it was needed for; it is shown to the user verbatim.
+    needed it; [--json] shows it verbatim, and the text summary counts the rule
+    rather than repeating the sentence.
 
     Call it where a resolution query answers "nothing" for a reason that is not
     an answer -- a library or binary whose providing package this run's index
     never scanned, an installed root that was not populated. Do not call it
     where "nothing" is the answer: a rule that looked and found the tree clean
-    reports that by returning no issues, which is what it means. *)
+    says so by returning no issues. *)
 
 val unevaluated_questions : project -> (string * string) list
 (** [unevaluated_questions p] is every question recorded by {!cannot_evaluate},

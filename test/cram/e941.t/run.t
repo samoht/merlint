@@ -213,15 +213,14 @@ Pointed at the whole workspace, the index holds pkg-a and the rule decides:
     Run `merlint help E941` for the rule's description, hint, and good/bad examples.
   [1]
 
-Pointed at pkg-b alone, pkg-a is never scanned and the rule cannot decide.
-It says so, under its own code, and the run does not pass -- where before it
-reported the same clean summary as a run that had checked everything:
+Pointed at pkg-b alone, pkg-a is never scanned and the rule cannot decide. The
+summary counts the rule it could not check, and the run exits 2 -- where before
+it printed the clean summary of a complete run and exited 0. A caller's gate
+rests on that status, so the [2] below is asserted with the text: a change that
+returns 0 under this same summary turns this test red.
 
   $ merlint -r E941 unscanned/pkg-b
   Dune root: $TESTCASE_ROOT/unscanned
-  ! 2 questions went undecided: a rule asked the project index for a fact it does not hold, so what it returned is neither a finding nor a clean result. Point the run at the tree the fact lives in, or build the project, and ask again.
-  ! E941: the project index has no package providing binary gen, used by pkg-b, so whether pkg-b.opam declares it is undecided: this run scanned part of the tree only, and resolves nothing outside the packages it read and the libraries installed under _opam/lib and _build/install/default/lib
-  ! E941: the project index has no package providing library pkg-a.helper, used by pkg-b, so whether pkg-b.opam declares it is undecided: this run scanned part of the tree only, and resolves nothing outside the packages it read and the libraries installed under _opam/lib and _build/install/default/lib
   Running merlint analysis...
   
   Analyzing 2 files
@@ -235,8 +234,11 @@ reported the same clean summary as a run that had checked everything:
   ✓ Interop Testing (0 total issues)
   ✓ Code Generation (0 total issues)
   
-  Summary: ✗ 0 total issues (applied 1 rule, 2 questions undecided)
-  ✗ 2 questions went undecided, so nothing above answers for them: E941 ran and could not tell a clean result from a finding, because this run's project index does not hold a fact it needed.
-      E941: the project index has no package providing binary gen, used by pkg-b, so whether pkg-b.opam declares it is undecided: this run scanned part of the tree only, and resolves nothing outside the packages it read and the libraries installed under _opam/lib and _build/install/default/lib
-      E941: the project index has no package providing library pkg-a.helper, used by pkg-b, so whether pkg-b.opam declares it is undecided: this run scanned part of the tree only, and resolves nothing outside the packages it read and the libraries installed under _opam/lib and _build/install/default/lib
+  Summary: ✗ 0 total issues (applied 1 rule, 1 rule not checked)
   [2]
+
+E941 could not resolve two names, and the summary counts one rule. A rule that
+cannot resolve forty names is still one rule this run did not check, and
+counting the names would read as forty rules. The count is all the text report
+says; [--json] carries a [failed_checks] member per name, each naming the rule
+and what it could not resolve.

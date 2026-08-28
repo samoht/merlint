@@ -3,12 +3,10 @@
 type exclusion_stats = { rule : string; file : string }
 (** A single suppressed issue. *)
 
-(** Why a unit of work did not finish. {!constructor-Crashed} is a defect in
-    merlint: the rule's body raised. {!constructor-Unevaluated} is a fact the
-    rule needed and the project index did not hold, so the rule ran to the end
-    and still could not decide. The two are apart because they are fixed apart
-    -- one by changing merlint, the other by pointing this run at the tree the
-    missing fact lives in. *)
+(** Why a unit of work did not finish. {!constructor-Crashed}: the rule's body
+    raised, which is a defect in merlint. {!constructor-Unevaluated}: the rule
+    ran to the end and could not decide, because the project index did not hold
+    a fact it needed. The two are counted apart because the fixes differ. *)
 type incomplete = Crashed | Unevaluated
 
 type failure = {
@@ -20,8 +18,8 @@ type failure = {
 (** One unit of work a run started and did not finish. [rule] is the code of the
     rule whose body raised or could not decide, and [None] when what raised was
     the whole file's analysis, which is every rule of the run over that file.
-    [file] is the source being read, and [error] the exception or the question
-    that went undecided. *)
+    [file] is the source being read. [error] is the exception, or the name the
+    rule could not resolve. *)
 
 type result = {
   issues : Rule.Run.result list;
@@ -72,14 +70,13 @@ type result = {
 
     {!field-failed} is the work this run began and did not finish: a rule whose
     body raised, a file whose whole analysis did, or a rule that could not
-    decide because the project index did not hold a fact it needed. The result
-    of a rule that crashed, of a rule that could not evaluate, and of a rule
-    that ran and found nothing are all the same empty list, so a run that
-    counted only findings reported the three the same way; a crashed rule is
-    also not counted in {!field-rules_applied}, since it did not apply to
-    anything. Nothing here is a statement about the code, and each member leaves
-    the run's verdict short by however much the rule would have said. See
-    {!type-incomplete} for which of the two reasons a member carries. *)
+    decide because the project index did not hold a fact it needed. All three
+    return the empty list a rule that ran and found nothing returns, so a run
+    that counted findings alone reported all three as a pass. A crashed rule is
+    also not counted in {!field-rules_applied}, since it applied to nothing.
+    Nothing here says anything about the code being read, and each member leaves
+    the run's verdict short by whatever the rule would have said.
+    {!type-incomplete} says which of the two reasons a member carries. *)
 
 val run :
   ?domain_mgr:[> Eio.Domain_manager.ty ] Eio.Resource.t ->

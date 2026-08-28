@@ -60,25 +60,18 @@ let opam_loc pkg =
     to come from the switch, which is scanned for exactly the names the sources
     reference -- so the note is dropped and the rule's silence means what it
     says. Over a narrowed index it is not an answer: the provider may sit in a
-    directory this run never scanned, and every one of these rules reads that
-    the same way it reads "the declaration is fine", both being the empty list.
-    So there it is recorded under [rule] and the run reports it apart from the
-    findings. *)
+    directory this run never scanned, and the rule reads that the same way it
+    reads "the declaration is fine", both being the empty list. So there it is
+    recorded under [rule] and the run counts it apart from the findings. *)
 let resolution_note ctx ~rule =
   if Context.index_is_partial ctx then Context.cannot_evaluate ctx ~rule
   else fun (_ : string) -> ()
 
 (** [note_unresolved ~note ~package ~what name] hands [note] the sentence for
-    one such name: what could not be resolved, which package needed it, and what
-    the index does resolve. *)
+    one such name: what could not be resolved, and which package used it. It
+    reaches the user through [--json]; the text summary counts the rule. *)
 let note_unresolved ~note ~package ~what name =
-  Fmt.kstr note
-    "the project index has no package providing %s %s, used by %s, so whether \
-     %s.opam declares it is undecided: this run scanned part of the tree only, \
-     and resolves nothing outside the packages it read and the libraries \
-     installed under _opam/lib and _build/install/default/lib"
-    what name
-    (Project_index.Package.name package)
+  Fmt.kstr note "no package provides %s %s, used by %s" what name
     (Project_index.Package.name package)
 
 (** [run_per_package ~check_package index] applies [check_package] to every

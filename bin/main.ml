@@ -315,9 +315,10 @@ module Json_report = struct
      is apart from them because nothing merlint does fixes it;
      [failed_checks] is apart from both because nothing in the tree it was
      reading caused it, and it counts checks rather than files: a [crashed]
-     member is a defect in merlint, an [unevaluated] one a question the rule
-     could not decide because this run's project index does not hold the fact
-     it needed. [passed] is false while any of the four has a member. *)
+     member is a defect in merlint, an [unevaluated] one names the fact a rule
+     needed and this run's project index does not hold. The text report counts
+     these and stops; this is where the whole set is named. [passed] is false
+     while any of the four has a member. *)
   let v ~project_root ~files_analyzed ~rules_applied ~unchecked_files
       ~unclaimed_files ~skipped ~failed ~excluded issues =
     let issues =
@@ -549,50 +550,28 @@ let print_crashed failures =
     (if n = 1 then "it" else "them")
 
 (* A rule that could not evaluate is the third way an empty finding list is
-   produced, beside a rule that found nothing and a rule that crashed. It is
-   named here, by code, because that is the whole difference between "E941 says
-   this package is fine" and "E941 could not tell": a summary that printed the
-   same line for both would be reporting the second as the first, which is what
-   let a scoped run print a clean pass over a package with a real missing
-   dependency. The questions are listed, not just counted, because the fix is
-   per question -- widen the run, or build the tree the provider lives in. *)
-let unevaluated_sample = 10
+   produced, beside a rule that found nothing and a rule that crashed. The
+   summary counts it and the exit status carries it, and that is all it gets:
+   the count is what a reader needs, and --json names the rule and the fact it
+   could not resolve for a reader who wants more.
 
-let print_unevaluated failures =
-  let n = List.length failures in
-  let codes =
-    List.filter_map (fun (f : Merlint.Engine.failure) -> f.rule) failures
-    |> List.sort_uniq String.compare
-  in
-  Fmt.pr
-    "%s %d question%s went undecided, so nothing above answers for %s: %s ran \
-     and could not tell a clean result from a finding, because this run's \
-     project index does not hold a fact %s needed.@."
-    (Merlint.Report.print_color false "✗")
-    n
-    (if n = 1 then "" else "s")
-    (if n = 1 then "it" else "them")
-    (String.concat ", " codes)
-    (if List.length codes = 1 then "it" else "they");
-  let shown, rest =
-    ( List.filteri (fun i _ -> i < unevaluated_sample) failures,
-      List.length failures - unevaluated_sample )
-  in
-  List.iter
-    (fun (f : Merlint.Engine.failure) ->
-      Fmt.pr "    %s: %s@."
-        (match f.rule with Some code -> code | None -> "a rule")
-        f.error)
-    shown;
-  if rest > 0 then Fmt.pr "    ... and %d more; --json carries them all.@." rest
+   Counted by rule, not by question. One rule that could not resolve forty
+   names is one rule this run did not check, and a count of forty would read as
+   forty rules. Deduplication is over the rule code, so a failure carrying no
+   code still counts as one. *)
+let rules_unchecked failures =
+  List.map (fun (f : Merlint.Engine.failure) -> f.rule) failures
+  |> List.sort_uniq (Option.compare String.compare)
+  |> List.length
 
 (* What the summary line adds when the run answered for less than it was given.
    The four reasons are counted apart because they are fixed apart: an
    unchecked file is one merlint was going to read and could not, which a build
    or an edit answers; a skipped path is one it has no rule for, which only
    dropping it from the arguments answers; a crashed check is a defect in
-   merlint, which only merlint answers; and an undecided question is a fact the
-   index does not hold, which widening the run or building the tree answers. *)
+   merlint, which only merlint answers; and a rule that was not checked needed a
+   fact the project index does not hold, which widening the run or building the
+   tree answers. *)
 let incomplete_clauses ~unchecked ~skipped ~crashed ~unevaluated =
   let clause n singular plural =
     if n = 0 then []
@@ -601,7 +580,7 @@ let incomplete_clauses ~unchecked ~skipped ~crashed ~unevaluated =
   clause unchecked "file unchecked" "files unchecked"
   @ clause skipped "path skipped" "paths skipped"
   @ clause crashed "check crashed" "checks crashed"
-  @ clause unevaluated "question undecided" "questions undecided"
+  @ clause unevaluated "rule not checked" "rules not checked"
 
 (* Print summary and status *)
 (* A run whose typedtree-backed rules could not read an artefact, or that was
@@ -619,7 +598,8 @@ let print_summary ?(unchecked = 0) ?(skipped = []) ?(failed = []) ?remedy
   in
   let clauses =
     incomplete_clauses ~unchecked ~skipped:(List.length skipped)
-      ~crashed:(List.length crashed) ~unevaluated:(List.length unevaluated)
+      ~crashed:(List.length crashed)
+      ~unevaluated:(rules_unchecked unevaluated)
   in
   let all_passed = total_issues = 0 && clauses = [] in
   let rule_word = if rules_applied = 1 then "rule" else "rules" in
@@ -636,7 +616,6 @@ let print_summary ?(unchecked = 0) ?(skipped = []) ?(failed = []) ?remedy
 
   if skipped <> [] then print_skipped skipped;
   if crashed <> [] then print_crashed crashed;
-  if unevaluated <> [] then print_unevaluated unevaluated;
   if all_passed then
     Fmt.pr "%s All checks passed!@." (Merlint.Report.print_color true "✓")
   else if total_issues = 0 then (

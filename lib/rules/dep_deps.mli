@@ -46,13 +46,12 @@ val note_unresolved :
   what:string ->
   string ->
   unit
-(** [note_unresolved ~note ~package ~what name] hands [note] one sentence saying
-    that this run's project index names no package providing [name] (a [what] --
-    "library", "binary"), so whether [package] declares it is undecided rather
-    than fine. The index answers "nothing provides it" both when nothing does
-    and when this run never scanned whatever does, and a rule reading the second
-    as the first reports a gap as a clean result. Pass
-    {!Context.cannot_evaluate} partially applied to the calling rule's code. *)
+(** [note_unresolved ~note ~package ~what name] hands [note] one sentence: no
+    package provides [name] (a [what] -- "library", "binary"), and [package]
+    uses it. The index answers "nothing provides it" both when nothing does and
+    when this run never scanned whatever does, so the rule cannot say whether
+    [package] declares it. Pass {!Context.cannot_evaluate} partially applied to
+    the calling rule's code. *)
 
 val run_per_package :
   check_package:(Project_index.Package.t -> 'a list) ->
