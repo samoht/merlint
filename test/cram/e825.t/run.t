@@ -17,7 +17,7 @@ Build bad fixture project:
   ✗ Interop Testing (1 total issues)
     [E825] Missing csv dependency (1 issue)
     Interop tests with CSV traces should use csv for parsing. Add csv to the
-    (libraries ...) in the dune file and use Csv.decode_file with a Row codec.
+    (libraries ...) in the dune file and use Csv.of_file with a Row codec.
     - bad/foo/test/interop/oracle/dune:1:0: Interop test bad/foo/test/interop/oracle has CSV traces but dune lacks csv dependency
   ✓ Code Generation (0 total issues)
   
