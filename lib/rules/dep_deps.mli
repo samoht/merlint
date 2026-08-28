@@ -19,6 +19,17 @@ val is_builtin : string -> bool
 (** [is_builtin lib] is [true] for libraries shipped with the OCaml distribution
     (unix, str, threads, etc.). *)
 
+val is_project_target : string -> bool
+(** [is_project_target name] is [true] when [name], drawn from
+    {!Project_index.bin_uses}, is a target this project builds rather than a
+    binary some opam package installs. [%{bin:NAME}] and [%{exe:PATH.exe}]
+    arrive as one set of names, and two spellings mark the second: a path
+    separator, which a [(public_name ...)] never contains, and a [.exe] suffix,
+    which a [(public_name ...)] never ends in -- the only mark left on the
+    same-directory spelling [%{exe:fuzz.exe}]. Such a name is not a dependency
+    candidate, so "no package provides it" is an answer for it however narrow
+    this run's scan was, and it is never handed to {!note_unresolved}. *)
+
 val own_libs : Project_index.Package.t -> String_set.t
 (** [own_libs pkg] is the set of libraries declared by [pkg]. *)
 

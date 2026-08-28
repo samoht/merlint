@@ -1,0 +1,17 @@
+; A %{exe:...} reference to a target of this project, in the directory that
+; builds it, so it carries no path to be recognised by. It reaches E941 beside
+; %{bin:...} as "gen.exe", and the suffix is what says it is this project's own
+; target rather than a binary some package installs: no (public_name ...) ends
+; in .exe. Here to hold that. Were the suffix dropped, the name would read as a
+; demand for an installed binary called "gen", nothing would provide it, and a
+; scan narrowed to this package -- which cannot see whatever might provide it
+; -- would report a rule it could not evaluate and exit 2, where the package is
+; in fact clean. Every package with a fuzz/ directory has this shape.
+(executable
+ (name gen))
+
+(rule
+ (alias check)
+ (deps %{exe:gen.exe})
+ (action
+  (progn)))

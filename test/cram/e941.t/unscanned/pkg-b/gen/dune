@@ -1,8 +1,11 @@
 ; A %{exe:...} reference to a target of this project. It reaches E941 beside
-; %{bin:...} as the bare name "gen", which no package installs, so resolution
-; answers nothing for it -- and over a whole-project index that is an answer,
-; not an undecided question. Here to hold that: were the gate to treat every
-; scan as partial, this run would report a question it can decide.
+; %{bin:...} as "gen.exe", and the .exe suffix says it is this project's own
+; target rather than a binary some package installs, so resolution is never
+; asked about it -- and over a whole-project index a name resolution does
+; answer nothing for is an answer, not an undecided question. Here to hold
+; both: were the gate to treat every scan as partial, this run would report a
+; question it can decide. The same reference under a narrowed scan is
+; pkg-a/gen/dune.
 (executable
  (name gen))
 

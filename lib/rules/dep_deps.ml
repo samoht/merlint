@@ -35,6 +35,19 @@ let top_namespace name =
     distribution library: [unix], [str], [threads.posix], etc. *)
 let is_builtin lib = String_set.mem (top_namespace lib) ocaml_builtins
 
+(* [%{bin:NAME}] and [%{exe:PATH.exe}] reach the dep rules as one set of names,
+   and two spellings say the name is a target this project builds rather than a
+   binary some package installs. A name carrying a path separator came from
+   [%{exe:...}]: it points at a build target by path, and a [(public_name ...)]
+   never contains one. A [.exe] suffix says the same for the same-directory
+   spelling, [%{exe:fuzz.exe}], which carries no separator to be recognised by:
+   a [(public_name ...)] never ends in [.exe] either, so a name that does is
+   this project's own target however it was spelled. Neither is a dependency
+   candidate, so "the index names no package providing it" is an answer for
+   such a name however narrow this run's scan was. *)
+let is_project_target bin =
+  String.contains bin '/' || Filename.check_suffix bin ".exe"
+
 (** [own_libs pkg] is the set of libraries declared by [pkg] itself -- a package
     never needs to declare a dep on itself. *)
 let own_libs pkg = String_set.of_list (Project_index.Package.library_names pkg)

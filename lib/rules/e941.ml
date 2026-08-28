@@ -75,16 +75,8 @@ let check_runtime_use ~note ~package ~depends_set ~own used_lib =
    cram test fires (build or test time), not linked at runtime. So it is
    satisfied by the providing package appearing in any dependency scope --
    runtime [depends:], build, or [{with-test}] -- not only runtime. *)
-(* [%{bin:NAME}] and [%{exe:PATH.exe}] reach this rule as one set of names, and
-   a name carrying a path separator came from the second: it points at a build
-   target of this project by path, not at a binary some package installs. A
-   [(public_name ...)] never contains one, so such a name is not a dependency
-   candidate and "the index names no package providing it" is an answer for it
-   however narrow this run's scan was. *)
-let is_target_path bin = String.contains bin '/'
-
 let check_bin_use ~note ~package ~depends_set ~build_set ~test_set bin =
-  if is_target_path bin then None
+  if Dep_deps.is_project_target bin then None
   else
     match Project_index.package_of_binary (P.index package) bin with
     | None ->

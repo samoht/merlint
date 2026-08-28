@@ -237,8 +237,32 @@ returns 0 under this same summary turns this test red.
   Summary: ✗ 0 total issues (applied 1 rule, 1 rule not checked)
   [2]
 
-E941 could not resolve two names, and the summary counts one rule. A rule that
-cannot resolve forty names is still one rule this run did not check, and
-counting the names would read as forty rules. The count is all the text report
-says; [--json] carries a [failed_checks] member per name, each naming the rule
-and what it could not resolve.
+E941 could not resolve one name, pkg-a.helper, and the summary counts one
+rule. A rule that cannot resolve forty names is still one rule this run did not
+check, and counting the names would read as forty rules. The count is all the
+text report says; [--json] carries a [failed_checks] member per name, each
+naming the rule and what it could not resolve.
+
+pkg-a is clean under the same narrowing. Its gen/ directory holds a
+same-directory [%{exe:gen.exe}], the shape every package with a fuzz/ directory
+has, and that name is a target of this project rather than a binary any package
+installs -- so the rule decides it without consulting the index, and a scan
+that never saw the rest of the tree is still a complete answer here.
+
+  $ merlint -r E941 unscanned/pkg-a
+  Dune root: $TESTCASE_ROOT/unscanned
+  Running merlint analysis...
+  
+  Analyzing 2 files
+  
+  ✓ Code Quality (0 total issues)
+  ✓ Code Style (0 total issues)
+  ✓ Naming Conventions (0 total issues)
+  ✓ Documentation (0 total issues)
+  ✓ Project Structure (0 total issues)
+  ✓ Test Quality (0 total issues)
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
+  
+  Summary: ✓ 0 total issues (applied 1 rule)
+  ✓ All checks passed!

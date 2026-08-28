@@ -113,7 +113,7 @@ let has_public_artifact package =
    (remove). E941 accepts the same tool in any scope. *)
 let bin_use_packages package =
   P.bin_uses package
-  |> List.filter (fun bin -> not (String.contains bin '/'))
+  |> List.filter (fun bin -> not (Dep_deps.is_project_target bin))
   |> List.filter_map (Project_index.package_of_binary (P.index package))
   |> List.fold_left
        (fun acc p -> Dep_deps.String_set.add p acc)
