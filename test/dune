@@ -39,6 +39,16 @@
 ; so an edit to any merlint source left it linting the previous version and
 ; saying nothing, which is the failure it exists to catch.
 ;
+; E941 is off because this root cannot answer it. The rule resolves each
+; library in (libraries ...) to the package providing it, and resolution reads
+; the packages the scan covered plus _opam/lib and _build/install/default/lib.
+; The root here is the built copy under _build/default/merlint, which has no
+; switch beside it and holds one package, so every external library merlint
+; links -- cmdliner, eio, fmt -- resolves to nothing and the rule can decide
+; nothing about them. It is answered by the runs made from the work-tree root,
+; where both install trees are present: the pre-commit hook's, and a tree-wide
+; merlint. Left on, it reports 23 undecided questions on every runtest.
+;
 ; lib/examples.ml is excluded because it is generated: the root this runs from
 ; is a copy in which the generated file sits beside the rule that generates it,
 ; so a dune build there refuses with "Multiple rules generated" and merlint
@@ -63,4 +73,4 @@
  (action
   (chdir
    ..
-   (run %{bin:merlint} --exclude lib/examples.ml lib bin))))
+   (run %{bin:merlint} --rules all-E941 --exclude lib/examples.ml lib bin))))

@@ -1,0 +1,13 @@
+; A %{exe:...} reference to a target of this project. It reaches E941 beside
+; %{bin:...} as the bare name "gen", which no package installs, so resolution
+; answers nothing for it -- and over a whole-project index that is an answer,
+; not an undecided question. Here to hold that: were the gate to treat every
+; scan as partial, this run would report a question it can decide.
+(executable
+ (name gen))
+
+(rule
+ (alias check)
+ (deps %{exe:gen.exe})
+ (action
+  (progn)))
