@@ -48,6 +48,6 @@ let rule =
   Rule.v ~code:"E825" ~title:"Missing csv dependency" ~category:Interop_testing
     ~hint:
       "Interop tests with CSV traces should use csv for parsing. Add csv to \
-       the (libraries ...) in the dune file and use Csv.decode_file with a Row \
+       the (libraries ...) in the dune file and use Csv.of_file with a Row \
        codec."
     ~examples:[] ~pp (Project check)

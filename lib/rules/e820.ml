@@ -36,6 +36,6 @@ let pp ppf { dir } =
 let rule =
   Rule.v ~code:"E820" ~title:"Hand-rolled CSV parsing" ~category:Interop_testing
     ~hint:
-      "Use csv (Csv.decode_file with a Csv.Row codec) for CSV trace parsing. \
-       Never hand-roll CSV readers with open_in/input_line/split_on_char."
+      "Use csv (Csv.of_file with a Csv.Row codec) for CSV trace parsing. Never \
+       hand-roll CSV readers with open_in/input_line/split_on_char."
     ~examples:[] ~pp (Project check)

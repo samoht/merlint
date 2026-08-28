@@ -1,1 +1,1 @@
-let () = ignore (Csv.decode_file "traces/sample.csv")
+let () = ignore (Csv.of_file "traces/sample.csv")
