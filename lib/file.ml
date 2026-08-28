@@ -10,8 +10,8 @@ let is_in_examples path =
    govern that directory exactly as they govern [fuzz/] itself. Keyed on the
    immediate parent alone, every such directory was exempt from all of them by
    accident. *)
-let is_in_fuzz_dir file =
-  Fpath.parent file |> Fpath.segs |> List.exists (String.equal "fuzz")
+let is_fuzz_dir dir = Fpath.segs dir |> List.exists (String.equal "fuzz")
+let is_in_fuzz_dir file = is_fuzz_dir (Fpath.parent file)
 
 let is_in_test_dir file =
   let dir = Fpath.parent file |> Fpath.basename in

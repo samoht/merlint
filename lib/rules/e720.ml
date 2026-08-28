@@ -2,22 +2,22 @@
 
 type payload = { directory : string; stanza_names : string list }
 
-(** Collect all stanza names in fuzz/ directories from both test and executable
-    stanzas. *)
+(* Collect all stanza names in fuzz/ directories from both test and executable
+   stanzas, keyed on the directory each stanza is declared in, which the stanza
+   record carries. The parent of a source file is not that directory: a
+   [(copy_files ../other/fuzz.ml)] import compiles in the directory holding the
+   stanza from a file that stays where it was named, so keying on a file's
+   parent files the importing stanza under the directory it imported from and
+   the two read as one directory holding two stanzas. *)
 let fuzz_stanzas_by_dir ctx =
   let collect_dirs stanzas =
     List.filter_map
       (fun (stanza : Project_index.source_stanza) ->
-        let name = stanza.name in
-        if not (String.starts_with ~prefix:"fuzz" name) then None
-        else
-          match
-            List.find_opt
-              (fun f -> Fpath.has_ext ".ml" f && File.is_in_fuzz_dir f)
-              stanza.files
-          with
-          | Some f -> Some (Path.parent (Context.resolve ctx f), name)
-          | None -> None)
+        if
+          String.starts_with ~prefix:"fuzz" stanza.name
+          && File.is_fuzz_dir stanza.dir
+        then Some (Context.resolve ctx stanza.dir, stanza.name)
+        else None)
       stanzas
   in
   collect_dirs (Context.test_stanzas ctx)

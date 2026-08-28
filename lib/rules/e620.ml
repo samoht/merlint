@@ -2,14 +2,17 @@
 
 type payload = { directory : string; stanza_names : string list }
 
+(* Group by the directory the stanza is declared in, which the stanza record
+   carries. The parent of a source file is not that directory: a
+   [(copy_files ../js/test.ml)] import compiles in the directory holding the
+   stanza from a file that stays where it was named, so keying on a file's
+   parent files the importing stanza under the directory it imported from and
+   the two read as one directory holding two stanzas. *)
 let check (ctx : Context.project) =
-  (* Group test stanzas by directory *)
   let by_dir =
-    List.filter_map
+    List.map
       (fun (t : Project_index.source_stanza) ->
-        match t.files with
-        | f :: _ -> Some (Path.parent (Context.resolve ctx f), t.name)
-        | [] -> None)
+        (Context.resolve ctx t.dir, t.name))
       (Context.test_stanzas ctx)
   in
   let dirs = List.sort_uniq Path.compare (List.map fst by_dir) in

@@ -4,6 +4,12 @@ val is_in_examples : string -> bool
 (** [is_in_examples path] returns [true] if [path] is in an examples directory.
 *)
 
+val is_fuzz_dir : Fpath.t -> bool
+(** [is_fuzz_dir dir] returns [true] if [dir] is a directory named [fuzz] or
+    lies below one. This is the directory-level form {!is_in_fuzz_dir} is
+    defined from, for callers that hold the directory itself rather than a file
+    in it. *)
+
 val is_in_fuzz_dir : Fpath.t -> bool
 (** [is_in_fuzz_dir file] returns [true] if [file] is below a directory named
     [fuzz], at any depth: [fuzz/eio/fuzz_chaos.ml] is in a fuzz directory as

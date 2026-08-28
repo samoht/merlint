@@ -1,0 +1,13 @@
+; The importing half of the copy_files pair. This directory holds one test
+; stanza and no source of its own: the module it compiles is drawn from
+; ../source and stays where it was named, as the js/wasm arms of a package
+; that runs one spec under two backends do. The directory a stanza is declared
+; in is not the directory its sources sit in, and reading the second for the
+; first counts this stanza against ../source.
+
+(copy_files#
+ (files ../source/test.ml))
+
+(test
+ (name test)
+ (libraries alcotest))

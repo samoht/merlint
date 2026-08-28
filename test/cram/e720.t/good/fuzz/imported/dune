@@ -1,0 +1,15 @@
+; The importing half of the copy_files pair. This directory holds one fuzz
+; stanza and no source of its own: the modules it compiles are drawn from
+; ../ and stay where they were named. The directory a stanza is declared in is
+; not the directory its sources sit in, and reading the second for the first
+; counts this stanza against ../.
+
+(copy_files#
+ (files ../fuzz.ml))
+
+(copy_files#
+ (files ../fuzz_parser.ml))
+
+(executable
+ (name fuzz)
+ (libraries alcobar))
