@@ -109,11 +109,15 @@ let source_stanzas pkg =
        ([], [])
   |> snd |> List.rev
 
-let dead_dep ~pkg ~imports ~stubs_stanza name =
+let code = "E956"
+
+let dead_dep ~note ~pkg ~imports ~stubs_stanza name =
   if Dep_deps.is_builtin name then None
   else
     match Project_index.library_used_by pkg name with
-    | None -> None
+    | None ->
+        Dep_deps.note_unresolved ~note ~package:pkg ~what:"library" name;
+        None
     | Some lib ->
         if Project_index.Library.is_virtual_implementation lib then None
         else if stubs_stanza && Project_index.Library.has_foreign_stubs lib then
@@ -125,30 +129,31 @@ let dead_dep ~pkg ~imports ~stubs_stanza name =
             None
           else Some name
 
-let check_stanza ~root ~pkg s =
+let check_stanza ~note ~root ~pkg s =
   if s.links_all || s.files = [] then []
   else
     match stanza_imports ~root s.files with
     | None -> []
     | Some imports ->
         s.libs
-        |> List.filter_map (dead_dep ~pkg ~imports ~stubs_stanza:s.stubs)
+        |> List.filter_map (dead_dep ~note ~pkg ~imports ~stubs_stanza:s.stubs)
         |> List.map (fun library ->
             let loc = Loc.in_file (Loc.current_dir_relative s.dune) in
             Issue.v ~loc { stanza = s.name; library })
 
-let check_package ~root pkg =
+let check_package ~note ~root pkg =
   library_stanzas pkg @ source_stanzas pkg
-  |> List.concat_map (check_stanza ~root ~pkg)
+  |> List.concat_map (check_stanza ~note ~root ~pkg)
 
 let check ctx =
   let index = Context.index ctx in
   let root = Context.project_root_path ctx in
+  let note = Dep_deps.resolution_note ctx ~rule:code in
   Project_index.source_package_list index
-  |> List.concat_map (check_package ~root)
+  |> List.concat_map (check_package ~note ~root)
 
 let rule =
-  Rule.v ~code:"E956" ~title:"Dead library dependency"
+  Rule.v ~code ~title:"Dead library dependency"
     ~hint:
       "A stanza's [(libraries ...)] entry is dead when no compilation unit of \
        that library appears in the imports the compiler recorded in the \

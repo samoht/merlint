@@ -28,21 +28,30 @@ type payload = {
 
 module P = Project_index.Package
 
-let packages_of_lib package lib =
-  Project_index.libraries_used_by package [ lib ]
-  |> List.map Project_index.Library.package
-  |> List.map Project_index.Package.name
+let code = "E943"
 
-let resolve_pkgs package libs =
+let packages_of_lib ~note package lib =
+  match Project_index.libraries_used_by package [ lib ] with
+  | [] ->
+      if not (Dep_deps.is_builtin lib) then
+        Dep_deps.note_unresolved ~note ~package ~what:"library" lib;
+      []
+  | libs ->
+      libs
+      |> List.map Project_index.Library.package
+      |> List.map Project_index.Package.name
+
+let resolve_pkgs ~note package libs =
   List.fold_left
     (fun acc lib ->
-      packages_of_lib package lib
+      packages_of_lib ~note package lib
       |> List.fold_left (fun acc pkg -> Dep_deps.String_set.add pkg acc) acc)
     Dep_deps.String_set.empty libs
 
 let example_lib_for libs ~package ~dep =
+  let note (_ : string) = () in
   libs
-  |> List.find_opt (fun lib -> List.mem dep (packages_of_lib package lib))
+  |> List.find_opt (fun lib -> List.mem dep (packages_of_lib ~note package lib))
   |> Option.value ~default:dep
 
 let dep_provides_ocaml_libraries package name =
@@ -104,24 +113,25 @@ let has_public_artifact package =
    (remove). E941 accepts the same tool in any scope. *)
 let bin_use_packages package =
   P.bin_uses package
+  |> List.filter (fun bin -> not (String.contains bin '/'))
   |> List.filter_map (Project_index.package_of_binary (P.index package))
   |> List.fold_left
        (fun acc p -> Dep_deps.String_set.add p acc)
        Dep_deps.String_set.empty
 
-let check_package package =
+let check_package ~note package =
   let pkg_name = P.name package in
   let has_public_artifact = has_public_artifact package in
   let runtime_uses = closed_runtime_library_uses package in
   let test_uses = P.test_library_uses package in
   let dev_uses = P.dev_library_uses package in
-  let runtime_pkgs = resolve_pkgs package runtime_uses in
+  let runtime_pkgs = resolve_pkgs ~note package runtime_uses in
   let test_pkgs =
     Dep_deps.String_set.union
-      (resolve_pkgs package test_uses)
+      (resolve_pkgs ~note package test_uses)
       (bin_use_packages package)
   in
-  let dev_pkgs = resolve_pkgs package dev_uses in
+  let dev_pkgs = resolve_pkgs ~note package dev_uses in
   let runtime_depends = P.depends package in
   List.filter_map
     (fun dep ->
@@ -160,7 +170,9 @@ let check_package package =
     runtime_depends
 
 let check (ctx : Context.project) =
-  Dep_deps.run_per_package ~check_package (Context.index ctx)
+  let note = Dep_deps.resolution_note ctx ~rule:code in
+  Dep_deps.run_per_package ~check_package:(check_package ~note)
+    (Context.index ctx)
 
 let suggest_str = function
   | Test -> "{with-test}"
@@ -195,7 +207,7 @@ let pp ppf p =
         (suggest_str p.suggest)
 
 let rule =
-  Rule.v ~code:"E943" ~title:"Misclassified runtime dependency"
+  Rule.v ~code ~title:"Misclassified runtime dependency"
     ~category:Rule.Project_structure
     ~hint:
       "A dep used only from [(test ...)] / [(tests ...)] or a runtest-attached \
