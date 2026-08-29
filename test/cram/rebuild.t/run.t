@@ -127,6 +127,14 @@ neither reported nor called clean.
   merlint: nothing was analysed, because a verdict computed without the artefacts its rules read is not a verdict about this code.
   [124]
 
+The JSON report carries the same refusal as an instrument failure, not as an
+unchecked file. Zero analysed and zero unchecked say that no lint verdict was
+computed; [build_failure] says why, and [passed] cannot be read as green:
+
+  $ (merlint --json --build -r E105 u/lib/ulib.ml > report.json 2>/dev/null; status=$?; sed -E 's/.*"files_analyzed":([0-9]+).*"unchecked":([0-9]+).*"build_failure":\{"kind":"([^"]+)","error":".*"\},"passed":([^,}]+).*/files_analyzed=\1 unchecked=\2 build_failure=\3 passed=\4/' report.json; exit $status)
+  files_analyzed=0 unchecked=0 build_failure=broken passed=false
+  [124]
+
 Once per run, there too. A run given [--build] whose build failed does not get
 a second build out of the repair: one failing build is the answer, and running
 it twice would double the wait before the refusal.
