@@ -66,6 +66,20 @@ asked for:
   merlint: nothing was analysed, because a run that skipped it would report the files it did read as the whole answer.
   [4]
 
+A path that is there, but not under the dune root the run resolved, is refused
+the same way. Every rule resolves its sources beneath that root, so nothing
+this run does answers for a path outside it. It used to reach the engine, which
+resolves it and raises, and the run ended as "merlint: internal error, uncaught
+exception" over an argument merlint had parsed perfectly and could simply not
+act on. The root is named as well as the path, because the answer is a pair:
+
+  $ printf 'let x = 1\n' > outside.ml
+  $ merlint -r E425 t/lib outside.ml
+  Dune root: $TESTCASE_ROOT/t
+  merlint: outside.ml is outside the dune root $TESTCASE_ROOT/t
+  merlint: nothing was analysed, because no rule reads a source from outside the root the run resolved.
+  [4]
+
 Paths that are all there run as before:
 
   $ merlint -r E425 t/lib

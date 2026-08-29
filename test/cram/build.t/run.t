@@ -39,13 +39,13 @@ is its alias: Dune has no @./check to build.
   $ merlint -v --build -r E100 . 2>&1 | grep '^Running: '
   Running: dune build --root '$TESTCASE_ROOT/proj/' '@check'
 
-A directory outside the dune root has no alias under that root. Building the
-whole tree instead would do something other than what was asked without saying
-so, so the warm-up refuses and names the scope it cannot place. The run refuses
-with it: merlint was asked to build before it read, it did not build, and a
-verdict computed without the artefacts its rules read answers for nothing.
+A directory outside the dune root is refused before any of this. It has no
+alias under that root, but it also has no source any rule would read, so the
+answer does not depend on what [--build] would have done next and the run does
+not get that far. Both halves are named resolved, because a caller checking a
+relative argument against a root needs to see where it landed:
 
   $ merlint --build -r E100 alpha ../outside 2>&1 >/dev/null
-  merlint: $TESTCASE_ROOT/outside/ is outside the dune root $TESTCASE_ROOT/proj/, so it has no [@check] alias there
-  merlint: nothing was analysed, because a verdict computed without the artefacts its rules read is not a verdict about this code.
+  merlint: $TESTCASE_ROOT/outside is outside the dune root $TESTCASE_ROOT/proj/
+  merlint: nothing was analysed, because no rule reads a source from outside the root the run resolved.
   [4]

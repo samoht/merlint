@@ -74,12 +74,15 @@ let project_with_line_directive_copy root contents =
   let source = Filename.concat root "lib/shared.ml" in
   let context = Filename.concat root "_build/default" in
   let materialized = Filename.concat context "lib/backend/shared.ml" in
-  write (Filename.concat root "dune-project")
+  write
+    (Filename.concat root "dune-project")
     "(lang dune 3.21)\n(package (name copy))\n";
-  write (Filename.concat root "lib/dune")
+  write
+    (Filename.concat root "lib/dune")
     "(library (name copy) (modules copy))\n";
   write (Filename.concat root "lib/copy.ml") "let x = 0\n";
-  write (Filename.concat root "lib/backend/dune")
+  write
+    (Filename.concat root "lib/backend/dune")
     "(library (name backend))\n(copy_files# ../shared.ml)\n";
   write source contents;
   write materialized ("# 1 \"lib/shared.ml\"\n" ^ contents);

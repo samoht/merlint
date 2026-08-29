@@ -141,7 +141,7 @@ let source_status ~root ~index file =
   match Project_index.source_presence index file with
   | Project_index.Absent -> Missing
   | Project_index.Unindexed -> Skipped
-  | Project_index.Indexed -> (
+  | Project_index.Indexed ->
       let artefacts =
         Option.to_list (cmt_artefact ~root file)
         @ materialized_artefacts ~root ~index (Fpath.to_string file)
@@ -150,9 +150,7 @@ let source_status ~root ~index file =
         Compiled
       else if
         List.exists
-          (function
-            | _, Error Merlin.Cmt.Unusable.Partial -> true
-            | _ -> false)
+          (function _, Error Merlin.Cmt.Unusable.Partial -> true | _ -> false)
           artefacts
       then Uncompilable
-      else Not_compiled)
+      else Not_compiled

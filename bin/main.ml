@@ -331,15 +331,13 @@ module Json_report = struct
       issues
       (List.map exclusion_of_engine excluded)
 
-  let refused ~project_root reason =
-    let kind =
-      match reason with
-      | Merlint.Build.Contended _ -> "contended"
-      | Merlint.Build.Broken _ -> "broken"
-      | Merlint.Build.Unscoped _ -> "unscoped"
-    in
+  (* Every refused run reports the same document: no counts, and
+     [build_failure] naming the instrument that failed. [kind] is the
+     machine-readable half, so a caller tells "your tree does not build" from
+     "merlint does not work" by reading a field rather than the prose. *)
+  let refused ~project_root ~kind ~error =
     v project_root 0 0 0 0 [] [] [] []
-      (Some (build_failure kind (Merlint.Build.message reason)))
+      (Some (build_failure kind error))
       false [] []
 
   let print t = Fmt.pr "%s@." (Json.to_string json t)
@@ -351,8 +349,33 @@ let print_json_report ~project_root ~files_analyzed ~rules_applied
     ~unchecked_files ~unclaimed_files ~skipped ~failed ~excluded issues
   |> Json_report.print
 
+let build_failure_kind = function
+  | Merlint.Build.Contended _ -> "contended"
+  | Merlint.Build.Broken _ -> "broken"
+  | Merlint.Build.Unscoped _ -> "unscoped"
+
 let print_json_refusal ~project_root reason =
-  Json_report.refused ~project_root reason |> Json_report.print
+  Json_report.refused ~project_root
+    ~kind:(build_failure_kind reason)
+    ~error:(Merlint.Build.message reason)
+  |> Json_report.print
+
+(* A refusal whose cause is merlint rather than the tree it was pointed at. It
+   ends where the others end -- nothing analysed, status 4 -- because a caller
+   acts on that identically: it stops and reads the text. The distinction it
+   does act on is in the document, under [kind], which is the field built to
+   carry it. *)
+let refuse_internal ~json_output ~project_root error =
+  if json_output then
+    Json_report.refused ~project_root ~kind:"internal" ~error
+    |> Json_report.print
+  else begin
+    Fmt.epr "merlint: %s@." error;
+    Fmt.epr
+      "merlint: nothing was analysed, because the fault is merlint's and \
+       any        verdict it printed would be one this defect produced.@."
+  end;
+  Stdlib.exit Merlint_doc.Exit_status.refused
 
 (* Group issues by category for visual reporting *)
 let group_issues_by_category all_issues =
@@ -644,7 +667,7 @@ let print_summary ?(unchecked = 0) ?(skipped = []) ?(failed = []) ?remedy
       sample
   end
 
-let run_engine ?domain_mgr ~load_file ?profiling ~bail ~exclude
+let run_engine ?domain_mgr ~load_file ?profiling ~json_output ~bail ~exclude
     ~include_vendored ~index_is_partial rule_filter analyze_set analyze_roots
     build_index project_root =
   match rule_filter with
@@ -662,8 +685,9 @@ let run_engine ?domain_mgr ~load_file ?profiling ~bail ~exclude
           (* An empty result here would report a run that examined nothing as a
              clean one. The filter is merlint's own literal, so a parse failure
              is a defect in merlint and it says so rather than passing. *)
-          Fmt.epr "merlint: the default rule filter does not parse: %s@." msg;
-          Stdlib.exit Cmd.Exit.internal_error)
+          Fmt.kstr
+            (refuse_internal ~json_output ~project_root)
+            "the default rule filter does not parse: %s" msg)
 
 let print_exclusion_stats all_excluded =
   if all_excluded <> [] then begin
@@ -719,8 +743,8 @@ let run_analysis ?domain_mgr ~load_file ~json_output ~repair ~skipped
       m "Analysing %s files"
         (match files_count with None -> "all" | Some n -> string_of_int n));
   let analyse () =
-    run_engine ?domain_mgr ~load_file ?profiling:profiling_state rule_filter
-      ~bail ~exclude ~include_vendored ~index_is_partial analyze_set
+    run_engine ?domain_mgr ~load_file ?profiling:profiling_state ~json_output
+      rule_filter ~bail ~exclude ~include_vendored ~index_is_partial analyze_set
       analyze_roots build_index project_root
   in
   let result = analyse () in
@@ -964,6 +988,40 @@ let build_scopes_of_files files =
       | `Other | `Missing -> None)
     files
 
+(* A path outside the dune root is a path merlint will not read: every rule
+   resolves its sources under that root, so nothing this run does answers for
+   it. It reached the engine, which resolves it with [Project_index.Path.under]
+   and raises, and the run ended in "merlint: internal error, uncaught
+   exception" over an argument merlint had parsed perfectly and simply could
+   not act on -- reported as a defect in merlint, and as status 125, which
+   timeout(1) also spends.
+
+   Refused here instead, where the root has just been chosen, because that is
+   the first point that knows both halves. The root is named as well as the
+   path: the answer is a pair, and a caller who sees only the path it gave will
+   look for the fault in the path. *)
+let refuse_paths_outside_root ~project_root files =
+  let root = Project_index.Path.v project_root in
+  let outside =
+    List.filter
+      (fun path ->
+        not
+          (Project_index.Path.is_descendant ~ancestor:root
+             (Project_index.Path.v path)))
+      files
+  in
+  match outside with
+  | [] -> ()
+  | outside ->
+      List.iter
+        (fun path ->
+          Fmt.epr "merlint: %s is outside the dune root %s@." path project_root)
+        outside;
+      Fmt.epr
+        "merlint: nothing was analysed, because no rule reads a source from \
+         outside the root the run resolved.@.";
+      Stdlib.exit Merlint_doc.Exit_status.refused
+
 let load_file_via_eio fs filename = Eio.Path.load Eio.Path.(fs / filename)
 
 let project_root_of_files = function
@@ -1081,6 +1139,7 @@ let analyze_files mgr clock fs domain_mgr ?(exclude_patterns = []) ?rule_filter
   in
   Log.info (fun m -> m "Dune root: %s (cwd: %s)" project_root (Sys.getcwd ()));
   if not json_output then Fmt.pr "Dune root: %s@." project_root;
+  refuse_paths_outside_root ~project_root files;
   Log.info (fun m -> m "Scanning project structure...");
   let analyze_set = analyze_set_of_files files in
   let analyze_roots = analyze_roots_of_files files in

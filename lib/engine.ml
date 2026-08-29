@@ -354,8 +354,7 @@ let file_view ?profiling ~load_file ~index ~backend filename =
     |> List.map Fpath.to_string
   in
   let source =
-    Merlin.Source.v ~file:source_filename ~content
-    |> fun source ->
+    Merlin.Source.v ~file:source_filename ~content |> fun source ->
     Merlin.Source.with_materialized_files source materialized_files
   in
   let typedtree () =
