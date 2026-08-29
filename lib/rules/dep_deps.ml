@@ -81,11 +81,18 @@ let resolution_note ctx ~rule =
   else fun (_ : string) -> ()
 
 (** [note_unresolved ~note ~package ~what name] hands [note] the sentence for
-    one such name: what could not be resolved, and which package used it. It
-    reaches the user through [--json]; the text summary counts the rule. *)
+    one such name -- but only when the name is genuinely undecided, which is the
+    case exactly when a package this run did not scan could be the one providing
+    it. Otherwise the empty lookup is an answer, the same answer a whole-tree
+    run gives, and the rule's silence means what it says. The sentence reaches
+    the user through [--json]; the text summary counts the rule. *)
 let note_unresolved ~note ~package ~what name =
-  Fmt.kstr note "no package provides %s %s, used by %s" what name
-    (Project_index.Package.name package)
+  let index = Project_index.Package.index package in
+  if Project_index.provider_left_unscanned index what name then
+    Fmt.kstr note "no package provides %s %s, used by %s"
+      (match what with `Library -> "library" | `Binary -> "binary")
+      name
+      (Project_index.Package.name package)
 
 (** [run_per_package ~check_package index] applies [check_package] to every
     {!Project_index.source_package_list}, attaches an [opam_loc]-derived

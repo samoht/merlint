@@ -34,7 +34,7 @@ let packages_of_lib ~note package lib =
   match Project_index.libraries_used_by package [ lib ] with
   | [] ->
       if not (Dep_deps.is_builtin lib) then
-        Dep_deps.note_unresolved ~note ~package ~what:"library" lib;
+        Dep_deps.note_unresolved ~note ~package ~what:`Library lib;
       []
   | libs ->
       libs

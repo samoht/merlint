@@ -1,0 +1,6 @@
+; A binary pkg-b installs. Its name is not pkg-b's name and dune does not
+; require it to be: a package's own name relates to its public LIBRARY names,
+; never to the binaries it installs. pkg-c below demands this one.
+(executable
+ (name tool)
+ (public_name pkg-b-tool))

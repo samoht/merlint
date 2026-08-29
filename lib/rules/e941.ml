@@ -33,7 +33,7 @@ let check_used_lib ~note ~package ~depends_set ~own used_lib =
   else
     match Project_index.library_used_by package used_lib with
     | None ->
-        Dep_deps.note_unresolved ~note ~package ~what:"library" used_lib;
+        Dep_deps.note_unresolved ~note ~package ~what:`Library used_lib;
         `Skip
     | Some lib ->
         let used_pkg = P.name (Project_index.Library.package lib) in
@@ -80,7 +80,7 @@ let check_bin_use ~note ~package ~depends_set ~build_set ~test_set bin =
   else
     match Project_index.package_of_binary (P.index package) bin with
     | None ->
-        Dep_deps.note_unresolved ~note ~package ~what:"binary" bin;
+        Dep_deps.note_unresolved ~note ~package ~what:`Binary bin;
         None
     | Some used_pkg
       when used_pkg = P.name package

@@ -1,0 +1,16 @@
+(library
+ (name pkg_c)
+ (public_name pkg-c))
+
+; A demand for a binary pkg-b installs. The name carries no path and no .exe,
+; so it is a %{bin:...} demand rather than a target of this project, and
+; nothing about the name says which package installs it. Over the whole
+; workspace the index answers "pkg-b", which pkg-c.opam declares, and the rule
+; is silent. Narrowed to pkg-c, pkg-b is unscanned and the same lookup answers
+; nothing -- which is also what a name no package installs looks like -- so the
+; rule cannot decide and says so.
+(rule
+ (alias check)
+ (deps %{bin:pkg-b-tool})
+ (action
+  (progn)))

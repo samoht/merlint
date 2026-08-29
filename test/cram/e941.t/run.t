@@ -176,7 +176,7 @@ Pointed at the whole workspace, the index holds pkg-a and the rule decides:
   Dune root: $TESTCASE_ROOT/unscanned/
   Running merlint analysis...
   
-  Analyzing 3 files
+  Analyzing 6 files
   
   ✓ Code Quality (0 total issues)
   ✓ Code Style (0 total issues)
@@ -223,7 +223,7 @@ returns 0 under this same summary turns this test red.
   Dune root: $TESTCASE_ROOT/unscanned
   Running merlint analysis...
   
-  Analyzing 2 files
+  Analyzing 3 files
   
   ✓ Code Quality (0 total issues)
   ✓ Code Style (0 total issues)
@@ -243,11 +243,14 @@ check, and counting the names would read as forty rules. The count is all the
 text report says; [--json] carries a [failed_checks] member per name, each
 naming the rule and what it could not resolve.
 
-pkg-a is clean under the same narrowing. Its gen/ directory holds a
-same-directory [%{exe:gen.exe}], the shape every package with a fuzz/ directory
-has, and that name is a target of this project rather than a binary any package
-installs -- so the rule decides it without consulting the index, and a scan
-that never saw the rest of the tree is still a complete answer here.
+pkg-a is clean under the same narrowing, on two counts. Its gen/ directory
+holds a same-directory [%{exe:gen.exe}], the shape every package with a fuzz/
+directory has, and that name is a target of this project rather than a binary
+any package installs, so the rule decides it without consulting the index. It
+also demands [%{bin:no-such-tool-anywhere}], which is a demand for an installed
+binary -- and no package this scan left out installs one by that name, so
+"nothing provides it" is the answer here and not a question. A scan that never
+saw the rest of the tree is still a complete answer for both.
 
   $ merlint -r E941 unscanned/pkg-a
   Dune root: $TESTCASE_ROOT/unscanned
@@ -266,3 +269,31 @@ that never saw the rest of the tree is still a complete answer here.
   
   Summary: ✓ 0 total issues (applied 1 rule)
   ✓ All checks passed!
+
+pkg-c demands a binary pkg-b installs, and declares pkg-b in its [depends:], so
+the whole-workspace run above is silent about it. Narrowed to pkg-c, pkg-b is
+never scanned, and the lookup answers nothing -- the same answer it gives for a
+name no package installs at all. Only the index's record of what this scan left
+out separates them, and it must, because nothing in the name "pkg-b-tool" says
+which package installs it: dune ties a package's name to its public library
+names and to nothing else. A rule that decided a binary by looking for a
+package of that name would call this run clean and drop a question it cannot
+answer, which is why the exit status below is asserted.
+
+  $ merlint -r E941 unscanned/pkg-c
+  Dune root: $TESTCASE_ROOT/unscanned
+  Running merlint analysis...
+  
+  Analyzing 1 files
+  
+  ✓ Code Quality (0 total issues)
+  ✓ Code Style (0 total issues)
+  ✓ Naming Conventions (0 total issues)
+  ✓ Documentation (0 total issues)
+  ✓ Project Structure (0 total issues)
+  ✓ Test Quality (0 total issues)
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
+  
+  Summary: ✗ 0 total issues (applied 1 rule, 1 rule not checked)
+  [2]

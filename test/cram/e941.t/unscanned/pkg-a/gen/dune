@@ -15,3 +15,15 @@
  (deps %{exe:gen.exe})
  (action
   (progn)))
+
+; A demand for a binary no package in this workspace installs. Narrowed to
+; pkg-a, the index answers nothing for it -- and that IS the answer, the same
+; one the whole workspace gives, because no package left out of this scan
+; installs a binary of that name either. Were the rule to treat every
+; unresolved binary under a narrowed scan as undecided, this package would
+; stop being clean below.
+(rule
+ (alias check)
+ (deps %{bin:no-such-tool-anywhere})
+ (action
+  (progn)))

@@ -54,15 +54,17 @@ val resolution_note : Context.project -> rule:string -> string -> unit
 val note_unresolved :
   note:(string -> unit) ->
   package:Project_index.Package.t ->
-  what:string ->
+  what:[ `Library | `Binary ] ->
   string ->
   unit
-(** [note_unresolved ~note ~package ~what name] hands [note] one sentence: no
-    package provides [name] (a [what] -- "library", "binary"), and [package]
-    uses it. The index answers "nothing provides it" both when nothing does and
-    when this run never scanned whatever does, so the rule cannot say whether
-    [package] declares it. Pass {!Context.cannot_evaluate} partially applied to
-    the calling rule's code. *)
+(** [note_unresolved ~note ~package ~what name] hands [note] one sentence -- no
+    package provides [name], and [package] uses it -- when, and only when, the
+    index says a package this run left unscanned could be the one providing it
+    ({!Project_index.provider_left_unscanned}). The lookup answers "nothing
+    provides it" both when nothing does and when this run never read whatever
+    does; that test is what tells the two apart, so a name it clears is one the
+    rule has decided rather than one it gave up on. Pass
+    {!Context.cannot_evaluate} partially applied to the calling rule's code. *)
 
 val run_per_package :
   check_package:(Project_index.Package.t -> 'a list) ->

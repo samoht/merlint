@@ -1,0 +1,3 @@
+opam-version: "2.0"
+synopsis: "Demands a binary another package installs"
+depends: [ "ocaml" "dune" "pkg-b" ]

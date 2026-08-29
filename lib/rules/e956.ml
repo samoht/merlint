@@ -116,7 +116,7 @@ let dead_dep ~note ~pkg ~imports ~stubs_stanza name =
   else
     match Project_index.library_used_by pkg name with
     | None ->
-        Dep_deps.note_unresolved ~note ~package:pkg ~what:"library" name;
+        Dep_deps.note_unresolved ~note ~package:pkg ~what:`Library name;
         None
     | Some lib ->
         if Project_index.Library.is_virtual_implementation lib then None
