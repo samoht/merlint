@@ -22,7 +22,8 @@ type callers
 (** Precomputed names that reference a [.suite] value. *)
 
 val callers : File_view.t -> callers option
-(** [callers view] extracts [.suite] callers once for repeated lookups. *)
+(** [callers view] extracts [.suite] callers once for repeated lookups, and is
+    [None] where no build artefact describes [view]: see {!type-resolved}. *)
 
 val references_in : callers -> string -> bool
 (** [references_in callers module_name] checks whether precomputed [callers]
@@ -31,9 +32,9 @@ val references_in : callers -> string -> bool
 val missing_references : File_view.t -> string list -> string list
 (** [missing_references view modules] is the subset of [modules] (capitalized
     module names) whose [<module>.suite] the runner [view] does not reference,
-    in input order. Empty when the typedtree is not built: an unresolved runner
-    answers no absence claims (see {!type-resolved}), it never flags every
-    module. The caller set is computed once for the whole list. *)
+    in input order. Empty where no build artefact describes the runner: an
+    unresolved runner answers no absence claims (see {!type-resolved}), it never
+    flags every module. The caller set is computed once for the whole list. *)
 
 (** The result of a typedtree-backed query. Returning this instead of a bare
     [bool] stops callers from reading {!constructor-Unresolved} as a negative
@@ -41,28 +42,32 @@ val missing_references : File_view.t -> string list -> string list
     into a false positive when artefacts are missing. *)
 type 'a resolved =
   | Unresolved
-      (** No fresh typedtree was available (the [.cmt]/[.cmti] is not built), so
-          the query could not run. *)
+      (** No [.cmt]/[.cmti] the compiler wrote for this source was available, so
+          the query could not run. A typedtree merlint typechecked in place of
+          one does not stand in: it recovers from the names it cannot resolve,
+          so what it omits is as much a fact about the build directory as about
+          the source. *)
   | Resolved of 'a  (** The query ran against a loaded typedtree. *)
 
 val references : File_view.t -> string -> bool resolved
 (** [references view module_name] is whether [view] references
-    [module_name].suite, or {!constructor-Unresolved} when the typedtree is not
-    built. *)
+    [module_name].suite, or {!constructor-Unresolved} where no artefact
+    describes [view]. *)
 
 val references_with_prefix : File_view.t -> prefix:string -> bool resolved
 (** [references_with_prefix view ~prefix] is whether [view] references a module
     whose name starts with [prefix] and exposes [suite], or
-    {!constructor-Unresolved} when the typedtree is not built. *)
+    {!constructor-Unresolved} where no artefact describes [view]. *)
 
 val calls_test_case : File_view.t -> bool resolved
 (** [calls_test_case view] is whether [view] calls an Alcotest test-case
-    constructor, or {!constructor-Unresolved} when the typedtree is not built.
-*)
+    constructor, or {!constructor-Unresolved} where no artefact describes
+    [view]. *)
 
 val is_compliant_view : expected:string -> File_view.t -> bool resolved
 (** [is_compliant_view ~expected view] is whether an interface exposes exactly
     one [suite] value with the expected test-suite type, or
-    {!constructor-Unresolved} when the typedtree is not built. The expected type
-    cannot be recognised without one, so a caller treating the absent answer as
-    a mismatch reports every compliant interface in an unbuilt tree. *)
+    {!constructor-Unresolved} where no artefact describes [view]. The expected
+    type cannot be recognised without one, so a caller treating the absent
+    answer as a mismatch reports every compliant interface in an unbuilt tree.
+*)

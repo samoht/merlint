@@ -1001,7 +1001,13 @@ let pp ppf t = Fmt.string ppf t.filename
 let typedtree t = force t t.typedtree
 let values t = force t t.values
 let is_resolved t = Option.is_some (force t t.typedtree)
-let docs_recorded t = force t t.docs = Merlin.Recorded
+
+(* Doc comments and resolved names come out of the same place. An artefact
+   carries both; a tree merlint typechecked itself has neither the comments nor
+   any assurance that every name in it resolved, so the two questions have one
+   answer. *)
+let from_artefact t = force t t.docs = Merlin.Recorded
+let docs_recorded = from_artefact
 
 (* {2 Name} *)
 

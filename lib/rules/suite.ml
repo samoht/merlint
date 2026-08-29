@@ -79,31 +79,41 @@ type callers = {
           library modules). Typically a small fraction of [exact]. *)
 }
 
+(* Every query below reads names out of the typedtree and answers a caller that
+   will conclude something from a name it does not find. Only an artefact
+   supports that conclusion: where none described the source, merlin typechecks
+   it and recovers from what it cannot resolve, so a module whose [.cmi] is not
+   in the build directory leaves no reference behind and the file reads as one
+   that never mentioned it. That is how E615 came to report modules a runner
+   plainly calls, and to report a different set of them on each run over one
+   unchanged tree, as a concurrent build moved the artefacts around. *)
 let callers view =
-  match File_view.resolved_identifiers view with
-  | None -> None
-  | Some refs ->
-      let exact = Hashtbl.create 64 in
-      let wrapped = ref [] in
-      List.iter
-        (fun ref_ ->
-          let name = File_view.Reference.name ref_ in
-          if File_view.Name.base name = "suite" then
-            match List.rev (File_view.Name.prefix name) with
-            | actual :: _ ->
-                Hashtbl.replace exact actual ();
-                if
-                  let len = String.length actual in
-                  let rec has_dunder i =
-                    if i + 1 >= len then false
-                    else if actual.[i] = '_' && actual.[i + 1] = '_' then true
-                    else has_dunder (i + 1)
-                  in
-                  has_dunder 0
-                then wrapped := actual :: !wrapped
-            | [] -> ())
-        refs;
-      Some { exact; wrapped = !wrapped }
+  if not (File_view.from_artefact view) then None
+  else
+    match File_view.resolved_identifiers view with
+    | None -> None
+    | Some refs ->
+        let exact = Hashtbl.create 64 in
+        let wrapped = ref [] in
+        List.iter
+          (fun ref_ ->
+            let name = File_view.Reference.name ref_ in
+            if File_view.Name.base name = "suite" then
+              match List.rev (File_view.Name.prefix name) with
+              | actual :: _ ->
+                  Hashtbl.replace exact actual ();
+                  if
+                    let len = String.length actual in
+                    let rec has_dunder i =
+                      if i + 1 >= len then false
+                      else if actual.[i] = '_' && actual.[i + 1] = '_' then true
+                      else has_dunder (i + 1)
+                    in
+                    has_dunder 0
+                  then wrapped := actual :: !wrapped
+              | [] -> ())
+          refs;
+        Some { exact; wrapped = !wrapped }
 
 let references_in callers module_name =
   Hashtbl.mem callers.exact module_name
@@ -133,7 +143,7 @@ let references_with_prefix view ~prefix =
            c.exact false)
 
 let calls_test_case view =
-  if not (File_view.is_resolved view) then Unresolved
+  if not (File_view.from_artefact view) then Unresolved
   else
     Resolved
       (File_view.calls_path view [ "Alcobar"; "test_case" ]
@@ -187,7 +197,7 @@ let is_compliant_view ~expected view =
   match expected_of_string expected with
   | None -> Resolved false
   | Some expected -> (
-      if not (File_view.is_resolved view) then Unresolved
+      if not (File_view.from_artefact view) then Unresolved
       else
         match File_view.typed_items view with
         | [ item ] when File_view.Item.kind item = File_view.Item.Value ->

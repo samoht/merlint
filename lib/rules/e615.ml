@@ -76,7 +76,7 @@ let check_test_info ctx env (test_stanza : Project_index.source_stanza) =
   | Some test_file -> (
       try
         let view = Context.file_view ctx (Context.resolve ctx test_file) in
-        if not (File_view.is_resolved view) then []
+        if not (File_view.from_artefact view) then []
         else
           let modules = test_modules env test_stanza test_file in
           Log.debug (fun m ->
@@ -86,9 +86,10 @@ let check_test_info ctx env (test_stanza : Project_index.source_stanza) =
                 (List.length modules) name
                 Fmt.(list ~sep:comma string)
                 modules);
-          (* An unresolved runner answers no absence claims: flagging every
-             module because the typedtree is stale is how this rule used to
-             flap under a concurrent build. *)
+          (* A runner no artefact describes answers no absence claims:
+             flagging every module because the tree merlint typechecked in its
+             place could not resolve them is how this rule used to flap under a
+             concurrent build. *)
           modules
           |> List.map String.capitalize_ascii
           |> Suite.missing_references view

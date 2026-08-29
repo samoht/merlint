@@ -56,3 +56,30 @@ Build good fixture project:
   
   Summary: ✓ 0 total issues (applied 1 rule)
   ✓ All checks passed!
+
+The same sources again, read against a build directory that no longer holds
+the artefacts for them. Dropping the runner's own artefact makes merlint
+typecheck it from source, and dropping the interface of the module it calls
+leaves that typecheck unable to resolve the call. Nothing the runner
+references has changed, so what E615 reports must not change either:
+  $ rm -f good/_build/default/test/.test.eobjs/byte/dune__exe__Test.cmt
+
+  $ rm -f good/_build/default/test/.test.eobjs/byte/dune__exe__Test_parser.cmi
+
+  $ merlint -r E615 good/
+  Dune root: $TESTCASE_ROOT/good/
+  Running merlint analysis...
+  
+  Analyzing 3 files
+  
+  ✓ Code Quality (0 total issues)
+  ✓ Code Style (0 total issues)
+  ✓ Naming Conventions (0 total issues)
+  ✓ Documentation (0 total issues)
+  ✓ Project Structure (0 total issues)
+  ✓ Test Quality (0 total issues)
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
+  
+  Summary: ✓ 0 total issues (applied 1 rule)
+  ✓ All checks passed!

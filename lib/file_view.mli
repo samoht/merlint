@@ -46,9 +46,23 @@ val docs_recorded : t -> bool
     the file when this is [false] rather than report on what it cannot see. *)
 
 val is_resolved : t -> bool
-(** [is_resolved t] is [true] iff a fresh typedtree was loaded from [.cmt] or
-    [.cmti]. Rules use this if they want to know whether typedtree-backed
-    accessors below will run or be skipped for this file. *)
+(** [is_resolved t] is [true] iff a typedtree is available for the file, whether
+    it was read from an artefact or typechecked from the source in place of one
+    that was missing or stale. Rules use this if they want to know whether the
+    typedtree-backed accessors below will run or be skipped for this file. A
+    rule that argues from what the tree does {e not} hold wants
+    {!from_artefact}. *)
+
+val from_artefact : t -> bool
+(** [from_artefact t] is [true] iff the typedtree came from a [.cmt] or [.cmti]
+    the compiler wrote for this exact source, and [false] when merlint
+    typechecked the source itself because no artefact described it. Both are a
+    typedtree to read and only one is evidence of absence: a typecheck recovers
+    from what it cannot resolve, so a reference whose module has no [.cmi] in
+    the build directory is simply not in the tree it produces. A rule that reads
+    that absence as the source not making the reference reports on the state of
+    a build directory, which is not what its finding says and not the same from
+    one run to the next. *)
 
 (** {2 Names — qualified identifiers}
 
