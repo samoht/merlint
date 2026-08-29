@@ -117,7 +117,10 @@ whose remedy is the real one. `passed` is false while any of the four
 has a member. All are complete, whatever the verbosity, so a repo-wide
 run can enumerate its own blind spot in one pass; the human-readable
 warnings sample ten of each and `-v` names them all, while every skipped
-path is named under the summary.
+path is named under the summary. `build_failure` is `null` on these
+reports. When a requested build fails, the same field instead holds a
+machine-readable `kind` and Dune's `error`; every count is zero and
+`passed` is false because no lint verdict was computed.
 `--json` suppresses the human `Dune root:` banner and the summary tables,
 leaving the exit status unchanged, so it stays usable as a gate. This is
 the format to consume from editors, CI, and git hooks.

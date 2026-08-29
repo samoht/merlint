@@ -166,6 +166,8 @@ module Json_report = struct
     error : string;
   }
 
+  type build_failure = { kind : string; error : string }
+
   type t = {
     project_root : string;
     files_analyzed : int;
@@ -176,6 +178,7 @@ module Json_report = struct
     unclaimed_files : string list;
     skipped_paths : string list;
     failed_checks : failure list;
+    build_failure : build_failure option;
     passed : bool;
     issues : issue list;
     excluded : exclusion list;
@@ -189,10 +192,11 @@ module Json_report = struct
 
   let exclusion rule file = ({ rule; file } : exclusion)
   let failure rule file kind error = ({ rule; file; kind; error } : failure)
+  let build_failure kind error = ({ kind; error } : build_failure)
 
   let v project_root files_analyzed rules_applied total_issues unchecked
-      unchecked_files unclaimed_files skipped_paths failed_checks passed issues
-      excluded =
+      unchecked_files unclaimed_files skipped_paths failed_checks build_failure
+      passed issues excluded =
     {
       project_root;
       files_analyzed;
@@ -203,6 +207,7 @@ module Json_report = struct
       unclaimed_files;
       skipped_paths;
       failed_checks;
+      build_failure;
       passed;
       issues;
       excluded;
@@ -248,6 +253,13 @@ module Json_report = struct
     |> C.Object.member "error" C.string ~enc:(fun (t : failure) -> t.error)
     |> C.Object.seal
 
+  let build_failure_json =
+    C.Object.map build_failure
+    |> C.Object.member "kind" C.string ~enc:(fun (t : build_failure) -> t.kind)
+    |> C.Object.member "error" C.string ~enc:(fun (t : build_failure) ->
+        t.error)
+    |> C.Object.seal
+
   let json =
     C.Object.map v
     |> C.Object.member "project_root" C.string ~enc:(fun (t : t) ->
@@ -266,6 +278,8 @@ module Json_report = struct
         t.skipped_paths)
     |> C.Object.member "failed_checks" (C.list failure_json)
          ~enc:(fun (t : t) -> t.failed_checks)
+    |> C.Object.member "build_failure" (C.option build_failure_json)
+         ~enc:(fun (t : t) -> t.build_failure)
     |> C.Object.member "passed" C.bool ~enc:(fun (t : t) -> t.passed)
     |> C.Object.member "issues" (C.list issue_json) ~enc:(fun (t : t) ->
         t.issues)
@@ -317,9 +331,12 @@ module Json_report = struct
      reading caused it, and it counts checks rather than files: a [crashed]
      member is a defect in merlint, an [unevaluated] one names the fact a rule
      needed and this run's project index does not hold. The text report counts
-     these and stops; this is where the whole set is named. [passed] is false
-     while any of the four has a member. *)
-  let v ~project_root ~files_analyzed ~rules_applied ~unchecked_files
+     these and stops; this is where the whole set is named. [build_failure] is
+     apart from all four: no verdict was computed at all, so its report has
+     zero counts and names the failed instrument instead of putting every
+     source under [unchecked_files]. [passed] is false while any of the four
+     has a member, and in every refused report. *)
+  let of_analysis ~project_root ~files_analyzed ~rules_applied ~unchecked_files
       ~unclaimed_files ~skipped ~failed ~excluded issues =
     let issues =
       issues |> List.sort Merlint.Rule.Run.compare |> List.map issue_of_run
@@ -331,18 +348,33 @@ module Json_report = struct
       (List.map report_path unclaimed_files)
       (List.map report_path skipped)
       (List.map failure_of_engine failed)
+      None
       (total_issues = 0 && unchecked = 0 && skipped = [] && failed = [])
       issues
       (List.map exclusion_of_engine excluded)
+
+  let refused ~project_root reason =
+    let kind =
+      match reason with
+      | Merlint.Build.Contended _ -> "contended"
+      | Merlint.Build.Broken _ -> "broken"
+      | Merlint.Build.Unscoped _ -> "unscoped"
+    in
+    v project_root 0 0 0 0 [] [] [] []
+      (Some (build_failure kind (Merlint.Build.message reason)))
+      false [] []
 
   let print t = Fmt.pr "%s@." (Json.to_string json t)
 end
 
 let print_json_report ~project_root ~files_analyzed ~rules_applied
     ~unchecked_files ~unclaimed_files ~skipped ~failed ~excluded issues =
-  Json_report.v ~project_root ~files_analyzed ~rules_applied ~unchecked_files
-    ~unclaimed_files ~skipped ~failed ~excluded issues
+  Json_report.of_analysis ~project_root ~files_analyzed ~rules_applied
+    ~unchecked_files ~unclaimed_files ~skipped ~failed ~excluded issues
   |> Json_report.print
+
+let print_json_refusal ~project_root reason =
+  Json_report.refused ~project_root reason |> Json_report.print
 
 (* Group issues by category for visual reporting *)
 let group_issues_by_category all_issues =
@@ -772,24 +804,28 @@ let run_analysis ?domain_mgr ~load_file ~json_output ~repair ~skipped
 let build_attempts = 6
 let build_wait = 10.0
 
-let refuse_unbuilt ~project_root reason =
-  Fmt.epr "merlint: %s@." (Merlint.Build.message reason);
-  (match switch_link_remedy ~project_root with
-  | Some remedy -> Fmt.epr "%s@." remedy
-  | None -> ());
-  Fmt.epr
-    "merlint: nothing was analysed, because a verdict computed without the \
-     artefacts its rules read is not a verdict about this code.@.";
+let refuse_unbuilt ~json_output ~project_root reason =
+  if json_output then print_json_refusal ~project_root reason
+  else begin
+    Fmt.epr "merlint: %s@." (Merlint.Build.message reason);
+    (match switch_link_remedy ~project_root with
+    | Some remedy -> Fmt.epr "%s@." remedy
+    | None -> ());
+    Fmt.epr
+      "merlint: nothing was analysed, because a verdict computed without the \
+       artefacts its rules read is not a verdict about this code.@."
+  end;
   Stdlib.exit Cmd.Exit.cli_error
 
-let ensure_project_built ~clock ~root ~scopes mgr =
+let ensure_project_built ~json_output ~clock ~root ~scopes mgr =
   let started = Eio.Time.now clock in
   let rec attempt n =
     match Merlint.Build.ensure_project_built ~root ~scopes mgr with
     | Ok () -> ()
     | Error (Merlint.Build.Contended _ as reason) ->
         if n >= build_attempts then
-          refuse_unbuilt ~project_root:(Fpath.to_string root) reason
+          refuse_unbuilt ~json_output ~project_root:(Fpath.to_string root)
+            reason
         else begin
           Fmt.epr
             "merlint: another dune session holds %a, so the build has not \
@@ -800,7 +836,8 @@ let ensure_project_built ~clock ~root ~scopes mgr =
           Eio.Time.sleep clock build_wait;
           attempt (n + 1)
         end
-    | Error reason -> refuse_unbuilt ~project_root:(Fpath.to_string root) reason
+    | Error reason ->
+        refuse_unbuilt ~json_output ~project_root:(Fpath.to_string root) reason
   in
   attempt 1
 
@@ -819,7 +856,7 @@ let ensure_project_built ~clock ~root ~scopes mgr =
 
    Once per run. A run that warmed the build already had its build, and a
    second identical one produces the same artefacts it just produced. *)
-let repair_unresolved ~built ~clock mgr ~project_root files =
+let repair_unresolved ~built ~json_output ~clock mgr ~project_root files =
   match files with
   | [] -> false
   | _ :: _ when built -> false
@@ -832,7 +869,8 @@ let repair_unresolved ~built ~clock mgr ~project_root files =
         List.map (fun file -> Fpath.parent (Fpath.v file)) files
         |> List.sort_uniq Fpath.compare
       in
-      ensure_project_built ~clock ~root:(Fpath.v project_root) ~scopes mgr;
+      ensure_project_built ~json_output ~clock ~root:(Fpath.v project_root)
+        ~scopes mgr;
       true
 
 let is_ocaml_source path =
@@ -993,8 +1031,8 @@ let redirect_analysis files =
       in
       Some (files, Fpath.to_string workspace)
 
-let maybe_build_project mgr ~clock ~project_root ~analyze_roots ~build_scopes
-    ~index ~build =
+let maybe_build_project mgr ~json_output ~clock ~project_root ~analyze_roots
+    ~build_scopes ~index ~build =
   if build then (
     Log.info (fun m -> m "Building project...");
     (* Freeze the analysis set before starting Dune. A source added while the
@@ -1007,7 +1045,7 @@ let maybe_build_project mgr ~clock ~project_root ~analyze_roots ~build_scopes
     ignore
       (Project_index.source_files ?roots:analyze_roots frozen_index
         : Fpath.t list);
-    ensure_project_built ~clock ~root:(Fpath.v project_root)
+    ensure_project_built ~json_output ~clock ~root:(Fpath.v project_root)
       ~scopes:build_scopes mgr;
     Log.info (fun m -> m "Build done."))
 
@@ -1089,13 +1127,13 @@ let analyze_files mgr clock fs domain_mgr ?(exclude_patterns = []) ?rule_filter
     build_project_index ~fs ~monorepo ?roots:index_roots ~installed ?pool ()
   in
   let lazy_index = lazy (build_index ()) in
-  maybe_build_project mgr ~clock ~project_root ~analyze_roots ~build_scopes
-    ~index:lazy_index ~build;
+  maybe_build_project mgr ~json_output ~clock ~project_root ~analyze_roots
+    ~build_scopes ~index:lazy_index ~build;
   let analysis_index ?pool () =
     if build then Lazy.force lazy_index else build_index ?pool ()
   in
   run_analysis ~domain_mgr ~load_file ~json_output
-    ~repair:(repair_unresolved ~built:build ~clock mgr)
+    ~repair:(repair_unresolved ~built:build ~json_output ~clock mgr)
     ~skipped ~index_is_partial project_root analyze_set analyze_roots
     analysis_index rule_filter show_profile ~bail ~exclude:exclude_patterns
     ~include_vendored
