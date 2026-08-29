@@ -113,11 +113,14 @@ line and neither `.ml` nor `.mli`, so merlint has no rule that reads
 one), and `failed_checks` (a rule raised, so what it would have found is
 missing -- a defect in merlint, not in the code it read). The first two
 are disjoint: a file no stanza compiles is reported once, under the set
-whose remedy is the real one. `passed` is false while any of the four
-has a member. All are complete, whatever the verbosity, so a repo-wide
-run can enumerate its own blind spot in one pass; the human-readable
-warnings sample ten of each and `-v` names them all, while every skipped
-path is named under the summary.
+whose remedy is the real one. A file `merlint.toml` excludes from every
+rule is in none of them: the project has said it does not ask for that
+file to be linted, so a run that left it alone did not fail to check
+it. `passed` is false while any of the four has a member. All are
+complete, whatever the verbosity, so a repo-wide run can enumerate its
+own blind spot in one pass; the human-readable warnings sample ten of
+each and `-v` names them all, while every skipped path is named under
+the summary.
 `--json` suppresses the human `Dune root:` banner and the summary tables,
 leaving the exit status unchanged, so it stays usable as a gate. This is
 the format to consume from editors, CI, and git hooks.

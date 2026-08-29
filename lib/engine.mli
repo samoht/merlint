@@ -54,7 +54,11 @@ type result = {
     no stanza claims it. The orphans of a directory the caller did not name stay
     out of a file-scoped run, which is the part of "an explicit set is the
     caller's own accounting" that holds -- a file the caller did name is
-    precisely the one it is owed an answer about.
+    precisely the one it is owed an answer about. A file the project's own
+    configuration excludes from every rule is left out of this list and of
+    {!field-unresolved_files} and {!field-uncompilable_files}: the project has
+    said it does not ask for that file to be linted, and a run that obeyed it
+    did not fail to check anything.
 
     {!field-failed} is the work this run began and did not finish: a rule whose
     body raised, or a file whose whole analysis did. The result of a rule that

@@ -105,13 +105,13 @@ let path_mem paths =
    unchecked file. It is also the right answer on its own terms: this warning
    sends the reader to [dune build], and no build produces an artefact for a
    file no stanza compiles. *)
-let warn_unresolved ~index ~analyzed ~unclaimed stats =
+let warn_unresolved ~index ~analyzed ~unclaimed ~skipped stats =
   let in_scope = path_mem analyzed in
   let is_unclaimed = path_mem unclaimed in
   let is_gated = path_mem (Project_index.gated_source_files index) in
   let _unavailable, missing =
     List.filter
-      (fun f -> in_scope f && not (is_unclaimed f))
+      (fun f -> in_scope f && (not (is_unclaimed f)) && not (skipped f))
       stats.Merlin.unresolved_files
     |> List.partition is_gated
   in
@@ -136,12 +136,12 @@ let warn_unresolved ~index ~analyzed ~unclaimed stats =
    the warning above -- [dune build] is what the user would be sent to there,
    and here it reaches the same error -- so it gets its own, and says the one
    thing that does clear it. Asked of [analyzed] alone, for the same reason. *)
-let warn_uncompilable ~analyzed ~unclaimed stats =
+let warn_uncompilable ~analyzed ~unclaimed ~skipped stats =
   let in_scope = path_mem analyzed in
   let is_unclaimed = path_mem unclaimed in
   let broken =
     List.filter
-      (fun f -> in_scope f && not (is_unclaimed f))
+      (fun f -> in_scope f && (not (is_unclaimed f)) && not (skipped f))
       stats.Merlin.uncompilable_files
   in
   (if broken <> [] then
@@ -186,10 +186,15 @@ let warn_unclaimed unclaimed =
             %s (a [(modules ...)] spec may be excluding %s); %s in the tree; \
             or a stanza does name %s and merlint's project index could not \
             read that stanza, which is a defect in merlint and not one of \
-            yours. Check which with [dune exec -- project-index stanzas -p \
+            yours -- the [(preludes ...)] of an [(mdx ...)] stanza is a field \
+            it does not read, and dune compiles no unit for what that field \
+            names. Check which with [dune exec -- project-index stanzas -p \
             <dir>] and [dune exec -- project-index libraries -p <dir>], where \
             <dir> is the package directory a named file sits under: a stanza \
-            that is in the dune file and in neither listing is the third.%a@]"
+            that is in the dune file and in neither listing is the third. A \
+            file no stanza can be made to claim leaves this count through \
+            [[rules]] files = ... exclude = [\"*\"] in merlint.toml, which \
+            says the project does not ask for it to be linted.%a@]"
            n
            (if n = 1 then " is" else "s are")
            it it it it belongs it pp_sample unclaimed));
@@ -239,7 +244,7 @@ let log_fs_stats () =
         m "FS stats: readdirs=%d is_directory=%d file_exists=%d file_opens=%d"
           s.readdirs s.is_directory_checks s.file_exists_checks s.file_opens)
 
-let log_backend_stats ~index ~analyzed ~unclaimed backend =
+let log_backend_stats ~index ~analyzed ~unclaimed ~skipped backend =
   let s = Merlin.stats backend in
   Log.info (fun m ->
       m
@@ -257,8 +262,8 @@ let log_backend_stats ~index ~analyzed ~unclaimed backend =
             (List.length recovered)
             (if List.length recovered = 1 then "" else "s")
             (if List.length recovered = 1 then "it" else "them")));
-  ( warn_unresolved ~index ~analyzed ~unclaimed s,
-    warn_uncompilable ~analyzed ~unclaimed s )
+  ( warn_unresolved ~index ~analyzed ~unclaimed ~skipped s,
+    warn_uncompilable ~analyzed ~unclaimed ~skipped s )
 
 (* The whole-repo index builders are meant to run a handful of times per
    analysis (roughly once per project rule). A count orders of magnitude higher
@@ -378,6 +383,16 @@ let config_lookup () =
         let c = Config.for_file file in
         Hashtbl.add cache dir c;
         c
+
+(* [[rules]] files = ... exclude = ["*"] is the project saying it does not ask
+   for these files to be linted. A run that leaves such a file alone has not
+   failed to check it, so it stays out of the sets that report what the run
+   could not read -- otherwise the one lever a project has over a source no
+   dune stanza will ever claim silences the findings and leaves the run
+   incomplete for ever. *)
+let config_skips config_for file =
+  let cfg : Config.t = config_for file in
+  Rule_config.is_wildcard_excluded cfg.exclusions ~file
 
 (* Decide a finding's fate against the file's exclusions: [skip] drops it, and
    [count] (only when skipped) marks it a suppressed finding for the stats. A
@@ -751,18 +766,20 @@ let analyse ?pool ?profiling ?bail ~load_file ~filter ~requested_set
       analyze_set
   in
   log_index_stats idx_value;
+  let skipped = config_skips (config_lookup ()) in
   (* Unclaimed first: a file no stanza compiles is that set's to report, and
      subtracting it here is what keeps one file from counting as two unchecked
      ones and from sending the caller to a build that cannot help it. *)
   let unclaimed_files =
     warn_unclaimed
       (unclaimed_files ~project_root ~exclude ~include_vendored
-         ~analyze_set:requested_set ~analyze_roots idx_value)
+         ~analyze_set:requested_set ~analyze_roots idx_value
+      |> List.filter (fun file -> not (skipped file)))
   in
   let unresolved_files, uncompilable_files =
     log_backend_stats ~index:idx_value ~analyzed:analyze_set
       ~unclaimed:(List.map Fpath.v unclaimed_files)
-      backend
+      ~skipped backend
   in
   build_result ?bail ~unresolved_files ~uncompilable_files ~unclaimed_files
     project_results file_results files_analyzed
