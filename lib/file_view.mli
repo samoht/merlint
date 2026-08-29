@@ -75,7 +75,33 @@ module Name : sig
   (** [pp] prints a {!t} via {!to_string}. *)
 end
 
-(** {2 Types — structured shape queries on declared types} *)
+(** {2 Types — structured shape queries on declared types}
+
+    A type expression is a graph, not a tree: under [-rectypes] a node can be
+    its own descendant, and object and variant rows close the same way. Every
+    walk over one carries a {!Type_walk.t} so that it terminates. *)
+
+module Type_walk : sig
+  type t
+  (** The type for the set of type nodes a walk currently has open: the path
+      from the root of the walk to the node it is looking at. *)
+
+  val root : t
+  (** [root] is the empty path, where a walk starts. *)
+
+  val enter : t -> Ocaml_typing.Types.type_expr -> cycle:'a -> (t -> 'a) -> 'a
+  (** [enter visiting ty ~cycle f] is [f visiting'], with [ty] added to the open
+      path, when [ty] is not already open; it is [cycle] when [ty] is, which is
+      precisely when following it would not terminate.
+
+      This is an occurs check, not a depth bound. The nodes reachable from a
+      type are finite and each nested [enter] opens one more, so the recursion
+      depth cannot exceed that count. A type with no cycle is therefore walked
+      whole, node for node, and only a cycle is cut, once round. Answering a
+      cyclic type with a truncated walk would be a wrong answer wearing the face
+      of a complete one. *)
+end
+
 module Type_view : sig
   type t
 

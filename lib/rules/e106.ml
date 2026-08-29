@@ -102,34 +102,37 @@ let operator fn =
    top, the cross-module type's own library once we descend into it). [locals]
    holds this file's own module bindings, which have no interface on disk to
    read. *)
-let rec dangerous ~root ~locals ~lib ~seen ty =
-  match Types.get_desc ty with
-  | Types.Tvar _ | Types.Tunivar _ -> false
-  | Types.Tarrow _ -> true
-  | Types.Ttuple fields ->
-      List.exists (fun (_, t) -> dangerous ~root ~locals ~lib ~seen t) fields
-  | Types.Tpoly (body, _) -> dangerous ~root ~locals ~lib ~seen body
-  | Types.Tvariant row -> dangerous_row ~root ~locals ~lib ~seen row
-  | Types.Tconstr (path, args, _) -> (
-      if is_scalar path || is_custom_compare path then false
-      else if is_container path then
-        List.exists (dangerous ~root ~locals ~lib ~seen) args
-      else
-        match path with
-        | Path.Pident _ -> List.exists (dangerous ~root ~locals ~lib ~seen) args
-        | _ -> dangerous_named ~root ~locals ~lib ~seen (Path.name path) args)
-  | _ -> true
+let rec dangerous ~root ~locals ~lib ~seen ~visiting ty =
+  File_view.Type_walk.enter visiting ty ~cycle:false (fun visiting ->
+      let dangerous = dangerous ~root ~locals ~lib ~seen ~visiting in
+      match Types.get_desc ty with
+      | Types.Tvar _ | Types.Tunivar _ -> false
+      | Types.Tarrow _ -> true
+      | Types.Ttuple fields -> List.exists (fun (_, t) -> dangerous t) fields
+      | Types.Tpoly (body, _) -> dangerous body
+      | Types.Tvariant row ->
+          dangerous_row ~root ~locals ~lib ~seen ~visiting row
+      | Types.Tconstr (path, args, _) -> (
+          if is_scalar path || is_custom_compare path then false
+          else if is_container path then List.exists dangerous args
+          else
+            match path with
+            | Path.Pident _ -> List.exists dangerous args
+            | _ ->
+                dangerous_named ~root ~locals ~lib ~seen ~visiting
+                  (Path.name path) args)
+      | _ -> true)
 
 (* A polymorphic variant is dangerous when any present tag carries a payload
    that is itself dangerous. Nullary and absent tags carry nothing to walk. *)
-and dangerous_row ~root ~locals ~lib ~seen row =
+and dangerous_row ~root ~locals ~lib ~seen ~visiting row =
+  let dangerous = dangerous ~root ~locals ~lib ~seen ~visiting in
   List.exists
     (fun (_, field) ->
       match Types.row_field_repr field with
       | Types.Rpresent None | Types.Rabsent -> false
-      | Types.Rpresent (Some ty) -> dangerous ~root ~locals ~lib ~seen ty
-      | Types.Reither (_, tys, _) ->
-          List.exists (dangerous ~root ~locals ~lib ~seen) tys)
+      | Types.Rpresent (Some ty) -> dangerous ty
+      | Types.Reither (_, tys, _) -> List.exists dangerous tys)
     (Types.row_fields row)
 
 (* A type named by another module: dangerous if its declaration is abstract or
@@ -141,13 +144,16 @@ and dangerous_row ~root ~locals ~lib ~seen row =
    they keep [locals] and no library. Members read out of another unit's
    interface drop [locals] instead, so a module bound here cannot capture a
    short sibling name that unit meant for its own neighbour. [seen] breaks
-   recursion on cyclic type definitions. *)
-and dangerous_named ~root ~locals ~lib ~seen name args =
+   recursion on a type whose declaration names itself, which is a cycle among
+   declarations; [visiting] breaks recursion on a cyclic type expression, which
+   is a cycle among the nodes of one type and is what a [-rectypes] unit
+   produces. Neither substitutes for the other. *)
+and dangerous_named ~root ~locals ~lib ~seen ~visiting name args =
   if List.mem name seen then false
   else
     let seen = name :: seen in
     let local = Type_kind.names_local locals name in
-    List.exists (dangerous ~root ~locals ~lib ~seen) args
+    List.exists (dangerous ~root ~locals ~lib ~seen ~visiting) args
     ||
     match Type_kind.classify ~root ?locals ?lib ~path:name () with
     | Type_kind.Abstract | Type_kind.Unknown -> true
@@ -156,10 +162,11 @@ and dangerous_named ~root ~locals ~lib ~seen name args =
           if local then (locals, lib)
           else (None, Some (Type_kind.library_of ?enclosing:lib name))
         in
-        List.exists (dangerous ~root ~locals ~lib ~seen) members
+        List.exists (dangerous ~root ~locals ~lib ~seen ~visiting) members
 
 let flaggable ~root ~locals (operand : T.expression) =
-  dangerous ~root ~locals:(Some locals) ~lib:None ~seen:[] operand.exp_type
+  dangerous ~root ~locals:(Some locals) ~lib:None ~seen:[]
+    ~visiting:File_view.Type_walk.root operand.exp_type
 
 (* The type-specific function the caller should reach for instead. *)
 let replacement = function

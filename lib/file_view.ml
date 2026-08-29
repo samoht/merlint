@@ -7,6 +7,7 @@ module Typed_ident = Ocaml_typing.Ident
 module Typed_path = Ocaml_typing.Path
 module Typed_predef = Ocaml_typing.Predef
 module Typed_types = Ocaml_typing.Types
+module Typed_btype = Ocaml_typing.Btype
 open Ocaml_parsing
 
 exception Analysis_error of string
@@ -619,10 +620,42 @@ let deriving_names attrs =
       | _ -> [])
     attrs
 
-let rec typed_arg_labels ty =
-  match Typed_types.get_desc ty with
-  | Typed_types.Tarrow (label, _, rest, _) -> label :: typed_arg_labels rest
-  | _ -> []
+(* A type expression is a graph, not a tree. [-rectypes] lets a node be its own
+   descendant -- [int -> 'a as 'a] is literally its own return type -- and an
+   object or variant row closes the same way. A walk that follows such a type
+   without recording where it has been does not terminate, and every walk here
+   used to be one: [typed_arg_labels] built an infinite list of argument
+   labels, so [typed_items] died of Stack_overflow inside its own lazy and
+   every typedtree-backed rule re-raised it.
+
+   Each walk below therefore carries the nodes it currently has open and stops
+   when it reaches one of them again. That is an occurs check over the
+   compiler's own set of type nodes ([Btype.TypeSet], keyed on the identity
+   [Types.get_id] answers), and it is a termination argument rather than a
+   bound: the nodes reachable from a type are finite and each step opens one
+   more, so the depth cannot exceed that count. Nothing finite is truncated --
+   a type with no cycle is walked node for node exactly as before -- and a
+   cycle is walked once round instead of forever. A depth cap would instead
+   cut a large honest type short and report the partial answer as the whole
+   one. *)
+module Type_walk = struct
+  type t = Typed_btype.TypeSet.t
+
+  let root = Typed_btype.TypeSet.empty
+
+  let enter visiting ty ~cycle f =
+    if Typed_btype.TypeSet.mem ty visiting then cycle
+    else f (Typed_btype.TypeSet.add ty visiting)
+end
+
+let typed_arg_labels ty =
+  let rec walk visiting ty =
+    Type_walk.enter visiting ty ~cycle:[] (fun visiting ->
+        match Typed_types.get_desc ty with
+        | Typed_types.Tarrow (label, _, rest, _) -> label :: walk visiting rest
+        | _ -> [])
+  in
+  walk Type_walk.root ty
 
 let typed_item ~name ~kind ?type_ ?(children = []) ?(deriving = [])
     ?(deprecated = false) ?(mutable_field = false) loc =
@@ -1056,20 +1089,26 @@ module Type_view = struct
     | Typed_types.Tconstr (path, _, _) -> Some path
     | _ -> None
 
-  let rec constrs ct =
-    match Typed_types.get_desc ct with
-    | Typed_types.Tconstr (path, args, _) ->
-        name_of_path path :: List.concat_map constrs args
-    | Typed_types.Ttuple fields ->
-        List.concat_map (fun (_, t) -> constrs t) fields
-    | Typed_types.Tarrow (_, dom, ret, _) -> constrs dom @ constrs ret
-    | Typed_types.Tpoly (body, args) ->
-        constrs body @ List.concat_map constrs args
-    | Typed_types.Tvariant row -> (
-        match Typed_types.row_name row with
-        | Some (path, args) -> name_of_path path :: List.concat_map constrs args
-        | None -> [])
-    | _ -> []
+  let constrs ct =
+    let rec walk visiting ct =
+      Type_walk.enter visiting ct ~cycle:[] (fun visiting ->
+          match Typed_types.get_desc ct with
+          | Typed_types.Tconstr (path, args, _) ->
+              name_of_path path :: List.concat_map (walk visiting) args
+          | Typed_types.Ttuple fields ->
+              List.concat_map (fun (_, t) -> walk visiting t) fields
+          | Typed_types.Tarrow (_, dom, ret, _) ->
+              walk visiting dom @ walk visiting ret
+          | Typed_types.Tpoly (body, args) ->
+              walk visiting body @ List.concat_map (walk visiting) args
+          | Typed_types.Tvariant row -> (
+              match Typed_types.row_name row with
+              | Some (path, args) ->
+                  name_of_path path :: List.concat_map (walk visiting) args
+              | None -> [])
+          | _ -> [])
+    in
+    walk Type_walk.root ct
 
   let is_constr ct ~path =
     match constr ct with
@@ -1102,30 +1141,41 @@ module Type_view = struct
         Name.equals_path name [ "Stdlib"; "list" ] && elem arg
     | _ -> false
 
-  let rec return_type (ct : t) : t option =
-    match Typed_types.get_desc ct with
-    | Typed_types.Tarrow (_, _, ret, _) -> return_type ret
-    | _ -> Some ct
+  (* A cyclic arrow is its own return type, and that is what [~cycle] answers:
+     the walk stops at the node it re-entered and hands that node back. *)
+  let return_type (ct : t) : t option =
+    let rec walk visiting ct =
+      Type_walk.enter visiting ct ~cycle:(Some ct) (fun visiting ->
+          match Typed_types.get_desc ct with
+          | Typed_types.Tarrow (_, _, ret, _) -> walk visiting ret
+          | _ -> Some ct)
+    in
+    walk Type_walk.root ct
 
-  let rec returns_option (ct : t) =
-    match Typed_types.get_desc ct with
-    | Typed_types.Tarrow (_, _, ret, _) -> returns_option ret
-    | Typed_types.Tconstr (path, _, _) ->
-        Typed_path.same path Typed_predef.path_option
-        || name_of_path path |> fun n ->
-           Name.equals_path n [ "Stdlib"; "option" ]
-    | _ -> false
+  let returns_option (ct : t) =
+    let rec walk visiting ct =
+      Type_walk.enter visiting ct ~cycle:false (fun visiting ->
+          match Typed_types.get_desc ct with
+          | Typed_types.Tarrow (_, _, ret, _) -> walk visiting ret
+          | Typed_types.Tconstr (path, _, _) ->
+              Typed_path.same path Typed_predef.path_option
+              || name_of_path path |> fun n ->
+                 Name.equals_path n [ "Stdlib"; "option" ]
+          | _ -> false)
+    in
+    walk Type_walk.root ct
 
   let count_unlabelled (ct : t) ~match_ =
-    let rec aux acc (ct : t) =
-      match Typed_types.get_desc ct with
-      | Typed_types.Tarrow (Asttypes.Nolabel, dom, rest, _) ->
-          let acc = if match_ dom then acc + 1 else acc in
-          aux acc rest
-      | Typed_types.Tarrow (_, _, rest, _) -> aux acc rest
-      | _ -> acc
+    let rec aux visiting acc (ct : t) =
+      Type_walk.enter visiting ct ~cycle:acc (fun visiting ->
+          match Typed_types.get_desc ct with
+          | Typed_types.Tarrow (Asttypes.Nolabel, dom, rest, _) ->
+              let acc = if match_ dom then acc + 1 else acc in
+              aux visiting acc rest
+          | Typed_types.Tarrow (_, _, rest, _) -> aux visiting acc rest
+          | _ -> acc)
     in
-    aux 0 ct
+    aux Type_walk.root 0 ct
 
   let pp ppf (ct : t) =
     Ocaml_typing.Printtyp.type_expr Format.str_formatter ct;

@@ -1,0 +1,3 @@
+(library
+ (name test_rectypes)
+ (flags :standard -rectypes -warn-error -a))
