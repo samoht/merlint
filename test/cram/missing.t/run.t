@@ -76,7 +76,7 @@ act on. The root is named as well as the path, because the answer is a pair:
   $ printf 'let x = 1\n' > outside.ml
   $ merlint -r E425 t/lib outside.ml
   Dune root: $TESTCASE_ROOT/t
-  merlint: outside.ml is outside the dune root $TESTCASE_ROOT/t
+  merlint: $TESTCASE_ROOT/outside.ml is outside the dune root $TESTCASE_ROOT/t
   merlint: nothing was analysed, because no rule reads a source from outside the root the run resolved.
   [4]
 

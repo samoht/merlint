@@ -372,8 +372,8 @@ let refuse_internal ~json_output ~project_root error =
   else begin
     Fmt.epr "merlint: %s@." error;
     Fmt.epr
-      "merlint: nothing was analysed, because the fault is merlint's and \
-       any        verdict it printed would be one this defect produced.@."
+      "merlint: nothing was analysed, because the fault is merlint's and any \
+       verdict it printed would be one this defect produced.@."
   end;
   Stdlib.exit Merlint_doc.Exit_status.refused
 
@@ -1003,19 +1003,24 @@ let build_scopes_of_files files =
 let refuse_paths_outside_root ~project_root files =
   let root = Project_index.Path.v project_root in
   let outside =
-    List.filter
+    List.filter_map
       (fun path ->
-        not
-          (Project_index.Path.is_descendant ~ancestor:root
-             (Project_index.Path.v path)))
+        let path = Project_index.Path.v path in
+        if Project_index.Path.is_descendant ~ancestor:root path then None
+        else Some path)
       files
   in
   match outside with
   | [] -> ()
   | outside ->
+      (* The resolved path, not the argument as written: a relative one is
+         refused for where it landed, and a caller cannot check that against a
+         root without seeing both sides resolved the same way. *)
       List.iter
         (fun path ->
-          Fmt.epr "merlint: %s is outside the dune root %s@." path project_root)
+          Fmt.epr "merlint: %s is outside the dune root %s@."
+            (Project_index.Path.to_string path)
+            project_root)
         outside;
       Fmt.epr
         "merlint: nothing was analysed, because no rule reads a source from \
