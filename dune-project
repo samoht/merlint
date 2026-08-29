@@ -6,6 +6,7 @@
 (implicit_transitive_deps false)
 
 
+(license ISC)
 (source (tangled gazagnaire.org/merlint))
 
 (package
@@ -15,7 +16,6 @@
  (description "An opinionated OCaml linter that enforces modern OCaml coding conventions and best practices")
  (maintainers "Thomas Gazagnaire <thomas@gazagnaire.org>")
  (authors "Thomas Gazagnaire <thomas@gazagnaire.org>")
- (license ISC)
  (depends
   ocaml
   bytesrw
