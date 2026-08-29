@@ -1,13 +1,22 @@
-merlint answers two independent questions about a run: whether the code it read
-has findings, and whether it read everything it was pointed at. One non-zero
-status answered both, so a caller could not tell "your code has problems" from
-"I could not look at part of it" -- two answers that call for different work,
-one on the tree and one on merlint. The status is a bit set: bit 0 (1) says
-findings, bit 1 (2) says incomplete coverage. Both bits, status 3, is the worst
-of the three: the findings are real *and* the run that produced them did not
-read everything, so the list is also short. Any non-zero still reads as failure
-for a caller that only wants pass or fail, which is what the pre-commit hook
-does.
+merlint answers three independent questions about a run: whether the code it
+read has findings, whether it read everything it was pointed at, and whether it
+read anything at all. One non-zero status answered all three, so a caller could
+not tell "your code has problems" from "I could not look at part of it" from "I
+did not look" -- three answers that call for different work, one on the tree,
+one on merlint, and one that is worth retrying. The status is a bit set: bit 0
+(1) says findings, bit 1 (2) says incomplete coverage, bit 2 (4) says merlint
+refused and computed no verdict at all. Bits 0 and 1, status 3, is the worst of
+those two: the findings are real *and* the run that produced them did not read
+everything, so the list is also short. Any non-zero still reads as failure for a
+caller that only wants pass or fail, which is what the pre-commit hook does.
+
+The refusal takes a bit of its own rather than cmdliner's [cli_error], because
+[cli_error] is 124 and 124 is also what coreutils' timeout(1) exits with when it
+kills the command it wrapped. CI wraps linters in timeout as a matter of course,
+so under 124 a wrapper could not tell "merlint refused because the project does
+not build" from "merlint never finished" -- the collapse of two answers into one
+number that these bits exist to prevent. No status merlint returns is one the
+shell, a signal or timeout(1) already spends.
 
 The project is written here rather than committed beside this transcript,
 because the cases below add a source and then a finding to it and the sandbox
@@ -106,6 +115,13 @@ that read everything it was pointed at -- status 1:
   $ merlint -r E425 t/lib > /dev/null
   [1]
 
+A refusal is none of those. Nothing was read, so the number is not a verdict
+that happens to be bad -- it is the absence of one, and the counts a verdict
+would carry are zero because there was nothing to count:
+
+  $ merlint -r E425 t/lib/nope.ml > /dev/null 2>&1
+  [4]
+
 The statuses are documented where a caller looks for them, so nobody has to read
 this transcript to find them out:
 
@@ -114,5 +130,6 @@ this transcript to find them out:
   1   findings: the code merlint read has issues to fix.
   2   incomplete coverage: merlint could not read part of it.
   3   both: findings, over a run that read only part of the tree.
-  124 refused: nothing was analysed, so there is no verdict.
+  4   refused: nothing was analysed, so there is no verdict.
+  124 on a command line merlint could not parse.
   125 on unexpected internal errors.

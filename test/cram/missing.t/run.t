@@ -28,13 +28,15 @@ because the sandbox keeps whatever a test leaves behind:
 E425 reads the interface's parsetree, which needs no build artefact, so the
 runs below turn on the paths alone.
 
-A path naming nothing is refused, and the status is the one cmdliner uses for
-an argument merlint cannot act on:
+A path naming nothing is refused, and the status is 4: merlint computed no
+verdict, so there is none to read. Not cmdliner's 124 for an argument it cannot
+act on -- 124 is also what timeout(1) exits with when it kills the command it
+wrapped, and a caller could not tell the two apart:
 
   $ merlint -r E425 t/lib/nope.ml
   merlint: t/lib/nope.ml: no such file or directory
   merlint: nothing was analysed, because a run that skipped it would report the files it did read as the whole answer.
-  [124]
+  [4]
 
 A missing path beside paths that are there refuses the whole run. The summary
 is one verdict over every argument, so reporting on the rest would carry the
@@ -44,7 +46,7 @@ of it means anything:
   $ merlint -r E425 t/lib t/lib/nope.ml
   merlint: t/lib/nope.ml: no such file or directory
   merlint: nothing was analysed, because a run that skipped it would report the files it did read as the whole answer.
-  [124]
+  [4]
 
 Every missing path is named, not just the first: a caller fixing one at a time
 would run merlint once per typo.
@@ -53,7 +55,7 @@ would run merlint once per typo.
   merlint: t/lib/nope.ml: no such file or directory
   merlint: t/nowhere: no such file or directory
   merlint: nothing was analysed, because a run that skipped them would report the files it did read as the whole answer.
-  [124]
+  [4]
 
 A directory that does not exist is the same answer. Analysing the project it
 sits in instead would report a verdict about something other than what was
@@ -62,7 +64,7 @@ asked for:
   $ merlint -r E425 t/nowhere
   merlint: t/nowhere: no such file or directory
   merlint: nothing was analysed, because a run that skipped it would report the files it did read as the whole answer.
-  [124]
+  [4]
 
 Paths that are all there run as before:
 

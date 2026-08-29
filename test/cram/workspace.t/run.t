@@ -7,14 +7,14 @@ library of the [ws] workspace, so [pkg] builds only as part of [ws] and its
   $ cd pkg
 
 Analysed as a project of its own the checkout cannot be built, so it has no
-artefact for any of its files and every rule that reads a typedtree is skipped.
-The exit status reports the incomplete run rather than a clean one.
+artefact for any of its files, so the build merlint runs to repair that fails
+and the run is refused: status 4, no verdict, rather than a clean one.
 
   $ mv merlint.toml declared.toml
   $ merlint --build . 2>/dev/null | sed -E 's/applied [0-9]+ rules/applied N rules/' | tail -2
   Dune root: $TESTCASE_ROOT/pkg/
   $ merlint . > /dev/null 2>&1
-  [124]
+  [4]
 
 Nothing in the checkout points back at the workspace, and more than one
 workspace may link the same sources, so the checkout names the one that builds
@@ -71,7 +71,7 @@ declaration at all.
   -> required by _build/default/lib/.demo.objs/byte/demo.cmi
   -> required by alias lib/check
   merlint: nothing was analysed, because a verdict computed without the artefacts its rules read is not a verdict about this code.
-  [124]
+  [4]
   $ merlint . 2>/dev/null | sed -E 's/applied [0-9]+ rules/applied N rules/' | tail -4
   Dune root: $TESTCASE_ROOT/pkg/
   ! 2 files have no typedtree: no build artefact describes them and the build system names no stanza that compiles them, so nothing says what to type them against and the rules that read a typedtree were skipped.

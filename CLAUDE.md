@@ -85,7 +85,9 @@ The codebase follows a clean separation between library and executable:
 ## Important Notes
 
 - Never run `dune`, `ocamlmerlin`, or `prune` commands in `*.t` (cram) directories
-- The tool exits with code 1 when issues are found (useful for CI/CD)
+- The exit status is a bit set, not one number: 1 findings, 2 incomplete
+  coverage, 4 refused (nothing was analysed). `bin/doc/exit_status.ml` owns it
+  and README.md "Exit status" explains it; do not restate the values elsewhere
 - Git hooks enforce formatting and passing tests (use `test!:` or `wip:` prefixes to bypass)
 
 ## Debugging Tips

@@ -127,9 +127,9 @@ the format to consume from editors, CI, and git hooks.
 
 ## Exit status
 
-Merlint answers two independent questions -- does the code have
-findings, and did merlint read all of what it was pointed at -- so the
-status is a bit set rather than one number:
+Merlint answers three independent questions -- does the code have
+findings, did merlint read all of what it was pointed at, and did it read
+anything at all -- so the status is a bit set rather than one number:
 
 | Status | Meaning                                                       |
 |--------|---------------------------------------------------------------|
@@ -137,26 +137,38 @@ status is a bit set rather than one number:
 | `1`    | findings: the code merlint read has issues to fix             |
 | `2`    | incomplete coverage: merlint could not read part of it        |
 | `3`    | both: findings, over a run that read only part of the tree    |
-| `124`  | refused: nothing was analysed, so there is no verdict         |
+| `4`    | refused: nothing was analysed, so there is no verdict         |
+| `124`  | cmdliner's: a command line merlint could not parse            |
+| `125`  | cmdliner's: an unexpected internal error                      |
 
 `2` is not a warning. A run that exits `0` having read half of what it
 was given is read as "this code is clean", and a source no stanza claims
 is a source no rule ever examined. A path merlint has no rule for sets
 the same bit: the run never opened it, and the verdict over the other
 arguments does not answer for it. So does a rule that raised, and there
-the fault is merlint's. `3` is the worst of the three: the findings are
+the fault is merlint's. `3` is the worst of those two: the findings are
 real and the list they came from is also short. A gate that only wants
 pass or fail reads any non-zero and needs no change.
 
-`124` is not a verdict at all. Merlint refuses rather than analyses when
-a path it was given does not exist, and when the project does not build:
-without the artefacts its rules read it cannot tell a clean tree from an
+`4` is not a verdict at all. Merlint refuses rather than analyses when a
+path it was given does not exist, when its `merlint.toml` or its `-r`
+filter does not parse, and when the project does not build: without the
+artefacts its rules read it cannot tell a clean tree from an
 untypechecked one, and printing either answer would be printing a guess.
 A build another dune session is holding the root against is waited on --
 bounded, and saying which root and for how long each time -- so a busy
 tree stays committable by costing wall time rather than by buying a
 pass; a project that does not compile is refused at once, carrying what
 dune said about it.
+
+`4` rather than `124`, which is what cmdliner spends on a command line it
+could not parse and what `timeout(1)` exits with when it kills the
+command it wrapped. CI wraps linters in `timeout` as a matter of course,
+so a refusal reported as `124` would be indistinguishable from a run that
+never finished -- and the two call for different work. No status merlint
+chooses is one the shell, a signal or `timeout` already spends; the
+`exit_status` test suite fails on a bit that would let the mask reach
+one.
 
 To see what a rule means and how to fix it, and to render the rule
 reference, ask `merlint help`:

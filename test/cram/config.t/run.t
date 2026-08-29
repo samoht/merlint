@@ -15,14 +15,14 @@ separator style it was written in, so the fix is one edit:
   > EOF
   $ merlint .
   merlint config: ./merlint.toml: unknown key "disalowed-modules" -- did you mean "disallowed-modules"?
-  [1]
+  [4]
 
   $ cat > merlint.toml <<EOF
   > require_mli_file = false
   > EOF
   $ merlint .
   merlint config: ./merlint.toml: unknown key "require_mli_file" -- did you mean "require_mli_files"?
-  [1]
+  [4]
 
 A key close to nothing merlint knows is refused without a guess:
 
@@ -31,7 +31,7 @@ A key close to nothing merlint knows is refused without a guess:
   > EOF
   $ merlint .
   merlint config: ./merlint.toml: unknown key "banana". Run `merlint help config` for the keys merlint accepts.
-  [1]
+  [4]
 
 Every documented key stays accepted, including [workspace], which Project reads
 rather than Config:

@@ -48,4 +48,4 @@ verdict computed without the artefacts its rules read answers for nothing.
   $ merlint --build -r E100 alpha ../outside 2>&1 >/dev/null
   merlint: $TESTCASE_ROOT/outside/ is outside the dune root $TESTCASE_ROOT/proj/, so it has no [@check] alias there
   merlint: nothing was analysed, because a verdict computed without the artefacts its rules read is not a verdict about this code.
-  [124]
+  [4]
