@@ -53,6 +53,7 @@ let () =
       Test_config_doc.suite;
       Test_probe_events.suite;
       Test_e610.suite;
+      Test_exit_status.suite;
     ]
   in
   Alcotest.run "merlint" suites

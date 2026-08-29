@@ -103,36 +103,14 @@ let group_issues_by_code issues =
       (error_code, issue :: current) :: List.remove_assoc error_code acc)
     [] issues
 
-(* A run answers two independent questions, so the status carries two bits. Bit
-   0: the code merlint read has findings. Bit 1: merlint could not look at part
-   of what it was pointed at, which is work on a dune file or on merlint itself
-   and says nothing about the code. Summed into one number, a caller could not
-   tell them apart; as bits it can, and a caller that only wants pass or fail
-   still reads any non-zero -- which is what the pre-commit hook does.
-
-   Both bits, status 3, is the worst of the three outcomes rather than a third
-   kind of outcome: the findings are real, and the list they came from is also
-   short, so it is strictly above either alone.
-
-   An incomplete run is never merely a warning. A run that exits 0 having read
-   half of what it was given is read as "this code is clean", and that reading
-   is what hid three discovery defects until the status made it impossible.
-
-   A path merlint has no rule for reaches bit 1 the same way. It is not a file
-   the run failed to read, it is one the run was never going to read, and the
-   caller who named it is owed that answer rather than the verdict over the
-   other arguments. A check that raised reaches it too: the rule did not run, so
-   what it would have found is not in the list, and the reason this time is
-   merlint itself -- which bit 1 already says it can be. *)
-let exit_findings = 1
-let exit_incomplete = 2
-
-let exit_status ~unchecked ~skipped ~failed issues =
-  (if issues <> [] then exit_findings else 0)
-  lor if unchecked > 0 || skipped > 0 || failed > 0 then exit_incomplete else 0
-
+(* Merlint_doc.Exit_status owns the mask, its reserved-value check and the
+   manual entry that publishes it; the comment there says why each bit exists.
+   The status is read here and nowhere else. *)
 let exit_with_status ~unchecked ~skipped ~failed all_issues =
-  match exit_status ~unchecked ~skipped ~failed all_issues with
+  match
+    Merlint_doc.Exit_status.of_run ~findings:(List.length all_issues) ~unchecked
+      ~skipped ~failed
+  with
   | 0 -> ()
   | status -> exit status
 
@@ -815,7 +793,7 @@ let refuse_unbuilt ~json_output ~project_root reason =
       "merlint: nothing was analysed, because a verdict computed without the \
        artefacts its rules read is not a verdict about this code.@."
   end;
-  Stdlib.exit Cmd.Exit.cli_error
+  Stdlib.exit Merlint_doc.Exit_status.refused
 
 let ensure_project_built ~json_output ~clock ~root ~scopes mgr =
   let started = Eio.Time.now clock in
@@ -922,7 +900,7 @@ let refuse_missing_paths files =
         "merlint: nothing was analysed, because a run that skipped %s would \
          report the files it did read as the whole answer.@."
         (if List.length missing = 1 then "it" else "them");
-      Stdlib.exit Cmd.Exit.cli_error
+      Stdlib.exit Merlint_doc.Exit_status.refused
 
 let resolve_cli_path raw =
   let p = Fpath.v raw in
@@ -1201,7 +1179,10 @@ let check_configuration files =
   | exception Failure msg ->
       (* The message already opens with "merlint config: <file>:". *)
       Fmt.epr "%s@." msg;
-      Stdlib.exit 1
+      (* Refused, not a finding: the run stopped before it read a source, so
+         the status that means "the code merlint read has issues" would be
+         reporting on code nothing looked at. *)
+      Stdlib.exit Merlint_doc.Exit_status.refused
 
 let show_configuration files =
   let path = match files with [] -> Sys.getcwd () | path :: _ -> path in
@@ -1241,7 +1222,8 @@ let parse_rule_filter rules_spec =
       | Ok filter -> Some filter
       | Error msg ->
           Log.err (fun m -> m "Invalid rules specification: %s" msg);
-          Stdlib.exit 1)
+          (* Same refusal: no rule was selected, so no rule ran. *)
+          Stdlib.exit Merlint_doc.Exit_status.refused)
 
 let main exclude_patterns rules_spec ~show_profile ~show_config ~build ~bail
     ~include_vendored files () =
@@ -1273,24 +1255,7 @@ let analyze_term =
     $ build_flag $ include_vendored_flag $ files
     $ Observe.setup ~json_reporter:(Some json_log_reporter) "merlint")
 
-(* The status is the only thing a scripted caller reads, so it is documented in
-   the manual of every command that produces one. [Cmd.Exit.defaults] documents
-   0 with "on success", which a run reporting an incomplete analysis is not, so
-   0 is described here and the defaults are not reused. *)
-let exits =
-  [
-    Cmd.Exit.info 0 ~doc:"on a complete run with no findings.";
-    Cmd.Exit.info exit_findings
-      ~doc:"findings: the code merlint read has issues to fix.";
-    Cmd.Exit.info exit_incomplete
-      ~doc:"incomplete coverage: merlint could not read part of it.";
-    Cmd.Exit.info
-      (exit_findings lor exit_incomplete)
-      ~doc:"both: findings, over a run that read only part of the tree.";
-    Cmd.Exit.info Cmd.Exit.cli_error
-      ~doc:"refused: nothing was analysed, so there is no verdict.";
-    Cmd.Exit.info Cmd.Exit.internal_error ~doc:"on unexpected internal errors.";
-  ]
+let exits = Merlint_doc.Exit_status.exits
 
 let scan =
   let doc = "Scan OCaml code for style issues" in
