@@ -116,6 +116,14 @@ let cmt_artefact ~root file =
   | Some cmt when not (Sys.file_exists cmt) -> None
   | Some cmt -> Some (cmt, Merlin.Cmt.status ~root_dir:root file)
 
+let materialized_artefacts ~root ~index file =
+  Project_index.materialized_source_files index (Fpath.v file)
+  |> List.concat_map (fun materialized ->
+      Merlin.Project.materialized_cmts ~root_dir:root
+        (Fpath.to_string materialized))
+  |> List.map (fun (m : Merlin.Project.materialized_cmt) ->
+      (m.cmt, Merlin.Cmt.status ~root_dir:m.root_dir m.source_file))
+
 type source_status =
   | Compiled
   | Not_compiled
@@ -134,10 +142,17 @@ let source_status ~root ~index file =
   | Project_index.Absent -> Missing
   | Project_index.Unindexed -> Skipped
   | Project_index.Indexed -> (
-      match cmt_artefact ~root file with
-      | Some (_, Ok ()) -> Compiled
-      | Some (_, Error Merlin.Cmt.Unusable.Partial) -> Uncompilable
-      | None
-      | Some (_, Error (Merlin.Cmt.Unusable.Absent | Merlin.Cmt.Unusable.Stale))
-        ->
-          Not_compiled)
+      let artefacts =
+        Option.to_list (cmt_artefact ~root file)
+        @ materialized_artefacts ~root ~index (Fpath.to_string file)
+      in
+      if List.exists (fun (_, status) -> Result.is_ok status) artefacts then
+        Compiled
+      else if
+        List.exists
+          (function
+            | _, Error Merlin.Cmt.Unusable.Partial -> true
+            | _ -> false)
+          artefacts
+      then Uncompilable
+      else Not_compiled)

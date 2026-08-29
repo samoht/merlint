@@ -70,6 +70,30 @@ let project ~expect_failure root contents =
   copy built (Filename.concat root "_build/default/lib/.foo.objs/byte/foo.cmt");
   Fpath.v source
 
+let project_with_line_directive_copy root contents =
+  let source = Filename.concat root "lib/shared.ml" in
+  let context = Filename.concat root "_build/default" in
+  let materialized = Filename.concat context "lib/backend/shared.ml" in
+  write (Filename.concat root "dune-project")
+    "(lang dune 3.21)\n(package (name copy))\n";
+  write (Filename.concat root "lib/dune")
+    "(library (name copy) (modules copy))\n";
+  write (Filename.concat root "lib/copy.ml") "let x = 0\n";
+  write (Filename.concat root "lib/backend/dune")
+    "(library (name backend))\n(copy_files# ../shared.ml)\n";
+  write source contents;
+  write materialized ("# 1 \"lib/shared.ml\"\n" ^ contents);
+  let status =
+    Fmt.kstr Sys.command
+      "cd %s && ocamlc -bin-annot -c lib/backend/shared.ml 2>/dev/null"
+      (Filename.quote context)
+  in
+  if status <> 0 then Alcotest.failf "ocamlc failed with status %d" status;
+  copy
+    (Filename.concat context "lib/backend/shared.cmt")
+    (Filename.concat context "lib/backend/.backend.objs/byte/shared.cmt");
+  Fpath.v source
+
 let status_of root file =
   Eio_main.run @@ fun env ->
   let index =
@@ -110,6 +134,12 @@ let test_source_with_no_artefact () =
   Alcotest.check status "an unbuilt source is not compiled" Build.Not_compiled
     (status_of root file)
 
+let test_source_compiled_through_line_directive_copy () =
+  with_temp_dir @@ fun root ->
+  let file = project_with_line_directive_copy root good in
+  Alcotest.check status "the copied source is compiled" Build.Compiled
+    (status_of root file)
+
 let test_missing_source () =
   with_temp_dir @@ fun root ->
   let _ = project ~expect_failure:false root good in
@@ -138,6 +168,8 @@ let suite =
         test_compiled_source;
       Alcotest.test_case "a source with no artefact is not compiled" `Quick
         test_source_with_no_artefact;
+      Alcotest.test_case "a line-directive copy is compiled" `Quick
+        test_source_compiled_through_line_directive_copy;
       Alcotest.test_case "a source that does not exist is missing" `Quick
         test_missing_source;
       Alcotest.test_case "a source that does not compile is uncompilable" `Quick

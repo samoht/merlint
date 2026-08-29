@@ -346,10 +346,18 @@ let merlin_op ?profiling filename f =
   | None -> ());
   r
 
-let file_view ?profiling ~load_file ~backend filename =
+let file_view ?profiling ~load_file ~index ~backend filename =
   let source_filename = Context.string_of_path filename in
   let content = lazy (load_file source_filename) in
-  let source = Merlin.Source.v ~file:source_filename ~content in
+  let materialized_files =
+    Project_index.materialized_source_files index (Fpath.v source_filename)
+    |> List.map Fpath.to_string
+  in
+  let source =
+    Merlin.Source.v ~file:source_filename ~content
+    |> fun source ->
+    Merlin.Source.with_materialized_files source materialized_files
+  in
   let typedtree () =
     (* Only OCaml units have a typedtree. A grammar/lexer source (.mly/.mll) or
        any other non-.ml/.mli file has no .cmt of its own -- the generated .ml
@@ -763,7 +771,7 @@ let analyse ?pool ?profiling ?bail ~load_file ~filter ~requested_set
       idx_value
     |> drop_excluded_files ~project_root ~exclude
   in
-  let file_view = file_view ?profiling ~load_file ~backend in
+  let file_view = file_view ?profiling ~load_file ~index:idx_value ~backend in
   let _config, project_ctx, enabled_rules =
     setup_analysis ~filter ~analyze_set ~index:idx ~index_is_partial ~file_view
       project_root
