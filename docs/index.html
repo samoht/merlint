@@ -2142,6 +2142,13 @@ and replace each call site with [err_x &quot;...&quot; args] / [fail_x &quot;...
     </div>
     <div class="error-hint"><p>All .ml files in a test/ directory should follow the test_ naming convention (e.g., test_parser.ml) or be the test runner (test.ml). Non-test modules should either be extracted into a private (library ...) stanza or renamed to test_&lt;module&gt;.ml.</p></div>
 </div>
+<div class="error-card" id="E619">
+    <div>
+        <span class="error-code">E619</span>
+        <span class="error-title">Test Suite Never Run</span>
+    </div>
+    <div class="error-hint"><p>A test module in a library exports a 'suite' that no runner names. The alias over its directory then passes without running one of its cases, which reads exactly like a directory whose tests all pass. Name the suite in the runner that links the library, or delete the module.</p></div>
+</div>
 <div class="error-card" id="E620">
     <div>
         <span class="error-code">E620</span>
