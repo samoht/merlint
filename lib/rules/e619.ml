@@ -13,19 +13,14 @@ module Log = (val Logs.src_log log_src : Logs.LOG)
    edges come from the [(libraries ...)] fields the index already parsed, so
    nothing here re-reads a dune file.
 
-   Two things this does not see, both measured on 2026-08-30 and both visible
-   in the [-vv] trace rather than silently absent:
-
-   - a module whose [suite] is a list of suites ([let suite = [ (name, cases) ]])
-     rather than one [(name, cases)] pair. {!Suite.bindings} recognises the pair
-     alone, and E621 and E725 read the same binding for its name and emptiness,
-     so widening it is their change too. [ocaml-hash/test/backend] and
-     [ocaml-crypto/test/backend] are written that way.
-   - a library {!Project.Query.source_libraries} does not report. It walks the
-     packages' library lists, and a private library the index attributes to no
-     package is absent from them: [fsm_trace_target] and [crypto_backend_tests]
-     are, though each is named in a [(libraries ...)] field of a stanza that
-     does carry a package. *)
+   One thing this does not see, measured on 2026-08-30 and visible in the [-vv]
+   trace rather than silently absent: a library
+   {!Project.Query.source_libraries} does not report. It walks the packages'
+   library lists, and a private library the index attributes to no package is
+   absent from them: [fsm_trace_target] and [crypto_backend_tests] are, though
+   each is named in a [(libraries ...)] field of a stanza that does carry a
+   package. So [ocaml-crypto/test/backend]'s suites stay unseen even now that
+   {!Suite.bindings} reads them. *)
 type env = {
   own : (string, Fpath.t list) Hashtbl.t;
       (** Local library name -> its own [.ml] files. *)
@@ -111,10 +106,17 @@ let definition ctx index file =
   let filename = Context.string_of_path path in
   match Suite.bindings ~filename (Context.file_view ctx path) with
   | [] -> None
-  | (binding : Suite.binding) :: _ ->
+  | (binding : Suite.binding) :: _ as suites ->
       let module_ =
         String.capitalize_ascii (Project_index.module_name_of_file index file)
       in
+      (* A module declaring a list of suites is named by the runner once, so
+         one issue covers them all; the trace still names each, because "0
+         suites" and "3 suites nobody runs" read alike in the report. *)
+      Log.debug (fun m ->
+          m "E619: %s declares %d suite(s) %a" filename (List.length suites)
+            Fmt.(Dump.list (Dump.option string))
+            (List.map (fun (s : Suite.binding) -> s.name) suites));
       Some (module_, binding.loc)
 
 let definitions ctx index lib =

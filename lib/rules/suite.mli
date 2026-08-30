@@ -1,13 +1,22 @@
 (** Typedtree queries for test-suite definitions and references. *)
 
 type binding = { loc : Location.t; name : string option; empty : bool }
-(** A top-level [suite] binding extracted from a test module. *)
+(** One [(name, cases)] suite a test module's top-level [suite] declares. [loc]
+    is where that suite is written: the whole [let] for a module declaring a
+    single pair, the element's own expression for a module declaring a list of
+    them, so a finding points at the entry it is about rather than at the list.
+*)
 
 val is_empty_list : Ocaml_typing.Typedtree.expression -> bool
 (** [is_empty_list expr] checks whether [expr] is the empty list constructor. *)
 
 val bindings : filename:string -> File_view.t -> binding list
-(** [bindings ~filename view] returns top-level [suite] bindings in [view]. *)
+(** [bindings ~filename view] returns the suites [view]'s top-level [suite]
+    declares, in source order. A module writes either one [(name, cases)] pair
+    or a list of them ([ocaml-hash/test/backend] and [ocaml-crypto/test/backend]
+    are written the second way), and both yield one element per suite: reading
+    the pair alone reported no suite at all for the list, which is a silent
+    absence in every rule that asks. *)
 
 val empty : filename:string -> File_view.t -> Location.t option
 (** [empty ~filename view] returns the location of an empty top-level [suite]

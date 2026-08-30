@@ -3,41 +3,77 @@ module T = Ocaml_typing.Typedtree
 type binding = { loc : Location.t; name : string option; empty : bool }
 type expected = Alcotest | Alcobar
 
-let rec is_empty_list (expr : T.expression) =
+let rec strip_open (expr : T.expression) =
   match expr.exp_desc with
-  | Texp_construct (lid, _, []) ->
-      Ocaml_parsing.Longident.flatten lid.txt = [ "[]" ]
-  | Texp_open (_, inner) -> is_empty_list inner
-  | _ -> false
+  | Texp_open (_, inner) -> strip_open inner
+  | _ -> expr
+
+let constructor (expr : T.expression) =
+  match (strip_open expr).exp_desc with
+  | Texp_construct (lid, _, args) ->
+      Some (Ocaml_parsing.Longident.flatten lid.txt, args)
+  | _ -> None
+
+let is_empty_list expr =
+  match constructor expr with Some ([ "[]" ], []) -> true | _ -> false
+
+(* The elements of a list literal, or [None] when the expression is not one.
+   The distinction matters: [Some []] says "a list of no suites", which is what
+   [let suite = []] is, while a [suite] built by a call has no elements to
+   enumerate at all and must fall through to the single-pair reading. *)
+let list_elements expr =
+  let rec walk acc expr =
+    match constructor expr with
+    | Some ([ "[]" ], []) -> Some (List.rev acc)
+    | Some ([ "::" ], [ head; tail ]) -> walk (head :: acc) tail
+    | _ -> None
+  in
+  walk [] expr
 
 let string_constant (expr : T.expression) =
   match expr.exp_desc with
   | Texp_constant (Ocaml_parsing.Asttypes.Const_string (s, _, _)) -> Some s
   | _ -> None
 
+(* One [(name, cases)] pair, located at [loc]. *)
+let pair ~loc (expr : T.expression) =
+  match (strip_open expr).exp_desc with
+  | Texp_tuple [ (None, name_expr); (None, list_expr) ] ->
+      Some
+        {
+          loc;
+          name = string_constant name_expr;
+          empty = is_empty_list list_expr;
+        }
+  | _ -> None
+
+(* A test module writes either one [(name, cases)] pair or a list of them, and
+   the list carries a name and an emptiness per element. Each element is
+   located at its own expression rather than at the whole [let], so a finding
+   points at the entry it is about. *)
 let binding_of_value ~filename (vb : T.value_binding) =
   match vb.vb_pat.pat_desc with
   | Tpat_var (_, name, _) when name.txt = "suite" -> (
-      match vb.vb_expr.exp_desc with
-      | Texp_tuple [ (None, name_expr); (None, list_expr) ] ->
-          Some
-            {
-              loc = Loc.of_typed ~filename vb.vb_loc;
-              name = string_constant name_expr;
-              empty = is_empty_list list_expr;
-            }
-      | _ -> None)
-  | _ -> None
+      match list_elements vb.vb_expr with
+      | Some elements ->
+          List.filter_map
+            (fun (element : T.expression) ->
+              pair ~loc:(Loc.of_typed ~filename element.exp_loc) element)
+            elements
+      | None ->
+          Option.to_list
+            (pair ~loc:(Loc.of_typed ~filename vb.vb_loc) vb.vb_expr))
+  | _ -> []
 
 let bindings ~filename view =
   match File_view.typedtree view with
   | Some (`Implementation structure) ->
-      List.filter_map
+      List.concat_map
         (fun (item : T.structure_item) ->
           match item.str_desc with
-          | Tstr_value (_, bindings) ->
-              List.find_map (binding_of_value ~filename) bindings
-          | _ -> None)
+          | Tstr_value (_, values) ->
+              List.concat_map (binding_of_value ~filename) values
+          | _ -> [])
         structure.str_items
   | Some (`Interface _) | None -> []
 
