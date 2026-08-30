@@ -1062,6 +1062,8 @@ end
 module Type_view = struct
   type t = Typed_types.type_expr
 
+  let print_buffer = Domain.DLS.new_key (fun () -> Buffer.create 128)
+
   let arrow ct =
     match Typed_types.get_desc ct with
     | Typed_types.Tarrow (label, dom, ret, _) -> Some (label, dom, ret)
@@ -1178,7 +1180,12 @@ module Type_view = struct
     aux Type_walk.root 0 ct
 
   let pp ppf (ct : t) =
-    let rendered = Fmt.str "%a" Ocaml_typing.Printtyp.type_expr ct in
+    let buffer = Domain.DLS.get print_buffer in
+    Buffer.clear buffer;
+    let formatter = Fmt.with_buffer buffer in
+    Ocaml_typing.Printtyp.type_expr formatter ct;
+    Fmt.flush formatter ();
+    let rendered = Buffer.contents buffer in
     match rendered with
     | "" -> (
         match constr ct with Some (name, []) -> Name.pp ppf name | _ -> ())

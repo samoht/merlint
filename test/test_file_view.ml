@@ -127,9 +127,10 @@ let test_typedtree_loaded_across_domains () =
   Alcotest.(check int) "typedtree loaded once" 1 (Atomic.get typedtree_calls)
 
 (* Type rendering runs inside every typed whole-file rule. The analysis engine
-   sends those files to separate domains, so this printer may not use the
-   process-global [Format.str_formatter]: OCaml 5 detects concurrent access to
-   that formatter and refuses the checks rather than returning partial text. *)
+   sends those files to separate domains, while the compiler's type printer
+   carries process-global formatting state. Distinct renders must not overlap:
+   OCaml 5 detects that access and refuses the checks rather than returning
+   partial text. *)
 let test_type_rendering_across_domains () =
   Eio_main.run @@ fun env ->
   let root_dir = Self_exe.dir () |> Filename.dirname in
@@ -149,22 +150,16 @@ let test_type_rendering_across_domains () =
   let v =
     view file (fun () -> Ok (Some (`Interface signature, Merlin.Recorded)))
   in
-  let type_ =
-    Merlint.File_view.typed_items v
-    |> List.find_map (fun item ->
-        if String.equal (Merlint.File_view.Item.name item) "Type_view" then
-          Merlint.File_view.Item.children item
-          |> List.find_map (fun child ->
-              if String.equal (Merlint.File_view.Item.name child) "pp" then
-                Merlint.File_view.Item.type_sig child
-              else None)
-        else None)
-    |> Option.get
+  let rec item_types item =
+    Option.to_list (Merlint.File_view.Item.type_sig item)
+    @ List.concat_map item_types (Merlint.File_view.Item.children item)
   in
+  let types = Merlint.File_view.typed_items v |> List.concat_map item_types in
+  Alcotest.(check bool) "interface carries types" true (types <> []);
   let render () =
-    let last = ref "" in
-    for _ = 1 to 200 do
-      last := Fmt.str "%a" Merlint.File_view.Type_view.pp type_
+    let last = ref [] in
+    for _ = 1 to 50 do
+      last := List.map (Fmt.str "%a" Merlint.File_view.Type_view.pp) types
     done;
     !last
   in
@@ -176,7 +171,7 @@ let test_type_rendering_across_domains () =
   match rendered with
   | [] -> Alcotest.fail "parallel rendering ran no work"
   | expected :: rest ->
-      Alcotest.(check (list string))
+      Alcotest.(check (list (list string)))
         "every domain renders the same complete type"
         (List.init (List.length rest) (Fun.const expected))
         rest
