@@ -126,6 +126,61 @@ let test_typedtree_loaded_across_domains () =
   Alcotest.(check (list bool)) "all resolved" [ true; true; true; true ] results;
   Alcotest.(check int) "typedtree loaded once" 1 (Atomic.get typedtree_calls)
 
+(* Type rendering runs inside every typed whole-file rule. The analysis engine
+   sends those files to separate domains, so this printer may not use the
+   process-global [Format.str_formatter]: OCaml 5 detects concurrent access to
+   that formatter and refuses the checks rather than returning partial text. *)
+let test_type_rendering_across_domains () =
+  Eio_main.run @@ fun env ->
+  let root_dir = Self_exe.dir () |> Filename.dirname in
+  let file = Filename.concat root_dir "lib/file_view.mli" in
+  let signature =
+    match Merlin.Cmt.of_source ~root_dir file with
+    | Error reason ->
+        Alcotest.failf "could not read File_view's interface: %a"
+          Merlin.Cmt.Unusable.pp reason
+    | Ok cmt -> (
+        match cmt.Ocaml_typing.Cmt_format.cmt_annots with
+        | Ocaml_typing.Cmt_format.Interface signature -> signature
+        | Implementation _ | Packed _ | Partial_implementation _
+        | Partial_interface _ ->
+            Alcotest.fail "File_view's interface CMT is not an interface")
+  in
+  let v =
+    view file (fun () -> Ok (Some (`Interface signature, Merlin.Recorded)))
+  in
+  let type_ =
+    Merlint.File_view.typed_items v
+    |> List.find_map (fun item ->
+        if String.equal (Merlint.File_view.Item.name item) "Type_view" then
+          Merlint.File_view.Item.children item
+          |> List.find_map (fun child ->
+              if String.equal (Merlint.File_view.Item.name child) "pp" then
+                Merlint.File_view.Item.type_sig child
+              else None)
+        else None)
+    |> Option.get
+  in
+  let render () =
+    let last = ref "" in
+    for _ = 1 to 200 do
+      last := Fmt.str "%a" Merlint.File_view.Type_view.pp type_
+    done;
+    !last
+  in
+  let dm = Eio.Stdenv.domain_mgr env in
+  let rendered =
+    Merlint.Fs.with_pool dm ~domain_count:4 @@ fun pool ->
+    Merlint.Fs.parallel_map pool (List.init 32 Fun.id) (fun _ -> render ())
+  in
+  match rendered with
+  | [] -> Alcotest.fail "parallel rendering ran no work"
+  | expected :: rest ->
+      Alcotest.(check (list string))
+        "every domain renders the same complete type"
+        (List.init (List.length rest) (Fun.const expected))
+        rest
+
 (* A tree typechecked from source carries no doc comments, and a view over one
    must say so: a rule that reads doc comments would otherwise read the absence
    of every one of them as a source with no documentation and report on all of
@@ -163,6 +218,7 @@ let tests =
     ( "typedtree_loaded_once_across_domains",
       `Quick,
       test_typedtree_loaded_across_domains );
+    ("type_rendering_across_domains", `Quick, test_type_rendering_across_domains);
     ( "docs_recorded_follows_the_tree",
       `Quick,
       test_docs_recorded_follows_the_tree );

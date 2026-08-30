@@ -41,5 +41,6 @@
   eio_main
   project-index
   dune-build-info
+  (self-exe :with-test)
   (alcotest :with-test)
   (mdx :with-test)))

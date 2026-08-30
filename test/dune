@@ -25,6 +25,7 @@
   logs.fmt
   fmt
   re
+  self-exe
   fmt.tty))
 
 ; Merlint lints its own sources: the linter must pass the rules it enforces.

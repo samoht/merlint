@@ -1178,8 +1178,8 @@ module Type_view = struct
     aux Type_walk.root 0 ct
 
   let pp ppf (ct : t) =
-    Ocaml_typing.Printtyp.type_expr Format.str_formatter ct;
-    match Format.flush_str_formatter () with
+    let rendered = Fmt.str "%a" Ocaml_typing.Printtyp.type_expr ct in
+    match rendered with
     | "" -> (
         match constr ct with Some (name, []) -> Name.pp ppf name | _ -> ())
     | s -> Fmt.string ppf s
