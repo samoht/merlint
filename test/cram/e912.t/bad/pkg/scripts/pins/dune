@@ -1,0 +1,3 @@
+(library
+ (name pkg_pins)
+ (public_name pkg.pins))

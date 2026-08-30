@@ -1,0 +1,15 @@
+; Two packages fuzzed from one directory. A dune stanza belongs to a single
+; package, so each gets its own; merging them would link both packages'
+; dependencies into one executable.
+
+(test
+ (name fuzz)
+ (package e720-a)
+ (modules fuzz)
+ (libraries alcobar))
+
+(test
+ (name fuzz_adapter)
+ (package e720-b)
+ (modules fuzz_adapter)
+ (libraries alcobar))

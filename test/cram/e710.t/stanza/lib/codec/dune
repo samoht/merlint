@@ -1,0 +1,3 @@
+(library
+ (name e710_stanza_codec)
+ (public_name e710-stanza.codec))

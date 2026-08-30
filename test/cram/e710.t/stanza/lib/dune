@@ -1,0 +1,3 @@
+(library
+ (name e710_stanza)
+ (public_name e710-stanza))

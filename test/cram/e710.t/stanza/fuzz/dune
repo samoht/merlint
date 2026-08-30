@@ -1,0 +1,3 @@
+(executable
+ (name fuzz)
+ (libraries alcobar e710-stanza.codec))
