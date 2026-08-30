@@ -486,45 +486,21 @@ let print_summary_table issues_by_category =
     in
     Fmt.pr "%a@." Console.Table.pp table)
 
-let has_switch dir = Sys.file_exists Fpath.(to_string (dir / "_opam"))
-
-(* A linked working tree holds only what is committed, so the local opam switch
-   the main tree carries is not in it and dune has none to build against. That
-   is a condition merlint can recognise and name the one command that clears,
-   which is worth more to a reader than whatever dune said on its way out. Its
-   own producer, because both a refused build and a run that merely came up
-   short want to say it. *)
-let switch_link_remedy ~project_root =
-  let root = Fpath.(v project_root |> normalize |> rem_empty_seg) in
-  if has_switch root then None
-  else
-    match Merlint.Worktree.main root with
-    | Some main when has_switch main ->
-        Fmt.kstr
-          (fun s -> Some s)
-          "  This working tree has no opam switch of its own, so nothing here \
-           could be built. Link the switch of the tree it was branched from, \
-           then re-run:@.    opam switch link %a %a"
-          Fpath.pp main Fpath.pp root
-    | Some _ | None -> None
-
-(* What to do about files nothing could be read for. Where the tree has its own
-   switch the artefacts are missing for some other reason, and the only thing
-   left to say is that merlint already tried the build -- which it does whenever
-   a file it was asked to read has no artefact -- so the build itself is what
-   needs looking at. *)
+(* What to do about files nothing could be read for. Nothing merlint can read
+   from the tree says why an artefact is missing, so the only thing left to say
+   is that merlint already tried the build -- which it does whenever a file it
+   was asked to read has no artefact -- and the build itself is what needs
+   looking at. *)
 let unchecked_remedy ~project_root ~repaired =
-  let root = Fpath.(v project_root |> normalize |> rem_empty_seg) in
-  match switch_link_remedy ~project_root with
-  | Some remedy -> Some remedy
-  | None when repaired ->
-      Fmt.kstr
-        (fun s -> Some s)
-        "  merlint ran the build for this and no artefact appeared, so the \
-         build itself is what needs fixing. Run it and read what it \
-         reports:@.    dune build --root %a @@check"
-        Fpath.pp root
-  | None -> None
+  if not repaired then None
+  else
+    let root = Fpath.(v project_root |> normalize |> rem_empty_seg) in
+    Fmt.kstr
+      (fun s -> Some s)
+      "  merlint ran the build for this and no artefact appeared, so the build \
+       itself is what needs fixing. Run it and read what it reports:@.    dune \
+       build --root %a @@check"
+      Fpath.pp root
 
 (* A run that examined less than it was asked to reports what it could not
    reach and, when the tree says why, what to do about it. A file gets here two
@@ -810,9 +786,6 @@ let refuse_unbuilt ~json_output ~project_root reason =
   if json_output then print_json_refusal ~project_root reason
   else begin
     Fmt.epr "merlint: %s@." (Merlint.Build.message reason);
-    (match switch_link_remedy ~project_root with
-    | Some remedy -> Fmt.epr "%s@." remedy
-    | None -> ());
     Fmt.epr
       "merlint: nothing was analysed, because a verdict computed without the \
        artefacts its rules read is not a verdict about this code.@."

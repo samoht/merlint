@@ -7,5 +7,4 @@ val main : Fpath.t -> Fpath.t option
 
     A linked working tree holds only what is committed, so the gitignored
     companions the main tree carries -- a local [_opam] switch above all -- are
-    absent from it, and a build run there has no switch to resolve against. This
-    is what names the tree whose switch it was branched from. *)
+    absent from it. [main] is what names the tree they are in. *)
