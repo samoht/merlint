@@ -2204,7 +2204,7 @@ and replace each call site with [err_x &quot;...&quot; args] / [fail_x &quot;...
         <span class="error-code">E710</span>
         <span class="error-title">Fuzz Without Library</span>
     </div>
-    <div class="error-hint"><p>Every fuzz module (fuzz_&lt;module&gt;.ml) should have a corresponding library module (&lt;module&gt;.ml). This ensures fuzz tests are testing actual library functionality.</p></div>
+    <div class="error-hint"><p>Every fuzz module (fuzz_&lt;module&gt;.ml) should name what it fuzzes: a module of a library, or a library its own stanza links, whose name carries the same words in the same order (fuzz_diagram.ml for fsm-diagram's Fsm_diagram). This ensures fuzz tests are testing actual library functionality.</p></div>
 </div>
 <div class="error-card" id="E715">
     <div>
@@ -2225,7 +2225,7 @@ and replace each call site with [err_x &quot;...&quot; args] / [fail_x &quot;...
         <span class="error-code">E720</span>
         <span class="error-title">Multiple Fuzz Stanzas in Directory</span>
     </div>
-    <div class="error-hint"><p>Each fuzz directory should have exactly one executable stanza with a single fuzz runner (fuzz.ml). Use (modules ...) to list all fuzz modules in a single stanza.</p></div>
+    <div class="error-hint"><p>Each fuzz directory should have exactly one executable stanza per package, with a single fuzz runner (fuzz.ml). Use (modules ...) to list all fuzz modules in a single stanza. A directory fuzzing two packages declares one stanza for each: a dune stanza belongs to a single package, and merging them would link both packages' dependencies into one executable.</p></div>
 </div>
 <div class="error-card" id="E721">
     <div>
@@ -2409,7 +2409,7 @@ and replace each call site with [err_x &quot;...&quot; args] / [fail_x &quot;...
         <span class="error-code">E912</span>
         <span class="error-title">Package directory layout</span>
     </div>
-    <div class="error-hint"><p>Organise each opam package into the standard top-level component directories: lib/ for libraries, bin/ for executables, test/ for tests, fuzz/ for fuzzers, bench/ for benchmarks, c/ for C codegen and examples/ for example programs. A scripts/ directory may hold private helper executables (codegen, dune-configurator probes); anything with a public_name belongs in bin/. Sub-components nest under those roots (lib/&lt;name&gt;/ with test/&lt;name&gt;/, IO adapters in lib/eio/), never as new top-level directories (foo/lib/, foo/test/).</p></div>
+    <div class="error-hint"><p>Organise each opam package into the standard top-level component directories: lib/ for libraries, bin/ for executables, test/ for tests, fuzz/ for fuzzers, bench/ for benchmarks, c/ for C codegen and examples/ for example programs. A scripts/ directory may hold the private helpers a package builds with (codegen, dune-configurator probes), executables and the libraries beside them alike; anything with a public_name belongs in bin/ or lib/. Sub-components nest under those roots (lib/&lt;name&gt;/ with test/&lt;name&gt;/, IO adapters in lib/eio/), never as new top-level directories (foo/lib/, foo/test/).</p></div>
 </div>
 <div class="error-card" id="E913">
     <div>

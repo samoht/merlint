@@ -510,7 +510,7 @@ val name : t -> string
 
 ### [E912] Package directory layout
 
-Organise each opam package into the standard top-level component directories: lib/ for libraries, bin/ for executables, test/ for tests, fuzz/ for fuzzers, bench/ for benchmarks, c/ for C codegen and examples/ for example programs. A scripts/ directory may hold private helper executables (codegen, dune-configurator probes); anything with a public_name belongs in bin/. Sub-components nest under those roots (lib/<name>/ with test/<name>/, IO adapters in lib/eio/), never as new top-level directories (foo/lib/, foo/test/).
+Organise each opam package into the standard top-level component directories: lib/ for libraries, bin/ for executables, test/ for tests, fuzz/ for fuzzers, bench/ for benchmarks, c/ for C codegen and examples/ for example programs. A scripts/ directory may hold the private helpers a package builds with (codegen, dune-configurator probes), executables and the libraries beside them alike; anything with a public_name belongs in bin/ or lib/. Sub-components nest under those roots (lib/<name>/ with test/<name>/, IO adapters in lib/eio/), never as new top-level directories (foo/lib/, foo/test/).
 
 **Metadata Files**: Every package ships human-facing metadata at its source root: a `README.md` describing the package and a license file (`LICENSE.md`). These travel with the package when it is split out to its own repository.
 

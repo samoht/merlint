@@ -15,9 +15,10 @@ Build bad fixture project:
   ✓ Project Structure (0 total issues)
   ✗ Test Quality (1 total issues)
     [E710] Fuzz Without Library (1 issue)
-    Every fuzz module (fuzz_<module>.ml) should have a corresponding library
-    module (<module>.ml). This ensures fuzz tests are testing actual library
-    functionality.
+    Every fuzz module (fuzz_<module>.ml) should name what it fuzzes: a module of a
+    library, or a library its own stanza links, whose name carries the same words
+    in the same order (fuzz_diagram.ml for fsm-diagram's Fsm_diagram). This
+    ensures fuzz tests are testing actual library functionality.
     - bad/fuzz/fuzz_missing.ml:1:0: Fuzz file exists but corresponding library module 'missing' not found
   ✓ Interop Testing (0 total issues)
   ✓ Code Generation (0 total issues)
@@ -43,6 +44,29 @@ Build good fixture project:
   Running merlint analysis...
   
   Analyzing 3 files
+  
+  ✓ Code Quality (0 total issues)
+  ✓ Code Style (0 total issues)
+  ✓ Naming Conventions (0 total issues)
+  ✓ Documentation (0 total issues)
+  ✓ Project Structure (0 total issues)
+  ✓ Test Quality (0 total issues)
+  ✓ Interop Testing (0 total issues)
+  ✓ Code Generation (0 total issues)
+  
+  Summary: ✓ 0 total issues (applied 1 rule)
+  ✓ All checks passed!
+
+Test the sub-library case - fuzz_codec.ml names e710-stanza.codec, whose entry
+module is E710_stanza_codec, with the package's own word left off:
+Build stanza fixture project:
+  $ (cd stanza && dune build @check)
+
+  $ merlint --build -r E710 stanza/
+  Dune root: $TESTCASE_ROOT/stanza/
+  Running merlint analysis...
+  
+  Analyzing 4 files
   
   ✓ Code Quality (0 total issues)
   ✓ Code Style (0 total issues)
