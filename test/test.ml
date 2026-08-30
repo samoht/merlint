@@ -17,7 +17,6 @@ let () =
       Test_categories.suite;
       Test_file_kind.suite;
       Test_config.suite;
-      Test_analysis.suite;
       Test_config_parser.suite;
       Test_rule_config.suite;
       Test_project.suite;

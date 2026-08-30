@@ -63,6 +63,7 @@ let all_rules =
     E616.rule;
     E617.rule;
     E618.rule;
+    E619.rule;
     E620.rule;
     E621.rule;
     E622.rule;

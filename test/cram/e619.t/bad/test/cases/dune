@@ -1,0 +1,7 @@
+; The cases live in a library of their own, so the test stanza's own module
+; list never names them and only the runner says which are run.
+
+(library
+ (name e619_bad_cases)
+ (wrapped false)
+ (libraries alcotest))

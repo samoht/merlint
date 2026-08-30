@@ -1,0 +1,4 @@
+(test
+ (name test)
+ (modules test)
+ (libraries e619_good_cases alcotest))

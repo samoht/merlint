@@ -74,6 +74,7 @@ let () =
       Test_e616.suite;
       Test_e617.suite;
       Test_e618.suite;
+      Test_e619.suite;
       Test_e620.suite;
       Test_e621.suite;
       Test_e622.suite;
