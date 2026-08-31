@@ -57,7 +57,8 @@ let log_command cmd =
 
 (* How dune names the [check] alias of the directory [rel] on its command line.
    [rel] is relative to the dune root, which is where dune resolves it from. *)
-let alias_of_rel rel = Fmt.str "@@%a/check" Fpath.pp (Fpath.rem_empty_seg rel)
+let alias_of_rel rel =
+  Fmt.str "@@_build/default/%a/check" Fpath.pp (Fpath.rem_empty_seg rel)
 
 (* The [check] alias to ask [dune build] for on behalf of [scope]: the bare one
    at [root] itself, the directory's own below it. Dune resolves a scoped alias
@@ -71,7 +72,7 @@ let check_alias ~root scope =
   else
     match Fpath.relativize ~root scope with
     | None -> err_outside_root ~root scope
-    | Some rel when Fpath.equal rel (Fpath.v "./") -> Ok "@check"
+    | Some rel when Fpath.equal rel (Fpath.v "./") -> Ok "@_build/default/check"
     | Some rel -> Ok (alias_of_rel rel)
 
 (* One alias per scope, in the order given and without repeats, so two files of
@@ -112,7 +113,9 @@ let ensure_project_built ~root ~scopes ~targets mgr =
   | Error msg, _ | _, Error msg -> Error msg
   | Ok aliases, Ok targets -> (
       let requests =
-        match aliases @ targets with [] -> [ "@check" ] | requests -> requests
+        match aliases @ targets with
+        | [] -> [ "@_build/default/check" ]
+        | requests -> requests
       in
       let cmd =
         Fmt.str "dune build --root %s %s"

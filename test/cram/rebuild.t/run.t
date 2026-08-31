@@ -77,14 +77,14 @@ itself asks Dune for the same alias a run given [--build] asks for:
 
   $ rm -rf t/_build
   $ merlint -v -r E205 t/lib/mylib.ml 2>&1 | grep '^Running: '
-  Running: dune build --root '$TESTCASE_ROOT/t/' '@lib/check'
+  Running: dune build --root '$TESTCASE_ROOT/t/' '@_build/default/lib/check'
 
 A run given [--build] has already had its build. The repair does not run a
 second one on top of it:
 
   $ rm -rf t/_build
   $ merlint -v --build -r E205 t/lib/mylib.ml 2>&1 | grep '^Running: '
-  Running: dune build --root '$TESTCASE_ROOT/t/' '@lib/check'
+  Running: dune build --root '$TESTCASE_ROOT/t/' '@_build/default/lib/check'
 
 An executable helper is compiled by the executable target that owns it. The
 directory alias happens to compile this simple fixture too, but that is not a

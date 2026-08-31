@@ -36,11 +36,14 @@ val ensure_project_built :
   (unit, unbuilt) result
 (** [ensure_project_built ~root ~scopes ~targets mgr] runs a single
     [dune build --root <root>] over each exact [target] and the [check] alias of
-    each directory in [scopes]. A directory below [root] becomes [@<dir>/check];
-    [root] itself becomes [@check]. Empty [scopes] and [targets] build [@check].
-    Exact targets are what make executable and test repairs independent of
-    whether a composed workspace gives their directory alias any members. Scoped
-    aliases retain Dune's complete [.cmt] production for library modules.
+    each directory in [scopes]. A directory below [root] becomes
+    [@_build/default/<dir>/check]; [root] itself becomes
+    [@_build/default/check]. Empty [scopes] and [targets] build that same root
+    alias. Naming the context matches the [_build/default] typedtrees merlint
+    reads and avoids building unrelated workspace contexts. Exact targets are
+    what make executable and test repairs independent of whether a composed
+    workspace gives their directory alias any members. Scoped aliases retain
+    Dune's complete [.cmt] production for library modules.
 
     Dune's stderr is captured rather than discarded, because it is the only
     place the difference between {!constructor-Contended} and
