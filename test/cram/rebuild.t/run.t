@@ -107,6 +107,28 @@ the target pins the build to the stanza project-index found for the source:
   $ merlint -v -r E205 t/app/helper.ml 2>&1 | grep '^Running: '
   Running: dune build --root '$TESTCASE_ROOT/t/' 'app/runner.exe'
 
+Merlint reads typedtrees from Dune's default context, so repairing one must not
+build every other context in the workspace. A release-only check action makes
+that otherwise invisible extra work observable:
+
+  $ cat > t/dune-workspace <<'EOF'
+  > (lang dune 3.21)
+  > (context default)
+  > (context
+  >  (default
+  >   (name release)))
+  > EOF
+  $ cat >> t/lib/dune <<'EOF'
+  > (rule
+  >  (alias check)
+  >  (enabled_if (= %{context_name} release))
+  >  (action (write-file release-was-built "")))
+  > EOF
+  $ rm -rf t/_build
+  $ merlint -r E205 t/lib/mylib.ml >/dev/null 2>&1
+  [1]
+  $ test ! -e t/_build/release/lib/release-was-built
+
 Refusing is what is left when a build cannot produce the artefact. This project
 names a library that does not exist, so Dune can configure nothing for it and
 no build merlint runs will change that:
