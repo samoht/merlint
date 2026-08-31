@@ -163,12 +163,12 @@ Build good bench fixture project:
   Summary: ✓ 0 total issues (applied 1 rule)
   ✓ All checks passed!
 
-E941 answers by resolving a library name to the package that provides it,
-and this run's index resolves only the packages it scanned. A run narrowed
-to one directory leaves the provider unscanned, and the same lookup then
-answers "nothing provides it" -- which is what a correctly declared
-dependency also looks like. The fixture is the monorepo shape: sibling
-packages, each its own dune project, under one workspace root.
+E941 answers by resolving a library or binary name to the package that provides
+it. Detailed source analysis follows the paths on the command line, but provider
+discovery is workspace metadata: narrowing the files must not make a sibling
+provider disappear or make the verdict depend on `_build/install`. The fixture
+is the monorepo shape: sibling packages, each its own dune project, under one
+workspace root.
 
 Pointed at the whole workspace, the index holds pkg-a and the rule decides:
 
@@ -213,11 +213,8 @@ Pointed at the whole workspace, the index holds pkg-a and the rule decides:
     Run `merlint help E941` for the rule's description, hint, and good/bad examples.
   [1]
 
-Pointed at pkg-b alone, pkg-a is never scanned and the rule cannot decide. The
-summary counts the rule it could not check, and the run exits 2 -- where before
-it printed the clean summary of a complete run and exited 0. A caller's gate
-rests on that status, so the [2] below is asserted with the text: a change that
-returns 0 under this same summary turns this test red.
+Pointed at pkg-b alone, detailed analysis stays scoped to pkg-b while the
+provider catalogue still names pkg-a, so the same missing dependency is found:
 
   $ merlint -r E941 unscanned/pkg-b
   Dune root: $TESTCASE_ROOT/unscanned
@@ -229,19 +226,36 @@ returns 0 under this same summary turns this test red.
   ✓ Code Style (0 total issues)
   ✓ Naming Conventions (0 total issues)
   ✓ Documentation (0 total issues)
-  ✓ Project Structure (0 total issues)
+  ✗ Project Structure (1 total issues)
+    [E941] Missing runtime dependency (1 issue)
+    When a library in your package's [(libraries L)] resolves to opam package P, P
+    must appear in your package's [depends:]. This includes libraries linked by
+    public executables, since [opam install] builds those through [@install].
+    Otherwise [opam install] from a fresh switch fails for downstream users --
+    your local build only works because P happens to be in the active switch. The
+    fix depends on how you author opam metadata: if you hand-write [<pkg>.opam],
+    add the package to its [depends:]; if you let dune generate [<pkg>.opam] from
+    [dune-project], add it to the [(package (depends ...))] stanza (use
+    [<pkg>.opam.template] only for fields dune can't generate). Builtin libraries
+    (unix, str, threads, ...), build-tool packages dune resolves separately
+    (ocaml, dune, js_of_ocaml), [conf-*] system-library wrappers, and libraries
+    owned by the package itself are exempt.
+    - unscanned/pkg-b/pkg-b.opam:1:0: pkg-b uses library pkg-a.helper (from package pkg-a) via the (libraries ...) of pkg-b, but pkg-a is missing from pkg-b.opam's [depends:]. Add it.
   ✓ Test Quality (0 total issues)
   ✓ Interop Testing (0 total issues)
   ✓ Code Generation (0 total issues)
   
-  Summary: ✗ 0 total issues (applied 1 rule, 1 rule not checked)
-  [2]
-
-E941 could not resolve one name, pkg-a.helper, and the summary counts one
-rule. A rule that cannot resolve forty names is still one rule this run did not
-check, and counting the names would read as forty rules. The count is all the
-text report says; [--json] carries a [failed_checks] member per name, each
-naming the rule and what it could not resolve.
+  ╭───────────────────┬──────────────────────────────────╮
+  │ Category          │ Issues                           │
+  ├───────────────────┼──────────────────────────────────┤
+  │ Project Structure │ 1 (1 missing runtime dependency) │
+  ╰───────────────────┴──────────────────────────────────╯
+  
+  
+  Summary: ✗ 1 total issue (applied 1 rule)
+  ✗ Some checks failed. See details above.
+    Run `merlint help E941` for the rule's description, hint, and good/bad examples.
+  [1]
 
 pkg-a is clean under the same narrowing, on two counts. Its gen/ directory
 holds a same-directory [%{exe:gen.exe}], the shape every package with a fuzz/
@@ -270,15 +284,10 @@ saw the rest of the tree is still a complete answer for both.
   Summary: ✓ 0 total issues (applied 1 rule)
   ✓ All checks passed!
 
-pkg-c demands a binary pkg-b installs, and declares pkg-b in its [depends:], so
-the whole-workspace run above is silent about it. Narrowed to pkg-c, pkg-b is
-never scanned, and the lookup answers nothing -- the same answer it gives for a
-name no package installs at all. Only the index's record of what this scan left
-out separates them, and it must, because nothing in the name "pkg-b-tool" says
-which package installs it: dune ties a package's name to its public library
-names and to nothing else. A rule that decided a binary by looking for a
-package of that name would call this run clean and drop a question it cannot
-answer, which is why the exit status below is asserted.
+pkg-c demands a binary pkg-b installs and declares pkg-b in its [depends:]. The
+provider catalogue records public binaries as well as libraries, so narrowing
+the detailed scan to pkg-c stays clean for the same reason the whole-workspace
+run is clean:
 
   $ merlint -r E941 unscanned/pkg-c
   Dune root: $TESTCASE_ROOT/unscanned
@@ -295,5 +304,5 @@ answer, which is why the exit status below is asserted.
   ✓ Interop Testing (0 total issues)
   ✓ Code Generation (0 total issues)
   
-  Summary: ✗ 0 total issues (applied 1 rule, 1 rule not checked)
-  [2]
+  Summary: ✓ 0 total issues (applied 1 rule)
+  ✓ All checks passed!
