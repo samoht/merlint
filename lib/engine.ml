@@ -104,9 +104,11 @@ let path_mem paths =
    - Missing: the build system knows no stanza that compiles the file, for a
      stanza the host does build -- it has simply never been built, and one
      [dune build] fixes it.
-   - Unavailable: the file belongs to a platform- or config-gated stanza the
-     host does not build, so the build system has nothing to say about it and
-     never will here -- not the user's to fix.
+   - Unavailable: no artefact is expected for the file at all -- it belongs to
+     a platform- or config-gated stanza the host does not build, or it is an
+     mdx prelude, which dune copies into the build tree and compiles no unit
+     for. The build system has nothing to say about it and never will here --
+     not the user's to fix.
    Only Missing warrants the "run dune build" warning.
 
    The question is asked of [analyzed] alone. A project rule reads sources well
@@ -123,12 +125,14 @@ let path_mem paths =
 let warn_unresolved ~index ~analyzed ~unclaimed stats =
   let in_scope = path_mem analyzed in
   let is_unclaimed = path_mem unclaimed in
-  let is_gated = path_mem (Project_index.gated_source_files index) in
+  let expects_no_artefact =
+    path_mem (Project_index.artefact_free_source_files index)
+  in
   let _unavailable, missing =
     List.filter
       (fun f -> in_scope f && not (is_unclaimed f))
       stats.Merlin.unresolved_files
-    |> List.partition is_gated
+    |> List.partition expects_no_artefact
   in
   (if missing <> [] then
      let n = List.length missing in

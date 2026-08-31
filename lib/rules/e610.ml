@@ -143,27 +143,28 @@ let missing_library_issue ~unscanned file expected_path =
 
 type scan = { names : String_set.t; unread : string list }
 
-(* A platform- or config-gated stanza is one the host does not build, so its
-   artefact is legitimately absent and names no defect the user can act on. *)
-let gated_source ctx =
+(* A source no artefact is expected for -- a platform- or config-gated stanza
+   the host does not build, an mdx prelude dune compiles no unit for -- is
+   legitimately unreadable here and names no defect the user can act on. *)
+let artefact_free_source ctx =
   let norm path = Fpath.(v path |> normalize |> to_string) in
-  let gated =
-    Project_index.gated_source_files (Context.index ctx)
+  let artefact_free =
+    Project_index.artefact_free_source_files (Context.index ctx)
     |> List.map (fun p -> norm (Fpath.to_string p))
     |> String_set.of_list
   in
-  fun path -> String_set.mem (norm (Context.string_of_path path)) gated
+  fun path -> String_set.mem (norm (Context.string_of_path path)) artefact_free
 
 (* The reference scan is the only artefact-backed evidence this rule holds: a
    module defined inside another compilation unit is named nowhere but that
    unit's typedtree. A library source whose [.cmt] no longer describes it
    withholds the references it carries, so an absence read off the remainder is
    a guess. Record those sources and let the finding say which reading it is. *)
-let scan_library_file ctx ~gated acc path =
+let scan_library_file ctx ~artefact_free acc path =
   if not (Path.has_ext ".ml" path || Path.has_ext ".mli" path) then acc
   else
     let unread () =
-      if gated path then acc
+      if artefact_free path then acc
       else
         {
           acc with
@@ -188,10 +189,10 @@ let scan_library_file ctx ~gated acc path =
         }
 
 let scan_libraries ctx library_source_files =
-  let gated = gated_source ctx in
+  let artefact_free = artefact_free_source ctx in
   let scan =
     List.fold_left
-      (scan_library_file ctx ~gated)
+      (scan_library_file ctx ~artefact_free)
       { names = String_set.empty; unread = [] }
       library_source_files
   in
