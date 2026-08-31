@@ -14,30 +14,30 @@ outer one:
 A directory argument builds that directory's alias, and only that one:
 
   $ merlint -v --build -r E100 alpha 2>&1 | grep '^Running: '
-  Running: dune build --root '$TESTCASE_ROOT/proj/' '@alpha/check'
+  Running: dune build --root '$TESTCASE_ROOT/proj/' '@_build/default/alpha/check'
 
 A file argument is scoped by the directory holding it, which is the directory
 whose alias compiles it:
 
   $ merlint -v --build -r E100 alpha/alpha.ml 2>&1 | grep '^Running: '
-  Running: dune build --root '$TESTCASE_ROOT/proj/' '@alpha/check'
+  Running: dune build --root '$TESTCASE_ROOT/proj/' '@_build/default/alpha/check'
 
 Several scopes are several alias targets in a single Dune invocation, and two
 files of one directory name that directory once:
 
   $ merlint -v --build -r E100 alpha beta/beta.ml beta/beta.mli 2>&1 | grep '^Running: '
-  Running: dune build --root '$TESTCASE_ROOT/proj/' '@alpha/check' '@beta/check'
+  Running: dune build --root '$TESTCASE_ROOT/proj/' '@_build/default/alpha/check' '@_build/default/beta/check'
 
 Asked for the whole project, the whole project is what is built:
 
   $ merlint -v --build -r E100 2>&1 | grep '^Running: '
-  Running: dune build --root '$TESTCASE_ROOT/proj/' '@check'
+  Running: dune build --root '$TESTCASE_ROOT/proj/' '@_build/default/check'
 
 The dune root named explicitly is that same whole project, and the bare alias
 is its alias: Dune has no @./check to build.
 
   $ merlint -v --build -r E100 . 2>&1 | grep '^Running: '
-  Running: dune build --root '$TESTCASE_ROOT/proj/' '@check'
+  Running: dune build --root '$TESTCASE_ROOT/proj/' '@_build/default/check'
 
 A directory outside the dune root is refused before any of this. It has no
 alias under that root, but it also has no source any rule would read, so the
