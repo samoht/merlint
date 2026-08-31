@@ -31,16 +31,16 @@ val message : unbuilt -> string
 val ensure_project_built :
   root:Fpath.t ->
   scopes:Fpath.t list ->
+  targets:Fpath.t list ->
   _ Eio.Process.mgr ->
   (unit, unbuilt) result
-(** [ensure_project_built ~root ~scopes mgr] runs a single
-    [dune build --root <root>] over the [check] alias of every directory in
-    [scopes]: [@<dir>/check] for a directory below [root], and the bare [@check]
-    for [root] itself or for empty [scopes]. Dune resolves a scoped alias
-    against the whole workspace, so cross-package dependencies still build and
-    only the targets narrow. The [check] alias is what produces [.cmt] artefacts
-    for every module (including wrapped executables and tests where a plain
-    [dune build] only emits native code).
+(** [ensure_project_built ~root ~scopes ~targets mgr] runs a single
+    [dune build --root <root>] over each exact [target] and the [check] alias of
+    each directory in [scopes]. A directory below [root] becomes [@<dir>/check];
+    [root] itself becomes [@check]. Empty [scopes] and [targets] build [@check].
+    Exact targets are what make executable and test repairs independent of
+    whether a composed workspace gives their directory alias any members. Scoped
+    aliases retain Dune's complete [.cmt] production for library modules.
 
     Dune's stderr is captured rather than discarded, because it is the only
     place the difference between {!constructor-Contended} and

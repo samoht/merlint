@@ -792,10 +792,10 @@ let refuse_unbuilt ~json_output ~project_root reason =
   end;
   Stdlib.exit Merlint_doc.Exit_status.refused
 
-let ensure_project_built ~json_output ~clock ~root ~scopes mgr =
+let ensure_project_built ~json_output ~clock ~root ~scopes ~targets mgr =
   let started = Eio.Time.now clock in
   let rec attempt n =
-    match Merlint.Build.ensure_project_built ~root ~scopes mgr with
+    match Merlint.Build.ensure_project_built ~root ~scopes ~targets mgr with
     | Ok () -> ()
     | Error (Merlint.Build.Contended _ as reason) ->
         if n >= build_attempts then
@@ -831,7 +831,8 @@ let ensure_project_built ~json_output ~clock ~root ~scopes mgr =
 
    Once per run. A run that warmed the build already had its build, and a
    second identical one produces the same artefacts it just produced. *)
-let repair_unresolved ~built ~json_output ~clock mgr ~project_root files =
+let repair_unresolved ~built ~json_output ~clock ~index mgr ~project_root files
+    =
   match files with
   | [] -> false
   | _ :: _ when built -> false
@@ -840,12 +841,21 @@ let repair_unresolved ~built ~json_output ~clock mgr ~project_root files =
       if n = 1 then
         Fmt.epr "Building the file above, then analysing it again.@."
       else Fmt.epr "Building the %d files above, then analysing them again.@." n;
-      let scopes =
-        List.map (fun file -> Fpath.parent (Fpath.v file)) files
-        |> List.sort_uniq Fpath.compare
+      let targets, scopes =
+        List.fold_left
+          (fun (targets, scopes) file ->
+            let file = Fpath.v file in
+            match
+              Project_index.executable_targets_of_source (index ()) file
+            with
+            | [] -> (targets, Fpath.parent file :: scopes)
+            | file_targets -> (List.rev_append file_targets targets, scopes))
+          ([], []) files
       in
+      let targets = List.sort_uniq Fpath.compare targets in
+      let scopes = List.sort_uniq Fpath.compare scopes in
       ensure_project_built ~json_output ~clock ~root:(Fpath.v project_root)
-        ~scopes mgr;
+        ~scopes ~targets mgr;
       true
 
 let is_ocaml_source path =
@@ -1060,7 +1070,7 @@ let maybe_build_project mgr ~json_output ~clock ~project_root ~analyze_roots
       (Project_index.source_files ?roots:analyze_roots frozen_index
         : Fpath.t list);
     ensure_project_built ~json_output ~clock ~root:(Fpath.v project_root)
-      ~scopes:build_scopes mgr;
+      ~scopes:build_scopes ~targets:[] mgr;
     Log.info (fun m -> m "Build done."))
 
 let monorepo_for_index project_root =
@@ -1138,8 +1148,17 @@ let analyze_files mgr clock fs domain_mgr ?(exclude_patterns = []) ?rule_filter
     | Some roots -> not (List.exists (root_covers ~monorepo) roots)
   in
   let installed = installed_index_mode rule_filter in
+  let index_cache = ref None in
   let build_index ?pool () =
-    build_project_index ~fs ~monorepo ?roots:index_roots ~installed ?pool ()
+    match !index_cache with
+    | Some index -> index
+    | None ->
+        let index =
+          build_project_index ~fs ~monorepo ?roots:index_roots ~installed ?pool
+            ()
+        in
+        index_cache := Some index;
+        index
   in
   let lazy_index = lazy (build_index ()) in
   maybe_build_project mgr ~json_output ~clock ~project_root ~analyze_roots
@@ -1148,7 +1167,10 @@ let analyze_files mgr clock fs domain_mgr ?(exclude_patterns = []) ?rule_filter
     if build then Lazy.force lazy_index else build_index ?pool ()
   in
   run_analysis ~domain_mgr ~load_file ~json_output
-    ~repair:(repair_unresolved ~built:build ~json_output ~clock mgr)
+    ~repair:
+      (repair_unresolved ~built:build ~json_output ~clock
+         ~index:(fun () -> build_index ())
+         mgr)
     ~skipped ~index_is_partial project_root analyze_set analyze_roots
     analysis_index rule_filter show_profile ~bail ~exclude:exclude_patterns
     ~include_vendored

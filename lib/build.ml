@@ -87,18 +87,37 @@ let check_aliases ~root scopes =
   in
   collect [] scopes
 
-let ensure_project_built ~root ~scopes mgr =
+let target_of_path ~root target =
+  let target = Fpath.(normalize target |> rem_empty_seg) in
+  if not (Fpath.is_prefix root target) then err_outside_root ~root target
+  else
+    match Fpath.relativize ~root target with
+    | None -> err_outside_root ~root target
+    | Some rel -> Ok Fpath.(to_string (rem_empty_seg rel))
+
+let target_args ~root targets =
+  let rec collect acc = function
+    | [] -> Ok (List.rev acc)
+    | target :: rest -> (
+        match target_of_path ~root target with
+        | Error msg -> Error msg
+        | Ok target when List.mem target acc -> collect acc rest
+        | Ok target -> collect (target :: acc) rest)
+  in
+  collect [] targets
+
+let ensure_project_built ~root ~scopes ~targets mgr =
   let root = Fpath.(to_dir_path (normalize root)) in
-  match check_aliases ~root scopes with
-  | Error msg -> Error msg
-  | Ok aliases -> (
-      let aliases =
-        match aliases with [] -> [ "@check" ] | aliases -> aliases
+  match (check_aliases ~root scopes, target_args ~root targets) with
+  | Error msg, _ | _, Error msg -> Error msg
+  | Ok aliases, Ok targets -> (
+      let requests =
+        match aliases @ targets with [] -> [ "@check" ] | requests -> requests
       in
       let cmd =
         Fmt.str "dune build --root %s %s"
           (Filename.quote (Fpath.to_string root))
-          (String.concat " " (List.map Filename.quote aliases))
+          (String.concat " " (List.map Filename.quote requests))
       in
       log_command cmd;
       match Command.run mgr cmd with
