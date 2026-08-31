@@ -86,6 +86,27 @@ second one on top of it:
   $ merlint -v --build -r E205 t/lib/mylib.ml 2>&1 | grep '^Running: '
   Running: dune build --root '$TESTCASE_ROOT/t/' '@lib/check'
 
+An executable helper is compiled by the executable target that owns it. The
+directory alias happens to compile this simple fixture too, but that is not a
+Dune invariant: composed workspaces may leave a scoped [@check] empty. Naming
+the target pins the build to the stanza project-index found for the source:
+
+  $ mkdir -p t/app
+  $ cat > t/app/dune <<'EOF'
+  > (executable
+  >  (name runner)
+  >  (modules runner helper))
+  > EOF
+  $ cat > t/app/runner.ml <<'EOF'
+  > let () = Helper.run ()
+  > EOF
+  $ cat > t/app/helper.ml <<'EOF'
+  > let run () = Printf.printf "x\n"
+  > EOF
+  $ rm -rf t/_build
+  $ merlint -v -r E205 t/app/helper.ml 2>&1 | grep '^Running: '
+  Running: dune build --root '$TESTCASE_ROOT/t/' 'app/runner.exe'
+
 Refusing is what is left when a build cannot produce the artefact. This project
 names a library that does not exist, so Dune can configure nothing for it and
 no build merlint runs will change that:
