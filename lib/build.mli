@@ -43,9 +43,10 @@ val ensure_project_built :
     reads and avoids building unrelated workspace contexts. Exact targets are
     what make executable and test repairs independent of whether a composed
     workspace gives their directory alias any members. Scoped aliases retain
-    Dune's complete [.cmt] production for library modules. Exact targets are
-    also named below [_build/default], so they do not request the same target
-    from every context in a composed workspace.
+    Dune's complete [.cmt] production, including implementation typedtrees for
+    executables whose link target alone does not request [-bin-annot]. Exact
+    targets are also named below [_build/default], so they do not request the
+    same target from every context in a composed workspace.
 
     Dune's stderr is captured rather than discarded, because it is the only
     place the difference between {!constructor-Contended} and

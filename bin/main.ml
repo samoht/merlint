@@ -845,11 +845,10 @@ let repair_unresolved ~built ~json_output ~clock ~index mgr ~project_root files
         List.fold_left
           (fun (targets, scopes) file ->
             let file = Fpath.v file in
-            match
+            let file_targets =
               Project_index.executable_targets_of_source (index ()) file
-            with
-            | [] -> (targets, Fpath.parent file :: scopes)
-            | file_targets -> (List.rev_append file_targets targets, scopes))
+            in
+            (List.rev_append file_targets targets, Fpath.parent file :: scopes))
           ([], []) files
       in
       let targets = List.sort_uniq Fpath.compare targets in

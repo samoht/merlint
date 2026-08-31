@@ -87,9 +87,9 @@ second one on top of it:
   Running: dune build --root '$TESTCASE_ROOT/t/' '@_build/default/lib/check'
 
 An executable helper is compiled by the executable target that owns it. The
-directory alias happens to compile this simple fixture too, but that is not a
-Dune invariant: composed workspaces may leave a scoped [@check] empty. Naming
-the target pins the build to the stanza project-index found for the source:
+directory check alias asks Dune for its typedtree, while the exact target makes
+the stanza build even in a composed workspace whose scoped alias is empty. Both
+belong to the same repair:
 
   $ mkdir -p t/app
   $ cat > t/app/dune <<'EOF'
@@ -105,7 +105,7 @@ the target pins the build to the stanza project-index found for the source:
   > EOF
   $ rm -rf t/_build
   $ merlint -v -r E205 t/app/helper.ml 2>&1 | grep '^Running: '
-  Running: dune build --root '$TESTCASE_ROOT/t/' '_build/default/app/runner.exe'
+  Running: dune build --root '$TESTCASE_ROOT/t/' '@_build/default/app/check' '_build/default/app/runner.exe'
 
 Merlint reads typedtrees from Dune's default context, so repairing one must not
 build every other context in the workspace. A release-only check action makes
