@@ -105,7 +105,7 @@ the target pins the build to the stanza project-index found for the source:
   > EOF
   $ rm -rf t/_build
   $ merlint -v -r E205 t/app/helper.ml 2>&1 | grep '^Running: '
-  Running: dune build --root '$TESTCASE_ROOT/t/' 'app/runner.exe'
+  Running: dune build --root '$TESTCASE_ROOT/t/' '_build/default/app/runner.exe'
 
 Merlint reads typedtrees from Dune's default context, so repairing one must not
 build every other context in the workspace. A release-only check action makes

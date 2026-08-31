@@ -94,7 +94,11 @@ let target_of_path ~root target =
   else
     match Fpath.relativize ~root target with
     | None -> err_outside_root ~root target
-    | Some rel -> Ok Fpath.(to_string (rem_empty_seg rel))
+    | Some rel ->
+        Fmt.kstr
+          (fun target -> Ok target)
+          "_build/default/%a" Fpath.pp
+          Fpath.(rem_empty_seg rel)
 
 let target_args ~root targets =
   let rec collect acc = function
